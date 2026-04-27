@@ -32,6 +32,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Sparkles, TrendingUp, TrendingDown, AlertTriangle, Eye } from "lucide-react";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const tooltipStyle = {
   background: "hsl(var(--card))",
@@ -40,31 +41,34 @@ const tooltipStyle = {
   fontSize: "12px",
 };
 
-const funnelKpis = overviewKpis
-  .filter((k) => ["clicks", "regs", "apps", "bookings", "viewers", "sales", "revFact", "roas"].includes(k.key))
-  .map((k) => ({ ...k, label: k.label.replace("Revenue Fact", "Revenue") }));
-
 export default function Funnel() {
-  const showViewers = true; // toggle this when no viewer data
+  const { t, lang } = useI18n();
+  const showViewers = true;
+
+  const funnelKpis = overviewKpis.filter((k) =>
+    ["clicks", "regs", "apps", "bookings", "viewers", "sales", "revFact", "roas"].includes(k.key),
+  );
 
   return (
     <DashboardLayout
-      title="Funnel / Report"
+      title={t("funnelTitle")}
       subtitle="Pulse Education · Webinar Q4"
     >
       <div className="space-y-4">
-        <FilterBar freshness={{ source: "fact_daily", status: "fresh", lastSync: "5 min ago" }} />
+        <FilterBar freshness={{ source: "fact_daily", status: "fresh", lastSync: "5 min" }} />
 
         <KpiGrid kpis={funnelKpis} columns={4} />
 
         {/* Conversion flow */}
-        <SectionCard title="Conversion flow" description="Step-to-step conversion across the selected funnel">
+        <SectionCard title={t("conversionFlow")} description={t("conversionFlowDesc")}>
           <div className="space-y-2">
             {funnelSteps.map((s, i) => {
               const widthPct = (s.value / funnelSteps[0].value) * 100;
               return (
                 <div key={s.step} className="grid grid-cols-12 items-center gap-3">
-                  <div className="col-span-12 lg:col-span-2 text-sm font-medium">{s.step}</div>
+                  <div className="col-span-12 lg:col-span-2 text-sm font-medium">
+                    {lang === "uk" ? s.stepUk : s.step}
+                  </div>
                   <div className="col-span-9 lg:col-span-7">
                     <div className="relative h-8 overflow-hidden rounded-md bg-muted">
                       <div
@@ -87,7 +91,7 @@ export default function Funnel() {
 
         {/* Trend + plan vs fact */}
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-          <SectionCard className="xl:col-span-2" title="Daily trend" description="Registrations & sales">
+          <SectionCard className="xl:col-span-2" title={t("dailyTrend")} description={t("dailyTrendDesc")}>
             <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={dailyTrend} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -96,14 +100,14 @@ export default function Funnel() {
                   <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
                   <Tooltip contentStyle={tooltipStyle} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Line type="monotone" dataKey="registrations" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="sales" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="registrations" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} name={t("kpiRegs")} />
+                  <Line type="monotone" dataKey="sales" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} name={t("kpiSales")} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           </SectionCard>
 
-          <SectionCard title="Sales plan vs fact" description="Weekly">
+          <SectionCard title={t("planVsFact")} description={t("weekly")}>
             <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={salesPlanFact} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -121,17 +125,17 @@ export default function Funnel() {
         </div>
 
         {/* Traffic table */}
-        <SectionCard title="Traffic by campaign" noPadding>
+        <SectionCard title={t("topCampaigns")} noPadding>
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Campaign</TableHead>
-                  <TableHead className="text-right">Spend</TableHead>
-                  <TableHead className="text-right">Regs</TableHead>
-                  <TableHead className="text-right">Sales</TableHead>
-                  <TableHead className="text-right">Revenue</TableHead>
-                  <TableHead className="text-right">ROAS</TableHead>
+                  <TableHead>{t("thCampaign")}</TableHead>
+                  <TableHead className="text-right">{t("thSpend")}</TableHead>
+                  <TableHead className="text-right">{t("thRegs")}</TableHead>
+                  <TableHead className="text-right">{t("thSales")}</TableHead>
+                  <TableHead className="text-right">{t("thRevenue")}</TableHead>
+                  <TableHead className="text-right">{t("thRoas")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -153,7 +157,7 @@ export default function Funnel() {
         {/* Optional viewer slots + AI commentary */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
           {showViewers ? (
-            <SectionCard title="Viewer slots" description="Webinar attendance distribution" actions={<Eye className="h-4 w-4 text-muted-foreground" />}>
+            <SectionCard title={t("kpiViewers")} actions={<Eye className="h-4 w-4 text-muted-foreground" />}>
               <div className="space-y-2.5">
                 {[
                   { slot: "Tue 19:00 UTC", booked: 420, viewers: 312 },
@@ -179,14 +183,14 @@ export default function Funnel() {
               </div>
             </SectionCard>
           ) : (
-            <SectionCard title="Viewer slots">
-              <EmptyState title="No viewer data" description="This funnel does not have a webinar / viewer step." />
+            <SectionCard title={t("kpiViewers")}>
+              <EmptyState title={t("noData")} description={t("noDataDesc")} />
             </SectionCard>
           )}
 
           <SectionCard
-            title="AI commentary"
-            description="What changed in this funnel"
+            title={t("aiObservations")}
+            description={t("aiObservationsDesc")}
             actions={<Sparkles className="h-4 w-4 text-primary" />}
           >
             <div className="space-y-3 text-sm">
@@ -195,8 +199,12 @@ export default function Funnel() {
                   <TrendingUp className="h-3.5 w-3.5" />
                 </span>
                 <div>
-                  <div className="font-medium">Improved</div>
-                  <p className="text-muted-foreground">Booking → Viewer conversion grew from 64% to 71% after sending 24h reminder.</p>
+                  <div className="font-medium">{lang === "uk" ? "Покращення" : "Improved"}</div>
+                  <p className="text-muted-foreground">
+                    {lang === "uk"
+                      ? "Конверсія Бронювання → Глядач зросла з 64% до 71% після 24-годинного нагадування."
+                      : "Booking → Viewer conversion grew from 64% to 71% after sending 24h reminder."}
+                  </p>
                 </div>
               </div>
               <div className="flex items-start gap-2.5">
@@ -204,8 +212,12 @@ export default function Funnel() {
                   <TrendingDown className="h-3.5 w-3.5" />
                 </span>
                 <div>
-                  <div className="font-medium">Dropped</div>
-                  <p className="text-muted-foreground">Click → Registration fell to 17% (vs 21% prior week). Cold static creatives showing fatigue.</p>
+                  <div className="font-medium">{lang === "uk" ? "Просіло" : "Dropped"}</div>
+                  <p className="text-muted-foreground">
+                    {lang === "uk"
+                      ? "Клік → Реєстрація впала до 17% (було 21%). Холодні статичні креативи показують втому."
+                      : "Click → Registration fell to 17% (vs 21% prior week). Cold static creatives showing fatigue."}
+                  </p>
                 </div>
               </div>
               <div className="flex items-start gap-2.5">
@@ -213,8 +225,12 @@ export default function Funnel() {
                   <AlertTriangle className="h-3.5 w-3.5" />
                 </span>
                 <div>
-                  <div className="font-medium">Bottleneck</div>
-                  <p className="text-muted-foreground">Viewer → Sale at 36%. Investigate the close-script for Saturday slot — lowest converting.</p>
+                  <div className="font-medium">{lang === "uk" ? "Вузьке місце" : "Bottleneck"}</div>
+                  <p className="text-muted-foreground">
+                    {lang === "uk"
+                      ? "Глядач → Продаж 36%. Перевірте close-script для суботнього слоту — найгірша конверсія."
+                      : "Viewer → Sale at 36%. Investigate close-script for the Saturday slot — lowest converting."}
+                  </p>
                 </div>
               </div>
             </div>
