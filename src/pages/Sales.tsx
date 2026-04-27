@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Info } from "lucide-react";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const tooltipStyle = {
   background: "hsl(var(--card))",
@@ -30,10 +31,11 @@ const tooltipStyle = {
 };
 
 export default function Sales() {
+  const { t, lang } = useI18n();
   return (
-    <DashboardLayout title="Sales / Revenue" subtitle="Internal sales analytics">
+    <DashboardLayout title={t("salesTitle")} subtitle={t("salesSubtitle")}>
       <div className="space-y-4">
-        <FilterBar freshness={{ source: "fact_sales", status: "fresh", lastSync: "12 min ago" }} />
+        <FilterBar freshness={{ source: "fact_sales", status: "fresh", lastSync: "12 min" }} />
 
         {/* Status note for partial outdated */}
         <div className="flex items-start gap-2 rounded-lg border border-warning/30 bg-warning-soft px-3 py-2.5 text-sm">
