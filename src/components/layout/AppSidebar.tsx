@@ -22,14 +22,16 @@ import {
   Sparkles,
   Activity,
 } from "lucide-react";
+import { useI18n } from "@/i18n/I18nProvider";
+import type { TranslationKey } from "@/i18n/translations";
 
-const items = [
-  { title: "Overview", url: "/", icon: LayoutDashboard },
-  { title: "Funnel / Report", url: "/funnel", icon: GitBranch },
-  { title: "Campaigns", url: "/campaigns", icon: Megaphone },
-  { title: "Sales / Revenue", url: "/sales", icon: DollarSign },
-  { title: "Imports / Data Health", url: "/imports", icon: Database },
-  { title: "AI Assistant", url: "/assistant", icon: Sparkles },
+const items: { titleKey: TranslationKey; url: string; icon: typeof LayoutDashboard }[] = [
+  { titleKey: "navOverview", url: "/", icon: LayoutDashboard },
+  { titleKey: "navFunnel", url: "/funnel", icon: GitBranch },
+  { titleKey: "navCampaigns", url: "/campaigns", icon: Megaphone },
+  { titleKey: "navSales", url: "/sales", icon: DollarSign },
+  { titleKey: "navImports", url: "/imports", icon: Database },
+  { titleKey: "navAssistant", url: "/assistant", icon: Sparkles },
 ];
 
 export function AppSidebar() {
