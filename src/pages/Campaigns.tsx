@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/table";
 import { Download, Search, ArrowUpDown } from "lucide-react";
 import { useMemo, useState } from "react";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const tooltipStyle = {
   background: "hsl(var(--card))",
@@ -35,6 +36,7 @@ const tooltipStyle = {
 type SortKey = "spend" | "roas" | "ctr" | "cpl" | "revenue";
 
 export default function Campaigns() {
+  const { t } = useI18n();
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortKey>("roas");
 
@@ -62,12 +64,12 @@ export default function Campaigns() {
 
   return (
     <DashboardLayout
-      title="Campaigns / Placements"
-      subtitle="Media buying analytics for the traffic team"
+      title={t("campaignsTitle")}
+      subtitle={t("campaignsSubtitle")}
       actions={
         <Button size="sm" variant="outline" className="gap-1.5">
           <Download className="h-3.5 w-3.5" />
-          Export CSV
+          {t("exportCsv")}
         </Button>
       }
     >
@@ -79,24 +81,24 @@ export default function Campaigns() {
               <Input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search campaign or placement"
+                placeholder={t("searchPlaceholder")}
                 className="h-8 w-[220px] pl-8 text-xs"
               />
             </div>
           }
-          freshness={{ source: "fact_campaigns", status: "fresh", lastSync: "8 min ago" }}
+          freshness={{ source: "fact_campaigns", status: "fresh", lastSync: "8 min" }}
         />
 
         {/* Quick comparison cards */}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <QuickCard label="Total spend" value={fmtCurrency(totals.spend)} />
-          <QuickCard label="Total revenue" value={fmtCurrency(totals.revenue)} />
-          <QuickCard label="Sales" value={fmtNum(totals.sales)} />
-          <QuickCard label="Blended ROAS" value={`${totals.roas.toFixed(2)}x`} highlight />
+          <QuickCard label={t("totalSpend")} value={fmtCurrency(totals.spend)} />
+          <QuickCard label={t("totalRevenue")} value={fmtCurrency(totals.revenue)} />
+          <QuickCard label={t("kpiSales")} value={fmtNum(totals.sales)} />
+          <QuickCard label={t("blendedRoas")} value={`${totals.roas.toFixed(2)}x`} highlight />
         </div>
 
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <SectionCard title="By ROAS" description="Top placements">
+          <SectionCard title={t("byRoas")}>
             <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={byRoas} layout="vertical" margin={{ top: 5, right: 16, left: 100, bottom: 0 }}>
@@ -110,7 +112,7 @@ export default function Campaigns() {
             </div>
           </SectionCard>
 
-          <SectionCard title="By spend" description="Where the money goes">
+          <SectionCard title={t("bySpend")}>
             <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={bySpend} layout="vertical" margin={{ top: 5, right: 16, left: 100, bottom: 0 }}>
@@ -126,20 +128,19 @@ export default function Campaigns() {
         </div>
 
         <SectionCard
-          title="All campaigns & placements"
-          description={`${filtered.length} rows`}
+          title={t("allCampaigns")}
+          description={`${filtered.length} ${t("rows")}`}
           actions={
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <ArrowUpDown className="h-3.5 w-3.5" />
-              Sort:
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as SortKey)}
                 className="h-7 rounded-md border bg-background px-1.5 text-xs"
               >
                 <option value="roas">ROAS</option>
-                <option value="spend">Spend</option>
-                <option value="revenue">Revenue</option>
+                <option value="spend">{t("thSpend")}</option>
+                <option value="revenue">{t("thRevenue")}</option>
                 <option value="ctr">CTR</option>
                 <option value="cpl">CPL</option>
               </select>
@@ -151,24 +152,24 @@ export default function Campaigns() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[180px]">Campaign</TableHead>
-                  <TableHead>Placement</TableHead>
-                  <TableHead className="text-right">Spend</TableHead>
-                  <TableHead className="text-right">Reach</TableHead>
-                  <TableHead className="text-right">Clicks</TableHead>
-                  <TableHead className="text-right">CPC</TableHead>
-                  <TableHead className="text-right">CPM</TableHead>
-                  <TableHead className="text-right">CTR</TableHead>
-                  <TableHead className="text-right">Regs</TableHead>
-                  <TableHead className="text-right">CPL</TableHead>
-                  <TableHead className="text-right">Sales</TableHead>
-                  <TableHead className="text-right">Revenue</TableHead>
-                  <TableHead className="text-right">ROAS</TableHead>
+                  <TableHead className="min-w-[180px]">{t("thCampaign")}</TableHead>
+                  <TableHead>{t("thPlacement")}</TableHead>
+                  <TableHead className="text-right">{t("thSpend")}</TableHead>
+                  <TableHead className="text-right">{t("thReach")}</TableHead>
+                  <TableHead className="text-right">{t("thClicks")}</TableHead>
+                  <TableHead className="text-right">{t("thCpc")}</TableHead>
+                  <TableHead className="text-right">{t("thCpm")}</TableHead>
+                  <TableHead className="text-right">{t("thCtr")}</TableHead>
+                  <TableHead className="text-right">{t("thRegs")}</TableHead>
+                  <TableHead className="text-right">{t("thCpl")}</TableHead>
+                  <TableHead className="text-right">{t("thSales")}</TableHead>
+                  <TableHead className="text-right">{t("thRevenue")}</TableHead>
+                  <TableHead className="text-right">{t("thRoas")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((c, i) => (
-                  <TableRow key={i}>
+                  <TableRow key={i} className="text-xs">
                     <TableCell className="font-medium">{c.campaign}</TableCell>
                     <TableCell className="text-muted-foreground">{c.placement}</TableCell>
                     <TableCell className="text-right num">{fmtCurrency(c.spend)}</TableCell>

@@ -4,7 +4,10 @@ import { AppSidebar } from "./AppSidebar";
 import { Search, Bell } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { LangSwitcher } from "@/components/header/LangSwitcher";
+import { ThemeSwitcher } from "@/components/header/ThemeSwitcher";
+import { UserMenu } from "@/components/header/UserMenu";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface DashboardLayoutProps {
   title: string;
@@ -14,6 +17,7 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ title, subtitle, actions, children }: DashboardLayoutProps) {
+  const { t } = useI18n();
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background">
@@ -24,27 +28,25 @@ export function DashboardLayout({ title, subtitle, actions, children }: Dashboar
             <SidebarTrigger />
             <div className="flex flex-1 items-center gap-3">
               <div className="hidden md:flex items-center gap-1.5 text-sm">
-                <span className="text-muted-foreground">Workspace</span>
+                <span className="text-muted-foreground">{t("workspace")}</span>
                 <span className="text-muted-foreground">/</span>
                 <span className="font-medium">{title}</span>
               </div>
-              <div className="ml-auto flex items-center gap-2">
+              <div className="ml-auto flex items-center gap-1.5">
                 <div className="relative hidden lg:block">
                   <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    placeholder="Search campaigns, projects…"
+                    placeholder={t("searchPlaceholder")}
                     className="h-8 w-64 pl-8 text-sm"
                   />
                 </div>
+                <LangSwitcher />
+                <ThemeSwitcher />
                 <Button variant="ghost" size="icon" className="h-8 w-8 relative">
                   <Bell className="h-4 w-4" />
                   <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-destructive" />
                 </Button>
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary-soft text-primary text-xs font-medium">
-                    AN
-                  </AvatarFallback>
-                </Avatar>
+                <UserMenu />
               </div>
             </div>
           </header>

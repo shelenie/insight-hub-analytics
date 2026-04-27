@@ -2,51 +2,55 @@
 // Replace these with Supabase queries against fact_* tables when wiring up.
 
 export const projects = [
-  { id: "all", name: "All projects" },
-  { id: "pulse-edu", name: "Pulse Education" },
-  { id: "atlas-fin", name: "Atlas Finance" },
-  { id: "nova-health", name: "Nova Health" },
-  { id: "loop-saas", name: "Loop SaaS" },
+  { id: "all", name: "All projects", nameUk: "Усі проєкти" },
+  { id: "pulse-edu", name: "Pulse Education", nameUk: "Pulse Education" },
+  { id: "atlas-fin", name: "Atlas Finance", nameUk: "Atlas Finance" },
+  { id: "nova-health", name: "Nova Health", nameUk: "Nova Health" },
+  { id: "loop-saas", name: "Loop SaaS", nameUk: "Loop SaaS" },
 ];
 
 export const reportGroups = [
-  { id: "all", name: "All groups" },
-  { id: "webinar-q4", name: "Webinar Q4" },
-  { id: "evergreen-fb", name: "Evergreen FB" },
-  { id: "launch-may", name: "Spring Launch" },
-  { id: "retention", name: "Retention" },
+  { id: "all", name: "All groups", nameUk: "Усі групи" },
+  { id: "webinar-q4", name: "Webinar Q4", nameUk: "Вебінар Q4" },
+  { id: "evergreen-fb", name: "Evergreen FB", nameUk: "Evergreen FB" },
+  { id: "launch-may", name: "Spring Launch", nameUk: "Весняний запуск" },
+  { id: "retention", name: "Retention", nameUk: "Утримання" },
 ];
 
-export const dateRanges = [
-  { id: "today", name: "Today" },
-  { id: "7d", name: "Last 7 days" },
-  { id: "30d", name: "Last 30 days" },
-  { id: "mtd", name: "Month to date" },
-  { id: "qtd", name: "Quarter to date" },
-  { id: "custom", name: "Custom" },
+// Date range presets — keys map to translation keys in i18n.
+export const dateRangePresets = [
+  { id: "today", labelKey: "dateToday" as const },
+  { id: "yesterday", labelKey: "dateYesterday" as const },
+  { id: "7d", labelKey: "date7d" as const },
+  { id: "30d", labelKey: "date30d" as const },
+  { id: "mtd", labelKey: "dateMtd" as const },
+  { id: "qtd", labelKey: "dateQtd" as const },
+  { id: "custom", labelKey: "dateCustom" as const },
 ];
 
 export type Kpi = {
   key: string;
-  label: string;
+  labelKey?: string; // translation key
+  label: string; // fallback
   value: number;
   unit?: "currency" | "number" | "percent";
-  delta?: number; // percent vs previous period
+  delta?: number;
   hint?: string;
 };
 
 export const overviewKpis: Kpi[] = [
-  { key: "spend", label: "Spend", value: 184320, unit: "currency", delta: 8.4 },
-  { key: "reach", label: "Reach", value: 2840000, unit: "number", delta: 12.1 },
-  { key: "clicks", label: "Clicks", value: 96420, unit: "number", delta: 4.6 },
-  { key: "regs", label: "Registrations", value: 14820, unit: "number", delta: -2.3 },
-  { key: "apps", label: "Applications", value: 3210, unit: "number", delta: 5.7 },
-  { key: "bookings", label: "Bookings", value: 1840, unit: "number", delta: 1.2 },
-  { key: "viewers", label: "Viewers", value: 7820, unit: "number", delta: -0.8 },
-  { key: "sales", label: "Sales", value: 612, unit: "number", delta: 9.4 },
-  { key: "revPlan", label: "Revenue Plan", value: 480000, unit: "currency" },
-  { key: "revFact", label: "Revenue Fact", value: 512840, unit: "currency", delta: 6.8 },
-  { key: "roas", label: "ROAS", value: 2.78, unit: "number", delta: 3.1, hint: "x" },
+  { key: "spend", labelKey: "kpiSpend", label: "Spend", value: 184320, unit: "currency", delta: 8.4 },
+  { key: "reach", labelKey: "kpiReach", label: "Reach", value: 2840000, unit: "number", delta: 12.1 },
+  { key: "clicks", labelKey: "kpiClicks", label: "Clicks", value: 96420, unit: "number", delta: 4.6 },
+  { key: "regs", labelKey: "kpiRegs", label: "Registrations", value: 14820, unit: "number", delta: -2.3 },
+  { key: "apps", labelKey: "kpiApps", label: "Applications", value: 3210, unit: "number", delta: 5.7 },
+  { key: "bookings", labelKey: "kpiBookings", label: "Bookings", value: 1840, unit: "number", delta: 1.2 },
+  { key: "viewers", labelKey: "kpiViewers", label: "Viewers", value: 7820, unit: "number", delta: -0.8 },
+  { key: "sales", labelKey: "kpiSales", label: "Sales", value: 612, unit: "number", delta: 9.4 },
+  { key: "revPlan", labelKey: "kpiRevPlan", label: "Revenue Plan", value: 480000, unit: "currency" },
+  { key: "revFact", labelKey: "kpiRevFact", label: "Revenue Fact", value: 512840, unit: "currency", delta: 6.8 },
+  { key: "roas", labelKey: "kpiRoas", label: "ROAS", value: 2.78, unit: "number", delta: 3.1, hint: "x" },
+  { key: "cpl", labelKey: "kpiCpl", label: "CPL", value: 12.43, unit: "currency", delta: -3.2 },
 ];
 
 export const revenueVsSpend = [
@@ -66,6 +70,43 @@ export const revenueVsSpend = [
   { day: "Apr 27", revenue: 35100, spend: 8900 },
 ];
 
+// Daily breakdown — first-class daily fact rows.
+export type DailyRow = {
+  date: string; // ISO
+  spend: number;
+  reach: number;
+  clicks: number;
+  regs: number;
+  apps: number;
+  bookings: number;
+  viewers: number;
+  sales: number;
+  revenue: number;
+  cpl: number;
+  roas: number;
+};
+
+const dailyDates = [
+  "2026-04-14","2026-04-15","2026-04-16","2026-04-17","2026-04-18",
+  "2026-04-19","2026-04-20","2026-04-21","2026-04-22","2026-04-23",
+  "2026-04-24","2026-04-25","2026-04-26","2026-04-27",
+];
+
+export const dailyAnalytics: DailyRow[] = dailyDates.map((d, i) => {
+  const spend = 6200 + i * 220 + (i % 3) * 180;
+  const reach = 180000 + i * 9400 + (i % 4) * 5200;
+  const clicks = 5400 + i * 240 + (i % 3) * 110;
+  const regs = 820 + i * 32 + (i % 5) * 18;
+  const apps = Math.round(regs * 0.22);
+  const bookings = Math.round(apps * 0.58);
+  const viewers = Math.round(bookings * 0.74);
+  const sales = Math.round(viewers * 0.34);
+  const revenue = sales * (1100 + (i % 4) * 60);
+  const cpl = +(spend / regs).toFixed(2);
+  const roas = +(revenue / spend).toFixed(2);
+  return { date: d, spend, reach, clicks, regs, apps, bookings, viewers, sales, revenue, cpl, roas };
+});
+
 export const topCampaigns = [
   { campaign: "WBN-Q4-LAL3-Video", project: "Pulse Education", spend: 18420, regs: 1820, sales: 84, revenue: 92400, roas: 5.02 },
   { campaign: "EVG-FB-Interest-A", project: "Atlas Finance", spend: 14200, regs: 1310, sales: 62, revenue: 71800, roas: 5.06 },
@@ -83,10 +124,10 @@ export const topReportGroups = [
 ];
 
 export const anomalies = [
-  { id: 1, severity: "critical" as const, title: "CPL spike on WBN-Q4-Cold-Static", detail: "CPL jumped 78% vs 7-day avg", time: "12 min ago" },
-  { id: 2, severity: "warning" as const, title: "Registrations dropped — Nova Health", detail: "−24% vs yesterday across Spring Launch", time: "1 h ago" },
-  { id: 3, severity: "info" as const, title: "ROAS improved — Atlas Search Brand", detail: "+31% over last 3 days", time: "3 h ago" },
-  { id: 4, severity: "warning" as const, title: "Missing pixel events", detail: "Lead events not received from LP-may-3", time: "5 h ago" },
+  { id: 1, severity: "critical" as const, titleEn: "CPL spike on WBN-Q4-Cold-Static", titleUk: "Стрибок CPL на WBN-Q4-Cold-Static", detailEn: "CPL jumped 78% vs 7-day avg", detailUk: "CPL зріс на 78% проти 7-денного середнього", time: "12 min ago" },
+  { id: 2, severity: "warning" as const, titleEn: "Registrations dropped — Nova Health", titleUk: "Просіли реєстрації — Nova Health", detailEn: "−24% vs yesterday across Spring Launch", detailUk: "−24% проти вчора по Spring Launch", time: "1 h ago" },
+  { id: 3, severity: "info" as const, titleEn: "ROAS improved — Atlas Search Brand", titleUk: "ROAS покращився — Atlas Search Brand", detailEn: "+31% over last 3 days", detailUk: "+31% за останні 3 дні", time: "3 h ago" },
+  { id: 4, severity: "warning" as const, titleEn: "Missing pixel events", titleUk: "Відсутні pixel-події", detailEn: "Lead events not received from LP-may-3", detailUk: "Не приходять lead-події з LP-may-3", time: "5 h ago" },
 ];
 
 export const dataFreshness = [
@@ -97,21 +138,28 @@ export const dataFreshness = [
   { source: "Webinar Platform", lastSync: "Failed", status: "failed" as const },
 ];
 
-export const aiInsights = [
-  "ROAS for Atlas Finance grew +18% this week, driven by Search Brand campaign — consider scaling budget by 20-30%.",
-  "Registrations on Nova Health dropped 24% in 24h. Likely cause: creative fatigue on Spring Launch — refresh top 3 ads.",
-  "Retention email-push delivers 7.24x ROAS at low spend. Worth a dedicated test budget next week.",
-];
+export const aiInsights = {
+  uk: [
+    "ROAS Atlas Finance виріс на +18% за тиждень — за рахунок Search Brand. Розгляньте збільшення бюджету на 20–30%.",
+    "Реєстрації Nova Health просіли на 24% за добу. Ймовірна причина — вигорання креативів Spring Launch. Рекомендуємо оновити топ-3 оголошення.",
+    "Retention email-push дає 7.24x ROAS при низьких витратах. Варто виділити окремий тестовий бюджет наступного тижня.",
+  ],
+  en: [
+    "Atlas Finance ROAS grew +18% this week, driven by Search Brand — consider scaling budget by 20-30%.",
+    "Nova Health registrations dropped 24% in 24h. Likely cause: creative fatigue on Spring Launch — refresh top 3 ads.",
+    "Retention email-push delivers 7.24x ROAS at low spend. Worth a dedicated test budget next week.",
+  ],
+};
 
 // Funnel page
 export const funnelSteps = [
-  { step: "Reach", value: 840000, conv: 100 },
-  { step: "Clicks", value: 28400, conv: 3.4 },
-  { step: "Registrations", value: 4820, conv: 17.0 },
-  { step: "Applications", value: 1240, conv: 25.7 },
-  { step: "Bookings", value: 720, conv: 58.1 },
-  { step: "Viewers", value: 510, conv: 70.8 },
-  { step: "Sales", value: 184, conv: 36.1 },
+  { step: "Reach", stepUk: "Охоплення", value: 840000, conv: 100 },
+  { step: "Clicks", stepUk: "Кліки", value: 28400, conv: 3.4 },
+  { step: "Registrations", stepUk: "Реєстрації", value: 4820, conv: 17.0 },
+  { step: "Applications", stepUk: "Заявки", value: 1240, conv: 25.7 },
+  { step: "Bookings", stepUk: "Бронювання", value: 720, conv: 58.1 },
+  { step: "Viewers", stepUk: "Глядачі", value: 510, conv: 70.8 },
+  { step: "Sales", stepUk: "Продажі", value: 184, conv: 36.1 },
 ];
 
 export const dailyTrend = revenueVsSpend.map((d) => ({
@@ -147,7 +195,7 @@ export const salesKpis: Kpi[] = [
   { key: "salesCount", label: "Sales count", value: 612, unit: "number", delta: 9.4 },
   { key: "revFact", label: "Revenue fact", value: 512840, unit: "currency", delta: 6.8 },
   { key: "revPlan", label: "Revenue plan", value: 480000, unit: "currency" },
-  { key: "avgCheck", label: "Average чек", value: 838, unit: "currency", delta: -2.1 },
+  { key: "avgCheck", label: "Avg deal", value: 838, unit: "currency", delta: -2.1 },
   { key: "payConv", label: "Payment conversion", value: 64.2, unit: "percent", delta: 1.8 },
 ];
 
@@ -161,7 +209,7 @@ export const salesBySource = [
 
 export const salesByLeadType = [
   { type: "Webinar", sales: 264, revenue: 232800 },
-  { size: "warm", type: "Application", sales: 184, revenue: 168400 },
+  { type: "Application", sales: 184, revenue: 168400 },
   { type: "Direct booking", sales: 96, revenue: 78200 },
   { type: "Cold / Form", sales: 68, revenue: 33440 },
 ];
@@ -204,24 +252,25 @@ export const unknownMappings = [
 ];
 
 export const dataQualityAlerts = [
-  { id: 1, severity: "warning" as const, message: "fact_daily missing rows for 2026-04-26 (Nova Health)" },
-  { id: 2, severity: "critical" as const, message: "TikTok Ads sync failing for 4+ hours" },
-  { id: 3, severity: "info" as const, message: "Mapping queue has 4 unresolved items" },
+  { id: 1, severity: "warning" as const, messageEn: "fact_daily missing rows for 2026-04-26 (Nova Health)", messageUk: "fact_daily — пропущені рядки за 26.04.2026 (Nova Health)" },
+  { id: 2, severity: "critical" as const, messageEn: "TikTok Ads sync failing for 4+ hours", messageUk: "TikTok Ads — синхронізація не працює понад 4 години" },
+  { id: 3, severity: "info" as const, messageEn: "Mapping queue has 4 unresolved items", messageUk: "У черзі мапінгів 4 невирішені пункти" },
 ];
 
-// AI Assistant
-export const suggestedPrompts = [
-  "Що змінилось за останні 7 днів?",
-  "Які кампанії дали найкращий ROAS?",
-  "Де просіли реєстрації?",
-  "Що зараз працює найкраще?",
-  "Що погіршилось у порівнянні з минулим тижнем?",
-];
-
-export const aiChatSeed = [
-  {
-    role: "assistant" as const,
-    content:
-      "Привіт 👋 Я аналітичний асистент. Я працюю тільки з підготовленими fact-таблицями і не змінюю сирі дані чи мапінги. Спитай про метрики, кампанії або тренди.",
-  },
-];
+// AI Assistant — bilingual prompts
+export const suggestedPromptsByLang = {
+  uk: [
+    "Що змінилось за останні 7 днів?",
+    "Які кампанії дали найкращий ROAS?",
+    "Де просіли реєстрації?",
+    "Що зараз працює найкраще?",
+    "Що погіршилось у порівнянні з минулим тижнем?",
+  ],
+  en: [
+    "What changed in the last 7 days?",
+    "Which campaigns delivered the best ROAS?",
+    "Where did registrations drop?",
+    "What is performing best right now?",
+    "What got worse compared to last week?",
+  ],
+};
