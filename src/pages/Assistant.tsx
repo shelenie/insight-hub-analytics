@@ -143,7 +143,10 @@ export default function Assistant() {
                 );
               }
               // assistant-card
-              return <ResponseCard key={i} data={m.data} />;
+              if (m.role === "assistant-card") {
+                return <ResponseCard key={i} data={m.data} />;
+              }
+              return null;
             })}
           </div>
 
