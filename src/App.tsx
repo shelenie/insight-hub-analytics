@@ -3,33 +3,87 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { I18nProvider } from "@/i18n/I18nProvider";
+import { ThemeProvider } from "@/theme/ThemeProvider";
+import { AuthProvider } from "@/auth/AuthProvider";
+import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import Overview from "./pages/Overview";
 import Funnel from "./pages/Funnel";
 import Campaigns from "./pages/Campaigns";
 import Sales from "./pages/Sales";
 import Imports from "./pages/Imports";
 import Assistant from "./pages/Assistant";
+import Login from "./pages/Login";
 import NotFound from "./pages/NotFound.tsx";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Overview />} />
-          <Route path="/funnel" element={<Funnel />} />
-          <Route path="/campaigns" element={<Campaigns />} />
-          <Route path="/sales" element={<Sales />} />
-          <Route path="/imports" element={<Imports />} />
-          <Route path="/assistant" element={<Assistant />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ThemeProvider>
+      <I18nProvider>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route
+                  path="/"
+                  element={
+                    <ProtectedRoute>
+                      <Overview />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/funnel"
+                  element={
+                    <ProtectedRoute>
+                      <Funnel />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/campaigns"
+                  element={
+                    <ProtectedRoute>
+                      <Campaigns />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/sales"
+                  element={
+                    <ProtectedRoute>
+                      <Sales />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/imports"
+                  element={
+                    <ProtectedRoute>
+                      <Imports />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/assistant"
+                  element={
+                    <ProtectedRoute>
+                      <Assistant />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
+      </I18nProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
