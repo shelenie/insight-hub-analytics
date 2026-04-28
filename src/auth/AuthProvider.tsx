@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
 
@@ -6,6 +6,8 @@ interface AuthContextValue {
   session: Session | null;
   user: User | null;
   loading: boolean;
+  /** True once we've completed the initial getSession check at least once. */
+  initialized: boolean;
   signOut: () => Promise<void>;
   signInWithMagicLink: (email: string) => Promise<{ error: string | null }>;
 }
@@ -15,18 +17,26 @@ const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
+  const hasInitial = useRef(false);
 
   useEffect(() => {
-    // Set up listener FIRST
+    // Listener first — captures sign-in/out, token refresh, OAuth redirect.
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
-      setLoading(false);
+      if (hasInitial.current) {
+        setLoading(false);
+      }
     });
-    // Then check existing session
+
+    // Then read persisted session from localStorage.
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
+      hasInitial.current = true;
+      setInitialized(true);
       setLoading(false);
     });
+
     return () => sub.subscription.unsubscribe();
   }, []);
 
@@ -38,7 +48,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        // Invite-only: do not create new users via magic link.
+        // Invite-only.
         shouldCreateUser: false,
         emailRedirectTo: window.location.origin,
       },
@@ -48,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ session, user: session?.user ?? null, loading, signOut, signInWithMagicLink }}
+      value={{ session, user: session?.user ?? null, loading, initialized, signOut, signInWithMagicLink }}
     >
       {children}
     </AuthContext.Provider>
