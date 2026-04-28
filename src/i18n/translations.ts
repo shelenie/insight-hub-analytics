@@ -261,6 +261,20 @@ export const translations = {
   // Sales
   salesTitle: { uk: "Продажі / Виторг", en: "Sales / Revenue" },
   salesSubtitle: { uk: "Внутрішня аналітика продажів", en: "Internal sales analytics" },
+  salesBySource: { uk: "Продажі за джерелом", en: "Sales by source" },
+  salesByLeadType: { uk: "Продажі за типом ліда", en: "Sales by lead type" },
+  salesByTariff: { uk: "Продажі за тарифом", en: "Sales by tariff" },
+  source: { uk: "Джерело", en: "Source" },
+  leadType: { uk: "Тип ліда", en: "Lead type" },
+  tariff: { uk: "Тариф", en: "Tariff" },
+  avgDeal: { uk: "Сер. чек", en: "Avg deal" },
+  revenueOverTime: { uk: "Виторг по днях", en: "Revenue over time" },
+  revenueOverTimeDesc: { uk: "Денний виторг (факт)", en: "Daily revenue (fact)" },
+  dopayNoteTitle: { uk: "Як обробляється «доплата»", en: "About “доплата” handling" },
+  dopayNote: {
+    uk: "Доплати не враховуються у кількості продажів, щоб уникнути подвійного підрахунку угод, але сума платежу включена у фактичний виторг. Це зберігає чисту воронку та коректну виручку.",
+    en: "Top-up payments (доплата) are excluded from sales count to avoid double-counting deals, but the payment amount is still included in revenue fact.",
+  },
 
   // Funnel
   funnelTitle: { uk: "Воронка / Звіт", en: "Funnel / Report" },
