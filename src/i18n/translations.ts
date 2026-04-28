@@ -264,6 +264,7 @@ export const translations = {
 
   // Funnel
   funnelTitle: { uk: "Воронка / Звіт", en: "Funnel / Report" },
+  funnelSubtitle: { uk: "Головний робочий екран аналітика", en: "Main analyst working screen" },
   conversionFlow: { uk: "Послідовність конверсій", en: "Conversion flow" },
   conversionFlowDesc: {
     uk: "Перехід між кроками воронки",
