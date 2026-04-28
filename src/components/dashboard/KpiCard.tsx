@@ -3,13 +3,19 @@ import { fmtKpi, fmtDelta } from "@/lib/format";
 import { ArrowDown, ArrowUp, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Kpi } from "@/data/mock";
+import { useDateFilter } from "@/filters/DateContext";
+import { useI18n } from "@/i18n/I18nProvider";
 
 interface KpiCardProps extends Kpi {
   compact?: boolean;
+  /** When true, renders a small subtitle showing the active date context */
+  showDateContext?: boolean;
 }
 
-export function KpiCard({ label, value, unit, delta, hint, compact }: KpiCardProps) {
+export function KpiCard({ label, value, unit, delta, hint, compact, showDateContext }: KpiCardProps) {
   const trend = delta === undefined ? "flat" : delta > 0 ? "up" : delta < 0 ? "down" : "flat";
+  const date = useDateFilter();
+  const { lang } = useI18n();
   return (
     <Card className="shadow-card hover:shadow-card-md transition-shadow">
       <CardContent className={cn("p-4", compact && "p-3")}>
@@ -36,12 +42,25 @@ export function KpiCard({ label, value, unit, delta, hint, compact }: KpiCardPro
             </div>
           )}
         </div>
+        {showDateContext && (
+          <div className="mt-1.5 truncate text-[10px] text-muted-foreground">
+            {date.contextLabel(lang)}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
-export function KpiGrid({ kpis, columns = 4 }: { kpis: Kpi[]; columns?: 3 | 4 | 5 | 6 }) {
+export function KpiGrid({
+  kpis,
+  columns = 4,
+  showDateContext = true,
+}: {
+  kpis: Kpi[];
+  columns?: 3 | 4 | 5 | 6;
+  showDateContext?: boolean;
+}) {
   const colsClass: Record<number, string> = {
     3: "md:grid-cols-3",
     4: "md:grid-cols-2 lg:grid-cols-4",
@@ -51,7 +70,7 @@ export function KpiGrid({ kpis, columns = 4 }: { kpis: Kpi[]; columns?: 3 | 4 | 
   return (
     <div className={cn("grid grid-cols-2 gap-3", colsClass[columns])}>
       {kpis.map((k) => (
-        <KpiCard key={k.key} {...k} />
+        <KpiCard key={k.key} {...k} showDateContext={showDateContext} />
       ))}
     </div>
   );

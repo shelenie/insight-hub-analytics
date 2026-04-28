@@ -38,6 +38,31 @@ export const translations = {
   dateMtd: { uk: "З початку місяця", en: "Month to date" },
   dateQtd: { uk: "З початку кварталу", en: "Quarter to date" },
   dateCustom: { uk: "Свій період", en: "Custom range" },
+  dateExact: { uk: "Конкретна дата", en: "Specific date" },
+  dateMode: { uk: "Режим", en: "Mode" },
+  quickPresets: { uk: "Швидкий вибір", en: "Quick presets" },
+  apply: { uk: "Застосувати", en: "Apply" },
+  pickPresetHint: { uk: "Оберіть пресет або режим зліва", en: "Pick a preset or mode on the left" },
+  activeRange: { uk: "Активний період", en: "Active range" },
+  activeDate: { uk: "Активна дата", en: "Active date" },
+
+  // Funnel blocks
+  blockTraffic: { uk: "Трафік", en: "Traffic" },
+  blockRegs: { uk: "Реєстрації", en: "Registrations" },
+  blockViewers: { uk: "Глядачі", en: "Viewers" },
+  blockApps: { uk: "Анкети", en: "Surveys" },
+  blockBookings: { uk: "Заявки", en: "Applications" },
+  blockReservations: { uk: "Броні", en: "Bookings" },
+  blockSales: { uk: "Продажі", en: "Sales" },
+  blockRevenue: { uk: "Revenue Plan / Fact", en: "Revenue Plan / Fact" },
+  blockRoas: { uk: "ROAS", en: "ROAS" },
+
+  // Imports per source
+  perSourceTitle: { uk: "По джерелах", en: "By source" },
+  perSourceDesc: { uk: "Стан кожного джерела даних", en: "Status of each data source" },
+  thLastSync: { uk: "Остання синхр.", en: "Last sync" },
+  thRowsToday: { uk: "Сьогодні", en: "Today" },
+  thHealth: { uk: "Стан", en: "Health" },
 
   // Buttons
   export: { uk: "Експорт", en: "Export" },
@@ -236,9 +261,24 @@ export const translations = {
   // Sales
   salesTitle: { uk: "Продажі / Виторг", en: "Sales / Revenue" },
   salesSubtitle: { uk: "Внутрішня аналітика продажів", en: "Internal sales analytics" },
+  salesBySource: { uk: "Продажі за джерелом", en: "Sales by source" },
+  salesByLeadType: { uk: "Продажі за типом ліда", en: "Sales by lead type" },
+  salesByTariff: { uk: "Продажі за тарифом", en: "Sales by tariff" },
+  source: { uk: "Джерело", en: "Source" },
+  leadType: { uk: "Тип ліда", en: "Lead type" },
+  tariff: { uk: "Тариф", en: "Tariff" },
+  avgDeal: { uk: "Сер. чек", en: "Avg deal" },
+  revenueOverTime: { uk: "Виторг по днях", en: "Revenue over time" },
+  revenueOverTimeDesc: { uk: "Денний виторг (факт)", en: "Daily revenue (fact)" },
+  dopayNoteTitle: { uk: "Як обробляється «доплата»", en: "About “доплата” handling" },
+  dopayNote: {
+    uk: "Доплати не враховуються у кількості продажів, щоб уникнути подвійного підрахунку угод, але сума платежу включена у фактичний виторг. Це зберігає чисту воронку та коректну виручку.",
+    en: "Top-up payments (доплата) are excluded from sales count to avoid double-counting deals, but the payment amount is still included in revenue fact.",
+  },
 
   // Funnel
   funnelTitle: { uk: "Воронка / Звіт", en: "Funnel / Report" },
+  funnelSubtitle: { uk: "Головний робочий екран аналітика", en: "Main analyst working screen" },
   conversionFlow: { uk: "Послідовність конверсій", en: "Conversion flow" },
   conversionFlowDesc: {
     uk: "Перехід між кроками воронки",

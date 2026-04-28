@@ -15,6 +15,7 @@ import {
   unknownMappings,
   dataQualityAlerts,
   dataFreshness,
+  sourcesHealth,
 } from "@/data/mock";
 import { fmtNum } from "@/lib/format";
 import {
@@ -82,6 +83,45 @@ export default function Imports() {
             </div>
           </div>
         )}
+
+        {/* Per-source health table */}
+        <SectionCard title={t("perSourceTitle")} description={t("perSourceDesc")} noPadding>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("thSource")}</TableHead>
+                  <TableHead>{t("thLastSync")}</TableHead>
+                  <TableHead className="text-right">{t("thRowsToday")}</TableHead>
+                  <TableHead className="text-right">{t("thInserted")}</TableHead>
+                  <TableHead className="text-right">{t("thFailed")}</TableHead>
+                  <TableHead>{t("thStatus")}</TableHead>
+                  <TableHead>{t("thHealth")}</TableHead>
+                  <TableHead className="text-right">{t("thAction")}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sourcesHealth.map((s) => (
+                  <TableRow key={s.source} className="text-xs">
+                    <TableCell className="font-medium">{s.source} <span className="text-muted-foreground">→ {s.target}</span></TableCell>
+                    <TableCell className="text-muted-foreground num">{s.lastSync}</TableCell>
+                    <TableCell className="text-right num">{fmtNum(s.rowsToday)}</TableCell>
+                    <TableCell className="text-right num">{fmtNum(s.inserted)}</TableCell>
+                    <TableCell className={`text-right num ${s.failed > 0 ? "text-destructive font-medium" : "text-muted-foreground"}`}>{s.failed}</TableCell>
+                    <TableCell><StatusBadge status={s.status} /></TableCell>
+                    <TableCell><StatusBadge status={s.health} /></TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs">
+                        <RotateCw className="h-3 w-3" />
+                        {t("retry")}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </SectionCard>
 
         {/* Data quality alerts */}
         <SectionCard title={t("qualityAlerts")} noPadding>

@@ -7,6 +7,7 @@ import { I18nProvider } from "@/i18n/I18nProvider";
 import { ThemeProvider } from "@/theme/ThemeProvider";
 import { AuthProvider } from "@/auth/AuthProvider";
 import { ProtectedRoute } from "@/auth/ProtectedRoute";
+import { DateFilterProvider } from "@/filters/DateContext";
 import Overview from "./pages/Overview";
 import Funnel from "./pages/Funnel";
 import Campaigns from "./pages/Campaigns";
@@ -23,64 +24,24 @@ const App = () => (
     <ThemeProvider>
       <I18nProvider>
         <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route
-                  path="/"
-                  element={
-                    <ProtectedRoute>
-                      <Overview />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/funnel"
-                  element={
-                    <ProtectedRoute>
-                      <Funnel />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/campaigns"
-                  element={
-                    <ProtectedRoute>
-                      <Campaigns />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/sales"
-                  element={
-                    <ProtectedRoute>
-                      <Sales />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/imports"
-                  element={
-                    <ProtectedRoute>
-                      <Imports />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/assistant"
-                  element={
-                    <ProtectedRoute>
-                      <Assistant />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
+          <DateFilterProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Routes>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
+                  <Route path="/funnel" element={<ProtectedRoute><Funnel /></ProtectedRoute>} />
+                  <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
+                  <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
+                  <Route path="/imports" element={<ProtectedRoute><Imports /></ProtectedRoute>} />
+                  <Route path="/assistant" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </BrowserRouter>
+            </TooltipProvider>
+          </DateFilterProvider>
         </AuthProvider>
       </I18nProvider>
     </ThemeProvider>

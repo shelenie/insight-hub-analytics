@@ -257,6 +257,16 @@ export const dataQualityAlerts = [
   { id: 3, severity: "info" as const, messageEn: "Mapping queue has 4 unresolved items", messageUk: "У черзі мапінгів 4 невирішені пункти" },
 ];
 
+// Per-source health snapshot — used on Imports page.
+export const sourcesHealth = [
+  { source: "Facebook Ads",     target: "fact_campaigns", lastSync: "2 min ago",  rowsToday: 4820, inserted: 4820, failed: 0,  status: "fresh" as const,  health: "healthy" as const },
+  { source: "Google Ads",       target: "fact_campaigns", lastSync: "8 min ago",  rowsToday: 1240, inserted: 1234, failed: 6,  status: "fresh" as const,  health: "warning" as const },
+  { source: "TikTok Ads",       target: "fact_campaigns", lastSync: "4 h ago",    rowsToday: 0,    inserted: 0,    failed: 0,  status: "failed" as const, health: "critical" as const },
+  { source: "CRM Sales",        target: "fact_sales",     lastSync: "12 min ago", rowsToday: 612,  inserted: 612,  failed: 0,  status: "fresh" as const,  health: "healthy" as const },
+  { source: "Webinar Platform", target: "fact_daily",     lastSync: "6 h ago",    rowsToday: 96,   inserted: 96,   failed: 0,  status: "stale" as const,  health: "warning" as const },
+  { source: "Google Sheets",    target: "fact_sales",     lastSync: "30 min ago", rowsToday: 184,  inserted: 178,  failed: 6,  status: "fresh" as const,  health: "warning" as const },
+];
+
 // AI Assistant — bilingual prompts
 export const suggestedPromptsByLang = {
   uk: [
