@@ -38,6 +38,31 @@ export const translations = {
   dateMtd: { uk: "З початку місяця", en: "Month to date" },
   dateQtd: { uk: "З початку кварталу", en: "Quarter to date" },
   dateCustom: { uk: "Свій період", en: "Custom range" },
+  dateExact: { uk: "Конкретна дата", en: "Specific date" },
+  dateMode: { uk: "Режим", en: "Mode" },
+  quickPresets: { uk: "Швидкий вибір", en: "Quick presets" },
+  apply: { uk: "Застосувати", en: "Apply" },
+  pickPresetHint: { uk: "Оберіть пресет або режим зліва", en: "Pick a preset or mode on the left" },
+  activeRange: { uk: "Активний період", en: "Active range" },
+  activeDate: { uk: "Активна дата", en: "Active date" },
+
+  // Funnel blocks
+  blockTraffic: { uk: "Трафік", en: "Traffic" },
+  blockRegs: { uk: "Реєстрації", en: "Registrations" },
+  blockViewers: { uk: "Глядачі", en: "Viewers" },
+  blockApps: { uk: "Анкети", en: "Surveys" },
+  blockBookings: { uk: "Заявки", en: "Applications" },
+  blockReservations: { uk: "Броні", en: "Bookings" },
+  blockSales: { uk: "Продажі", en: "Sales" },
+  blockRevenue: { uk: "Revenue Plan / Fact", en: "Revenue Plan / Fact" },
+  blockRoas: { uk: "ROAS", en: "ROAS" },
+
+  // Imports per source
+  perSourceTitle: { uk: "По джерелах", en: "By source" },
+  perSourceDesc: { uk: "Стан кожного джерела даних", en: "Status of each data source" },
+  thLastSync: { uk: "Остання синхр.", en: "Last sync" },
+  thRowsToday: { uk: "Сьогодні", en: "Today" },
+  thHealth: { uk: "Стан", en: "Health" },
 
   // Buttons
   export: { uk: "Експорт", en: "Export" },
