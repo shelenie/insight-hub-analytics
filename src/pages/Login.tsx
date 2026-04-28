@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/auth/AuthProvider";
 import { useI18n } from "@/i18n/I18nProvider";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,10 @@ import { ThemeSwitcher } from "@/components/header/ThemeSwitcher";
 import { lovable } from "@/integrations/lovable";
 
 export default function Login() {
-  const { session, signInWithMagicLink } = useAuth();
+  const { session, loading, signInWithMagicLink } = useAuth();
   const { t } = useI18n();
+  const loc = useLocation();
+  const fromPath = (loc.state as { from?: string } | null)?.from ?? "/";
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
@@ -32,9 +34,17 @@ export default function Login() {
       return;
     }
     if (result.redirected) return;
+    // Inline-completed OAuth: state listener will set session; redirect happens below.
   }
 
-  if (session) return <Navigate to="/" replace />;
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+  if (session) return <Navigate to={fromPath} replace />;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
