@@ -225,6 +225,12 @@ export const translations = {
     uk: "Якщо вас немає в списку запрошених — зверніться до адміністратора.",
     en: "If you're not on the invite list, contact your workspace admin.",
   },
+  signInWithGoogle: { uk: "Увійти через Google", en: "Sign in with Google" },
+  orDivider: { uk: "або", en: "or" },
+  googleSignInError: {
+    uk: "Не вдалось увійти через Google. Спробуйте ще раз.",
+    en: "Couldn't sign in with Google. Please try again.",
+  },
   myAccount: { uk: "Мій акаунт", en: "My account" },
 
   // Sales
