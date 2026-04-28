@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Activity, Mail, Loader2 } from "lucide-react";
 import { LangSwitcher } from "@/components/header/LangSwitcher";
 import { ThemeSwitcher } from "@/components/header/ThemeSwitcher";
+import { lovable } from "@/integrations/lovable";
 
 export default function Login() {
   const { session, signInWithMagicLink } = useAuth();
@@ -15,6 +16,23 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  async function handleGoogleSignIn() {
+    setGoogleLoading(true);
+    setStatus("idle");
+    setErrorMsg(null);
+    const result = await lovable.auth.signInWithOAuth("google", {
+      redirect_uri: window.location.origin,
+    });
+    if (result.error) {
+      setGoogleLoading(false);
+      setStatus("error");
+      setErrorMsg(t("googleSignInError"));
+      return;
+    }
+    if (result.redirected) return;
+  }
 
   if (session) return <Navigate to="/" replace />;
 
