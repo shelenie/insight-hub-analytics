@@ -9,12 +9,14 @@ import { Activity, Mail, Loader2 } from "lucide-react";
 import { LangSwitcher } from "@/components/header/LangSwitcher";
 import { ThemeSwitcher } from "@/components/header/ThemeSwitcher";
 import { lovable } from "@/integrations/lovable";
+import { usePreferences } from "@/preferences/PreferencesProvider";
 
 export default function Login() {
   const { session, loading, signInWithMagicLink } = useAuth();
   const { t } = useI18n();
+  const { defaultLanding } = usePreferences();
   const loc = useLocation();
-  const fromPath = (loc.state as { from?: string } | null)?.from ?? "/";
+  const fromPath = (loc.state as { from?: string } | null)?.from ?? defaultLanding ?? "/";
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);

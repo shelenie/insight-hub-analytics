@@ -14,7 +14,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { LogOut, Languages, Sun, Check } from "lucide-react";
+import { LogOut, Languages, Sun, Check, Settings2 } from "lucide-react";
+import { PreferencesDialog } from "./PreferencesDialog";
 
 function initialsFromEmail(email?: string | null) {
   if (!email) return "··";
@@ -87,6 +88,18 @@ export function UserMenu() {
           </DropdownMenuSubContent>
         </DropdownMenuSub>
 
+        <DropdownMenuSeparator />
+        <PreferencesDialog
+          trigger={
+            <DropdownMenuItem
+              onSelect={(e) => e.preventDefault()}
+              className="gap-2 text-xs"
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+              {t("preferences")}
+            </DropdownMenuItem>
+          }
+        />
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => signOut()} className="gap-2 text-xs text-destructive focus:text-destructive">
           <LogOut className="h-3.5 w-3.5" />

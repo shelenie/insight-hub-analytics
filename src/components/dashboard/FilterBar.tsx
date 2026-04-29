@@ -7,6 +7,8 @@ import { StatusBadge } from "./StatusBadge";
 import { useI18n } from "@/i18n/I18nProvider";
 import { DateFilter } from "./DateFilter";
 import { useDateFilter } from "@/filters/DateContext";
+import { SavedViewsMenu } from "./SavedViewsMenu";
+import { CompareControl } from "./CompareControl";
 
 interface FilterBarProps {
   showProject?: boolean;
@@ -100,6 +102,8 @@ export function FilterBar({
         {extra}
 
         <div className="ml-auto flex items-center gap-2">
+          <SavedViewsMenu />
+          <CompareControl />
           {freshness && (
             <div className="hidden md:flex items-center gap-2 text-[11px] text-muted-foreground">
               <span>{t("data")}</span>

@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { suggestedPromptsByLang } from "@/data/mock";
 import { fmtCurrency } from "@/lib/format";
-import { Sparkles, Send, User, Bot, BarChart3 } from "lucide-react";
-import { useState } from "react";
+import { Sparkles, Send, User, Bot, BarChart3, Plus, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -107,6 +107,31 @@ export default function Assistant() {
 
   const prompts = suggestedPromptsByLang[lang];
 
+  // Custom AI prompt presets, persisted per browser
+  const [customPrompts, setCustomPrompts] = useState<string[]>(() => {
+    try {
+      const raw = localStorage.getItem("pulse.aiPrompts.v1");
+      return raw ? (JSON.parse(raw) as string[]) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [newPrompt, setNewPrompt] = useState("");
+  useEffect(() => {
+    try {
+      localStorage.setItem("pulse.aiPrompts.v1", JSON.stringify(customPrompts));
+    } catch {
+      /* ignore */
+    }
+  }, [customPrompts]);
+
+  function addCustomPrompt() {
+    const v = newPrompt.trim();
+    if (!v) return;
+    setCustomPrompts((p) => [v, ...p.filter((x) => x !== v)].slice(0, 20));
+    setNewPrompt("");
+  }
+
   return (
     <DashboardLayout title={t("assistantTitle")} subtitle={t("assistantSubtitle")}>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
@@ -123,6 +148,44 @@ export default function Assistant() {
                   {p}
                 </button>
               ))}
+            </div>
+
+            {/* Custom prompt presets */}
+            <div className="mt-3 space-y-2 border-t pt-3">
+              <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+                {lang === "uk" ? "Мої пресети" : "My presets"}
+              </div>
+              <div className="flex items-center gap-1.5">
+                <Input
+                  value={newPrompt}
+                  onChange={(e) => setNewPrompt(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addCustomPrompt()}
+                  placeholder={lang === "uk" ? "Додати запит…" : "Add prompt…"}
+                  className="h-8 text-xs"
+                />
+                <Button size="sm" className="h-8 px-2" onClick={addCustomPrompt} disabled={!newPrompt.trim()}>
+                  <Plus className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                {customPrompts.map((p) => (
+                  <div
+                    key={p}
+                    className="group flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1.5 text-xs"
+                  >
+                    <button onClick={() => sendPrompt(p)} className="flex-1 text-left hover:text-primary">
+                      {p}
+                    </button>
+                    <button
+                      onClick={() => setCustomPrompts((prev) => prev.filter((x) => x !== p))}
+                      className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-destructive group-hover:opacity-100"
+                      aria-label="Remove"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           </SectionCard>
 
