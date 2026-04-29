@@ -43,39 +43,50 @@ export function AppSidebar() {
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
 
   return (
-    <Sidebar collapsible="icon" className="border-r">
-      <SidebarHeader className="border-b">
-        <div className="flex items-center gap-2 px-2 py-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+    <Sidebar collapsible="icon" className="border-r border-sidebar-border">
+      <SidebarHeader className="border-b border-sidebar-border">
+        <div className="flex items-center gap-2.5 px-2 py-2.5">
+          <div className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-accent text-primary-foreground shadow-card-md">
             <Activity className="h-4 w-4" />
+            <span className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-success ring-2 ring-sidebar-background" />
           </div>
           {!collapsed && (
             <div className="flex flex-col leading-tight">
-              <span className="text-sm font-semibold">Pulse</span>
-              <span className="text-[11px] text-muted-foreground">{t("appTagline")}</span>
+              <span className="text-[15px] font-semibold tracking-tight text-foreground">Pulse</span>
+              <span className="text-[10.5px] uppercase tracking-[0.12em] text-muted-foreground">
+                {t("appTagline")}
+              </span>
             </div>
           )}
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-1.5">
         <SidebarGroup>
-          {!collapsed && <SidebarGroupLabel>{t("workspace")}</SidebarGroupLabel>}
+          {!collapsed && (
+            <SidebarGroupLabel className="px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80">
+              {t("workspace")}
+            </SidebarGroupLabel>
+          )}
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-0.5">
               {items.map((item) => {
                 const title = t(item.titleKey);
+                const active = isActive(item.url);
                 return (
                   <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={title}>
-                      <NavLink
-                        to={item.url}
-                        end={item.url === "/"}
-                        className="flex items-center gap-2"
-                        activeClassName="bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-                      >
-                        <item.icon className="h-4 w-4 shrink-0" />
-                        {!collapsed && <span>{title}</span>}
+                    <SidebarMenuButton
+                      asChild
+                      isActive={active}
+                      tooltip={title}
+                      className="relative h-9 rounded-md text-[13px] data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-semibold"
+                    >
+                      <NavLink to={item.url} end={item.url === "/"} className="flex items-center gap-2.5">
+                        {active && (
+                          <span className="absolute left-0 top-1.5 bottom-1.5 w-[2.5px] rounded-r-full bg-primary" />
+                        )}
+                        <item.icon className="h-[15px] w-[15px] shrink-0" />
+                        {!collapsed && <span className="truncate">{title}</span>}
                       </NavLink>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -84,23 +95,27 @@ export function AppSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
+        {!collapsed && <div className="sidebar-sep my-3 mx-2" />}
       </SidebarContent>
 
-      <SidebarFooter className="border-t">
+      <SidebarFooter className="border-t border-sidebar-border">
         {!collapsed ? (
           <div className="px-2 py-2 text-[11px] text-muted-foreground">
             <div className="flex items-center gap-1.5">
-              <span className="h-1.5 w-1.5 rounded-full bg-success" />
-              {t("systemsOk")}
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/60 opacity-50" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+              </span>
+              <span className="font-medium text-foreground/80">{t("systemsOk")}</span>
             </div>
           </div>
         ) : (
           <div className="flex justify-center py-2">
-            <span className="h-1.5 w-1.5 rounded-full bg-success" />
+            <span className="h-2 w-2 rounded-full bg-success" />
           </div>
         )}
       </SidebarFooter>
     </Sidebar>
   );
 }
-
