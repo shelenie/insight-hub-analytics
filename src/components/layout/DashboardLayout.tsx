@@ -20,31 +20,32 @@ export function DashboardLayout({ title, subtitle, actions, children }: Dashboar
   const { t } = useI18n();
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background">
+      <div className="flex min-h-screen w-full bg-background bg-hero">
         <AppSidebar />
         <div className="flex flex-1 flex-col min-w-0">
-          {/* Top bar */}
-          <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-card/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-card/60">
-            <SidebarTrigger />
+          {/* Top bar — glass control surface */}
+          <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-border/60 glass px-4">
+            <SidebarTrigger className="hover:bg-muted/60" />
             <div className="flex flex-1 items-center gap-3">
-              <div className="hidden md:flex items-center gap-1.5 text-sm">
+              <div className="hidden md:flex items-center gap-1.5 text-[13px]">
                 <span className="text-muted-foreground">{t("workspace")}</span>
-                <span className="text-muted-foreground">/</span>
-                <span className="font-medium">{title}</span>
+                <span className="text-muted-foreground/60">/</span>
+                <span className="font-semibold tracking-tight">{title}</span>
               </div>
               <div className="ml-auto flex items-center gap-1.5">
                 <div className="relative hidden lg:block">
                   <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     placeholder={t("searchPlaceholder")}
-                    className="h-8 w-64 pl-8 text-sm"
+                    className="h-8 w-64 border-border/70 bg-background/60 pl-8 text-[13px] focus-visible:ring-1"
                   />
                 </div>
+                <div className="mx-1 hidden h-5 w-px bg-border/70 lg:block" />
                 <LangSwitcher />
                 <ThemeSwitcher />
-                <Button variant="ghost" size="icon" className="h-8 w-8 relative">
+                <Button variant="ghost" size="icon" className="h-8 w-8 relative hover:bg-muted/60">
                   <Bell className="h-4 w-4" />
-                  <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-destructive" />
+                  <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-destructive ring-2 ring-card" />
                 </Button>
                 <UserMenu />
               </div>
@@ -52,12 +53,12 @@ export function DashboardLayout({ title, subtitle, actions, children }: Dashboar
           </header>
 
           {/* Page header */}
-          <div className="border-b bg-card">
+          <div className="border-b border-border/60 bg-card/40 backdrop-blur-sm">
             <div className="flex flex-col gap-3 px-4 py-4 lg:flex-row lg:items-center lg:justify-between lg:px-6 lg:py-5">
               <div className="min-w-0">
-                <h1 className="text-xl font-semibold tracking-tight lg:text-2xl">{title}</h1>
+                <h1 className="text-[22px] font-semibold tracking-tight lg:text-[26px]">{title}</h1>
                 {subtitle && (
-                  <p className="mt-0.5 text-sm text-muted-foreground">{subtitle}</p>
+                  <p className="mt-1 text-[13px] text-muted-foreground">{subtitle}</p>
                 )}
               </div>
               {actions && <div className="flex flex-wrap items-center gap-2">{actions}</div>}
