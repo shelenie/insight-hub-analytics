@@ -38,8 +38,9 @@ export function FilterBar({
 
   return (
     <div className="space-y-1.5">
-      <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-2 shadow-card">
-        <div className="flex items-center gap-1.5 px-1.5 text-xs font-medium text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/70 glass p-2 shadow-card-md">
+        <div className="flex items-center gap-1.5 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <Filter className="h-3.5 w-3.5 text-primary/70" />
           <Filter className="h-3.5 w-3.5" />
           {t("filters")}
         </div>
@@ -119,10 +120,10 @@ export function FilterBar({
 
       {/* Active date context line — appears below filter bar so analyst always sees what KPIs reflect */}
       <div className="flex items-center gap-2 px-1 text-[11px] text-muted-foreground">
-        <span className="inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+        <span className="inline-flex h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_0_3px_hsl(var(--primary)/0.15)]" />
         <span>
           {date.mode === "exact" ? t("activeDate") : t("activeRange")}:
-          <span className="ml-1 font-medium text-foreground">{date.contextLabel(lang)}</span>
+          <span className="ml-1 font-semibold text-foreground">{date.contextLabel(lang)}</span>
         </span>
       </div>
     </div>
