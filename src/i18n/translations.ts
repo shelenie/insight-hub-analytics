@@ -302,6 +302,38 @@ export const translations = {
   bySpend: { uk: "За витратами", en: "By spend" },
   allCampaigns: { uk: "Усі кампанії та плейсменти", en: "All campaigns & placements" },
   rows: { uk: "рядків", en: "rows" },
+
+  // Preferences
+  preferences: { uk: "Налаштування", en: "Preferences" },
+  preferencesDesc: {
+    uk: "Персональні налаштування — зберігаються лише для вас.",
+    en: "Personal settings — saved only for you.",
+  },
+  defaultLanding: { uk: "Стартова сторінка", en: "Default landing page" },
+  defaultDateMode: { uk: "Режим дати за замовч.", en: "Default date mode" },
+  defaultViewMode: { uk: "Режим перегляду за замовч.", en: "Default view mode" },
+  tableDensity: { uk: "Щільність таблиць", en: "Table density" },
+  densityComfortable: { uk: "Комфортна", en: "Comfortable" },
+  densityCompact: { uk: "Щільна", en: "Compact" },
+  currencyFormat: { uk: "Формат валюти", en: "Currency format" },
+  showAiSummary: { uk: "Показувати AI-блок", en: "Show AI summary block" },
+  resetDefaults: { uk: "Скинути", en: "Reset" },
+  done: { uk: "Готово", en: "Done" },
+
+  // Saved views
+  savedViews: { uk: "Збережені види", en: "Saved views" },
+  savedViewNamePlaceholder: { uk: "Назва виду…", en: "View name…" },
+  noSavedViews: { uk: "Немає збережених видів", en: "No saved views yet" },
+
+  // Compare
+  compare: { uk: "Порівняння", en: "Compare" },
+  compareMode: { uk: "Режим порівняння", en: "Compare mode" },
+  compareDisplay: { uk: "Відображення", en: "Display" },
+  compareNone: { uk: "Без порівняння", en: "None" },
+  compareYesterday: { uk: "vs вчора", en: "vs yesterday" },
+  comparePrevious: { uk: "vs попередній період", en: "vs previous period" },
+  comparePercent: { uk: "У відсотках", en: "Percent (%)" },
+  compareAbsolute: { uk: "Абсолютне (Δ)", en: "Absolute (Δ)" },
 } as const;
 
 export type TranslationKey = keyof typeof translations;
