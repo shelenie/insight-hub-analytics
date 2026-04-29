@@ -63,10 +63,11 @@ const sampleResponses = {
 };
 
 const tooltipStyle = {
-  background: "hsl(var(--card))",
+  background: "hsl(var(--popover))",
   border: "1px solid hsl(var(--border))",
-  borderRadius: "8px",
+  borderRadius: "10px",
   fontSize: "12px",
+  boxShadow: "var(--shadow-md)",
 };
 
 export default function Assistant() {
@@ -207,10 +208,10 @@ export default function Assistant() {
               if (m.role === "user") {
                 return (
                   <div key={i} className="flex items-start gap-2.5 self-end max-w-[85%]">
-                    <div className="rounded-2xl rounded-tr-sm bg-primary px-3.5 py-2 text-sm text-primary-foreground">
+                    <div className="rounded-2xl rounded-tr-sm bg-primary px-3.5 py-2 text-[13.5px] text-primary-foreground shadow-card">
                       {m.content}
                     </div>
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-card">
                       <User className="h-3.5 w-3.5 text-muted-foreground" />
                     </div>
                   </div>
@@ -219,10 +220,10 @@ export default function Assistant() {
               if (m.role === "assistant") {
                 return (
                   <div key={i} className="flex items-start gap-2.5 max-w-[85%]">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-soft">
-                      <Bot className="h-3.5 w-3.5 text-primary" />
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-accent text-primary-foreground">
+                      <Bot className="h-3.5 w-3.5" />
                     </div>
-                    <div className="rounded-2xl rounded-tl-sm bg-muted px-3.5 py-2 text-sm">
+                    <div className="rounded-2xl rounded-tl-sm border border-border/70 bg-card-elevated px-3.5 py-2 text-[13.5px]">
                       {m.content}
                     </div>
                   </div>
