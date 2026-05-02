@@ -104,13 +104,15 @@ export function KpiGrid({
   showDateContext = true,
   accentFirst = true,
   emphasisKeys,
+  subtitleMode = "all",
 }: {
   kpis: Kpi[];
   columns?: 3 | 4 | 5 | 6;
   showDateContext?: boolean;
   accentFirst?: boolean;
-  /** KPI keys that should render with stronger premium emphasis */
   emphasisKeys?: string[];
+  /** "all": every card shows date subtitle; "emphasis": only emphasized cards do */
+  subtitleMode?: "all" | "emphasis";
 }) {
   const colsClass: Record<number, string> = {
     3: "md:grid-cols-3",
@@ -120,15 +122,18 @@ export function KpiGrid({
   };
   return (
     <div className={cn("grid grid-cols-2 gap-3", colsClass[columns])}>
-      {kpis.map((k, i) => (
-        <KpiCard
-          key={k.key}
-          {...k}
-          showDateContext={showDateContext}
-          accent={accentFirst && i === 0}
-          emphasis={emphasisKeys?.includes(k.key)}
-        />
-      ))}
+      {kpis.map((k, i) => {
+        const isEmphasis = emphasisKeys?.includes(k.key) ?? false;
+        return (
+          <KpiCard
+            key={k.key}
+            {...k}
+            showDateContext={showDateContext && (subtitleMode === "all" || isEmphasis)}
+            accent={accentFirst && i === 0 && !isEmphasis}
+            emphasis={isEmphasis}
+          />
+        );
+      })}
     </div>
   );
 }
