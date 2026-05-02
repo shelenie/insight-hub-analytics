@@ -3,6 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
+import { KpiGrid } from "@/components/dashboard/KpiCard";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -77,13 +78,17 @@ export default function Overview() {
     <DashboardLayout
       title={t("overviewTitle")}
       subtitle={t("overviewSubtitle")}
+      sync={{ source: "Meta · GA · CRM", lastSync: "2 min", status: "fresh" }}
       actions={
         <>
-          <Button variant="outline" size="sm" className="gap-1.5">
+          <Button variant="outline" size="sm" className="h-9 gap-1.5 border-border/70 bg-card/60">
             <Download className="h-3.5 w-3.5" />
             {t("export")}
           </Button>
-          <Button size="sm" className="gap-1.5">
+          <Button
+            size="sm"
+            className="h-9 gap-1.5 bg-gradient-accent text-primary-foreground shadow-card-md hover:opacity-95"
+          >
             <Sparkles className="h-3.5 w-3.5" />
             {t("askAi")}
           </Button>
@@ -130,12 +135,15 @@ export default function Overview() {
           />
         </div>
 
-        {/* KPI grid - 12 metrics, dense */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-          {overviewKpis.map((k) => (
-            <KpiInline key={k.key} kpi={k} />
-          ))}
-        </div>
+        {/* KPI grid — premium emphasis on Revenue Fact, ROAS, Sales */}
+        <KpiGrid
+          kpis={overviewKpis}
+          columns={6}
+          showDateContext
+          accentFirst={false}
+          emphasisKeys={["revFact", "roas", "sales"]}
+        />
+
 
         {viewMode === "summary" ? (
           <>
@@ -422,21 +430,29 @@ function OpsCard({
   icon: React.ReactNode;
   tone: "success" | "destructive" | "warning" | "info" | "neutral";
 }) {
-  const toneClass: Record<typeof tone, string> = {
-    success: "",
-    destructive: "border-destructive/30",
-    warning: "border-warning/30",
-    info: "",
-    neutral: "",
-  } as any;
+  const accent: Record<string, string> = {
+    success: "before:bg-success/70",
+    destructive: "before:bg-destructive/80",
+    warning: "before:bg-warning/80",
+    info: "before:bg-info/70",
+    neutral: "before:bg-primary/60",
+  };
   return (
-    <div className={`rounded-lg border bg-card p-3 shadow-card ${toneClass[tone]}`}>
-      <div className="flex items-center justify-between">
-        <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
+    <div
+      className={
+        "relative overflow-hidden rounded-lg border border-border/70 bg-card-elevated p-3.5 shadow-card " +
+        "before:absolute before:left-0 before:top-0 before:h-full before:w-[2px] " +
+        accent[tone]
+      }
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+          {label}
+        </div>
         {icon}
       </div>
-      <div className="mt-1 text-base font-semibold num truncate">{value}</div>
-      {sub && <div className="text-[11px] text-muted-foreground truncate">{sub}</div>}
+      <div className="mt-1.5 truncate text-[17px] font-semibold leading-none num tracking-[-0.01em]">{value}</div>
+      {sub && <div className="mt-1.5 truncate text-[11px] text-muted-foreground">{sub}</div>}
     </div>
   );
 }
