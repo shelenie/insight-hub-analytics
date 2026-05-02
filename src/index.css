@@ -7,7 +7,7 @@
 
 @layer base {
   :root {
-    /* Light — elegant, clean, upgraded off-white */
+    /* Light — premium minimal */
     --background: 228 33% 98%;        /* #F7F7FB */
     --foreground: 222 39% 11%;        /* #111827 */
 
@@ -18,26 +18,27 @@
     --popover: 0 0% 100%;
     --popover-foreground: 222 39% 11%;
 
-    /* Soft violet — single main accent */
-    --primary: 248 82% 69%;           /* #7C6CF2 */
+    /* Deep premium violet — single accent */
+    --primary: 258 90% 66%;           /* #8B5CF6 */
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 248 78% 63%;     /* #6D5CE8 */
-    --primary-soft: 248 82% 96%;
-    --primary-glow: 248 82% 78%;
+    --primary-hover: 262 83% 58%;     /* #7C3AED */
+    --primary-soft: 258 90% 96%;
+    --primary-glow: 258 90% 76%;
 
-    --secondary: 225 33% 95%;         /* #F1F3F9 */
+    --secondary: 225 33% 96%;         /* #F1F3F9 */
     --secondary-foreground: 222 25% 18%;
 
-    --muted: 225 33% 95%;
+    --muted: 225 33% 96%;
     --muted-foreground: 220 14% 46%;  /* #667085 */
+    --muted-text: 217 14% 60%;        /* #8A94A6 */
 
-    --accent: 248 82% 96%;
-    --accent-foreground: 248 60% 45%;
+    --accent: 258 90% 96%;
+    --accent-foreground: 262 83% 48%;
 
-    /* Legacy aliases — kept folded into the violet system */
-    --teal: 248 82% 69%;
-    --teal-soft: 248 82% 96%;
-    --violet: 248 82% 69%;
+    /* Legacy aliases — folded into violet */
+    --teal: 258 90% 66%;
+    --teal-soft: 258 90% 96%;
+    --violet: 258 90% 66%;
 
     --success: 142 72% 37%;           /* #16A34A */
     --success-foreground: 0 0% 100%;
@@ -54,28 +55,28 @@
     --info: 200 98% 39%;              /* #0284C7 */
     --info-soft: 199 90% 95%;
 
-    /* Charts — violet-led, neutrals + semantic status tints */
-    --chart-1: 248 82% 69%;           /* violet primary */
-    --chart-2: 248 60% 55%;           /* violet deep */
-    --chart-3: 222 15% 45%;           /* graphite */
-    --chart-4: 248 82% 82%;           /* violet soft */
-    --chart-5: 222 15% 70%;           /* graphite light */
-    --chart-6: 248 40% 40%;           /* violet shadow */
+    /* Charts — violet-led, neutrals + status tints */
+    --chart-1: 258 90% 66%;
+    --chart-2: 262 70% 52%;
+    --chart-3: 222 15% 45%;
+    --chart-4: 258 90% 80%;
+    --chart-5: 222 15% 70%;
+    --chart-6: 262 50% 38%;
 
-    --border: 222 24% 92%;            /* #E5EAF2 */
-    --input: 222 24% 92%;
-    --ring: 248 82% 69%;
+    --border: 218 30% 92%;            /* #E5EAF2 */
+    --input: 218 30% 92%;
+    --ring: 258 90% 66%;
 
     --radius: 0.625rem;
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 20% 30%;
-    --sidebar-primary: 248 82% 69%;
+    --sidebar-primary: 258 90% 66%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 248 82% 96%;
-    --sidebar-accent-foreground: 248 60% 45%;
-    --sidebar-border: 222 24% 92%;
-    --sidebar-ring: 248 82% 69%;
+    --sidebar-accent: 258 90% 96%;
+    --sidebar-accent-foreground: 262 83% 48%;
+    --sidebar-border: 218 30% 92%;
+    --sidebar-ring: 258 90% 66%;
 
     --shadow-sm: 0 1px 2px 0 hsl(222 39% 11% / 0.04);
     --shadow-md:
@@ -86,44 +87,43 @@
       0 16px 40px -12px hsl(222 39% 11% / 0.12);
 
     --gradient-hero:
-      radial-gradient(at 0% 0%, hsl(248 82% 96% / 0.8) 0px, transparent 55%);
-    --gradient-accent: linear-gradient(135deg, hsl(248 82% 69%) 0%, hsl(248 82% 78%) 100%);
+      radial-gradient(at 0% 0%, hsl(258 90% 96% / 0.8) 0px, transparent 55%);
+    --gradient-accent: linear-gradient(135deg, hsl(258 90% 66%) 0%, hsl(258 90% 76%) 100%);
     --glass-bg: hsl(0 0% 100% / 0.78);
-    --glass-border: hsl(222 24% 88% / 0.8);
+    --glass-border: hsl(218 30% 88% / 0.8);
   }
 
   .dark {
-    /* Dark — graphite, minimal blue */
-    --background: 222 15% 8%;         /* #111318 */
-    --foreground: 220 14% 96%;        /* #F3F4F6 */
+    /* Dark — graphite-plum, deep premium violet */
+    --background: 240 22% 8%;         /* #0F0F17 */
+    --foreground: 252 100% 98%;       /* #F5F3FF */
 
-    --card: 222 15% 14%;              /* #1D212B */
-    --card-foreground: 220 14% 96%;
-    --card-elevated: 222 15% 18%;     /* #252A36 */
+    --card: 236 24% 14%;              /* #1C1D2D */
+    --card-foreground: 252 100% 98%;
+    --card-elevated: 234 24% 19%;     /* #23253A */
 
-    --popover: 222 15% 14%;
-    --popover-foreground: 220 14% 96%;
+    --popover: 236 24% 14%;
+    --popover-foreground: 252 100% 98%;
 
-    /* Soft violet — same single accent */
-    --primary: 248 82% 69%;           /* #7C6CF2 */
+    --primary: 258 90% 66%;           /* #8B5CF6 */
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 248 78% 63%;     /* #6D5CE8 */
-    --primary-soft: 248 40% 22%;
-    --primary-glow: 248 82% 78%;
+    --primary-hover: 262 83% 58%;     /* #7C3AED */
+    --primary-soft: 258 40% 22%;
+    --primary-glow: 258 90% 76%;
 
-    --secondary: 222 15% 11%;         /* #171A21 */
-    --secondary-foreground: 220 14% 96%;
+    --secondary: 234 24% 12%;         /* #171826 */
+    --secondary-foreground: 252 100% 98%;
 
-    --muted: 222 15% 16%;
-    --muted-foreground: 222 14% 70%;  /* #A8B0BF */
+    --muted: 234 24% 16%;
+    --muted-foreground: 250 33% 77%;  /* #B7B2D9 */
+    --muted-text: 248 19% 61%;        /* #8E89AF */
 
-    --accent: 248 40% 22%;
-    --accent-foreground: 248 82% 85%;
+    --accent: 258 40% 22%;
+    --accent-foreground: 258 90% 86%;
 
-    /* Legacy aliases — folded into violet */
-    --teal: 248 82% 69%;
-    --teal-soft: 248 40% 22%;
-    --violet: 248 82% 69%;
+    --teal: 258 90% 66%;
+    --teal-soft: 258 40% 22%;
+    --violet: 258 90% 66%;
 
     --success: 142 71% 45%;           /* #22C55E */
     --success-foreground: 0 0% 100%;
@@ -140,25 +140,25 @@
     --info: 199 89% 60%;              /* #38BDF8 */
     --info-soft: 199 40% 20%;
 
-    --chart-1: 248 82% 72%;
-    --chart-2: 248 60% 60%;
-    --chart-3: 222 14% 70%;
-    --chart-4: 248 82% 84%;
-    --chart-5: 222 14% 45%;
-    --chart-6: 248 40% 50%;
+    --chart-1: 258 90% 70%;
+    --chart-2: 262 70% 58%;
+    --chart-3: 250 14% 70%;
+    --chart-4: 258 90% 82%;
+    --chart-5: 240 10% 45%;
+    --chart-6: 262 50% 48%;
 
-    /* rgba(255,255,255,0.08) border feel */
-    --border: 222 10% 20%;
-    --input: 222 10% 20%;
-    --ring: 248 82% 69%;
+    /* rgba(255,255,255,0.08) */
+    --border: 0 0% 100%;
+    --input: 0 0% 100%;
+    --ring: 258 90% 66%;
 
-    --sidebar-background: 222 15% 10%;
-    --sidebar-foreground: 222 14% 75%;
-    --sidebar-primary: 248 82% 69%;
+    --sidebar-background: 234 24% 10%;
+    --sidebar-foreground: 250 20% 78%;
+    --sidebar-primary: 258 90% 66%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 248 40% 22%;
-    --sidebar-accent-foreground: 248 82% 90%;
-    --sidebar-border: 222 10% 16%;
+    --sidebar-accent: 258 40% 22%;
+    --sidebar-accent-foreground: 258 90% 90%;
+    --sidebar-border: 0 0% 100%;
 
     --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.4);
     --shadow-md:
@@ -169,16 +169,19 @@
       0 20px 50px -16px hsl(0 0% 0% / 0.7);
 
     --gradient-hero:
-      radial-gradient(at 0% 0%, hsl(248 82% 69% / 0.08) 0px, transparent 55%);
-    --gradient-accent: linear-gradient(135deg, hsl(248 82% 69%) 0%, hsl(248 60% 55%) 100%);
-    --glass-bg: hsl(222 15% 11% / 0.72);
+      radial-gradient(at 0% 0%, hsl(258 90% 66% / 0.10) 0px, transparent 55%);
+    --gradient-accent: linear-gradient(135deg, hsl(258 90% 66%) 0%, hsl(262 70% 52%) 100%);
+    --glass-bg: hsl(236 24% 12% / 0.72);
     --glass-border: hsl(0 0% 100% / 0.08);
   }
 }
 
 @layer base {
   * {
-    @apply border-border;
+    border-color: hsl(var(--border) / 0.08);
+  }
+  :root * {
+    border-color: hsl(var(--border));
   }
   body {
     @apply bg-background text-foreground antialiased;
