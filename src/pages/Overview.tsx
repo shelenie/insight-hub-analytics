@@ -3,6 +3,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
+import { KpiGrid } from "@/components/dashboard/KpiCard";
 import { Button } from "@/components/ui/button";
 import {
   Table,
