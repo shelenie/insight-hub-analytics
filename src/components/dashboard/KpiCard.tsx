@@ -12,31 +12,52 @@ interface KpiCardProps extends Kpi {
   showDateContext?: boolean;
   /** When true, applies a subtle accent top line — use for the lead KPI in a group */
   accent?: boolean;
+  /** When true, gives the card a stronger premium emphasis (elevated surface, larger value) */
+  emphasis?: boolean;
 }
 
-export function KpiCard({ label, value, unit, delta, hint, compact, showDateContext, accent }: KpiCardProps) {
+export function KpiCard({
+  label,
+  value,
+  unit,
+  delta,
+  hint,
+  compact,
+  showDateContext,
+  accent,
+  emphasis,
+  labelKey,
+}: KpiCardProps) {
   const trend = delta === undefined ? "flat" : delta > 0 ? "up" : delta < 0 ? "down" : "flat";
   const date = useDateFilter();
-  const { lang } = useI18n();
+  const { lang, t } = useI18n();
+  const resolvedLabel = labelKey ? t(labelKey as any) : label;
+
   return (
     <Card
       className={cn(
-        "group relative overflow-hidden border-border/70 bg-card transition-all hover:border-primary/30 hover:shadow-card-md",
-        accent && "ring-accent-top",
+        "group relative overflow-hidden border-border/70 transition-all hover:border-primary/40 hover:shadow-card-md",
+        emphasis ? "bg-card-elevated shadow-card-md" : "bg-card",
+        (accent || emphasis) && "ring-accent-top",
       )}
     >
-      <CardContent className={cn("p-4", compact && "p-3")}>
+      <CardContent className={cn("p-4", compact && "p-3", emphasis && "p-5")}>
         <div className="flex items-center justify-between gap-2">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-            {label}
+          <div
+            className={cn(
+              "text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground",
+              emphasis && "text-[10.5px] text-foreground/70",
+            )}
+          >
+            {resolvedLabel}
           </div>
           {delta !== undefined && (
             <div
               className={cn(
-                "flex items-center gap-0.5 rounded-md px-1.5 py-0.5 text-[10.5px] font-semibold num tabular-nums",
-                trend === "up" && "bg-success-soft text-success",
-                trend === "down" && "bg-destructive-soft text-destructive",
-                trend === "flat" && "bg-muted text-muted-foreground",
+                "flex items-center gap-0.5 rounded-md border px-1.5 py-0.5 text-[10.5px] font-semibold num tabular-nums",
+                trend === "up" && "border-success/20 bg-success-soft text-success",
+                trend === "down" && "border-destructive/20 bg-destructive-soft text-destructive",
+                trend === "flat" && "border-border/60 bg-muted text-muted-foreground",
               )}
             >
               {trend === "up" && <ArrowUp className="h-3 w-3" />}
@@ -46,13 +67,30 @@ export function KpiCard({ label, value, unit, delta, hint, compact, showDateCont
             </div>
           )}
         </div>
-        <div className="mt-2 text-[26px] font-semibold leading-none num text-foreground">
+        <div
+          className={cn(
+            "mt-2.5 font-semibold leading-none num text-foreground",
+            emphasis ? "text-[32px] tracking-[-0.02em]" : "text-[26px] tracking-[-0.01em]",
+          )}
+        >
           {fmtKpi(value, unit, hint)}
         </div>
         {showDateContext && (
-          <div className="mt-2.5 flex items-center gap-1.5 truncate text-[10.5px] text-muted-foreground">
+          <div className="mt-3 flex items-center gap-1.5 truncate text-[10.5px] text-muted-foreground">
             <span className="inline-flex h-1 w-1 rounded-full bg-primary/70" />
-            {date.contextLabel(lang)}
+            <span className="truncate">
+              {lang === "uk" ? "за" : "for"} {date.contextLabel(lang)}
+              {delta !== undefined && (
+                <>
+                  <span className="mx-1.5 text-muted-foreground/40">·</span>
+                  <span className={cn(trend === "up" && "text-success", trend === "down" && "text-destructive")}>
+                    {trend === "up" ? "+" : trend === "down" ? "−" : ""}
+                    {fmtDelta(Math.abs(delta!))}{" "}
+                    <span className="text-muted-foreground">{lang === "uk" ? "vs попередній" : "vs prev"}</span>
+                  </span>
+                </>
+              )}
+            </span>
           </div>
         )}
       </CardContent>
@@ -65,11 +103,14 @@ export function KpiGrid({
   columns = 4,
   showDateContext = true,
   accentFirst = true,
+  emphasisKeys,
 }: {
   kpis: Kpi[];
   columns?: 3 | 4 | 5 | 6;
   showDateContext?: boolean;
   accentFirst?: boolean;
+  /** KPI keys that should render with stronger premium emphasis */
+  emphasisKeys?: string[];
 }) {
   const colsClass: Record<number, string> = {
     3: "md:grid-cols-3",
@@ -80,7 +121,13 @@ export function KpiGrid({
   return (
     <div className={cn("grid grid-cols-2 gap-3", colsClass[columns])}>
       {kpis.map((k, i) => (
-        <KpiCard key={k.key} {...k} showDateContext={showDateContext} accent={accentFirst && i === 0} />
+        <KpiCard
+          key={k.key}
+          {...k}
+          showDateContext={showDateContext}
+          accent={accentFirst && i === 0}
+          emphasis={emphasisKeys?.includes(k.key)}
+        />
       ))}
     </div>
   );
