@@ -78,13 +78,17 @@ export default function Overview() {
     <DashboardLayout
       title={t("overviewTitle")}
       subtitle={t("overviewSubtitle")}
+      sync={{ source: "Meta · GA · CRM", lastSync: "2 min", status: "fresh" }}
       actions={
         <>
-          <Button variant="outline" size="sm" className="gap-1.5">
+          <Button variant="outline" size="sm" className="h-9 gap-1.5 border-border/70 bg-card/60">
             <Download className="h-3.5 w-3.5" />
             {t("export")}
           </Button>
-          <Button size="sm" className="gap-1.5">
+          <Button
+            size="sm"
+            className="h-9 gap-1.5 bg-gradient-accent text-primary-foreground shadow-card-md hover:opacity-95"
+          >
             <Sparkles className="h-3.5 w-3.5" />
             {t("askAi")}
           </Button>
