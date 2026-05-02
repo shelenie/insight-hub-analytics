@@ -130,12 +130,15 @@ export default function Overview() {
           />
         </div>
 
-        {/* KPI grid - 12 metrics, dense */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
-          {overviewKpis.map((k) => (
-            <KpiInline key={k.key} kpi={k} />
-          ))}
-        </div>
+        {/* KPI grid — premium emphasis on Revenue Fact, ROAS, Sales */}
+        <KpiGrid
+          kpis={overviewKpis}
+          columns={6}
+          showDateContext
+          accentFirst={false}
+          emphasisKeys={["revFact", "roas", "sales"]}
+        />
+
 
         {viewMode === "summary" ? (
           <>
