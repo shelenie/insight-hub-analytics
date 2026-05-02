@@ -426,21 +426,29 @@ function OpsCard({
   icon: React.ReactNode;
   tone: "success" | "destructive" | "warning" | "info" | "neutral";
 }) {
-  const toneClass: Record<typeof tone, string> = {
-    success: "",
-    destructive: "border-destructive/30",
-    warning: "border-warning/30",
-    info: "",
-    neutral: "",
-  } as any;
+  const accent: Record<string, string> = {
+    success: "before:bg-success/70",
+    destructive: "before:bg-destructive/80",
+    warning: "before:bg-warning/80",
+    info: "before:bg-info/70",
+    neutral: "before:bg-primary/60",
+  };
   return (
-    <div className={`rounded-lg border bg-card p-3 shadow-card ${toneClass[tone]}`}>
-      <div className="flex items-center justify-between">
-        <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
+    <div
+      className={
+        "relative overflow-hidden rounded-lg border border-border/70 bg-card-elevated p-3.5 shadow-card " +
+        "before:absolute before:left-0 before:top-0 before:h-full before:w-[2px] " +
+        accent[tone]
+      }
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+          {label}
+        </div>
         {icon}
       </div>
-      <div className="mt-1 text-base font-semibold num truncate">{value}</div>
-      {sub && <div className="text-[11px] text-muted-foreground truncate">{sub}</div>}
+      <div className="mt-1.5 truncate text-[17px] font-semibold leading-none num tracking-[-0.01em]">{value}</div>
+      {sub && <div className="mt-1.5 truncate text-[11px] text-muted-foreground">{sub}</div>}
     </div>
   );
 }
