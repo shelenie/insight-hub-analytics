@@ -178,10 +178,7 @@
 
 @layer base {
   * {
-    border-color: hsl(var(--border) / 0.08);
-  }
-  :root * {
-    border-color: hsl(var(--border));
+    @apply border-border;
   }
   body {
     @apply bg-background text-foreground antialiased;
