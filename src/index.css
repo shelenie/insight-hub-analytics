@@ -19,9 +19,9 @@
     --popover-foreground: 222 39% 11%;
 
     /* Indigo-lavender — single accent (#6366F1 solid, lavender→indigo→blue gradient) */
-    --primary: 239 84% 67%;           /* #6366F1 */
+    --primary: 244 100% 69%;           /* #6366F1 */
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 239 70% 58%;     /* darker indigo */
+    --primary-hover: 244 93% 65%;     /* darker indigo */
     --primary-soft: 235 100% 96%;
     --primary-glow: 258 90% 76%;      /* lavender glow tip */
 
@@ -36,7 +36,7 @@
     --accent-foreground: 239 70% 50%;
 
     /* Legacy aliases — folded into indigo */
-    --teal: 239 84% 67%;
+    --teal: 244 100% 69%;
     --teal-soft: 235 100% 96%;
     --violet: 258 90% 66%;
 
@@ -56,7 +56,7 @@
     --info-soft: 199 90% 95%;
 
     /* Charts — indigo-led, with lavender + blue accents and neutrals */
-    --chart-1: 239 84% 67%;           /* indigo #6366F1 */
+    --chart-1: 244 100% 69%;           /* indigo #6366F1 */
     --chart-2: 258 90% 66%;           /* lavender #8B5CF6 */
     --chart-3: 217 91% 60%;           /* blue #3B82F6 */
     --chart-4: 239 84% 80%;
@@ -65,18 +65,18 @@
 
     --border: 218 30% 92%;            /* #E5EAF2 */
     --input: 218 30% 92%;
-    --ring: 239 84% 67%;
+    --ring: 244 100% 69%;
 
     --radius: 0.625rem;
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 20% 30%;
-    --sidebar-primary: 239 84% 67%;
+    --sidebar-primary: 244 100% 69%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 235 100% 96%;
     --sidebar-accent-foreground: 239 70% 50%;
     --sidebar-border: 218 30% 92%;
-    --sidebar-ring: 239 84% 67%;
+    --sidebar-ring: 244 100% 69%;
 
     --shadow-sm: 0 1px 2px 0 hsl(222 39% 11% / 0.04);
     --shadow-md:
@@ -88,8 +88,8 @@
 
     --gradient-hero:
       radial-gradient(at 0% 0%, hsl(235 100% 96% / 0.8) 0px, transparent 55%);
-    --gradient-accent: linear-gradient(135deg, #8B5CF6 0%, #6366F1 45%, #3B82F6 100%);
-    --shadow-glow: 0 8px 24px -4px rgba(99, 102, 241, 0.35);
+    --gradient-accent: linear-gradient(135deg, #7C5CFF 0%, #6C63FF 45%, #4F7CFF 100%);
+    --shadow-glow: 0 8px 24px -4px rgba(108, 99, 255, 0.4);
     --glass-bg: hsl(0 0% 100% / 0.78);
     --glass-border: hsl(218 30% 88% / 0.8);
   }
@@ -106,9 +106,9 @@
     --popover: 236 24% 14%;
     --popover-foreground: 252 100% 98%;
 
-    --primary: 239 84% 67%;           /* #6366F1 */
+    --primary: 244 100% 69%;           /* #6366F1 */
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 239 70% 58%;
+    --primary-hover: 244 93% 65%;
     --primary-soft: 239 40% 22%;
     --primary-glow: 258 90% 76%;
 
@@ -122,7 +122,7 @@
     --accent: 239 40% 22%;
     --accent-foreground: 239 90% 86%;
 
-    --teal: 239 84% 67%;
+    --teal: 244 100% 69%;
     --teal-soft: 239 40% 22%;
     --violet: 258 90% 66%;
 
@@ -141,7 +141,7 @@
     --info: 199 89% 60%;              /* #38BDF8 */
     --info-soft: 199 40% 20%;
 
-    --chart-1: 239 84% 70%;           /* indigo */
+    --chart-1: 244 100% 72%;           /* indigo */
     --chart-2: 258 90% 72%;           /* lavender */
     --chart-3: 217 91% 65%;           /* blue */
     --chart-4: 239 84% 82%;
@@ -151,11 +151,11 @@
     /* rgba(255,255,255,0.08) */
     --border: 240 10% 22%;
     --input: 240 10% 22%;
-    --ring: 239 84% 67%;
+    --ring: 244 100% 69%;
 
     --sidebar-background: 234 24% 10%;
     --sidebar-foreground: 250 20% 78%;
-    --sidebar-primary: 239 84% 67%;
+    --sidebar-primary: 244 100% 69%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 239 40% 22%;
     --sidebar-accent-foreground: 239 90% 90%;
@@ -170,9 +170,9 @@
       0 20px 50px -16px hsl(0 0% 0% / 0.7);
 
     --gradient-hero:
-      radial-gradient(at 0% 0%, hsl(239 84% 67% / 0.12) 0px, transparent 55%);
-    --gradient-accent: linear-gradient(135deg, #8B5CF6 0%, #6366F1 45%, #3B82F6 100%);
-    --shadow-glow: 0 8px 28px -4px rgba(99, 102, 241, 0.45);
+      radial-gradient(at 0% 0%, hsl(244 100% 69% / 0.12) 0px, transparent 55%);
+    --gradient-accent: linear-gradient(135deg, #7C5CFF 0%, #6C63FF 45%, #4F7CFF 100%);
+    --shadow-glow: 0 8px 28px -4px rgba(108, 99, 255, 0.5);
     --glass-bg: hsl(236 24% 12% / 0.72);
     --glass-border: hsl(0 0% 100% / 0.08);
   }
