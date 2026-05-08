@@ -102,7 +102,7 @@ export function FilterBar({
 
         {extra}
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 md:ml-auto md:w-auto">
           <SavedViewsMenu />
           <CompareControl />
           {freshness && (
