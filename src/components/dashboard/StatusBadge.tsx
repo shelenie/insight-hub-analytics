@@ -33,7 +33,7 @@ export function StatusBadge({ status, label }: { status: Status; label?: string 
     <Badge
       variant="outline"
       className={cn(
-        "h-5 gap-1.5 rounded-md border px-1.5 text-[10.5px] font-semibold uppercase tracking-wide",
+        "h-5 gap-1.5 rounded-md border px-1.5 text-[10.5px] font-semibold uppercase tracking-wide whitespace-nowrap",
         cfg.className,
       )}
     >
