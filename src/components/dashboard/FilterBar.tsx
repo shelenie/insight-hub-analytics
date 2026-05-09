@@ -38,14 +38,14 @@ export function FilterBar({
 
   return (
     <div className="space-y-1.5">
-      <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border/70 glass p-2 shadow-card-md">
-        <div className="flex items-center gap-1.5 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-          <Filter className="h-3.5 w-3.5 text-primary/70" />
-          <Filter className="h-3.5 w-3.5" />
-          {t("filters")}
-        </div>
+      <div className="rounded-xl border border-border/70 glass p-2 shadow-card-md space-y-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 px-1.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+            <Filter className="h-3.5 w-3.5 text-primary/70" />
+            {t("filters")}
+          </div>
 
-        {showDate && <DateFilter />}
+          {showDate && <DateFilter />}
 
         {showProject && (
           <Select value={project} onValueChange={setProject}>
@@ -100,18 +100,19 @@ export function FilterBar({
           </div>
         )}
 
-        {extra}
+          {extra}
+        </div>
 
-        <div className="flex w-full items-center gap-2 md:ml-auto md:w-auto">
+        <div className="flex flex-wrap items-center gap-2">
           <SavedViewsMenu />
           <CompareControl />
           {freshness && (
-            <div className="hidden md:flex items-center gap-2 text-[11px] text-muted-foreground">
+            <div className="hidden md:flex items-center gap-2 text-[11px] text-muted-foreground whitespace-nowrap">
               <span>{t("data")}</span>
               <StatusBadge status={freshness.status} label={`${freshness.source} · ${freshness.lastSync}`} />
             </div>
           )}
-          <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs">
+          <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs ml-auto">
             <RefreshCw className="h-3.5 w-3.5" />
             {t("refresh")}
           </Button>
