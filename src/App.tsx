@@ -18,6 +18,7 @@ import Sales from "./pages/Sales";
 import Imports from "./pages/Imports";
 import Assistant from "./pages/Assistant";
 import Onboarding from "./pages/Onboarding";
+import Bindings from "./pages/Bindings";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -45,6 +46,7 @@ const App = () => (
                       <Route path="/imports" element={<ProtectedRoute><Imports /></ProtectedRoute>} />
                       <Route path="/assistant" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
                       <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+                      <Route path="/bindings" element={<ProtectedRoute><Bindings /></ProtectedRoute>} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </BrowserRouter>
