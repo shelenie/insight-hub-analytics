@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import type { Kpi } from "@/data/mock";
 import { useDateFilter } from "@/filters/DateContext";
 import { useI18n } from "@/i18n/I18nProvider";
+import type { TranslationKey } from "@/i18n/translations";
 
 interface KpiCardProps extends Kpi {
   compact?: boolean;
@@ -31,7 +32,7 @@ export function KpiCard({
   const trend = delta === undefined ? "flat" : delta > 0 ? "up" : delta < 0 ? "down" : "flat";
   const date = useDateFilter();
   const { lang, t } = useI18n();
-  const resolvedLabel = labelKey ? t(labelKey as any) : label;
+  const resolvedLabel = labelKey ? t(labelKey as TranslationKey) : label;
 
   return (
     <Card

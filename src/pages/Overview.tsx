@@ -57,6 +57,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
+import type { TranslationKey } from "@/i18n/translations";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 
@@ -538,7 +539,7 @@ function OpsCard({
 
 function KpiInline({ kpi: k }: { kpi: typeof overviewKpis[number] }) {
   const { t } = useI18n();
-  const label = k.labelKey ? t(k.labelKey as any) : k.label;
+  const label = k.labelKey ? t(k.labelKey as TranslationKey) : k.label;
   return (
     <div className="rounded-lg border bg-card p-3 shadow-card">
       <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
