@@ -18,6 +18,7 @@ export const translations = {
   navSales: { uk: "Продажі / Виторг", en: "Sales / Revenue" },
   navImports: { uk: "Імпорти / Якість даних", en: "Imports / Data Health" },
   navAssistant: { uk: "AI-асистент", en: "AI Assistant" },
+  navOnboarding: { uk: "Онбординг", en: "Onboarding" },
 
   // Filters
   filters: { uk: "Фільтри", en: "Filters" },
