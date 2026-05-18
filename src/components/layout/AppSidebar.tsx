@@ -21,6 +21,7 @@ import {
   Database,
   Sparkles,
   Activity,
+  Layers3,
 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { TranslationKey } from "@/i18n/translations";
@@ -32,6 +33,7 @@ const items: { titleKey: TranslationKey; url: string; icon: typeof LayoutDashboa
   { titleKey: "navSales", url: "/sales", icon: DollarSign },
   { titleKey: "navImports", url: "/imports", icon: Database },
   { titleKey: "navAssistant", url: "/assistant", icon: Sparkles },
+  { titleKey: "navOnboarding", url: "/onboarding", icon: Layers3 },
 ];
 
 export function AppSidebar() {
