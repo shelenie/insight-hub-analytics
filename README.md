@@ -1,3 +1,3 @@
-# Welcome to your Lovable project
+# Insight Hub Analytics
 
 TODO: Document your project here
