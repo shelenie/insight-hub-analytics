@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { SectionCard } from "@/components/dashboard/SectionCard";
@@ -56,6 +57,23 @@ import {
   XCircle,
 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/auth/AuthProvider";
+
+const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
+
+type BackendSnapshotRow = {
+  technical_status: string | null;
+  failed_checks: number | null;
+  production_backend_status: string | null;
+  onboarding_status: string | null;
+  binding_status: string | null;
+  mapping_review_status: string | null;
+  telegram_hitl_status: string | null;
+  telegram_production_status: string | null;
+  operational_alerts_status: string | null;
+  ads_connector_status: string | null;
+};
 
 const tooltipStyle = {
   background: "hsl(var(--card))",
@@ -67,12 +85,30 @@ const tooltipStyle = {
 
 export default function Overview() {
   const { t, lang } = useI18n();
+  const { session } = useAuth();
   const [viewMode, setViewMode] = useState<"summary" | "daily">("summary");
   const [selectedDay, setSelectedDay] = useState<DailyRow | null>(null);
 
   const failedCount = useMemo(() => importRuns.filter((r) => r.status === "failed").length, []);
   const partialCount = useMemo(() => importRuns.filter((r) => r.status === "partial").length, []);
   const lastSuccess = useMemo(() => importRuns.find((r) => r.status === "success"), []);
+
+  const readinessQuery = useQuery({
+    queryKey: ["backend-readiness", WORKSPACE_ID],
+    enabled: Boolean(session),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("v_production_backend_snapshot")
+        .select(
+          "technical_status, failed_checks, production_backend_status, onboarding_status, binding_status, mapping_review_status, telegram_hitl_status, telegram_production_status, operational_alerts_status, ads_connector_status",
+        )
+        .eq("workspace_id", WORKSPACE_ID)
+        .maybeSingle();
+
+      if (error) throw error;
+      return (data as BackendSnapshotRow | null) ?? null;
+    },
+  });
 
   return (
     <DashboardLayout
@@ -134,6 +170,40 @@ export default function Overview() {
             tone="info"
           />
         </div>
+
+        <SectionCard
+          title="Backend readiness"
+          description="Live production backend snapshot from Supabase"
+        >
+          {!session ? (
+            <p className="text-sm text-muted-foreground">
+              Sign in to view backend readiness status for this workspace.
+            </p>
+          ) : readinessQuery.isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading backend readiness…</p>
+          ) : readinessQuery.error ? (
+            <p className="text-sm text-destructive">
+              Could not load backend readiness: {readinessQuery.error.message}
+            </p>
+          ) : !readinessQuery.data ? (
+            <p className="text-sm text-muted-foreground">
+              No backend readiness snapshot found for workspace {WORKSPACE_ID}.
+            </p>
+          ) : (
+            <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+              <ReadinessField label="technical_status" value={readinessQuery.data.technical_status} />
+              <ReadinessField label="failed_checks" value={readinessQuery.data.failed_checks} />
+              <ReadinessField label="production_backend_status" value={readinessQuery.data.production_backend_status} />
+              <ReadinessField label="onboarding_status" value={readinessQuery.data.onboarding_status} />
+              <ReadinessField label="binding_status" value={readinessQuery.data.binding_status} />
+              <ReadinessField label="mapping_review_status" value={readinessQuery.data.mapping_review_status} />
+              <ReadinessField label="telegram_hitl_status" value={readinessQuery.data.telegram_hitl_status} />
+              <ReadinessField label="telegram_production_status" value={readinessQuery.data.telegram_production_status} />
+              <ReadinessField label="operational_alerts_status" value={readinessQuery.data.operational_alerts_status} />
+              <ReadinessField label="ads_connector_status" value={readinessQuery.data.ads_connector_status} />
+            </div>
+          )}
+        </SectionCard>
 
         {/* KPI grid — premium emphasis on Revenue Fact, ROAS, Sales */}
         <KpiGrid
@@ -307,6 +377,15 @@ export default function Overview() {
 
       <DayDetailSheet day={selectedDay} onClose={() => setSelectedDay(null)} />
     </DashboardLayout>
+  );
+}
+
+function ReadinessField({ label, value }: { label: string; value: string | number | null }) {
+  return (
+    <div className="rounded-md border border-border/70 bg-card/40 p-3">
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="font-medium">{value ?? "—"}</p>
+    </div>
   );
 }
 
