@@ -21,6 +21,7 @@ export const translations = {
   navOnboarding: { uk: "Онбординг", en: "Onboarding" },
   navBindingsMapping: { uk: "Біндінги / Мапінг", en: "Bindings / Mapping" },
   navTelegramAlerts: { uk: "Telegram / Сповіщення", en: "Telegram / Alerts" },
+  navAdsConnectors: { uk: "Ads Конектори", en: "Ads Connectors" },
 
   // Filters
   filters: { uk: "Фільтри", en: "Filters" },

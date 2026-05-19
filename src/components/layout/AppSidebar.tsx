@@ -24,6 +24,7 @@ import {
   Layers3,
   Link2,
   BellRing,
+  PlugZap,
 } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { TranslationKey } from "@/i18n/translations";
@@ -38,6 +39,7 @@ const items: { titleKey: TranslationKey; url: string; icon: typeof LayoutDashboa
   { titleKey: "navOnboarding", url: "/onboarding", icon: Layers3 },
   { titleKey: "navBindingsMapping", url: "/bindings", icon: Link2 },
   { titleKey: "navTelegramAlerts", url: "/alerts", icon: BellRing },
+  { titleKey: "navAdsConnectors", url: "/ads-connectors", icon: PlugZap },
 ];
 
 export function AppSidebar() {
