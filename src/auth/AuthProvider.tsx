@@ -23,6 +23,43 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasInitial = useRef(false);
 
   useEffect(() => {
+    const cleanupAuthRedirectUrl = () => {
+      const basePath = new URL(import.meta.env.BASE_URL, window.location.origin).pathname;
+      window.history.replaceState({}, document.title, `${basePath}${window.location.hash || ""}`);
+    };
+
+    const hasAuthHashTokens = () => {
+      const hash = window.location.hash.startsWith("#") ? window.location.hash.slice(1) : window.location.hash;
+      const hashParams = new URLSearchParams(hash);
+      return hashParams.has("access_token") || hashParams.has("refresh_token") || hashParams.has("error");
+    };
+
+    const hasAuthQueryCode = () => {
+      const params = new URLSearchParams(window.location.search);
+      return params.has("code");
+    };
+
+    const maybeExchangeRedirectSession = async () => {
+      const authCode = new URLSearchParams(window.location.search).get("code");
+      if (authCode) {
+        const { error } = await supabase.auth.exchangeCodeForSession(authCode);
+        if (error) {
+          console.warn("[Auth] Failed to exchange auth code for session.", error.message);
+        } else {
+          cleanupAuthRedirectUrl();
+        }
+      }
+
+      if (hasAuthHashTokens()) {
+        const { error } = await supabase.auth.getSession();
+        if (error) {
+          console.warn("[Auth] Failed to read hash-based auth session.", error.message);
+        } else {
+          cleanupAuthRedirectUrl();
+        }
+      }
+    };
+
     // Listener first — captures sign-in/out, token refresh, OAuth redirect.
     const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
       setSession(s);
@@ -31,13 +68,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    // Then read persisted session from localStorage.
-    supabase.auth.getSession().then(({ data }) => {
+    // Then handle redirect auth session exchange and read persisted session.
+    maybeExchangeRedirectSession()
+      .catch((err: unknown) => {
+        console.warn("[Auth] Unexpected redirect session handling error.", err);
+      })
+      .then(() => supabase.auth.getSession())
+      .then(({ data }) => {
       setSession(data.session);
       hasInitial.current = true;
       setInitialized(true);
       setLoading(false);
-    });
+        if (hasAuthQueryCode()) {
+          cleanupAuthRedirectUrl();
+        }
+      });
 
     return () => sub.subscription.unsubscribe();
   }, []);
