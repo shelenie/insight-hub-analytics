@@ -24,7 +24,7 @@ export function DashboardLayout({ title, subtitle, actions, sync, children }: Da
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background bg-hero">
         <AppSidebar />
-        <div className="flex flex-1 flex-col min-w-0">
+        <div className="flex min-h-screen flex-1 min-w-0 flex-col">
           {/* Top bar — unified premium control strip */}
           <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-border/60 glass px-3 lg:px-4">
             <SidebarTrigger className="h-8 w-8 shrink-0 hover:bg-muted/60" />
@@ -88,7 +88,7 @@ export function DashboardLayout({ title, subtitle, actions, sync, children }: Da
           </div>
 
           {/* Content */}
-          <main className="flex-1 overflow-x-auto p-4 lg:p-6 animate-fade-in">{children}</main>
+          <main className="flex-1 overflow-x-hidden p-4 lg:p-6 animate-fade-in">{children}</main>
         </div>
       </div>
     </SidebarProvider>

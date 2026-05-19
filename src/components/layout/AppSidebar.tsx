@@ -82,7 +82,7 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-1.5">
+      <SidebarContent className="px-1.5 sidebar-scroll">
         <SidebarGroup>
           {!collapsed && (
             <SidebarGroupLabel className="px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80">

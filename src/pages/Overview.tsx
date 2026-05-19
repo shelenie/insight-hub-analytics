@@ -8,19 +8,22 @@ import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
-type BackendSnapshotRow = {
-  technical_status: string | null;
-  failed_checks: number | null;
-  production_backend_status: string | null;
-  onboarding_status: string | null;
-  binding_status: string | null;
-  mapping_review_status: string | null;
-  telegram_hitl_status: string | null;
-  telegram_production_status: string | null;
-  operational_alerts_status: string | null;
-  ads_connector_status: string | null;
-};
-type UiBackendContractRow = Record<string, string | number | boolean | null>;
+type SnapshotValue = string | number | boolean | null;
+type BackendSnapshotRow = Record<string, SnapshotValue>;
+type UiBackendContractRow = Record<string, SnapshotValue>;
+
+const KNOWN_SNAPSHOT_FIELDS = [
+  "technical_status",
+  "failed_checks",
+  "production_backend_status",
+  "onboarding_status",
+  "binding_status",
+  "mapping_review_status",
+  "telegram_hitl_status",
+  "telegram_production_status",
+  "operational_alerts_status",
+  "ads_connector_status",
+] as const;
 
 export default function Overview() {
   const { session } = useAuth();
@@ -32,7 +35,7 @@ export default function Overview() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("v_production_backend_snapshot")
-        .select("technical_status, failed_checks, production_backend_status, onboarding_status, binding_status, mapping_review_status, telegram_hitl_status, telegram_production_status, operational_alerts_status, ads_connector_status")
+        .select("*")
         .eq("workspace_id", WORKSPACE_ID)
         .maybeSingle();
       if (error) throw error;
@@ -65,20 +68,24 @@ export default function Overview() {
           ) : !readinessQuery.data ? (
             <p className="text-sm text-muted-foreground">No backend readiness snapshot found for workspace {WORKSPACE_ID}.</p>
           ) : (
-            <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-              <ReadinessField label="technical_status" value={readinessQuery.data.technical_status} />
-              <ReadinessField label="failed_checks" value={readinessQuery.data.failed_checks} />
-              <ReadinessField label="production_backend_status" value={readinessQuery.data.production_backend_status} />
-              <ReadinessField label="onboarding_status" value={readinessQuery.data.onboarding_status} />
-              <ReadinessField label="binding_status" value={readinessQuery.data.binding_status} />
-              <ReadinessField label="mapping_review_status" value={readinessQuery.data.mapping_review_status} />
-              <ReadinessField label="telegram_hitl_status" value={readinessQuery.data.telegram_hitl_status} />
-              <ReadinessField label="telegram_production_status" value={readinessQuery.data.telegram_production_status} />
-              <ReadinessField label="operational_alerts_status" value={readinessQuery.data.operational_alerts_status} />
-              <ReadinessField label="ads_connector_status" value={readinessQuery.data.ads_connector_status} />
-            </div>
+            <>
+              <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                {KNOWN_SNAPSHOT_FIELDS.map((field) => (
+                  <ReadinessField key={field} label={field} value={readinessQuery.data[field]} />
+                ))}
+              </div>
+
+              <AdditionalSnapshotFields row={readinessQuery.data} />
+
+              {(readinessQuery.data.ads_connector_status !== undefined || readinessQuery.data.production_backend_status === "ads_setup_required") ? (
+                <p className="mt-3 text-xs text-muted-foreground">
+                  Ads connector guidance: if <span className="font-medium">ads_connector_status</span> is
+                  <span className="font-medium"> no_active_connections</span>, connect a real ads account to activate ads data.
+                </p>
+              ) : null}
+            </>
           )}
-          <p className="mt-3 text-xs text-muted-foreground">If <span className="font-medium">production_backend_status</span> is not ready, module actions remain gated. For <span className="font-medium">ads_connector_status=no_active_connections</span>: Connect a real ads account to activate ads data.</p>
+          <p className="mt-3 text-xs text-muted-foreground">If <span className="font-medium">production_backend_status</span> is not ready, module actions remain gated.</p>
         </SectionCard>
 
         <SectionCard title="UI Backend Contract" description="Source: v_ui_backend_contract">
@@ -86,8 +93,14 @@ export default function Overview() {
             <p className="text-sm text-muted-foreground">Sign in to load UI contract status.</p>
           ) : uiContractQuery.isLoading ? (
             <p className="text-sm text-muted-foreground">Loading UI backend contract…</p>
-          ) : uiContractQuery.data?.unavailableReason ? (
-            <p className="text-sm text-muted-foreground">UI backend contract unavailable: {uiContractQuery.data.unavailableReason}</p>
+) : uiContractQuery.data?.unavailableReason ? (
+            <div className="rounded-md border border-warning/30 bg-warning-soft p-3 text-sm text-warning-foreground">
+              <p>UI backend contract is currently unavailable.</p>
+              <details className="mt-2 text-xs text-muted-foreground">
+                <summary className="cursor-pointer">Technical details</summary>
+                <p className="mt-2 break-words">{uiContractQuery.data.unavailableReason}</p>
+              </details>
+            </div>
           ) : (uiContractQuery.data?.rows.length ?? 0) === 0 ? (
             <p className="text-sm text-muted-foreground">UI backend contract unavailable.</p>
           ) : (
@@ -117,6 +130,24 @@ export default function Overview() {
   );
 }
 
-function ReadinessField({ label, value }: { label: string; value: string | number | null }) {
-  return <div className="rounded-md border border-border/70 bg-card/40 p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="font-medium">{value ?? "—"}</p></div>;
+function ReadinessField({ label, value }: { label: string; value: SnapshotValue | undefined }) {
+  const displayValue = value === undefined ? "Not provided by current backend snapshot" : value ?? "—";
+  return <div className="rounded-md border border-border/70 bg-card/40 p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="font-medium break-words">{String(displayValue)}</p></div>;
+}
+
+function AdditionalSnapshotFields({ row }: { row: BackendSnapshotRow }) {
+  const additional = Object.entries(row).filter(([key]) => !KNOWN_SNAPSHOT_FIELDS.includes(key as (typeof KNOWN_SNAPSHOT_FIELDS)[number]));
+
+  if (additional.length === 0) return null;
+
+  return (
+    <div className="mt-3 rounded-md border border-border/70 bg-card/30 p-3">
+      <p className="mb-2 text-xs font-medium text-muted-foreground">Additional backend snapshot fields</p>
+      <div className="space-y-1 text-xs">
+        {additional.map(([key, value]) => (
+          <p key={key}><span className="font-medium">{key}:</span> {value ?? "—"}</p>
+        ))}
+      </div>
+    </div>
+  );
 }
