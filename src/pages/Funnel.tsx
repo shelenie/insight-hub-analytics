@@ -1,261 +1,94 @@
-import { useState } from "react";
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { SectionCard } from "@/components/dashboard/SectionCard";
-import {
-  funnelSteps,
-  salesPlanFact,
-  dailyAnalytics,
-  type DailyRow,
-} from "@/data/mock";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { fmtCurrency, fmtNum } from "@/lib/format";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-  Legend,
-} from "recharts";
-import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
-} from "@/components/ui/table";
-import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
-} from "@/components/ui/sheet";
-import {
-  MousePointerClick, UserPlus, Users, FileText, Inbox, CalendarCheck,
-  ShoppingBag, DollarSign, TrendingUp, GitBranch,
-} from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
-import { ReactNode } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/auth/AuthProvider";
 
-const tooltipStyle = {
-  background: "hsl(var(--card))",
-  border: "1px solid hsl(var(--border))",
-  borderRadius: "8px",
-  fontSize: "12px",
-};
+const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
+type Row = Record<string, string | number | boolean | null>;
+type OptionalViewData = { rows: Row[]; unavailableReason: string | null };
 
 export default function Funnel() {
-  const { t, lang } = useI18n();
-  const [viewMode, setViewMode] = useState<"summary" | "daily">("summary");
-  const [selectedDay, setSelectedDay] = useState<DailyRow | null>(null);
+  const { t } = useI18n();
+  const { session } = useAuth();
 
-  // Aggregates from mock daily rows — stand in for the resolved date range.
-  const totals = dailyAnalytics.reduce(
-    (acc, d) => ({
-      spend: acc.spend + d.spend,
-      clicks: acc.clicks + d.clicks,
-      regs: acc.regs + d.regs,
-      apps: acc.apps + d.apps,
-      bookings: acc.bookings + d.bookings,
-      viewers: acc.viewers + d.viewers,
-      sales: acc.sales + d.sales,
-      revenue: acc.revenue + d.revenue,
-    }),
-    { spend: 0, clicks: 0, regs: 0, apps: 0, bookings: 0, viewers: 0, sales: 0, revenue: 0 },
-  );
-  const blendedRoas = totals.revenue / totals.spend;
+  const query = useQuery({
+    queryKey: ["funnel-page", WORKSPACE_ID],
+    enabled: Boolean(session),
+    queryFn: async () => {
+      const [events, bindings, onboarding, adsSummary] = await Promise.all([
+        readOptionalView("v_funnel_events", true),
+        readOptionalView("v_project_data_bindings", true),
+        readOptionalView("v_onboarding_hierarchy", true),
+        readOptionalView("v_ads_performance_summary", true),
+      ]);
+      return { events, bindings, onboarding, adsSummary };
+    },
+  });
+
+  const stageCounts = useMemo(() => {
+    const rows = query.data?.events.rows ?? [];
+    const map = new Map<string, number>();
+    rows.forEach((row) => {
+      const stage = String(row.event_name ?? row.stage_name ?? row.funnel_stage ?? "unknown");
+      const count = Number(row.event_count ?? row.count ?? 1);
+      map.set(stage, (map.get(stage) ?? 0) + count);
+    });
+    return Array.from(map.entries()).map(([stage, count]) => ({ stage, count }));
+  }, [query.data]);
 
   return (
     <DashboardLayout title={t("funnelTitle")} subtitle={t("funnelSubtitle")}>
       <div className="space-y-4">
-        <FilterBar
-          freshness={{ source: "fact_daily", status: "fresh", lastSync: "5 min" }}
-          showViewMode
-          viewMode={viewMode}
-          onViewModeChange={setViewMode}
-        />
+        <FilterBar freshness={{ source: "v_funnel_events", status: "fresh", lastSync: "live" }} />
+        {!session ? <Empty text="Sign in to view funnel production data." /> : query.isLoading ? <Empty text="Loading funnel production data…" /> : null}
+        {query.data?.events.unavailableReason ? <Empty text="Funnel production data is unavailable." /> : null}
 
-        {/* Block grid — the requested 9 working blocks */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
-          <BlockCard icon={<MousePointerClick className="h-3.5 w-3.5" />} label={t("blockTraffic")}     value={fmtNum(totals.clicks)}  hint={`${fmtCurrency(totals.spend)} ${t("kpiSpend").toLowerCase()}`} />
-          <BlockCard icon={<UserPlus className="h-3.5 w-3.5" />}          label={t("blockRegs")}        value={fmtNum(totals.regs)}    hint={`CPL $${(totals.spend/totals.regs).toFixed(2)}`} />
-          <BlockCard icon={<Users className="h-3.5 w-3.5" />}             label={t("blockViewers")}     value={fmtNum(totals.viewers)} hint={`${((totals.viewers/totals.bookings)*100).toFixed(0)}% ${lang === "uk" ? "з броней" : "of bookings"}`} />
-          <BlockCard icon={<FileText className="h-3.5 w-3.5" />}          label={t("blockApps")}        value={fmtNum(totals.apps)}    hint={`${((totals.apps/totals.regs)*100).toFixed(0)}% ${lang === "uk" ? "з реєстр." : "of regs"}`} />
-          <BlockCard icon={<Inbox className="h-3.5 w-3.5" />}             label={t("blockBookings")}    value={fmtNum(totals.bookings)} hint={`${((totals.bookings/totals.apps)*100).toFixed(0)}% ${lang === "uk" ? "з анкет" : "of surveys"}`} />
-          <BlockCard icon={<CalendarCheck className="h-3.5 w-3.5" />}     label={t("blockReservations")} value={fmtNum(totals.bookings)} hint={lang === "uk" ? "Підтверджені слоти" : "Confirmed slots"} />
-          <BlockCard icon={<ShoppingBag className="h-3.5 w-3.5" />}       label={t("blockSales")}       value={fmtNum(totals.sales)}   hint={`${((totals.sales/totals.viewers)*100).toFixed(0)}% ${lang === "uk" ? "з глядачів" : "of viewers"}`} />
-          <BlockCard icon={<DollarSign className="h-3.5 w-3.5" />}        label={t("blockRevenue")}     value={fmtCurrency(totals.revenue)} hint={`${lang==="uk"?"План":"Plan"} ${fmtCurrency(480000)}`} accent />
-          <BlockCard icon={<TrendingUp className="h-3.5 w-3.5" />}        label={t("blockRoas")}        value={`${blendedRoas.toFixed(2)}x`} hint={lang === "uk" ? "Сумарний ROAS" : "Blended ROAS"} accent />
-          <BlockCard icon={<GitBranch className="h-3.5 w-3.5" />}         label={t("conversionFlow")}   value={`${((totals.sales/totals.clicks)*100).toFixed(2)}%`} hint={lang === "uk" ? "Клік → Продаж" : "Click → Sale"} />
-        </div>
+        <SectionCard title="Funnel stage / event counts" description="Source: v_funnel_events" noPadding>
+          {stageCounts.length === 0 ? <Empty text="No production funnel data exists for this workspace." /> : (
+            <Table><TableHeader><TableRow><TableHead>Stage / event</TableHead><TableHead className="text-right">Count</TableHead></TableRow></TableHeader><TableBody>{stageCounts.map((s) => <TableRow key={s.stage}><TableCell>{s.stage}</TableCell><TableCell className="text-right num">{fmtNum(s.count)}</TableCell></TableRow>)}</TableBody></Table>
+          )}
+        </SectionCard>
 
-        {viewMode === "summary" ? (
-          <>
-            {/* Conversion flow — full width */}
-            <SectionCard title={t("conversionFlow")} description={t("conversionFlowDesc")}>
-              <div className="space-y-2">
-                {funnelSteps.map((s, i) => {
-                  const widthPct = (s.value / funnelSteps[0].value) * 100;
-                  return (
-                    <div key={s.step} className="grid grid-cols-12 items-center gap-3">
-                      <div className="col-span-12 lg:col-span-2 text-sm font-medium">
-                        {lang === "uk" ? s.stepUk : s.step}
-                      </div>
-                      <div className="col-span-9 lg:col-span-7">
-                        <div className="relative h-7 overflow-hidden rounded-md bg-muted">
-                          <div className="h-full rounded-md bg-primary/85 transition-all" style={{ width: `${widthPct}%` }} />
-                        </div>
-                      </div>
-                      <div className="col-span-2 lg:col-span-2 text-right text-sm font-semibold num">{fmtNum(s.value)}</div>
-                      <div className="col-span-1 lg:col-span-1 text-right text-xs text-muted-foreground num">
-                        {i === 0 ? "—" : `${s.conv.toFixed(1)}%`}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </SectionCard>
+        <SectionCard title="Client / project / funnel hierarchy" description="Source: v_onboarding_hierarchy" noPadding>
+          <SimpleRows rows={query.data?.onboarding.rows ?? []} emptyText="Hierarchy data is unavailable or empty." columns={["client_name", "project_name", "funnel_name", "status"]} />
+        </SectionCard>
 
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-              <SectionCard className="xl:col-span-2" title={t("dailyTrend")} description={t("dailyTrendDesc")}>
-                <div className="h-[260px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={dailyAnalytics} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                      <Tooltip contentStyle={tooltipStyle} />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Line type="monotone" dataKey="regs" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} name={t("kpiRegs")} />
-                      <Line type="monotone" dataKey="sales" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} name={t("kpiSales")} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </SectionCard>
+        <SectionCard title="Binding status" description="Source: v_project_data_bindings" noPadding>
+          <SimpleRows rows={query.data?.bindings.rows ?? []} emptyText="Binding status is unavailable or empty." columns={["project_name", "mapping_status", "binding_status", "updated_at"]} />
+        </SectionCard>
 
-              <SectionCard title={t("planVsFact")} description={t("weekly")}>
-                <div className="h-[260px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={salesPlanFact} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis dataKey="week" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                      <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtCurrency(v)} />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="plan" fill="hsl(var(--muted-foreground) / 0.45)" radius={[4, 4, 0, 0]} />
-                      <Bar dataKey="fact" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </SectionCard>
-            </div>
-          </>
-        ) : (
-          <DailyTable onSelect={setSelectedDay} />
-        )}
+        <SectionCard title="Ads summary linked to funnel" description="Source: v_ads_performance_summary" noPadding>
+          <SimpleRows rows={query.data?.adsSummary.rows ?? []} emptyText="Ads summary is unavailable or empty." columns={["platform", "campaign_name", "spend", "clicks", "impressions"]} />
+        </SectionCard>
       </div>
-
-      <DayDetailSheet day={selectedDay} onClose={() => setSelectedDay(null)} />
     </DashboardLayout>
   );
 }
 
-function BlockCard({
-  icon, label, value, hint, accent,
-}: { icon: ReactNode; label: string; value: string; hint?: string; accent?: boolean }) {
-  return (
-    <div className={`rounded-lg border bg-card p-3 shadow-card ${accent ? "border-primary/40 bg-primary-soft/30" : ""}`}>
-      <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-        <span className={`flex h-5 w-5 items-center justify-center rounded ${accent ? "bg-primary text-primary-foreground" : "bg-muted text-foreground/70"}`}>
-          {icon}
-        </span>
-        {label}
-      </div>
-      <div className={`mt-1.5 text-lg font-semibold num ${accent ? "text-primary" : ""}`}>{value}</div>
-      {hint && <div className="text-[11px] text-muted-foreground truncate">{hint}</div>}
-    </div>
-  );
+function SimpleRows({ rows, columns, emptyText }: { rows: Row[]; columns: string[]; emptyText: string }) {
+  if (rows.length === 0) return <Empty text={emptyText} />;
+  return <Table><TableHeader><TableRow>{columns.map((c) => <TableHead key={c}>{c}</TableHead>)}</TableRow></TableHeader><TableBody>{rows.slice(0, 50).map((row, idx) => <TableRow key={idx}>{columns.map((c) => <TableCell key={c}>{formatValue(row[c], c)}</TableCell>)}</TableRow>)}</TableBody></Table>;
 }
 
-function DailyTable({ onSelect }: { onSelect: (d: DailyRow) => void }) {
-  const { t } = useI18n();
-  return (
-    <SectionCard title={t("dailyBreakdown")} description={t("dailyBreakdownDesc")} noPadding>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("thDay")}</TableHead>
-              <TableHead className="text-right">{t("thSpend")}</TableHead>
-              <TableHead className="text-right">{t("thClicks")}</TableHead>
-              <TableHead className="text-right">{t("thRegs")}</TableHead>
-              <TableHead className="text-right">{t("thApps")}</TableHead>
-              <TableHead className="text-right">{t("thBookings")}</TableHead>
-              <TableHead className="text-right">{t("thViewers")}</TableHead>
-              <TableHead className="text-right">{t("thSales")}</TableHead>
-              <TableHead className="text-right">{t("thRevenue")}</TableHead>
-              <TableHead className="text-right">{t("thCpl")}</TableHead>
-              <TableHead className="text-right">{t("thRoas")}</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {dailyAnalytics.map((d) => (
-              <TableRow key={d.date} onClick={() => onSelect(d)} className="cursor-pointer hover:bg-muted/40 text-xs">
-                <TableCell className="font-medium num">{d.date}</TableCell>
-                <TableCell className="text-right num">{fmtCurrency(d.spend)}</TableCell>
-                <TableCell className="text-right num">{fmtNum(d.clicks)}</TableCell>
-                <TableCell className="text-right num">{fmtNum(d.regs)}</TableCell>
-                <TableCell className="text-right num">{fmtNum(d.apps)}</TableCell>
-                <TableCell className="text-right num">{fmtNum(d.bookings)}</TableCell>
-                <TableCell className="text-right num">{fmtNum(d.viewers)}</TableCell>
-                <TableCell className="text-right num">{d.sales}</TableCell>
-                <TableCell className="text-right num">{fmtCurrency(d.revenue)}</TableCell>
-                <TableCell className="text-right num">${d.cpl.toFixed(2)}</TableCell>
-                <TableCell className={`text-right num font-semibold ${d.roas >= 4 ? "text-success" : d.roas < 3 ? "text-destructive" : ""}`}>
-                  {d.roas.toFixed(2)}x
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </SectionCard>
-  );
+function formatValue(value: Row[string], key: string) {
+  if (value == null) return "—";
+  if (typeof value === "number" && ["spend", "revenue"].includes(key)) return fmtCurrency(value);
+  if (typeof value === "number") return fmtNum(value);
+  return String(value);
 }
 
-function DayDetailSheet({ day, onClose }: { day: DailyRow | null; onClose: () => void }) {
-  const { t } = useI18n();
-  return (
-    <Sheet open={!!day} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent className="w-full sm:max-w-md overflow-y-auto">
-        {day && (
-          <>
-            <SheetHeader>
-              <SheetTitle className="num">{day.date}</SheetTitle>
-              <SheetDescription>{t("dailyBreakdown")}</SheetDescription>
-            </SheetHeader>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              <Item label={t("kpiSpend")} value={fmtCurrency(day.spend)} />
-              <Item label={t("kpiReach")} value={fmtNum(day.reach)} />
-              <Item label={t("kpiClicks")} value={fmtNum(day.clicks)} />
-              <Item label={t("kpiRegs")} value={fmtNum(day.regs)} />
-              <Item label={t("kpiApps")} value={fmtNum(day.apps)} />
-              <Item label={t("kpiBookings")} value={fmtNum(day.bookings)} />
-              <Item label={t("kpiViewers")} value={fmtNum(day.viewers)} />
-              <Item label={t("kpiSales")} value={String(day.sales)} />
-              <Item label={t("kpiRevFact")} value={fmtCurrency(day.revenue)} />
-              <Item label={t("kpiCpl")} value={`$${day.cpl.toFixed(2)}`} />
-              <Item label={t("kpiRoas")} value={`${day.roas.toFixed(2)}x`} highlight />
-            </div>
-          </>
-        )}
-      </SheetContent>
-    </Sheet>
-  );
-}
+function Empty({ text }: { text: string }) { return <p className="p-4 text-sm text-muted-foreground">{text}</p>; }
 
-function Item({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
-  return (
-    <div className={`rounded-md border p-2.5 ${highlight ? "border-primary/30 bg-primary-soft/40" : "bg-background"}`}>
-      <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={`mt-0.5 text-sm font-semibold num ${highlight ? "text-primary" : ""}`}>{value}</div>
-    </div>
-  );
+async function readOptionalView(viewName: string, scopedByWorkspace: boolean): Promise<OptionalViewData> {
+  let query = supabase.from(viewName).select("*").limit(200);
+  if (scopedByWorkspace) query = query.eq("workspace_id", WORKSPACE_ID);
+  const result = await query;
+  if (result.error) return { rows: [], unavailableReason: result.error.message };
+  return { rows: (result.data ?? []) as Row[], unavailableReason: null };
 }
