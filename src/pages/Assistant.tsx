@@ -1,358 +1,254 @@
+import { useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { suggestedPromptsByLang } from "@/data/mock";
-import { fmtCurrency } from "@/lib/format";
-import { Sparkles, Send, User, Bot, BarChart3, Plus, X } from "lucide-react";
-import { useEffect, useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { useI18n } from "@/i18n/I18nProvider";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/auth/AuthProvider";
+import { supabase } from "@/integrations/supabase/client";
 
-type Msg =
-  | { role: "user" | "assistant"; content: string }
-  | { role: "assistant-card"; data: ResponseCardData };
+const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
-type ResponseCardData = {
-  summary: string;
-  metrics: { label: string; value: string }[];
-  filters: string[];
-  chart?: { name: string; value: number }[];
-  table?: { campaign: string; roas: number; revenue: number }[];
+type RequestType =
+  | "production_readiness_summary"
+  | "onboarding_summary"
+  | "mapping_review_summary"
+  | "operational_alerts_summary"
+  | "full_production_summary"
+  | "ads_health_summary"
+  | "ads_performance_summary"
+  | "ads_anomaly_explanation"
+  | "data_quality_summary"
+  | "import_health_summary"
+  | "import_error_explanation";
+
+type ContextScope =
+  | "production_readiness"
+  | "onboarding"
+  | "mapping_review"
+  | "operational_alerts"
+  | "full_production"
+  | "ads_health"
+  | "ads_performance"
+  | "ads_anomalies"
+  | "data_quality"
+  | "import_health"
+  | "import_errors";
+
+type Option = { label: string; requestType: RequestType; contextScope: ContextScope };
+type GenericRow = Record<string, string | number | boolean | null>;
+
+type RunResult = {
+  answerText: string | null;
+  requestType: string;
+  contextScope: string;
+  status: string | null;
+  createdAt: string | null;
+  requestId: string | null;
+  insightId: string | null;
+  raw: Record<string, unknown>;
 };
 
-const sampleResponses = {
-  uk: {
-    summary:
-      "За останні 7 днів ROAS виріс на 12% (з 2.48x до 2.78x), завдяки кампаніям Atlas-Search-Brand і Retention-Email-Push. Виторг збільшився на $34,200 при стабільних витратах.",
-    metrics: [
-      { label: "ROAS", value: "2.78x (+12%)" },
-      { label: "Виторг", value: "$512.8k (+7%)" },
-      { label: "Витрати", value: "$184.3k (+8%)" },
-      { label: "Продажі", value: "612 (+9%)" },
-    ],
-    filters: ["Останні 7 днів", "Усі проєкти", "Усі групи"],
-  },
-  en: {
-    summary:
-      "ROAS grew 12% over the last 7 days (2.48x → 2.78x), driven by Atlas-Search-Brand and Retention-Email-Push. Revenue is up $34,200 while spend stayed flat.",
-    metrics: [
-      { label: "ROAS", value: "2.78x (+12%)" },
-      { label: "Revenue", value: "$512.8k (+7%)" },
-      { label: "Spend", value: "$184.3k (+8%)" },
-      { label: "Sales", value: "612 (+9%)" },
-    ],
-    filters: ["Last 7 days", "All projects", "All groups"],
-  },
-};
-
-const tooltipStyle = {
-  background: "hsl(var(--popover))",
-  border: "1px solid hsl(var(--border))",
-  borderRadius: "10px",
-  fontSize: "12px",
-  boxShadow: "var(--shadow-md)",
-};
+const OPTIONS: Option[] = [
+  { label: "Production readiness summary", requestType: "production_readiness_summary", contextScope: "production_readiness" },
+  { label: "Onboarding summary", requestType: "onboarding_summary", contextScope: "onboarding" },
+  { label: "Mapping review summary", requestType: "mapping_review_summary", contextScope: "mapping_review" },
+  { label: "Operational alerts summary", requestType: "operational_alerts_summary", contextScope: "operational_alerts" },
+  { label: "Full production summary", requestType: "full_production_summary", contextScope: "full_production" },
+  { label: "Ads health summary", requestType: "ads_health_summary", contextScope: "ads_health" },
+  { label: "Ads performance summary", requestType: "ads_performance_summary", contextScope: "ads_performance" },
+  { label: "Ads anomaly explanation", requestType: "ads_anomaly_explanation", contextScope: "ads_anomalies" },
+  { label: "Data quality summary", requestType: "data_quality_summary", contextScope: "data_quality" },
+  { label: "Import health summary", requestType: "import_health_summary", contextScope: "import_health" },
+  { label: "Import error explanation", requestType: "import_error_explanation", contextScope: "import_errors" },
+];
 
 export default function Assistant() {
-  const { t, lang } = useI18n();
-  const [messages, setMessages] = useState<Msg[]>([
-    { role: "assistant", content: t("assistantWelcome") },
-  ]);
-  const [input, setInput] = useState("");
+  const { session } = useAuth();
+  const [selected, setSelected] = useState<RequestType>("production_readiness_summary");
+  const [prompt, setPrompt] = useState("");
+  const [latest, setLatest] = useState<RunResult | null>(null);
 
-  function buildResponse(): ResponseCardData {
-    const base = sampleResponses[lang];
-    return {
-      ...base,
-      chart: [
-        { name: "Atlas-Search-Brand", value: 9.48 },
-        { name: "Retention-Email-Push", value: 7.24 },
-        { name: "EVG-FB-Interest-A", value: 5.06 },
-        { name: "WBN-Q4-LAL3", value: 5.02 },
-        { name: "Launch-May-IG", value: 3.09 },
-      ],
-      table: [
-        { campaign: "Atlas-Search-Brand", roas: 9.48, revenue: 39800 },
-        { campaign: "Retention-Email-Push", roas: 7.24, revenue: 49200 },
-        { campaign: "EVG-FB-Interest-A", roas: 5.06, revenue: 71800 },
-      ],
-    };
-  }
+  const selectedOption = useMemo(() => OPTIONS.find((option) => option.requestType === selected) ?? OPTIONS[0], [selected]);
 
-  function sendPrompt(text: string) {
-    if (!text.trim()) return;
-    setMessages((m) => [
-      ...m,
-      { role: "user", content: text },
-      { role: "assistant-card", data: buildResponse() },
-    ]);
-    setInput("");
-  }
-
-  const prompts = suggestedPromptsByLang[lang];
-
-  // Custom AI prompt presets, persisted per browser
-  const [customPrompts, setCustomPrompts] = useState<string[]>(() => {
-    try {
-      const raw = localStorage.getItem("pulse.aiPrompts.v1");
-      return raw ? (JSON.parse(raw) as string[]) : [];
-    } catch {
-      return [];
-    }
+  const requestsQuery = useQuery<GenericRow[]>({
+    queryKey: ["ai-helper-requests", WORKSPACE_ID],
+    enabled: Boolean(session),
+    queryFn: async () => {
+      const result = await supabase.from("v_ai_helper_requests_recent").select("*").eq("workspace_id", WORKSPACE_ID).limit(100);
+      if (result.error) throw result.error;
+      return (result.data ?? []) as GenericRow[];
+    },
   });
-  const [newPrompt, setNewPrompt] = useState("");
-  useEffect(() => {
-    try {
-      localStorage.setItem("pulse.aiPrompts.v1", JSON.stringify(customPrompts));
-    } catch {
-      /* ignore */
-    }
-  }, [customPrompts]);
 
-  function addCustomPrompt() {
-    const v = newPrompt.trim();
-    if (!v) return;
-    setCustomPrompts((p) => [v, ...p.filter((x) => x !== v)].slice(0, 20));
-    setNewPrompt("");
-  }
+  const insightsQuery = useQuery<GenericRow[]>({
+    queryKey: ["ai-helper-insights", WORKSPACE_ID],
+    enabled: Boolean(session),
+    queryFn: async () => {
+      const result = await supabase.from("v_ai_helper_insights_recent").select("*").eq("workspace_id", WORKSPACE_ID).limit(100);
+      if (result.error) throw result.error;
+      return (result.data ?? []) as GenericRow[];
+    },
+  });
+
+  const healthQuery = useQuery<GenericRow[]>({
+    queryKey: ["ai-helper-health", WORKSPACE_ID],
+    enabled: Boolean(session),
+    queryFn: async () => {
+      const result = await supabase.from("v_ai_helper_health").select("*").eq("workspace_id", WORKSPACE_ID).limit(20);
+      if (result.error) throw result.error;
+      return (result.data ?? []) as GenericRow[];
+    },
+  });
+
+  const runMutation = useMutation({
+    mutationFn: async (): Promise<RunResult> => {
+      const response = await supabase.functions.invoke("ai-helper-run", {
+        body: {
+          workspace_id: WORKSPACE_ID,
+          request_type: selectedOption.requestType,
+          context_scope: selectedOption.contextScope,
+          prompt,
+        },
+      });
+      if (response.error) throw response.error;
+
+      const payload = isRecord(response.data) ? response.data : {};
+      return {
+        answerText: firstString(payload, ["answer", "summary", "response", "text", "message"]),
+        requestType: firstString(payload, ["request_type"]) ?? selectedOption.requestType,
+        contextScope: firstString(payload, ["context_scope"]) ?? selectedOption.contextScope,
+        status: firstString(payload, ["status"]),
+        createdAt: firstString(payload, ["created_at", "createdAt"]),
+        requestId: firstString(payload, ["request_id", "id"]),
+        insightId: firstString(payload, ["insight_id"]),
+        raw: payload,
+      };
+    },
+    onSuccess: (result) => {
+      setLatest(result);
+      void requestsQuery.refetch();
+      void insightsQuery.refetch();
+      void healthQuery.refetch();
+    },
+  });
+
+  const historyError = requestsQuery.error ?? insightsQuery.error ?? healthQuery.error;
+  const runDisabled = !session || runMutation.isPending;
 
   return (
-    <DashboardLayout title={t("assistantTitle")} subtitle={t("assistantSubtitle")}>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
-        {/* Suggested prompts */}
-        <div className="lg:col-span-1 space-y-4">
-          <SectionCard title={t("suggestedPrompts")}>
-            <div className="flex flex-col gap-2">
-              {prompts.map((p) => (
-                <button
-                  key={p}
-                  onClick={() => sendPrompt(p)}
-                  className="text-left rounded-md border border-border bg-card px-3 py-2 text-sm transition-colors hover:border-primary/40 hover:bg-primary-soft/40"
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-
-            {/* Custom prompt presets */}
-            <div className="mt-3 space-y-2 border-t pt-3">
-              <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                {lang === "uk" ? "Мої пресети" : "My presets"}
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Input
-                  value={newPrompt}
-                  onChange={(e) => setNewPrompt(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && addCustomPrompt()}
-                  placeholder={lang === "uk" ? "Додати запит…" : "Add prompt…"}
-                  className="h-8 text-xs"
-                />
-                <Button size="sm" className="h-8 px-2" onClick={addCustomPrompt} disabled={!newPrompt.trim()}>
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-              <div className="flex flex-col gap-1.5">
-                {customPrompts.map((p) => (
-                  <div
-                    key={p}
-                    className="group flex items-center gap-1.5 rounded-md border border-border bg-card px-2 py-1.5 text-xs"
-                  >
-                    <button onClick={() => sendPrompt(p)} className="flex-1 text-left hover:text-primary">
-                      {p}
-                    </button>
-                    <button
-                      onClick={() => setCustomPrompts((prev) => prev.filter((x) => x !== p))}
-                      className="rounded p-0.5 text-muted-foreground opacity-0 transition-opacity hover:bg-muted hover:text-destructive group-hover:opacity-100"
-                      aria-label="Remove"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+    <DashboardLayout title="AI Assistant" subtitle="Production helper panel for read-only operational insights">
+      <div className="space-y-4">
+        {!session ? (
+          <SectionCard title="Signed out" description="Authentication required">
+            <p className="text-sm text-muted-foreground">You are signed out. Sign in to run AI helper requests and view AI history.</p>
           </SectionCard>
+        ) : null}
 
-          <SectionCard title={t("whatICanDo")}>
-            <ul className="space-y-2 text-xs text-muted-foreground">
-              <li className="flex gap-2"><span className="text-success">✓</span> {t("canAnalyze")}</li>
-              <li className="flex gap-2"><span className="text-success">✓</span> {t("canCompare")}</li>
-              <li className="flex gap-2"><span className="text-success">✓</span> {t("canSurface")}</li>
-              <li className="flex gap-2"><span className="text-destructive">✗</span> {t("cantEdit")}</li>
-              <li className="flex gap-2"><span className="text-destructive">✗</span> {t("cantTrigger")}</li>
-            </ul>
+        <SectionCard title="AI action panel" description="Helper-only actions. No backend mutation actions are available.">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Request type</p>
+              <Select value={selected} onValueChange={(value: RequestType) => setSelected(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select request type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {OPTIONS.map((option) => (
+                    <SelectItem key={option.requestType} value={option.requestType}>{option.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Context scope: <span className="font-mono">{selectedOption.contextScope}</span></p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Prompt / input</p>
+              <Textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Ask the AI helper to summarize, explain anomalies, or highlight operational issues." className="min-h-24" />
+              <Button onClick={() => runMutation.mutate()} disabled={runDisabled}>
+                {runMutation.isPending ? "Running…" : "Run ai-helper-run"}
+              </Button>
+              {runMutation.error ? <p className="text-sm text-destructive">Run failed: {runMutation.error.message}</p> : null}
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Latest answer" description="Last response from ai-helper-run">
+          {!latest ? (
+            <p className="text-sm text-muted-foreground">No AI runs yet in this session.</p>
+          ) : (
+            <div className="space-y-2 text-sm">
+              <p><span className="font-medium">Answer:</span> {latest.answerText ?? "No answer text returned"}</p>
+              <p><span className="font-medium">Request type:</span> {latest.requestType}</p>
+              <p><span className="font-medium">Context scope:</span> {latest.contextScope}</p>
+              <p><span className="font-medium">Status:</span> {latest.status ?? "Unknown"}</p>
+              <p><span className="font-medium">Created:</span> {latest.createdAt ?? "Unknown"}</p>
+              <p><span className="font-medium">Request ID:</span> {latest.requestId ?? "N/A"}</p>
+              <p><span className="font-medium">Insight ID:</span> {latest.insightId ?? "N/A"}</p>
+            </div>
+          )}
+        </SectionCard>
+
+        {session && (requestsQuery.isLoading || insightsQuery.isLoading || healthQuery.isLoading) ? (
+          <SectionCard title="Loading" description="Loading AI helper data">
+            <p className="text-sm text-muted-foreground">Loading request history, insights history, and health status…</p>
           </SectionCard>
-        </div>
+        ) : null}
 
-        {/* Chat panel */}
-        <SectionCard className="lg:col-span-3 flex flex-col" contentClassName="flex flex-col gap-3">
-          <div className="flex h-[60vh] flex-col gap-4 overflow-y-auto pr-1">
-            {messages.map((m, i) => {
-              if (m.role === "user") {
-                return (
-                  <div key={i} className="flex items-start gap-2.5 self-end max-w-[85%]">
-                    <div className="rounded-2xl rounded-tr-sm bg-primary px-3.5 py-2 text-[13.5px] text-primary-foreground shadow-card">
-                      {m.content}
-                    </div>
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border/70 bg-card">
-                      <User className="h-3.5 w-3.5 text-muted-foreground" />
-                    </div>
-                  </div>
-                );
-              }
-              if (m.role === "assistant") {
-                return (
-                  <div key={i} className="flex items-start gap-2.5 max-w-[85%]">
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-accent text-primary-foreground">
-                      <Bot className="h-3.5 w-3.5" />
-                    </div>
-                    <div className="rounded-2xl rounded-tl-sm border border-border/70 bg-card-elevated px-3.5 py-2 text-[13.5px]">
-                      {m.content}
-                    </div>
-                  </div>
-                );
-              }
-              if (m.role === "assistant-card") {
-                return <ResponseCard key={i} data={m.data} />;
-              }
-              return null;
-            })}
-          </div>
+        {session && historyError ? (
+          <SectionCard title="Error" description="Could not load all AI helper data">
+            <p className="text-sm text-destructive">{historyError.message}</p>
+          </SectionCard>
+        ) : null}
 
-          {/* Input */}
-          <div className="flex items-center gap-2 border-t pt-3">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && sendPrompt(input)}
-              placeholder={t("assistantInputPlaceholder")}
-              className="h-10 text-sm"
-            />
-            <Button onClick={() => sendPrompt(input)} className="h-10 gap-1.5">
-              <Send className="h-3.5 w-3.5" />
-              {t("send")}
-            </Button>
-          </div>
+        <SectionCard title="Request history" description="Source: v_ai_helper_requests_recent">
+          <GenericRows rows={requestsQuery.data ?? []} emptyText="No recent AI helper requests found." />
+        </SectionCard>
+
+        <SectionCard title="Insights history" description="Source: v_ai_helper_insights_recent">
+          <GenericRows rows={insightsQuery.data ?? []} emptyText="No recent AI helper insights found." />
+        </SectionCard>
+
+        <SectionCard title="AI health / status" description="Source: v_ai_helper_health">
+          <GenericRows rows={healthQuery.data ?? []} emptyText="No AI helper health records found." />
         </SectionCard>
       </div>
     </DashboardLayout>
   );
 }
 
-function ResponseCard({ data }: { data: ResponseCardData }) {
-  const { t } = useI18n();
+function GenericRows({ rows, emptyText }: { rows: GenericRow[]; emptyText: string }) {
+  if (rows.length === 0) {
+    return <p className="text-sm text-muted-foreground">{emptyText}</p>;
+  }
+
   return (
-    <div className="flex items-start gap-2.5 max-w-full">
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-accent text-primary-foreground shadow-card-md">
-        <Sparkles className="h-4 w-4" />
-      </div>
-      <div className="ring-accent-top flex-1 space-y-4 overflow-hidden rounded-2xl rounded-tl-sm border border-border/70 bg-card p-4 shadow-card-md">
-        {/* Filters */}
-        <div>
-          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-            {t("appliedFilters")}
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {data.filters.map((f) => (
-              <span
-                key={f}
-                className="rounded-md border border-border/70 bg-muted/60 px-2 py-0.5 text-[11px] font-medium text-foreground/80"
-              >
-                {f}
-              </span>
-            ))}
-          </div>
+    <div className="space-y-3">
+      {rows.map((row, index) => (
+        <div key={index} className="rounded-md border border-border/70 bg-card/60 p-3">
+          {Object.entries(row).map(([key, value]) => (
+            <p key={key} className="text-xs">
+              <span className="font-medium">{key}:</span> {formatValue(value)}
+            </p>
+          ))}
         </div>
-
-        {/* Summary */}
-        <p className="text-[14px] leading-relaxed text-foreground/90">{data.summary}</p>
-
-        {/* Key metrics */}
-        <div>
-          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-            {t("keyMetrics")}
-          </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {data.metrics.map((m) => (
-              <div
-                key={m.label}
-                className="rounded-lg border border-border/70 bg-card-elevated p-2.5 transition-colors hover:border-primary/30"
-              >
-                <div className="text-[10px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
-                  {m.label}
-                </div>
-                <div className="mt-1 text-[15px] font-semibold num">{m.value}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Chart */}
-        {data.chart && (
-          <div className="rounded-lg border border-border/70 bg-card-elevated p-3">
-            <div className="mb-2 flex items-center gap-1.5 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-              <BarChart3 className="h-3 w-3" /> {t("supportingChart")} — ROAS
-            </div>
-            <div className="h-[180px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.chart} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="2 4" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} interval={0} angle={-15} textAnchor="end" height={50} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
-                  <Tooltip contentStyle={tooltipStyle} cursor={{ fill: "hsl(var(--muted) / 0.4)" }} formatter={(v: number) => `${v.toFixed(2)}x`} />
-                  <Bar dataKey="value" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        )}
-
-        {/* Table */}
-        {data.table && (
-          <div>
-            <div className="mb-1.5 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
-              {t("topContributors")}
-            </div>
-            <div className="overflow-hidden rounded-lg border border-border/70">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("thCampaign")}</TableHead>
-                    <TableHead className="text-right">{t("thRoas")}</TableHead>
-                    <TableHead className="text-right">{t("thRevenue")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.table.map((r) => (
-                    <TableRow key={r.campaign}>
-                      <TableCell className="font-medium">{r.campaign}</TableCell>
-                      <TableCell className="text-right num font-semibold">{r.roas.toFixed(2)}x</TableCell>
-                      <TableCell className="text-right num">{fmtCurrency(r.revenue)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </div>
-        )}
-      </div>
+      ))}
     </div>
   );
+}
+
+function firstString(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "string" && value.trim().length > 0) return value;
+  }
+  return null;
+}
+
+function formatValue(value: string | number | boolean | null) {
+  return value === null ? "null" : String(value);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
