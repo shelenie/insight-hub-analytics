@@ -1,206 +1,47 @@
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { SectionCard } from "@/components/dashboard/SectionCard";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { campaignsTable } from "@/data/mock";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { fmtCurrency, fmtNum } from "@/lib/format";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Download, Search, ArrowUpDown } from "lucide-react";
-import { useMemo, useState } from "react";
 import { useI18n } from "@/i18n/I18nProvider";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/auth/AuthProvider";
 
-const tooltipStyle = {
-  background: "hsl(var(--card))",
-  border: "1px solid hsl(var(--border))",
-  borderRadius: "8px",
-  fontSize: "12px",
-};
-
-type SortKey = "spend" | "roas" | "ctr" | "cpl" | "revenue";
+const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
+type Row = Record<string, string | number | boolean | null>;
 
 export default function Campaigns() {
   const { t } = useI18n();
-  const [query, setQuery] = useState("");
-  const [sort, setSort] = useState<SortKey>("roas");
+  const { session } = useAuth();
+  const [queryText, setQueryText] = useState("");
+  const query = useQuery({
+    queryKey: ["campaigns-page", WORKSPACE_ID],
+    enabled: Boolean(session),
+    queryFn: async () => {
+      const [daily, summary, bindings, anomalies, health] = await Promise.all([
+        read("v_ads_performance_daily"), read("v_ads_performance_summary"), read("v_ad_account_bindings"), read("v_ai_ads_anomaly_candidates"), read("v_ads_connector_health"),
+      ]);
+      return { daily, summary, bindings, anomalies, health };
+    },
+  });
 
-  const filtered = useMemo(
-    () =>
-      [...campaignsTable]
-        .filter(
-          (c) =>
-            c.campaign.toLowerCase().includes(query.toLowerCase()) ||
-            c.placement.toLowerCase().includes(query.toLowerCase()),
-        )
-        .sort((a, b) => b[sort] - a[sort]),
-    [query, sort],
-  );
+  const rows = useMemo(() => (query.data?.daily.rows ?? []).filter((r) => `${r.campaign_name ?? r.campaign_id ?? ""}`.toLowerCase().includes(queryText.toLowerCase())), [query.data, queryText]);
+  const connectorStatus = String(query.data?.health.rows[0]?.ads_connector_status ?? query.data?.health.rows[0]?.status ?? "");
 
-  const totals = useMemo(() => {
-    const spend = filtered.reduce((s, c) => s + c.spend, 0);
-    const revenue = filtered.reduce((s, c) => s + c.revenue, 0);
-    const sales = filtered.reduce((s, c) => s + c.sales, 0);
-    return { spend, revenue, sales, roas: spend ? revenue / spend : 0 };
-  }, [filtered]);
-
-  const byRoas = [...filtered].sort((a, b) => b.roas - a.roas).slice(0, 8);
-  const bySpend = [...filtered].sort((a, b) => b.spend - a.spend).slice(0, 8);
-
-  return (
-    <DashboardLayout
-      title={t("campaignsTitle")}
-      subtitle={t("campaignsSubtitle")}
-      actions={
-        <Button size="sm" variant="outline" className="gap-1.5">
-          <Download className="h-3.5 w-3.5" />
-          {t("exportCsv")}
-        </Button>
-      }
-    >
-      <div className="space-y-4">
-        <FilterBar
-          extra={
-            <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={t("searchPlaceholder")}
-                className="h-8 w-[220px] pl-8 text-xs"
-              />
-            </div>
-          }
-          freshness={{ source: "fact_campaigns", status: "fresh", lastSync: "8 min" }}
-        />
-
-        {/* Quick comparison cards */}
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <QuickCard label={t("totalSpend")} value={fmtCurrency(totals.spend)} />
-          <QuickCard label={t("totalRevenue")} value={fmtCurrency(totals.revenue)} />
-          <QuickCard label={t("kpiSales")} value={fmtNum(totals.sales)} />
-          <QuickCard label={t("blendedRoas")} value={`${totals.roas.toFixed(2)}x`} highlight />
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-          <SectionCard title={t("byRoas")}>
-            <div className="h-[260px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={byRoas} layout="vertical" margin={{ top: 5, right: 16, left: 100, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                  <YAxis dataKey="campaign" type="category" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} width={100} />
-                  <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => `${v.toFixed(2)}x`} />
-                  <Bar dataKey="roas" fill="hsl(var(--chart-2))" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </SectionCard>
-
-          <SectionCard title={t("bySpend")}>
-            <div className="h-[260px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={bySpend} layout="vertical" margin={{ top: 5, right: 16, left: 100, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" horizontal={false} />
-                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`} />
-                  <YAxis dataKey="campaign" type="category" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} width={100} />
-                  <Tooltip contentStyle={tooltipStyle} formatter={(v: number) => fmtCurrency(v)} />
-                  <Bar dataKey="spend" fill="hsl(var(--chart-3))" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </SectionCard>
-        </div>
-
-        <SectionCard
-          title={t("allCampaigns")}
-          description={`${filtered.length} ${t("rows")}`}
-          actions={
-            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <ArrowUpDown className="h-3.5 w-3.5" />
-              <select
-                value={sort}
-                onChange={(e) => setSort(e.target.value as SortKey)}
-                className="h-7 rounded-md border bg-background px-1.5 text-xs"
-              >
-                <option value="roas">ROAS</option>
-                <option value="spend">{t("thSpend")}</option>
-                <option value="revenue">{t("thRevenue")}</option>
-                <option value="ctr">CTR</option>
-                <option value="cpl">CPL</option>
-              </select>
-            </div>
-          }
-          noPadding
-        >
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="min-w-[180px]">{t("thCampaign")}</TableHead>
-                  <TableHead>{t("thPlacement")}</TableHead>
-                  <TableHead className="text-right">{t("thSpend")}</TableHead>
-                  <TableHead className="text-right">{t("thReach")}</TableHead>
-                  <TableHead className="text-right">{t("thClicks")}</TableHead>
-                  <TableHead className="text-right">{t("thCpc")}</TableHead>
-                  <TableHead className="text-right">{t("thCpm")}</TableHead>
-                  <TableHead className="text-right">{t("thCtr")}</TableHead>
-                  <TableHead className="text-right">{t("thRegs")}</TableHead>
-                  <TableHead className="text-right">{t("thCpl")}</TableHead>
-                  <TableHead className="text-right">{t("thSales")}</TableHead>
-                  <TableHead className="text-right">{t("thRevenue")}</TableHead>
-                  <TableHead className="text-right">{t("thRoas")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filtered.map((c, i) => (
-                  <TableRow key={i} className="text-xs">
-                    <TableCell className="font-medium">{c.campaign}</TableCell>
-                    <TableCell className="text-muted-foreground">{c.placement}</TableCell>
-                    <TableCell className="text-right num">{fmtCurrency(c.spend)}</TableCell>
-                    <TableCell className="text-right num">{fmtNum(c.reach)}</TableCell>
-                    <TableCell className="text-right num">{fmtNum(c.clicks)}</TableCell>
-                    <TableCell className="text-right num">${c.cpc.toFixed(2)}</TableCell>
-                    <TableCell className="text-right num">${c.cpm.toFixed(2)}</TableCell>
-                    <TableCell className="text-right num">{c.ctr.toFixed(2)}%</TableCell>
-                    <TableCell className="text-right num">{fmtNum(c.regs)}</TableCell>
-                    <TableCell className="text-right num">${c.cpl.toFixed(2)}</TableCell>
-                    <TableCell className="text-right num">{c.sales}</TableCell>
-                    <TableCell className="text-right num">{fmtCurrency(c.revenue)}</TableCell>
-                    <TableCell className={`text-right num font-semibold ${c.roas >= 4 ? "text-success" : c.roas < 3 ? "text-destructive" : ""}`}>
-                      {c.roas.toFixed(2)}x
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </SectionCard>
-      </div>
-    </DashboardLayout>
-  );
+  return <DashboardLayout title={t("campaignsTitle")} subtitle={t("campaignsSubtitle")}><div className="space-y-4"><FilterBar extra={<Input value={queryText} onChange={(e) => setQueryText(e.target.value)} placeholder={t("searchPlaceholder")} className="h-8 w-[240px] text-xs" />} freshness={{ source: "v_ads_performance_daily", status: "fresh", lastSync: "live" }} />
+    {!session ? <Msg t="Sign in to view campaigns production data." /> : query.isLoading ? <Msg t="Loading campaigns production data…" /> : null}
+    {connectorStatus === "no_active_connections" ? <Msg t="Connect a real ads account to activate ads data." /> : null}
+    <SectionCard title="Campaign metrics" description="Source: v_ads_performance_daily" noPadding>
+      {(query.data?.daily.unavailableReason) ? <Msg t="Campaign production data is unavailable." /> : <Table><TableHeader><TableRow><TableHead>platform</TableHead><TableHead>campaign</TableHead><TableHead className="text-right">spend</TableHead><TableHead className="text-right">clicks</TableHead><TableHead className="text-right">impressions/reach</TableHead><TableHead className="text-right">CTR</TableHead><TableHead className="text-right">CPC</TableHead><TableHead className="text-right">CPM</TableHead></TableRow></TableHeader><TableBody>{rows.slice(0, 100).map((r, i) => <TableRow key={i}><TableCell>{String(r.platform ?? "—")}</TableCell><TableCell>{String(r.campaign_name ?? r.campaign_id ?? "—")}</TableCell><TableCell className="text-right num">{val(r.spend, true)}</TableCell><TableCell className="text-right num">{val(r.clicks)}</TableCell><TableCell className="text-right num">{val(r.impressions ?? r.reach)}</TableCell><TableCell className="text-right num">{val(r.ctr)}</TableCell><TableCell className="text-right num">{val(r.cpc, true)}</TableCell><TableCell className="text-right num">{val(r.cpm, true)}</TableCell></TableRow>)}</TableBody></Table>}
+    </SectionCard>
+    <SectionCard title="Mapping / binding status" description="Source: v_ad_account_bindings" noPadding><Simple rows={query.data?.bindings.rows ?? []} columns={["platform", "ad_account_name", "mapping_status", "binding_status", "updated_at"]} empty="Binding status unavailable." /></SectionCard>
+    <SectionCard title="Anomaly candidates" description="Source: v_ai_ads_anomaly_candidates" noPadding><Simple rows={query.data?.anomalies.rows ?? []} columns={["severity", "title", "reason", "created_at"]} empty="No anomaly candidates." /></SectionCard>
+  </div></DashboardLayout>;
 }
-
-function QuickCard({ label, value, highlight }: { label: string; value: string; highlight?: boolean }) {
-  return (
-    <div className={`rounded-lg border bg-card p-4 shadow-card ${highlight ? "border-primary/30 bg-primary-soft/40" : ""}`}>
-      <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={`mt-1 text-xl font-semibold num ${highlight ? "text-primary" : ""}`}>{value}</div>
-    </div>
-  );
-}
+const Msg = ({ t }: { t: string }) => <p className="rounded border p-3 text-sm text-muted-foreground">{t}</p>;
+const val = (v: Row[string], currency?: boolean) => typeof v === "number" ? (currency ? fmtCurrency(v) : fmtNum(v)) : "—";
+function Simple({ rows, columns, empty }: { rows: Row[]; columns: string[]; empty: string }) { if (!rows.length) return <Msg t={empty} />; return <Table><TableHeader><TableRow>{columns.map((c) => <TableHead key={c}>{c}</TableHead>)}</TableRow></TableHeader><TableBody>{rows.slice(0, 50).map((r, i) => <TableRow key={i}>{columns.map((c) => <TableCell key={c}>{String(r[c] ?? "—")}</TableCell>)}</TableRow>)}</TableBody></Table>; }
+async function read(viewName: string) { const res = await supabase.from(viewName).select("*").eq("workspace_id", WORKSPACE_ID).limit(200); return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null }; }
