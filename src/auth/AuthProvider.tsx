@@ -14,6 +14,8 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+const getAppRedirectUrl = () => new URL(import.meta.env.BASE_URL, window.location.origin).toString();
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       options: {
         // Invite-only.
         shouldCreateUser: false,
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: getAppRedirectUrl(),
       },
     });
     return { error: error?.message ?? null };
