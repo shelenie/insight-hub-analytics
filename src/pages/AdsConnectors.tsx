@@ -4,6 +4,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -26,6 +27,8 @@ const CONNECTOR_FN: Record<ConnectorKey, string> = {
 export default function AdsConnectors() {
   const { session } = useAuth();
   const queryClient = useQueryClient();
+  const { capabilities, isLoading: roleLoading, error: roleError } = useWorkspaceRole(WORKSPACE_ID);
+  const canManage = capabilities.can_manage_bindings;
   const [connectorState, setConnectorState] = useState<Record<ConnectorKey, ConnectorState>>({
     meta: { loading: false, error: null },
     google: { loading: false, error: null },
@@ -135,6 +138,10 @@ export default function AdsConnectors() {
           <p className="text-sm text-destructive">Could not load ads connectors workspace: {query.error.message}</p>
         </SectionCard>
       ) : (
+        <>
+        {roleLoading ? <p className="text-xs text-muted-foreground">Loading workspace role permissions…</p> : null}
+        {!roleLoading && !canManage ? <p className="text-xs text-muted-foreground">You do not have permission to manage ads connectors.</p> : null}
+        {!roleLoading && roleError ? <p className="text-xs text-muted-foreground">Workspace role unavailable. Write actions are disabled for safety.</p> : null}
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -161,9 +168,9 @@ export default function AdsConnectors() {
 
           <TabsContent value="connections"><SectionCard title="Connections" description="Use secure OAuth start edge functions.">
             <div className="grid gap-3 md:grid-cols-2">
-              <ConnectorCard name="Meta Ads" description="Connect via secure Meta OAuth start function." state={connectorState.meta} onConnect={() => void connect("meta")} />
-              <ConnectorCard name="Google Ads" description="Connect via secure Google Ads OAuth start function." state={connectorState.google} onConnect={() => void connect("google")} />
-              <ConnectorCard name="TikTok Ads" description="Connect via secure TikTok OAuth start function." state={connectorState.tiktok} onConnect={() => void connect("tiktok")} />
+              <ConnectorCard name="Meta Ads" description="Connect via secure Meta OAuth start function." state={connectorState.meta} onConnect={() => void connect("meta")} canManage={canManage} />
+              <ConnectorCard name="Google Ads" description="Connect via secure Google Ads OAuth start function." state={connectorState.google} onConnect={() => void connect("google")} canManage={canManage} />
+              <ConnectorCard name="TikTok Ads" description="Connect via secure TikTok OAuth start function." state={connectorState.tiktok} onConnect={() => void connect("tiktok")} canManage={canManage} />
               <div className="rounded-md border border-border/70 p-3 text-sm">
                 <p className="font-medium">Facebook Lead Ads</p>
                 <p className="mt-1 text-muted-foreground">Uses Meta Ads connection in the current backend model.</p>
@@ -181,7 +188,7 @@ export default function AdsConnectors() {
               <OptionalKnownColumns data={query.data?.syncRules} columns={["platform", "cadence", "schedule", "status", "last_run_at", "next_run_at", "updated_at"]} emptyText="No scheduled sync rules found." />
               <OptionalKnownColumns data={query.data?.syncDue} columns={["platform", "status", "last_run_at", "next_run_at", "due_status", "is_due"]} emptyText="No scheduled sync due records found." />
               <div className="rounded-md border border-dashed border-border/70 bg-muted/30 p-3">
-                <Button type="button" onClick={() => void runScheduledSync()} disabled={!session || syncRunState.loading}>
+                <Button type="button" onClick={() => void runScheduledSync()} disabled={!session || !canManage || !capabilities.can_run_ads_scheduled_sync || syncRunState.loading}>
                   {syncRunState.loading ? "Running scheduled sync…" : "Run scheduled sync"}
                 </Button>
                 <p className="mt-2 text-xs text-muted-foreground">Scheduled sync is checked securely on submit.</p>
@@ -216,6 +223,7 @@ export default function AdsConnectors() {
             </ul>
           </SectionCard></TabsContent>
         </Tabs>
+        </>
       )}
     </DashboardLayout>
   );
@@ -230,8 +238,8 @@ async function readOptionalView(viewName: string): Promise<OptionalViewData> {
 function ReadinessField({ label, value }: { label: string; value: string | null | undefined }) {
   return <div className="rounded-md border border-border/70 bg-card/60 p-3"><p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p><p className="mt-1 font-medium">{value ?? "Unavailable"}</p></div>;
 }
-function ConnectorCard({ name, description, state, onConnect }: { name: string; description: string; state: ConnectorState; onConnect: () => void }) {
-  return <div className="rounded-md border border-border/70 p-3 text-sm"><p className="font-medium">{name}</p><p className="mt-1 text-muted-foreground">{description}</p><Button type="button" className="mt-3" onClick={onConnect} disabled={state.loading}>{state.loading ? "Connecting…" : "Connect"}</Button>{state.error && <p className="mt-2 text-xs text-destructive">{state.error}</p>}</div>;
+function ConnectorCard({ name, description, state, onConnect, canManage }: { name: string; description: string; state: ConnectorState; onConnect: () => void; canManage: boolean }) {
+  return <div className="rounded-md border border-border/70 p-3 text-sm"><p className="font-medium">{name}</p><p className="mt-1 text-muted-foreground">{description}</p><Button type="button" className="mt-3" onClick={onConnect} disabled={state.loading || !canManage}>{state.loading ? "Connecting…" : "Connect"}</Button>{state.error && <p className="mt-2 text-xs text-destructive">{state.error}</p>}</div>;
 }
 function OptionalViewCard({ title, viewName, data, emptyText }: { title: string; viewName: string; data: OptionalViewData | undefined; emptyText: string }) {
   return <SectionCard title={title} description={`Source: ${viewName}`}>{data?.unavailableReason ? <p className="text-sm text-muted-foreground">Unavailable: {data.unavailableReason}</p> : <GenericTable rows={data?.rows ?? []} emptyText={emptyText} />}</SectionCard>;
