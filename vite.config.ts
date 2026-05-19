@@ -4,6 +4,7 @@ import path from "path";
 
 // https://vitejs.dev/config/
 export default defineConfig(() => ({
+  base: process.env.GITHUB_PAGES === "true" ? "/insight-hub-analytics/" : "/",
   server: {
     host: "::",
     port: 8080,

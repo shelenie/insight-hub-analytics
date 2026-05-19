@@ -11,6 +11,8 @@ import { ThemeSwitcher } from "@/components/header/ThemeSwitcher";
 import { supabase } from "@/integrations/supabase/client";
 import { usePreferences } from "@/preferences/PreferencesProvider";
 
+const getAppRedirectUrl = () => new URL(import.meta.env.BASE_URL, window.location.origin).toString();
+
 export default function Login() {
   const { session, loading, signInWithMagicLink } = useAuth();
   const { t } = useI18n();
@@ -29,7 +31,7 @@ export default function Login() {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: getAppRedirectUrl(),
       },
     });
     if (error) {
