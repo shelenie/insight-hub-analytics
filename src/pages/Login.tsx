@@ -72,7 +72,7 @@ export default function Login() {
             <Activity className="h-4 w-4" />
           </div>
           <div className="leading-tight">
-            <div className="text-sm font-semibold">Pulse</div>
+            <div className="text-sm font-semibold">Insight Hub</div>
             <div className="text-[11px] text-muted-foreground">{t("appTagline")}</div>
           </div>
         </div>

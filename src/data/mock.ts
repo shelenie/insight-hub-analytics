@@ -3,7 +3,7 @@
 
 export const projects = [
   { id: "all", name: "All projects", nameUk: "Усі проєкти" },
-  { id: "pulse-edu", name: "Pulse Education", nameUk: "Pulse Education" },
+  { id: "pulse-edu", name: "Insight Hub Education", nameUk: "Insight Hub Education" },
   { id: "atlas-fin", name: "Atlas Finance", nameUk: "Atlas Finance" },
   { id: "nova-health", name: "Nova Health", nameUk: "Nova Health" },
   { id: "loop-saas", name: "Loop SaaS", nameUk: "Loop SaaS" },
@@ -108,16 +108,16 @@ export const dailyAnalytics: DailyRow[] = dailyDates.map((d, i) => {
 });
 
 export const topCampaigns = [
-  { campaign: "WBN-Q4-LAL3-Video", project: "Pulse Education", spend: 18420, regs: 1820, sales: 84, revenue: 92400, roas: 5.02 },
+  { campaign: "WBN-Q4-LAL3-Video", project: "Insight Hub Education", spend: 18420, regs: 1820, sales: 84, revenue: 92400, roas: 5.02 },
   { campaign: "EVG-FB-Interest-A", project: "Atlas Finance", spend: 14200, regs: 1310, sales: 62, revenue: 71800, roas: 5.06 },
   { campaign: "Launch-May-IG-Reels", project: "Nova Health", spend: 22100, regs: 1140, sales: 58, revenue: 68400, roas: 3.09 },
   { campaign: "Retention-Email-Push", project: "Loop SaaS", spend: 6800, regs: 420, sales: 41, revenue: 49200, roas: 7.24 },
-  { campaign: "WBN-Q4-Cold-Static", project: "Pulse Education", spend: 16800, regs: 980, sales: 38, revenue: 41600, roas: 2.48 },
+  { campaign: "WBN-Q4-Cold-Static", project: "Insight Hub Education", spend: 16800, regs: 980, sales: 38, revenue: 41600, roas: 2.48 },
   { campaign: "Atlas-Search-Brand", project: "Atlas Finance", spend: 4200, regs: 360, sales: 34, revenue: 39800, roas: 9.48 },
 ];
 
 export const topReportGroups = [
-  { group: "Webinar Q4", project: "Pulse Education", spend: 48400, sales: 184, revenue: 218400, roas: 4.51, status: "healthy" as const },
+  { group: "Webinar Q4", project: "Insight Hub Education", spend: 48400, sales: 184, revenue: 218400, roas: 4.51, status: "healthy" as const },
   { group: "Evergreen FB", project: "Atlas Finance", spend: 32800, sales: 142, revenue: 168200, roas: 5.13, status: "healthy" as const },
   { group: "Spring Launch", project: "Nova Health", spend: 41200, sales: 96, revenue: 102400, roas: 2.49, status: "warning" as const },
   { group: "Retention", project: "Loop SaaS", spend: 12400, sales: 88, revenue: 94800, roas: 7.65, status: "healthy" as const },
@@ -248,7 +248,7 @@ export const unknownMappings = [
   { id: 1, type: "tariff", value: "VIP+", source: "fact_sales", count: 14, suggested: "VIP" },
   { id: 2, type: "campaign", value: "wbn_q4_v2_lal3", source: "fact_campaigns", count: 8, suggested: "WBN-Q4-LAL3-Video" },
   { id: 3, type: "lead_type", value: "applic.", source: "fact_sales", count: 22, suggested: "Application" },
-  { id: 4, type: "project", value: "pulse_edu", source: "fact_daily", count: 4, suggested: "Pulse Education" },
+  { id: 4, type: "project", value: "insight_hub_edu", source: "fact_daily", count: 4, suggested: "Insight Hub Education" },
 ];
 
 export const dataQualityAlerts = [

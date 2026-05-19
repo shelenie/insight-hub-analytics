@@ -75,6 +75,7 @@ type BackendSnapshotRow = {
   operational_alerts_status: string | null;
   ads_connector_status: string | null;
 };
+type UiBackendContractRow = Record<string, string | number | boolean | null>;
 
 const tooltipStyle = {
   background: "hsl(var(--card))",
@@ -108,6 +109,19 @@ export default function Overview() {
 
       if (error) throw error;
       return (data as BackendSnapshotRow | null) ?? null;
+    },
+  });
+  const uiContractQuery = useQuery({
+    queryKey: ["ui-backend-contract", WORKSPACE_ID],
+    enabled: Boolean(session),
+    queryFn: async () => {
+      const result = await supabase
+        .from("v_ui_backend_contract")
+        .select("*")
+        .eq("workspace_id", WORKSPACE_ID)
+        .limit(20);
+      if (result.error) return { unavailableReason: result.error.message, rows: [] as UiBackendContractRow[] };
+      return { unavailableReason: null, rows: (result.data ?? []) as UiBackendContractRow[] };
     },
   });
 
@@ -204,6 +218,79 @@ export default function Overview() {
               <ReadinessField label="ads_connector_status" value={readinessQuery.data.ads_connector_status} />
             </div>
           )}
+        </SectionCard>
+        <SectionCard title="UI Backend Contract" description="Source: v_ui_backend_contract">
+          {!session ? (
+            <p className="text-sm text-muted-foreground">Sign in to load UI contract status.</p>
+          ) : uiContractQuery.isLoading ? (
+            <p className="text-sm text-muted-foreground">Loading UI backend contract…</p>
+          ) : uiContractQuery.data?.unavailableReason ? (
+            <p className="text-sm text-muted-foreground">UI backend contract unavailable: {uiContractQuery.data.unavailableReason}</p>
+          ) : (uiContractQuery.data?.rows.length ?? 0) === 0 ? (
+            <p className="text-sm text-muted-foreground">UI backend contract unavailable.</p>
+          ) : (
+            <div className="space-y-2 text-xs">
+              {uiContractQuery.data?.rows.map((row, idx) => (
+                <div key={idx} className="rounded-md border border-border/70 bg-card/60 p-2">
+                  {Object.entries(row).map(([key, value]) => <p key={key}><span className="font-medium">{key}:</span> {String(value ?? "—")}</p>)}
+                </div>
+              ))}
+            </div>
+          )}
+          <p className="mt-2 text-xs text-muted-foreground">Role-aware action gating requires a safe frontend role source.</p>
+        </SectionCard>
+        <SectionCard title="Frontend module readiness" description="Pre-live UI module inventory and disabled action areas">
+          <div className="grid gap-2 text-sm md:grid-cols-2">
+            {["Production Readiness", "Onboarding", "Bindings / Mapping", "Telegram / Alerts", "Ads Connectors", "AI Assistant"].map((module) => (
+              <p key={module}>✅ {module}</p>
+            ))}
+          </div>
+          <div className="mt-3 rounded-md border border-dashed border-border/70 bg-muted/30 p-3 text-xs">
+            <p className="font-medium text-foreground">Known disabled actions (intentional pre-live):</p>
+            <ul className="mt-1 list-disc pl-4 text-muted-foreground">
+              <li>Onboarding create/edit actions</li>
+              <li>Binding create/archive actions</li>
+              <li>Mapping approve/reject/send-to-Telegram actions</li>
+              <li>Telegram/alert resolve/retry actions</li>
+              <li>Manual scheduled sync</li>
+            </ul>
+          </div>
+        </SectionCard>
+        <SectionCard title="Action wiring plan before live preview" description="Concrete implementation plan for every currently disabled action">
+          <div className="space-y-4 text-sm">
+            <div>
+              <p className="font-medium">1) Can be wired now (secure frontend-callable function already exists)</p>
+              <ul className="mt-1 list-disc pl-5 text-muted-foreground">
+                <li>Ads Connectors: Meta/Google/TikTok connect actions already call secure OAuth start functions.</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-medium">2) Needs new secure Edge Function wrapper</p>
+              <ul className="mt-1 list-disc pl-5 text-muted-foreground">
+                <li><span className="font-medium text-foreground">onboarding-client-upsert</span> → backend onboarding upsert path for client create/edit.</li>
+                <li><span className="font-medium text-foreground">onboarding-project-upsert</span> → backend onboarding upsert path for project create/edit.</li>
+                <li><span className="font-medium text-foreground">onboarding-funnel-upsert</span> → backend onboarding upsert path for funnel create/edit.</li>
+                <li><span className="font-medium text-foreground">binding-create-or-update</span> → backend binding mutation path for create/edit and confidence/status updates.</li>
+                <li><span className="font-medium text-foreground">binding-archive</span> → backend binding archive/deactivate mutation path.</li>
+                <li><span className="font-medium text-foreground">mapping-review-approve</span> → backend approve mapping action path.</li>
+                <li><span className="font-medium text-foreground">mapping-review-reject</span> → backend reject mapping action path.</li>
+                <li><span className="font-medium text-foreground">mapping-review-send-telegram</span> → backend send-to-Telegram mapping action path.</li>
+                <li><span className="font-medium text-foreground">operational-alert-resolve</span> → backend resolve alert mutation path.</li>
+                <li><span className="font-medium text-foreground">telegram-outbox-retry</span> → backend retry outbox delivery path.</li>
+                <li><span className="font-medium text-foreground">telegram-action-request-open</span> → backend open/create action request path.</li>
+                <li><span className="font-medium text-foreground">ads-scheduled-sync-run</span> → backend scheduled sync trigger path for manual run.</li>
+              </ul>
+            </div>
+            <div>
+              <p className="font-medium">3) Must wait for live OAuth/manual external-provider testing</p>
+              <ul className="mt-1 list-disc pl-5 text-muted-foreground">
+                <li>Final end-to-end verification for ads connector OAuth callbacks and external account token health.</li>
+                <li>Live Telegram delivery confirmation for pending outbox retry and action request flows.</li>
+                <li>Manual provider-side verification of scheduled sync execution across connected ad platforms.</li>
+              </ul>
+            </div>
+            <p className="text-xs text-muted-foreground">Only deferred infra item after live preview: Infra Task 6B (remove Lovable auth wrapper/package after OAuth verification).</p>
+          </div>
         </SectionCard>
 
         {/* KPI grid — premium emphasis on Revenue Fact, ROAS, Sales */}
