@@ -60,6 +60,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import type { TranslationKey } from "@/i18n/translations";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
+import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
@@ -90,6 +91,7 @@ export default function Overview() {
   const { session } = useAuth();
   const [viewMode, setViewMode] = useState<"summary" | "daily">("summary");
   const [selectedDay, setSelectedDay] = useState<DailyRow | null>(null);
+  const { role, capabilities, isLoading: roleLoading, error: roleError } = useWorkspaceRole(WORKSPACE_ID);
 
   const failedCount = useMemo(() => importRuns.filter((r) => r.status === "failed").length, []);
   const partialCount = useMemo(() => importRuns.filter((r) => r.status === "partial").length, []);
@@ -237,7 +239,7 @@ export default function Overview() {
               ))}
             </div>
           )}
-          <p className="mt-2 text-xs text-muted-foreground">Role-aware action gating requires a safe frontend role source.</p>
+          <div className="mt-2 rounded-md border border-border/70 bg-muted/30 p-2 text-xs text-muted-foreground">{roleLoading ? "Loading workspace role…" : roleError ? "Workspace role unavailable." : <>Current role: <span className="font-medium text-foreground">{role ?? "unknown"}</span><br />Capabilities: {Object.entries(capabilities).filter(([, enabled]) => enabled).map(([name]) => name).join(", ") || "none"}</>}</div>
         </SectionCard>
         <SectionCard title="Frontend module readiness" description="Pre-live UI module inventory and disabled action areas">
           <div className="grid gap-2 text-sm md:grid-cols-2">

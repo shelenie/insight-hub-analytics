@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/auth/AuthProvider";
+import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { supabase } from "@/integrations/supabase/client";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
@@ -66,6 +67,7 @@ const OPTIONS: Option[] = [
 
 export default function Assistant() {
   const { session } = useAuth();
+  const { capabilities, isLoading: roleLoading, error: roleError } = useWorkspaceRole(WORKSPACE_ID);
   const [selected, setSelected] = useState<RequestType>("production_readiness_summary");
   const [prompt, setPrompt] = useState("");
   const [latest, setLatest] = useState<RunResult | null>(null);
@@ -135,7 +137,8 @@ export default function Assistant() {
   });
 
   const historyError = requestsQuery.error ?? insightsQuery.error ?? healthQuery.error;
-  const runDisabled = !session || runMutation.isPending;
+  const canUseAi = capabilities.can_use_ai_helper;
+  const runDisabled = !session || runMutation.isPending || roleLoading || !canUseAi;
 
   return (
     <DashboardLayout title="AI Assistant" subtitle="Production helper panel for read-only operational insights">
@@ -168,6 +171,8 @@ export default function Assistant() {
               <Button onClick={() => runMutation.mutate()} disabled={runDisabled}>
                 {runMutation.isPending ? "Running…" : "Run ai-helper-run"}
               </Button>
+              {!roleLoading && !canUseAi ? <p className="text-sm text-muted-foreground">You do not have permission to use AI helper.</p> : null}
+              {!roleLoading && roleError ? <p className="text-sm text-muted-foreground">Workspace role is unavailable. AI helper actions are disabled for safety.</p> : null}
               {runMutation.error ? <p className="text-sm text-destructive">Run failed: {runMutation.error.message}</p> : null}
             </div>
           </div>
