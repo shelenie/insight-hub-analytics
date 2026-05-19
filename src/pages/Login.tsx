@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Activity, Mail, Loader2 } from "lucide-react";
 import { LangSwitcher } from "@/components/header/LangSwitcher";
 import { ThemeSwitcher } from "@/components/header/ThemeSwitcher";
-import { lovable } from "@/integrations/lovable";
+import { supabase } from "@/integrations/supabase/client";
 import { usePreferences } from "@/preferences/PreferencesProvider";
 
 export default function Login() {
@@ -26,16 +26,19 @@ export default function Login() {
     setGoogleLoading(true);
     setStatus("idle");
     setErrorMsg(null);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+      },
     });
-    if (result.error) {
+    if (error) {
       setGoogleLoading(false);
       setStatus("error");
       setErrorMsg(t("googleSignInError"));
       return;
     }
-    if (result.redirected) return;
+    if (data?.url) return;
     // Inline-completed OAuth: state listener will set session; redirect happens below.
   }
 
