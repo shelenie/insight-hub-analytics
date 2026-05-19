@@ -20,6 +20,7 @@ export const translations = {
   navAssistant: { uk: "AI-асистент", en: "AI Assistant" },
   navOnboarding: { uk: "Онбординг", en: "Onboarding" },
   navBindingsMapping: { uk: "Біндінги / Мапінг", en: "Bindings / Mapping" },
+  navTelegramAlerts: { uk: "Telegram / Сповіщення", en: "Telegram / Alerts" },
 
   // Filters
   filters: { uk: "Фільтри", en: "Filters" },

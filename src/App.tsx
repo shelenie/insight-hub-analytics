@@ -19,6 +19,7 @@ import Imports from "./pages/Imports";
 import Assistant from "./pages/Assistant";
 import Onboarding from "./pages/Onboarding";
 import Bindings from "./pages/Bindings";
+import Alerts from "./pages/Alerts";
 import Login from "./pages/Login";
 import NotFound from "./pages/NotFound.tsx";
 
@@ -47,6 +48,7 @@ const App = () => (
                       <Route path="/assistant" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
                       <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
                       <Route path="/bindings" element={<ProtectedRoute><Bindings /></ProtectedRoute>} />
+                      <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
                       <Route path="*" element={<NotFound />} />
                     </Routes>
                   </BrowserRouter>
