@@ -1,17 +1,19 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
 
 type Primitive = string | number | boolean | null;
 type Row = Record<string, Primitive | Primitive[] | Record<string, unknown>>;
 type OptionalViewData = { rows: Row[]; unavailableReason: string | null };
 type ConnectorKey = "meta" | "google" | "tiktok";
 type ConnectorState = { loading: boolean; error: string | null };
+type SyncRunState = { loading: boolean; error: string | null; success: string | null; details: Record<string, unknown> | null };
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
@@ -23,10 +25,18 @@ const CONNECTOR_FN: Record<ConnectorKey, string> = {
 
 export default function AdsConnectors() {
   const { session } = useAuth();
+  const queryClient = useQueryClient();
   const [connectorState, setConnectorState] = useState<Record<ConnectorKey, ConnectorState>>({
     meta: { loading: false, error: null },
     google: { loading: false, error: null },
     tiktok: { loading: false, error: null },
+  });
+
+  const [syncRunState, setSyncRunState] = useState<SyncRunState>({
+    loading: false,
+    error: null,
+    success: null,
+    details: null,
   });
 
   const query = useQuery({
@@ -57,6 +67,37 @@ export default function AdsConnectors() {
     snapshot: query.data?.snapshot.rows[0],
     adsHealth: query.data?.adsSummary.rows[0] ?? query.data?.adsAnomalies.rows[0],
   }), [query.data]);
+
+
+  const runScheduledSync = async () => {
+    setSyncRunState({ loading: true, error: null, success: null, details: null });
+    const { data, error } = await supabase.functions.invoke("ads-scheduled-sync-run", {
+      body: { workspace_id: WORKSPACE_ID },
+    });
+
+    if (error) {
+      setSyncRunState({ loading: false, error: error.message, success: null, details: null });
+      toast({ title: "Scheduled sync failed", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    const details = toObject(data);
+    const message =
+      readString(details, "message") ??
+      readString(details, "status") ??
+      "Scheduled sync submitted securely.";
+
+    setSyncRunState({ loading: false, error: null, success: message, details });
+    toast({ title: "Scheduled sync submitted", description: message });
+
+    await Promise.all([
+      query.refetch(),
+      queryClient.invalidateQueries({ queryKey: ["ads-connectors-workspace", WORKSPACE_ID] }),
+      queryClient.invalidateQueries({ queryKey: ["ads-health"] }),
+      queryClient.invalidateQueries({ queryKey: ["scheduled-sync"] }),
+      queryClient.invalidateQueries({ queryKey: ["ads-readiness"] }),
+    ]);
+  };
 
   const connect = async (connector: ConnectorKey) => {
     setConnectorState((prev) => ({ ...prev, [connector]: { loading: true, error: null } }));
@@ -140,8 +181,17 @@ export default function AdsConnectors() {
               <OptionalKnownColumns data={query.data?.syncRules} columns={["platform", "cadence", "schedule", "status", "last_run_at", "next_run_at", "updated_at"]} emptyText="No scheduled sync rules found." />
               <OptionalKnownColumns data={query.data?.syncDue} columns={["platform", "status", "last_run_at", "next_run_at", "due_status", "is_due"]} emptyText="No scheduled sync due records found." />
               <div className="rounded-md border border-dashed border-border/70 bg-muted/30 p-3">
-                <Button type="button" disabled>Run scheduled sync</Button>
-                <p className="mt-2 text-xs text-muted-foreground">Manual sync requires a secure backend action.</p>
+                <Button type="button" onClick={() => void runScheduledSync()} disabled={!session || syncRunState.loading}>
+                  {syncRunState.loading ? "Running scheduled sync…" : "Run scheduled sync"}
+                </Button>
+                <p className="mt-2 text-xs text-muted-foreground">Scheduled sync is checked securely on submit.</p>
+                {syncRunState.success && <p className="mt-2 text-xs text-emerald-700">{syncRunState.success}</p>}
+                {syncRunState.error && <p className="mt-2 text-xs text-destructive">{syncRunState.error}</p>}
+                {syncRunState.details && (
+                  <pre className="mt-2 overflow-x-auto rounded bg-background p-2 text-xs text-muted-foreground">
+                    {JSON.stringify(syncRunState.details, null, 2)}
+                  </pre>
+                )}
               </div>
             </div>
           </SectionCard></TabsContent>
