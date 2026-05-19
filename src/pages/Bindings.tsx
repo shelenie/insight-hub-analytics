@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { useAuth } from "@/auth/AuthProvider";
@@ -6,197 +7,56 @@ import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 
+const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 type Row = Record<string, string | number | boolean | null>;
 type OptionalViewData = { rows: Row[]; unavailableReason: string | null };
-
-type BindingsData = {
-  sourceBindings: Row[];
-  adAccountBindings: Row[];
-  projectDataBindings: Row[];
-  mappingReviewQueue: Row[];
-  bindingHealth: Row[];
-  mappingReviewHealth: OptionalViewData;
-  mappingReviewActionsRecent: OptionalViewData;
-  telegramHitlHealth: OptionalViewData;
-};
-
-const MAPPING_ACTIONS_MESSAGE = "Mapping actions require a secure backend action.";
-const MISSING_SECURE_WRAPPERS = [
-  "send_mapping_review_to_telegram",
-  "approve_mapping_review",
-  "reject_mapping_review",
-] as const;
+type BindingsData = { sourceBindings: Row[]; adAccountBindings: Row[]; projectDataBindings: Row[]; mappingReviewQueue: Row[]; bindingHealth: Row[]; mappingReviewHealth: OptionalViewData; mappingReviewActionsRecent: OptionalViewData; telegramHitlHealth: OptionalViewData; };
+type BindingType = "source" | "ad_account";
 
 export default function Bindings() {
   const { session } = useAuth();
+  const queryClient = useQueryClient();
+  const [message, setMessage] = useState<string>("Binding and mapping actions are checked securely on submit.");
+  const [pending, setPending] = useState<string>("");
+  const [sourceForm, setSourceForm] = useState({ source_id: "", client_id: "", project_id: "", funnel_id: "" });
+  const [adForm, setAdForm] = useState({ ad_account_id: "", client_id: "", project_id: "", funnel_id: "" });
+  const query = useQuery<BindingsData>({ queryKey: ["bindings-mapping-workspace", WORKSPACE_ID], enabled: Boolean(session), queryFn: async () => {
+    const [sourceRes, adRes, projectRes, queueRes, healthRes] = await Promise.all([supabase.from("v_source_entity_bindings").select("*").order("updated_at", { ascending: false }), supabase.from("v_ad_account_bindings").select("*").order("updated_at", { ascending: false }), supabase.from("v_project_data_bindings").select("*").order("updated_at", { ascending: false }), supabase.from("v_mapping_review_queue").select("*").order("created_at", { ascending: false }), supabase.from("v_binding_health").select("*")]);
+    if (sourceRes.error) throw sourceRes.error; if (adRes.error) throw adRes.error; if (projectRes.error) throw projectRes.error; if (queueRes.error) throw queueRes.error; if (healthRes.error) throw healthRes.error;
+    const [mappingReviewHealth, mappingReviewActionsRecent, telegramHitlHealth] = await Promise.all([readOptionalView("v_mapping_review_health"), readOptionalView("v_mapping_review_actions_recent"), readOptionalView("v_telegram_hitl_production_health")]);
+    return { sourceBindings: (sourceRes.data ?? []) as Row[], adAccountBindings: (adRes.data ?? []) as Row[], projectDataBindings: (projectRes.data ?? []) as Row[], mappingReviewQueue: (queueRes.data ?? []) as Row[], bindingHealth: (healthRes.data ?? []) as Row[], mappingReviewHealth, mappingReviewActionsRecent, telegramHitlHealth };
+  }});
 
-  const query = useQuery<BindingsData>({
-    queryKey: ["bindings-mapping-workspace"],
-    enabled: Boolean(session),
-    queryFn: async () => {
-      const [sourceRes, adRes, projectRes, queueRes, healthRes] = await Promise.all([
-        supabase.from("v_source_entity_bindings").select("*").order("updated_at", { ascending: false }),
-        supabase.from("v_ad_account_bindings").select("*").order("updated_at", { ascending: false }),
-        supabase.from("v_project_data_bindings").select("*").order("updated_at", { ascending: false }),
-        supabase.from("v_mapping_review_queue").select("*").order("created_at", { ascending: false }),
-        supabase.from("v_binding_health").select("*"),
-      ]);
+  const runAction = async (key: string, fn: () => Promise<{ data: unknown; error: { message: string } | null }>) => {
+    setPending(key); setMessage("");
+    const { data, error } = await fn();
+    setPending("");
+    if (error) { setMessage(error.message); return; }
+    if ((data as { ok?: boolean; error?: string } | null)?.ok === false) { setMessage((data as { error?: string }).error ?? "Action failed"); return; }
+    setMessage("Action completed successfully.");
+    await query.refetch();
+    await Promise.all(["v_source_entity_bindings","v_ad_account_bindings","v_project_data_bindings","v_mapping_review_queue","v_binding_health","v_mapping_review_health","v_mapping_review_actions_recent"].map((qk) => queryClient.invalidateQueries({ queryKey: [qk, WORKSPACE_ID] })));
+  };
 
-      if (sourceRes.error) throw sourceRes.error;
-      if (adRes.error) throw adRes.error;
-      if (projectRes.error) throw projectRes.error;
-      if (queueRes.error) throw queueRes.error;
-      if (healthRes.error) throw healthRes.error;
+  const queueRows = useMemo(() => query.data?.mappingReviewQueue ?? [], [query.data?.mappingReviewQueue]);
+  const firstQueue = queueRows[0];
 
-      const [mappingReviewHealth, mappingReviewActionsRecent, telegramHitlHealth] = await Promise.all([
-        readOptionalView("v_mapping_review_health"),
-        readOptionalView("v_mapping_review_actions_recent"),
-        readOptionalView("v_telegram_hitl_production_health"),
-      ]);
-
-      return {
-        sourceBindings: (sourceRes.data ?? []) as Row[],
-        adAccountBindings: (adRes.data ?? []) as Row[],
-        projectDataBindings: (projectRes.data ?? []) as Row[],
-        mappingReviewQueue: (queueRes.data ?? []) as Row[],
-        bindingHealth: (healthRes.data ?? []) as Row[],
-        mappingReviewHealth,
-        mappingReviewActionsRecent,
-        telegramHitlHealth,
-      };
-    },
-  });
-
-  return (
-    <DashboardLayout title="Bindings / Mapping" subtitle="Inspect source and ad account bindings, mapping review queue, and binding health">
-      {!session ? (
-        <SectionCard title="Bindings / Mapping" description="Authentication required">
-          <p className="text-sm text-muted-foreground">You are signed out. Sign in to access bindings and mapping review data.</p>
-        </SectionCard>
-      ) : query.isLoading ? (
-        <SectionCard title="Bindings / Mapping" description="Loading data">
-          <p className="text-sm text-muted-foreground">Loading bindings workspace…</p>
-        </SectionCard>
-      ) : query.error ? (
-        <SectionCard title="Bindings / Mapping" description="Error state">
-          <p className="text-sm text-destructive">Could not load bindings workspace: {query.error.message}</p>
-        </SectionCard>
-      ) : (
-        <Tabs defaultValue="overview" className="space-y-4">
-          <TabsList className="w-full justify-start overflow-x-auto">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="source">Source Bindings</TabsTrigger>
-            <TabsTrigger value="ad-account">Ad Account Bindings</TabsTrigger>
-            <TabsTrigger value="project-data">Project Data Bindings</TabsTrigger>
-            <TabsTrigger value="mapping-review">Mapping Review Queue</TabsTrigger>
-            <TabsTrigger value="health">Health</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview">
-            <SectionCard title="Bindings Overview" description="Operational snapshot across binding views">
-              <ul className="grid gap-2 text-sm md:grid-cols-2">
-                <li>Source bindings: <strong>{query.data?.sourceBindings.length ?? 0}</strong></li>
-                <li>Ad account bindings: <strong>{query.data?.adAccountBindings.length ?? 0}</strong></li>
-                <li>Project data bindings: <strong>{query.data?.projectDataBindings.length ?? 0}</strong></li>
-                <li>Pending mapping reviews: <strong>{query.data?.mappingReviewQueue.length ?? 0}</strong></li>
-              </ul>
-            </SectionCard>
-          </TabsContent>
-
-          <TabsContent value="source">
-            <SectionCard title="Source Bindings" description="Source: v_source_entity_bindings">
-              <KnownColumnsTable rows={query.data?.sourceBindings ?? []} columns={[
-                "source_name","source_kind","platform","client_name","project_name","funnel_name","mapping_status","binding_status","confidence","binding_method","created_at","updated_at",
-              ]} emptyText="No source bindings found." />
-            </SectionCard>
-          </TabsContent>
-
-          <TabsContent value="ad-account">
-            <SectionCard title="Ad Account Bindings" description="Source: v_ad_account_bindings">
-              <KnownColumnsTable rows={query.data?.adAccountBindings ?? []} columns={[
-                "ad_account_name","external_account_id","platform","client_name","project_name","funnel_name","mapping_status","binding_status","confidence","binding_method","created_at","updated_at",
-              ]} emptyText="No ad account bindings found." />
-            </SectionCard>
-          </TabsContent>
-
-          <TabsContent value="project-data">
-            <SectionCard title="Project Data Bindings" description="Source: v_project_data_bindings">
-              <KnownColumnsTable rows={query.data?.projectDataBindings ?? []} columns={[
-                "client_name","project_name","funnel_name","source_name","ad_account_name","platform","source_kind","binding_type","mapping_status","health_status","binding_status",
-              ]} emptyText="No project data bindings found." />
-            </SectionCard>
-          </TabsContent>
-
-          <TabsContent value="mapping-review">
-            <SectionCard title="Mapping Review Queue" description="Source: v_mapping_review_queue">
-              <KnownColumnsTable rows={query.data?.mappingReviewQueue ?? []} columns={[
-                "source_name","ad_account_name","proposed_client_name","proposed_project_name","proposed_funnel_name","confidence","mapping_status","binding_method","reason","details","created_at",
-              ]} emptyText="No pending mappings." />
-              <div className="mt-4 rounded-md border border-dashed border-border/70 bg-muted/30 p-3">
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" disabled>Send to Telegram for approval</Button>
-                  <Button type="button" variant="outline" disabled>Approve</Button>
-                  <Button type="button" variant="destructive" disabled>Reject</Button>
-                </div>
-                <p className="mt-2 text-xs text-muted-foreground">{MAPPING_ACTIONS_MESSAGE}</p>
-                <p className="mt-1 text-xs text-muted-foreground">Missing secure wrappers: {MISSING_SECURE_WRAPPERS.join(", ")}.</p>
-              </div>
-            </SectionCard>
-          </TabsContent>
-
-          <TabsContent value="health">
-            <div className="space-y-4">
-              <SectionCard title="Binding Health" description="Source: v_binding_health">
-                <GenericTable rows={query.data?.bindingHealth ?? []} emptyText="No binding health records found." />
-              </SectionCard>
-              <OptionalViewCard title="Mapping Review Health" viewName="v_mapping_review_health" data={query.data?.mappingReviewHealth} />
-              <OptionalViewCard title="Mapping Review Actions (Recent)" viewName="v_mapping_review_actions_recent" data={query.data?.mappingReviewActionsRecent} />
-              <OptionalViewCard title="Telegram HITL Production Health" viewName="v_telegram_hitl_production_health" data={query.data?.telegramHitlHealth} />
-            </div>
-          </TabsContent>
-        </Tabs>
-      )}
-    </DashboardLayout>
-  );
+  return <DashboardLayout title="Bindings / Mapping" subtitle="Inspect source and ad account bindings, mapping review queue, and binding health">{!session ? <SectionCard title="Bindings / Mapping" description="Authentication required"><p className="text-sm text-muted-foreground">You are signed out. Sign in to access bindings and mapping review data.</p></SectionCard> : query.isLoading ? <SectionCard title="Bindings / Mapping" description="Loading data"><p className="text-sm text-muted-foreground">Loading bindings workspace…</p></SectionCard> : query.error ? <SectionCard title="Bindings / Mapping" description="Error state"><p className="text-sm text-destructive">Could not load bindings workspace: {query.error.message}</p></SectionCard> : <Tabs defaultValue="overview" className="space-y-4"><TabsList className="w-full justify-start overflow-x-auto"><TabsTrigger value="overview">Overview</TabsTrigger><TabsTrigger value="source">Source Bindings</TabsTrigger><TabsTrigger value="ad-account">Ad Account Bindings</TabsTrigger><TabsTrigger value="project-data">Project Data Bindings</TabsTrigger><TabsTrigger value="mapping-review">Mapping Review Queue</TabsTrigger><TabsTrigger value="health">Health</TabsTrigger></TabsList>
+    <p className="text-xs text-muted-foreground">{message}</p>
+    <TabsContent value="overview"><SectionCard title="Bindings Overview" description="Operational snapshot across binding views"><ul className="grid gap-2 text-sm md:grid-cols-2"><li>Source bindings: <strong>{query.data?.sourceBindings.length ?? 0}</strong></li><li>Ad account bindings: <strong>{query.data?.adAccountBindings.length ?? 0}</strong></li><li>Project data bindings: <strong>{query.data?.projectDataBindings.length ?? 0}</strong></li><li>Pending mapping reviews: <strong>{query.data?.mappingReviewQueue.length ?? 0}</strong></li></ul></SectionCard></TabsContent>
+    <TabsContent value="source"><SectionCard title="Source Bindings" description="Source: v_source_entity_bindings"><div className="mb-3 flex flex-wrap gap-2"><input className="rounded border px-2 py-1 text-sm" placeholder="source_id" value={sourceForm.source_id} onChange={(e) => setSourceForm((s) => ({ ...s, source_id: e.target.value }))} /><input className="rounded border px-2 py-1 text-sm" placeholder="client_id" value={sourceForm.client_id} onChange={(e) => setSourceForm((s) => ({ ...s, client_id: e.target.value }))} /><input className="rounded border px-2 py-1 text-sm" placeholder="project_id" value={sourceForm.project_id} onChange={(e) => setSourceForm((s) => ({ ...s, project_id: e.target.value }))} /><input className="rounded border px-2 py-1 text-sm" placeholder="funnel_id" value={sourceForm.funnel_id} onChange={(e) => setSourceForm((s) => ({ ...s, funnel_id: e.target.value }))} /><Button disabled={!session || !sourceForm.source_id || pending === "create-source"} onClick={() => runAction("create-source", () => supabase.functions.invoke("binding-create-or-update", { body: { workspace_id: WORKSPACE_ID, binding_type: "source", ...sourceForm } }))}>{pending === "create-source" ? "Saving..." : "Create / Update Source Binding"}</Button></div><KnownColumnsTable rows={query.data?.sourceBindings ?? []} columns={["source_name","source_kind","platform","client_name","project_name","funnel_name","mapping_status","binding_status","confidence","binding_method","created_at","updated_at"]} emptyText="No source bindings found." /></SectionCard></TabsContent>
+    <TabsContent value="ad-account"><SectionCard title="Ad Account Bindings" description="Source: v_ad_account_bindings"><div className="mb-3 flex flex-wrap gap-2"><input className="rounded border px-2 py-1 text-sm" placeholder="ad_account_id" value={adForm.ad_account_id} onChange={(e) => setAdForm((s) => ({ ...s, ad_account_id: e.target.value }))} /><input className="rounded border px-2 py-1 text-sm" placeholder="client_id" value={adForm.client_id} onChange={(e) => setAdForm((s) => ({ ...s, client_id: e.target.value }))} /><input className="rounded border px-2 py-1 text-sm" placeholder="project_id" value={adForm.project_id} onChange={(e) => setAdForm((s) => ({ ...s, project_id: e.target.value }))} /><input className="rounded border px-2 py-1 text-sm" placeholder="funnel_id" value={adForm.funnel_id} onChange={(e) => setAdForm((s) => ({ ...s, funnel_id: e.target.value }))} /><Button disabled={!session || !adForm.ad_account_id || pending === "create-ad"} onClick={() => runAction("create-ad", () => supabase.functions.invoke("binding-create-or-update", { body: { workspace_id: WORKSPACE_ID, binding_type: "ad_account", ...adForm } }))}>{pending === "create-ad" ? "Saving..." : "Create / Update Ad Binding"}</Button></div><KnownColumnsTable rows={query.data?.adAccountBindings ?? []} columns={["ad_account_name","external_account_id","platform","client_name","project_name","funnel_name","mapping_status","binding_status","confidence","binding_method","created_at","updated_at"]} emptyText="No ad account bindings found." /></SectionCard></TabsContent>
+    <TabsContent value="project-data"><SectionCard title="Project Data Bindings" description="Source: v_project_data_bindings"><KnownColumnsTable rows={query.data?.projectDataBindings ?? []} columns={["client_name","project_name","funnel_name","source_name","ad_account_name","platform","source_kind","binding_type","mapping_status","health_status","binding_status"]} emptyText="No project data bindings found." /></SectionCard></TabsContent>
+    <TabsContent value="mapping-review"><SectionCard title="Mapping Review Queue" description="Source: v_mapping_review_queue"><KnownColumnsTable rows={query.data?.mappingReviewQueue ?? []} columns={["source_name","ad_account_name","proposed_client_name","proposed_project_name","proposed_funnel_name","confidence","mapping_status","binding_method","reason","details","created_at"]} emptyText="No pending mappings." /><div className="mt-4 rounded-md border border-dashed border-border/70 bg-muted/30 p-3"><div className="flex flex-wrap gap-2"><Button type="button" disabled={!session || !firstQueue || pending === "send-telegram"} onClick={() => runAction("send-telegram", () => supabase.functions.invoke("mapping-review-send-telegram", { body: { workspace_id: WORKSPACE_ID, binding_type: getBindingType(firstQueue), binding_id: getBindingId(firstQueue) } }))}>{pending === "send-telegram" ? "Submitting..." : "Send to Telegram for approval"}</Button><Button type="button" variant="outline" disabled={!session || !firstQueue || pending === "approve"} onClick={() => runAction("approve", () => supabase.functions.invoke("mapping-review-approve", { body: { workspace_id: WORKSPACE_ID, binding_type: getBindingType(firstQueue), binding_id: getBindingId(firstQueue) } }))}>{pending === "approve" ? "Submitting..." : "Approve"}</Button><Button type="button" variant="destructive" disabled={!session || !firstQueue || pending === "reject"} onClick={() => runAction("reject", () => supabase.functions.invoke("mapping-review-reject", { body: { workspace_id: WORKSPACE_ID, binding_type: getBindingType(firstQueue), binding_id: getBindingId(firstQueue) } }))}>{pending === "reject" ? "Submitting..." : "Reject"}</Button></div></div></SectionCard></TabsContent>
+    <TabsContent value="health"><div className="space-y-4"><SectionCard title="Binding Health" description="Source: v_binding_health"><GenericTable rows={query.data?.bindingHealth ?? []} emptyText="No binding health records found." /></SectionCard><OptionalViewCard title="Mapping Review Health" viewName="v_mapping_review_health" data={query.data?.mappingReviewHealth} /><OptionalViewCard title="Mapping Review Actions (Recent)" viewName="v_mapping_review_actions_recent" data={query.data?.mappingReviewActionsRecent} /><OptionalViewCard title="Telegram HITL Production Health" viewName="v_telegram_hitl_production_health" data={query.data?.telegramHitlHealth} /></div></TabsContent>
+    </Tabs>}</DashboardLayout>;
 }
-
-async function readOptionalView(viewName: string): Promise<OptionalViewData> {
-  const result = await supabase.from(viewName).select("*");
-  if (result.error) {
-    return { rows: [], unavailableReason: result.error.message };
-  }
-  return { rows: (result.data ?? []) as Row[], unavailableReason: null };
-}
-
-function OptionalViewCard({ title, viewName, data }: { title: string; viewName: string; data: OptionalViewData | undefined }) {
-  return (
-    <SectionCard title={title} description={`Source: ${viewName}`}>
-      {data?.unavailableReason ? (
-        <p className="text-sm text-muted-foreground">Unavailable: {data.unavailableReason}</p>
-      ) : (
-        <GenericTable rows={data?.rows ?? []} emptyText="No records found." />
-      )}
-    </SectionCard>
-  );
-}
-
-function KnownColumnsTable({ rows, columns, emptyText }: { rows: Row[]; columns: string[]; emptyText: string }) {
-  const availableColumns = columns.filter((column) => rows.some((row) => row[column] !== undefined));
-  if (rows.length === 0) return <p className="text-sm text-muted-foreground">{emptyText}</p>;
-  if (availableColumns.length === 0) return <GenericTable rows={rows} emptyText={emptyText} />;
-  return <GenericDataTable rows={rows} columns={availableColumns} />;
-}
-
-function GenericTable({ rows, emptyText }: { rows: Row[]; emptyText: string }) {
-  if (rows.length === 0) return <p className="text-sm text-muted-foreground">{emptyText}</p>;
-  const columns = Object.keys(rows[0] ?? {});
-  if (columns.length === 0) return <p className="text-sm text-muted-foreground">Data exists but has no displayable fields.</p>;
-  return <GenericDataTable rows={rows} columns={columns} />;
-}
-
-function GenericDataTable({ rows, columns }: { rows: Row[]; columns: string[] }) {
-  return <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead><tr className="border-b border-border/70 text-muted-foreground">{columns.map((column) => <th key={column} className="px-2 py-2 font-medium">{titleize(column)}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${index}-${row.id ?? "row"}`} className="border-b border-border/40 last:border-0">{columns.map((column) => <td key={`${index}-${column}`} className="px-2 py-2 text-foreground">{formatValue(row[column])}</td>)}</tr>)}</tbody></table></div>;
-}
-
+const getBindingId = (row: Row) => String(row.binding_id ?? row.id ?? "");
+const getBindingType = (row: Row): BindingType => String(row.binding_type ?? "source") === "ad_account" ? "ad_account" : "source";
+async function readOptionalView(viewName: string): Promise<OptionalViewData> { const result = await supabase.from(viewName).select("*"); if (result.error) return { rows: [], unavailableReason: result.error.message }; return { rows: (result.data ?? []) as Row[], unavailableReason: null }; }
+function OptionalViewCard({ title, viewName, data }: { title: string; viewName: string; data: OptionalViewData | undefined }) { return <SectionCard title={title} description={`Source: ${viewName}`}>{data?.unavailableReason ? <p className="text-sm text-muted-foreground">Unavailable: {data.unavailableReason}</p> : <GenericTable rows={data?.rows ?? []} emptyText="No records found." />}</SectionCard>; }
+function KnownColumnsTable({ rows, columns, emptyText }: { rows: Row[]; columns: string[]; emptyText: string }) { const availableColumns = columns.filter((column) => rows.some((row) => row[column] !== undefined)); if (rows.length === 0) return <p className="text-sm text-muted-foreground">{emptyText}</p>; if (availableColumns.length === 0) return <GenericTable rows={rows} emptyText={emptyText} />; return <GenericDataTable rows={rows} columns={availableColumns} />; }
+function GenericTable({ rows, emptyText }: { rows: Row[]; emptyText: string }) { if (rows.length === 0) return <p className="text-sm text-muted-foreground">{emptyText}</p>; const columns = Object.keys(rows[0] ?? {}); if (columns.length === 0) return <p className="text-sm text-muted-foreground">Data exists but has no displayable fields.</p>; return <GenericDataTable rows={rows} columns={columns} />; }
+function GenericDataTable({ rows, columns }: { rows: Row[]; columns: string[] }) { return <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead><tr className="border-b border-border/70 text-muted-foreground">{columns.map((column) => <th key={column} className="px-2 py-2 font-medium">{titleize(column)}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${index}-${row.id ?? "row"}`} className="border-b border-border/40 last:border-0">{columns.map((column) => <td key={`${index}-${column}`} className="px-2 py-2 text-foreground">{formatValue(row[column])}</td>)}</tr>)}</tbody></table></div>; }
 function titleize(value: string) { return value.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" "); }
 function formatValue(value: string | number | boolean | null | undefined) { return value === null || value === undefined || value === "" ? "—" : String(value); }
