@@ -38,7 +38,7 @@ function resolvePreset(id: DatePresetId, today = new Date()): { from: Date; to: 
 }
 
 export function DateFilterProvider({ children }: { children: ReactNode }) {
-  // Pinned to a stable demo "today" so mock data lines up nicely.
+  // Pinned to a stable reference date for deterministic UI behavior.
   const today = useMemo(() => new Date("2026-04-27"), []);
   const [mode, setMode] = useState<DateMode>("preset");
   const [preset, setPreset] = useState<DatePresetId>("30d");
