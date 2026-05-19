@@ -5,11 +5,11 @@ export type Lang = "uk" | "en";
 
 export const translations = {
   // App / brand
-  appName: { uk: "Pulse", en: "Pulse" },
+  appName: { uk: "Insight Hub", en: "Insight Hub" },
   appTagline: { uk: "Внутрішня аналітика", en: "Internal analytics" },
   workspace: { uk: "Робочий простір", en: "Workspace" },
   systemsOk: { uk: "Усі системи працюють", en: "All systems operational" },
-  searchPlaceholder: { uk: "Пошук кампаній, проєктів…", en: "Search campaigns, projects…" },
+  searchPlaceholder: { uk: "Пошук кампаній, проєктів Insight Hub…", en: "Search Insight Hub campaigns, projects…" },
 
   // Navigation
   navOverview: { uk: "Огляд", en: "Overview" },

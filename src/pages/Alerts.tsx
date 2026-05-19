@@ -92,6 +92,7 @@ export default function Alerts() {
                 <li>Pending outbox messages: <strong>{query.data?.outboxPending.rows.length ?? 0}</strong></li>
                 <li>Pending action requests: <strong>{query.data?.actionRequestsPending.rows.length ?? 0}</strong></li>
                 <li>Recent operational alerts: <strong>{query.data?.operationalAlertsRecent.rows.length ?? 0}</strong></li>
+                <li>Telegram status: <strong>{query.data?.telegramChats.rows.length ? "Connected group(s) detected" : "No connected Telegram groups detected"}</strong></li>
               </ul>
             </SectionCard>
           </TabsContent>
@@ -138,7 +139,7 @@ export default function Alerts() {
             <SectionCard title="Operational Alerts" description="Source: v_operational_alerts_recent">
               <KnownColumnsTable rows={query.data?.operationalAlertsRecent.rows ?? []} columns={[
                 "alert_type", "severity", "status", "title", "message", "created_at", "resolved_at",
-              ]} emptyText="No operational alerts found." />
+              ]} emptyText="No open alerts." />
               <DisabledActions actionLabels={["Resolve alert"]} />
               <UnavailableHint data={query.data?.operationalAlertsRecent} />
             </SectionCard>

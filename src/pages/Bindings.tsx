@@ -131,7 +131,7 @@ export default function Bindings() {
             <SectionCard title="Mapping Review Queue" description="Source: v_mapping_review_queue">
               <KnownColumnsTable rows={query.data?.mappingReviewQueue ?? []} columns={[
                 "source_name","ad_account_name","proposed_client_name","proposed_project_name","proposed_funnel_name","confidence","mapping_status","binding_method","reason","details","created_at",
-              ]} emptyText="No pending mapping reviews found." />
+              ]} emptyText="No pending mappings." />
               <div className="mt-4 rounded-md border border-dashed border-border/70 bg-muted/30 p-3">
                 <div className="flex flex-wrap gap-2">
                   <Button type="button" disabled>Send to Telegram for approval</Button>

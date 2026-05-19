@@ -29,17 +29,30 @@ import {
 import { useI18n } from "@/i18n/I18nProvider";
 import type { TranslationKey } from "@/i18n/translations";
 
-const items: { titleKey: TranslationKey; url: string; icon: typeof LayoutDashboard }[] = [
-  { titleKey: "navOverview", url: "/", icon: LayoutDashboard },
-  { titleKey: "navFunnel", url: "/funnel", icon: GitBranch },
-  { titleKey: "navCampaigns", url: "/campaigns", icon: Megaphone },
-  { titleKey: "navSales", url: "/sales", icon: DollarSign },
-  { titleKey: "navImports", url: "/imports", icon: Database },
-  { titleKey: "navAssistant", url: "/assistant", icon: Sparkles },
-  { titleKey: "navOnboarding", url: "/onboarding", icon: Layers3 },
-  { titleKey: "navBindingsMapping", url: "/bindings", icon: Link2 },
-  { titleKey: "navTelegramAlerts", url: "/alerts", icon: BellRing },
-  { titleKey: "navAdsConnectors", url: "/ads-connectors", icon: PlugZap },
+const navSections: { label: string; items: { titleKey: TranslationKey; url: string; icon: typeof LayoutDashboard }[] }[] = [
+  {
+    label: "Analytics",
+    items: [
+      { titleKey: "navOverview", url: "/", icon: LayoutDashboard },
+      { titleKey: "navFunnel", url: "/funnel", icon: GitBranch },
+      { titleKey: "navCampaigns", url: "/campaigns", icon: Megaphone },
+      { titleKey: "navSales", url: "/sales", icon: DollarSign },
+      { titleKey: "navImports", url: "/imports", icon: Database },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { titleKey: "navOnboarding", url: "/onboarding", icon: Layers3 },
+      { titleKey: "navBindingsMapping", url: "/bindings", icon: Link2 },
+      { titleKey: "navTelegramAlerts", url: "/alerts", icon: BellRing },
+      { titleKey: "navAdsConnectors", url: "/ads-connectors", icon: PlugZap },
+    ],
+  },
+  {
+    label: "AI / System",
+    items: [{ titleKey: "navAssistant", url: "/assistant", icon: Sparkles }],
+  },
 ];
 
 export function AppSidebar() {
@@ -60,7 +73,7 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <div className="flex flex-col leading-tight">
-              <span className="text-[15px] font-semibold tracking-tight text-foreground">Pulse</span>
+              <span className="text-[15px] font-semibold tracking-tight text-foreground">Insight Hub</span>
               <span className="text-[10.5px] uppercase tracking-[0.12em] text-muted-foreground">
                 {t("appTagline")}
               </span>
@@ -78,7 +91,14 @@ export function AppSidebar() {
           )}
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
-              {items.map((item) => {
+              {navSections.map((section) => (
+                <div key={section.label} className="space-y-1">
+                  {!collapsed && (
+                    <p className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
+                      {section.label}
+                    </p>
+                  )}
+                  {section.items.map((item) => {
                 const title = t(item.titleKey);
                 const active = isActive(item.url);
                 return (
@@ -99,7 +119,9 @@ export function AppSidebar() {
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 );
-              })}
+                  })}
+                </div>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
