@@ -31,7 +31,7 @@ import type { TranslationKey } from "@/i18n/translations";
 
 const navSections: { label: string; items: { titleKey: TranslationKey; url: string; icon: typeof LayoutDashboard }[] }[] = [
   {
-    label: "Analytics",
+    label: "Аналітика",
     items: [
       { titleKey: "navOverview", url: "/", icon: LayoutDashboard },
       { titleKey: "navFunnel", url: "/funnel", icon: GitBranch },
@@ -41,7 +41,7 @@ const navSections: { label: string; items: { titleKey: TranslationKey; url: stri
     ],
   },
   {
-    label: "Operations",
+    label: "Операції",
     items: [
       { titleKey: "navOnboarding", url: "/onboarding", icon: Layers3 },
       { titleKey: "navBindingsMapping", url: "/bindings", icon: Link2 },
@@ -50,7 +50,7 @@ const navSections: { label: string; items: { titleKey: TranslationKey; url: stri
     ],
   },
   {
-    label: "AI / System",
+    label: "AI",
     items: [{ titleKey: "navAssistant", url: "/assistant", icon: Sparkles }],
   },
 ];

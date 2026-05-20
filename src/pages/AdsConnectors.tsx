@@ -127,11 +127,11 @@ export default function AdsConnectors() {
     <DashboardLayout title="Ads Connectors" subtitle="Manage ads OAuth connections, account bindings, scheduled sync, and ads health context.">
       {!session ? (
         <SectionCard title="Ads Connectors" description="Authentication required">
-          <p className="text-sm text-muted-foreground">You are signed out. Sign in to access Ads Connectors.</p>
+          <p className="text-sm text-muted-foreground">Ви вийшли з системи. Увійдіть to access Ads Connectors.</p>
         </SectionCard>
-      ) : query.isLoading ? (
-        <SectionCard title="Ads Connectors" description="Loading data">
-          <p className="text-sm text-muted-foreground">Loading ads connectors workspace…</p>
+      ) : query.isЗавантаження ? (
+        <SectionCard title="Ads Connectors" description="Завантаження data">
+          <p className="text-sm text-muted-foreground">Завантаження ads connectors workspace…</p>
         </SectionCard>
       ) : query.error ? (
         <SectionCard title="Ads Connectors" description="Error state">
@@ -139,9 +139,9 @@ export default function AdsConnectors() {
         </SectionCard>
       ) : (
         <>
-        {roleLoading ? <p className="text-xs text-muted-foreground">Loading workspace role permissions…</p> : null}
-        {!roleLoading && !canManage ? <p className="text-xs text-muted-foreground">You do not have permission to manage ads connectors.</p> : null}
-        {!roleLoading && roleError ? <p className="text-xs text-muted-foreground">Workspace role unavailable. Write actions are disabled for safety.</p> : null}
+        {roleЗавантаження ? <p className="text-xs text-muted-foreground">Завантаження workspace role permissions…</p> : null}
+        {!roleЗавантаження && !canManage ? <p className="text-xs text-muted-foreground">You do not have permission to manage ads connectors.</p> : null}
+        {!roleЗавантаження && roleError ? <p className="text-xs text-muted-foreground">Workspace role unavailable. Write actions are disabled for safety.</p> : null}
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList className="w-full justify-start overflow-x-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -242,11 +242,11 @@ function ConnectorCard({ name, description, state, onConnect, canManage }: { nam
   return <div className="rounded-md border border-border/70 p-3 text-sm"><p className="font-medium">{name}</p><p className="mt-1 text-muted-foreground">{description}</p><Button type="button" className="mt-3" onClick={onConnect} disabled={state.loading || !canManage}>{state.loading ? "Connecting…" : "Connect"}</Button>{state.error && <p className="mt-2 text-xs text-destructive">{state.error}</p>}</div>;
 }
 function OptionalViewCard({ title, viewName, data, emptyText }: { title: string; viewName: string; data: OptionalViewData | undefined; emptyText: string }) {
-  return <SectionCard title={title} description="Details">{data?.unavailableReason ? <p className="text-sm text-muted-foreground">Unavailable: {data.unavailableReason}</p> : <GenericTable rows={data?.rows ?? []} emptyText={emptyText} />}</SectionCard>;
+  return <SectionCard title={title} description="Details">{data?.unavailableReason ? <p className="text-sm text-muted-foreground">Цей розділ поки недоступний.</p> : <GenericTable rows={data?.rows ?? []} emptyText={emptyText} />}</SectionCard>;
 }
 function OptionalKnownColumns({ data, columns, emptyText }: { data: OptionalViewData | undefined; columns: string[]; emptyText: string }) {
   if (!data) return <p className="text-sm text-muted-foreground">Unavailable.</p>;
-  if (data.unavailableReason) return <p className="text-sm text-muted-foreground">Unavailable: {data.unavailableReason}</p>;
+  if (data.unavailableReason) return <p className="text-sm text-muted-foreground">Цей розділ поки недоступний.</p>;
   const filtered = columns.filter((column) => data.rows.some((row) => row[column] !== undefined));
   return filtered.length === 0 ? <GenericTable rows={data.rows} emptyText={emptyText} /> : <GenericDataTable rows={data.rows} columns={filtered} />;
 }

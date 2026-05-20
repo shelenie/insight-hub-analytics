@@ -13,15 +13,15 @@ export const translations = {
 
   // Navigation
   navOverview: { uk: "Огляд", en: "Overview" },
-  navFunnel: { uk: "Воронка / Звіт", en: "Funnel / Report" },
+  navFunnel: { uk: "Воронка", en: "Funnel / Report" },
   navCampaigns: { uk: "Кампанії", en: "Campaigns" },
-  navSales: { uk: "Продажі / Виторг", en: "Sales / Revenue" },
+  navSales: { uk: "Продажі", en: "Sales / Revenue" },
   navImports: { uk: "Імпорти / Якість даних", en: "Imports / Data Health" },
   navAssistant: { uk: "AI-асистент", en: "AI Assistant" },
   navOnboarding: { uk: "Онбординг", en: "Onboarding" },
-  navBindingsMapping: { uk: "Біндінги / Мапінг", en: "Bindings / Mapping" },
+  navBindingsMapping: { uk: "Звʼязки даних", en: "Bindings / Mapping" },
   navTelegramAlerts: { uk: "Telegram / Сповіщення", en: "Telegram / Alerts" },
-  navAdsConnectors: { uk: "Ads Конектори", en: "Ads Connectors" },
+  navAdsConnectors: { uk: "Ads конектори", en: "Ads Connectors" },
 
   // Filters
   filters: { uk: "Фільтри", en: "Filters" },

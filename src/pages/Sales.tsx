@@ -22,7 +22,7 @@ export default function Sales() {
   const unavailable = query.data?.summary.unavailableReason && query.data?.daily.unavailableReason;
 
   return <DashboardLayout title={t("salesTitle")} subtitle={t("salesSubtitle")}><div className="space-y-4"><FilterBar freshness={{ source: "v_sales_performance_summary", status: "fresh", lastSync: "live" }} />
-    {!session ? <Msg t="Sign in to view sales production data." /> : query.isLoading ? <Msg t="Loading sales production data…" /> : null}
+    {!session ? <Msg t="Sign in to view sales production data." /> : query.isЗавантаження ? <Msg t="Завантаження sales production data…" /> : null}
     {unavailable ? <Msg t="Sales production data is unavailable." /> : null}
     <SectionCard title="Sales summary" description="Sales performance overview" noPadding><Rows rows={query.data?.summary.rows ?? []} empty="No sales data is available yet." cols={["revenue", "sales_count", "conversion_rate", "project_name", "client_name"]} /></SectionCard>
     <SectionCard title="Sales daily" description="Sales by day" noPadding><Rows rows={query.data?.daily.rows ?? []} empty="No sales daily rows." cols={["date", "revenue", "sales_count", "conversion_rate"]} /></SectionCard>
