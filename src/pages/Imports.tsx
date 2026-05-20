@@ -21,10 +21,10 @@ export default function Imports() {
   return <DashboardLayout title={t("importsTitle")} subtitle={t("importsSubtitle")}><div className="space-y-4">
     {!session ? <Msg t="Sign in to view import production data." /> : query.isLoading ? <Msg t="Loading import production data…" /> : null}
     {fullyUnavailable ? <Msg t="Import production data is unavailable." /> : null}
-    <SectionCard title="Latest import/sync status" description="Source: v_import_health" noPadding><Rows rows={query.data?.health.rows ?? []} cols={["source_name", "source_type", "status", "last_sync_at", "rows_received", "rows_inserted", "rows_failed"]} empty="No import health rows." /></SectionCard>
-    <SectionCard title="Import error summary" description="Source: v_import_error_summary" noPadding><Rows rows={query.data?.errors.rows ?? []} cols={["source_name", "error_type", "error_count", "last_error_at"]} empty="No import errors." /></SectionCard>
-    <SectionCard title="Mapping status" description="Sources: v_file_import_mappings, v_file_import_mapping_fields" noPadding><Rows rows={query.data?.mappings.rows ?? []} cols={["source_name", "mapping_status", "updated_at"]} empty="No mapping rows." /></SectionCard>
-    <SectionCard title="Recent alerts" description="Source: v_alert_events_recent" noPadding><Rows rows={query.data?.alerts.rows ?? []} cols={["severity", "title", "status", "created_at"]} empty="No stale/failed import alerts." /></SectionCard>
+    <SectionCard title="Latest import/sync status" description="Latest import and sync status" noPadding><Rows rows={query.data?.health.rows ?? []} cols={["source_name", "source_type", "status", "last_sync_at", "rows_received", "rows_inserted", "rows_failed"]} empty="No import activity has been recorded yet." /></SectionCard>
+    <SectionCard title="Import error summary" description="Recent import issues" noPadding><Rows rows={query.data?.errors.rows ?? []} cols={["source_name", "error_type", "error_count", "last_error_at"]} empty="No import errors." /></SectionCard>
+    <SectionCard title="Mapping status" description="Import mapping status" noPadding><Rows rows={query.data?.mappings.rows ?? []} cols={["source_name", "mapping_status", "updated_at"]} empty="No mapping rows." /></SectionCard>
+    <SectionCard title="Recent alerts" description="Recent alerts" noPadding><Rows rows={query.data?.alerts.rows ?? []} cols={["severity", "title", "status", "created_at"]} empty="No stale/failed import alerts." /></SectionCard>
   </div></DashboardLayout>;
 }
 

@@ -179,11 +179,11 @@ export default function AdsConnectors() {
             </div>
           </SectionCard></TabsContent>
 
-          <TabsContent value="ad-accounts"><SectionCard title="Ad Accounts" description="Source: v_ad_account_bindings">
+          <TabsContent value="ad-accounts"><SectionCard title="Ad Accounts" description="Connected ad accounts">
             <OptionalKnownColumns data={query.data?.adBindings} columns={["platform", "ad_account_name", "external_account_id", "client_name", "project_name", "funnel_name", "mapping_status", "binding_status", "confidence", "created_at", "updated_at"]} emptyText="No ad account bindings found." />
           </SectionCard></TabsContent>
 
-          <TabsContent value="scheduled-sync"><SectionCard title="Scheduled Sync" description="Sources: v_ads_scheduled_sync_rules, v_ads_scheduled_sync_due">
+          <TabsContent value="scheduled-sync"><SectionCard title="Scheduled Sync" description="Scheduled sync status">
             <div className="space-y-4">
               <OptionalKnownColumns data={query.data?.syncRules} columns={["platform", "cadence", "schedule", "status", "last_run_at", "next_run_at", "updated_at"]} emptyText="No scheduled sync rules found." />
               <OptionalKnownColumns data={query.data?.syncDue} columns={["platform", "status", "last_run_at", "next_run_at", "due_status", "is_due"]} emptyText="No scheduled sync due records found." />
@@ -242,7 +242,7 @@ function ConnectorCard({ name, description, state, onConnect, canManage }: { nam
   return <div className="rounded-md border border-border/70 p-3 text-sm"><p className="font-medium">{name}</p><p className="mt-1 text-muted-foreground">{description}</p><Button type="button" className="mt-3" onClick={onConnect} disabled={state.loading || !canManage}>{state.loading ? "Connecting…" : "Connect"}</Button>{state.error && <p className="mt-2 text-xs text-destructive">{state.error}</p>}</div>;
 }
 function OptionalViewCard({ title, viewName, data, emptyText }: { title: string; viewName: string; data: OptionalViewData | undefined; emptyText: string }) {
-  return <SectionCard title={title} description={`Source: ${viewName}`}>{data?.unavailableReason ? <p className="text-sm text-muted-foreground">Unavailable: {data.unavailableReason}</p> : <GenericTable rows={data?.rows ?? []} emptyText={emptyText} />}</SectionCard>;
+  return <SectionCard title={title} description="Details">{data?.unavailableReason ? <p className="text-sm text-muted-foreground">Unavailable: {data.unavailableReason}</p> : <GenericTable rows={data?.rows ?? []} emptyText={emptyText} />}</SectionCard>;
 }
 function OptionalKnownColumns({ data, columns, emptyText }: { data: OptionalViewData | undefined; columns: string[]; emptyText: string }) {
   if (!data) return <p className="text-sm text-muted-foreground">Unavailable.</p>;

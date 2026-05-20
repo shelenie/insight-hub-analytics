@@ -44,10 +44,10 @@ export default function Onboarding() {
     enabled: Boolean(session),
     queryFn: async () => {
       const [hierarchyRes, clientsRes, projectsRes, funnelsRes, healthRes] = await Promise.all([
-        supabase.from("v_onboarding_hierarchy").select("*").eq("workspace_id", WORKSPACE_ID).order("client_name", { ascending: true }),
-        supabase.from("v_clients").select("*").eq("workspace_id", WORKSPACE_ID).order("name", { ascending: true }),
-        supabase.from("v_projects").select("*").eq("workspace_id", WORKSPACE_ID).order("name", { ascending: true }),
-        supabase.from("v_funnels").select("*").eq("workspace_id", WORKSPACE_ID).order("name", { ascending: true }),
+        supabase.from("v_onboarding_hierarchy").select("*").eq("workspace_id", WORKSPACE_ID),
+        supabase.from("v_clients").select("*").eq("workspace_id", WORKSPACE_ID),
+        supabase.from("v_projects").select("*").eq("workspace_id", WORKSPACE_ID),
+        supabase.from("v_funnels").select("*").eq("workspace_id", WORKSPACE_ID),
         supabase.from("v_onboarding_health").select("*").eq("workspace_id", WORKSPACE_ID),
       ]);
 
@@ -144,9 +144,9 @@ export default function Onboarding() {
   const groupedHierarchy = useMemo(() => {
     const byClient = new Map<string, HierarchySummary>();
     for (const row of onboardingQuery.data?.hierarchy ?? []) {
-      const clientName = asText(row.client_name) || "Unnamed client";
-      const projectName = asText(row.project_name) || "Unnamed project";
-      const funnelName = asText(row.funnel_name);
+      const clientName = asText((row.client_name ?? row.name ?? row.title ?? row.client_code) as string | number | boolean | null) || "Unnamed client";
+      const projectName = asText((row.project_name ?? row.name ?? row.title ?? row.project_code) as string | number | boolean | null) || "Unnamed project";
+      const funnelName = asText((row.funnel_name ?? row.name ?? row.title ?? row.funnel_code) as string | number | boolean | null);
       if (!byClient.has(clientName)) byClient.set(clientName, { clientName, projects: new Map() });
       const client = byClient.get(clientName);
       if (!client) continue;
@@ -169,7 +169,7 @@ export default function Onboarding() {
     <div className="space-y-4">
       {!session ? <SectionCard title="Onboarding" description="Authentication required"><p className="text-sm text-muted-foreground">You are signed out. Sign in to manage onboarding data.</p></SectionCard>
         : onboardingQuery.isLoading ? <SectionCard title="Onboarding" description="Loading data"><p className="text-sm text-muted-foreground">Loading onboarding workspace…</p></SectionCard>
-          : onboardingQuery.error ? <SectionCard title="Onboarding" description="Error state"><p className="text-sm text-destructive">Could not load onboarding data: {onboardingQuery.error.message}</p></SectionCard>
+          : onboardingQuery.error ? <SectionCard title="Onboarding" description="Error state"><p className="text-sm text-destructive">This section needs a backend update before it can be shown.</p><details className="mt-2 text-xs text-muted-foreground"><summary>Technical details</summary><p className="mt-2 break-words">{onboardingQuery.error.message}</p></details></SectionCard>
             : <>
               {roleLoading ? <SectionCard title="Permissions" description="Loading role"><p className="text-sm text-muted-foreground">Loading workspace role permissions…</p></SectionCard> : null}
               {!roleLoading && roleError ? <SectionCard title="Permissions" description="Role unavailable"><p className="text-sm text-muted-foreground">Workspace role is unavailable. Write actions are disabled for safety.</p></SectionCard> : null}
@@ -179,9 +179,9 @@ export default function Onboarding() {
                 <TabsTrigger value="overview">Overview / Hierarchy</TabsTrigger><TabsTrigger value="clients">Clients</TabsTrigger><TabsTrigger value="projects">Projects</TabsTrigger><TabsTrigger value="funnels">Funnels</TabsTrigger><TabsTrigger value="health">Health</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="overview"><SectionCard title="Client → Project → Funnel" description="Source: v_onboarding_hierarchy">{groupedHierarchy.length === 0 ? <p className="text-sm text-muted-foreground">No clients, projects, or funnels created yet.</p> : <div className="space-y-3">{groupedHierarchy.map((client) => <div key={client.clientName} className="rounded-md border border-border/70 bg-card/60 p-3"><p className="text-sm font-semibold text-foreground">{client.clientName}</p><div className="mt-2 space-y-2">{Array.from(client.projects.entries()).map(([projectName, funnels]) => <div key={`${client.clientName}-${projectName}`} className="rounded-md bg-muted/40 p-2"><p className="text-sm font-medium">{projectName}</p>{funnels.size === 0 ? <p className="mt-1 text-xs text-muted-foreground">No funnels yet.</p> : <ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground">{Array.from(funnels).map((funnelName) => <li key={`${client.clientName}-${projectName}-${funnelName}`}>{funnelName}</li>)}</ul>}</div>)}</div></div>)}</div>}</SectionCard></TabsContent>
+              <TabsContent value="overview"><SectionCard title="Client → Project → Funnel" description="Client, project, and funnel structure">{groupedHierarchy.length === 0 ? <p className="text-sm text-muted-foreground">No clients, projects, or funnels created yet.</p> : <div className="space-y-3">{groupedHierarchy.map((client) => <div key={client.clientName} className="rounded-md border border-border/70 bg-card/60 p-3"><p className="text-sm font-semibold text-foreground">{client.clientName}</p><div className="mt-2 space-y-2">{Array.from(client.projects.entries()).map(([projectName, funnels]) => <div key={`${client.clientName}-${projectName}`} className="rounded-md bg-muted/40 p-2"><p className="text-sm font-medium">{projectName}</p>{funnels.size === 0 ? <p className="mt-1 text-xs text-muted-foreground">No funnels yet.</p> : <ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground">{Array.from(funnels).map((funnelName) => <li key={`${client.clientName}-${projectName}-${funnelName}`}>{funnelName}</li>)}</ul>}</div>)}</div></div>)}</div>}</SectionCard></TabsContent>
 
-              <TabsContent value="clients"><SectionCard title="Clients" description="Source: v_clients"><UpsertPanel title="Client" editIdLabel="Client ID (optional for edit)" form={clientForm} setForm={setClientForm} isPending={clientMutation.isPending} error={clientError} signedIn={Boolean(session)} canSubmit={canManageOnboarding && Boolean(clientForm.name.trim())} onSubmit={() => {
+              <TabsContent value="clients"><SectionCard title="Clients" description="Manage client records"><UpsertPanel title="Client" editIdLabel="Client ID (optional for edit)" form={clientForm} setForm={setClientForm} isPending={clientMutation.isPending} error={clientError} signedIn={Boolean(session)} canSubmit={canManageOnboarding && Boolean(clientForm.name.trim())} onSubmit={() => {
                 if (!clientForm.name.trim()) return setClientError("Client name is required.");
                 setClientError("");
                 clientMutation.mutate({ client_id: clientForm.client_id || undefined, name: clientForm.name.trim(), code: clientForm.code || undefined, status: clientForm.status || undefined });
@@ -189,7 +189,7 @@ export default function Onboarding() {
                 <EntityTable rows={onboardingQuery.data?.clients ?? []} columns={["name", "client_code", "status", "created_at", "updated_at"]} countColumnTitle="Projects" countForRow={(row) => projectCountByClient.get(asText(row.name) || "") ?? 0} emptyText="No clients available." />
               </SectionCard></TabsContent>
 
-              <TabsContent value="projects"><SectionCard title="Projects" description="Source: v_projects"><UpsertPanel title="Project" parentLabel="Client ID" parentValue={projectForm.client_id} onParentChange={(value) => setProjectForm((p) => ({ ...p, client_id: value }))} editIdLabel="Project ID (optional for edit)" form={projectForm} setForm={setProjectForm} isPending={projectMutation.isPending} error={projectError} signedIn={Boolean(session)} canSubmit={canManageOnboarding && Boolean(projectForm.name.trim() && projectForm.client_id.trim())} onSubmit={() => {
+              <TabsContent value="projects"><SectionCard title="Projects" description="Manage project records"><UpsertPanel title="Project" parentLabel="Client ID" parentValue={projectForm.client_id} onParentChange={(value) => setProjectForm((p) => ({ ...p, client_id: value }))} editIdLabel="Project ID (optional for edit)" form={projectForm} setForm={setProjectForm} isPending={projectMutation.isPending} error={projectError} signedIn={Boolean(session)} canSubmit={canManageOnboarding && Boolean(projectForm.name.trim() && projectForm.client_id.trim())} onSubmit={() => {
                 if (!projectForm.client_id.trim()) return setProjectError("Client ID is required.");
                 if (!projectForm.name.trim()) return setProjectError("Project name is required.");
                 setProjectError("");
@@ -198,7 +198,7 @@ export default function Onboarding() {
                 <EntityTable rows={onboardingQuery.data?.projects ?? []} columns={["name", "client_name", "project_code", "status"]} countColumnTitle="Funnels" countForRow={(row) => funnelCountByProject.get(asText(row.name) || "") ?? 0} emptyText="No projects available." />
               </SectionCard></TabsContent>
 
-              <TabsContent value="funnels"><SectionCard title="Funnels" description="Source: v_funnels"><UpsertPanel title="Funnel" parentLabel="Project ID" parentValue={funnelForm.project_id} onParentChange={(value) => setFunnelForm((f) => ({ ...f, project_id: value }))} editIdLabel="Funnel ID (optional for edit)" form={funnelForm} setForm={setFunnelForm} isPending={funnelMutation.isPending} error={funnelError} signedIn={Boolean(session)} canSubmit={canManageOnboarding && Boolean(funnelForm.name.trim() && funnelForm.project_id.trim())} onSubmit={() => {
+              <TabsContent value="funnels"><SectionCard title="Funnels" description="Manage funnel records"><UpsertPanel title="Funnel" parentLabel="Project ID" parentValue={funnelForm.project_id} onParentChange={(value) => setFunnelForm((f) => ({ ...f, project_id: value }))} editIdLabel="Funnel ID (optional for edit)" form={funnelForm} setForm={setFunnelForm} isPending={funnelMutation.isPending} error={funnelError} signedIn={Boolean(session)} canSubmit={canManageOnboarding && Boolean(funnelForm.name.trim() && funnelForm.project_id.trim())} onSubmit={() => {
                 if (!funnelForm.project_id.trim()) return setFunnelError("Project ID is required.");
                 if (!funnelForm.name.trim()) return setFunnelError("Funnel name is required.");
                 setFunnelError("");
@@ -207,7 +207,7 @@ export default function Onboarding() {
                 <EntityTable rows={onboardingQuery.data?.funnels ?? []} columns={["name", "client_name", "project_name", "funnel_code", "status"]} emptyText="No funnels available." />
               </SectionCard></TabsContent>
 
-              <TabsContent value="health"><SectionCard title="Onboarding health" description="Source: v_onboarding_health"><GenericTable rows={onboardingQuery.data?.health ?? []} emptyText="No onboarding health records found." /></SectionCard></TabsContent>
+              <TabsContent value="health"><SectionCard title="Onboarding health" description="Onboarding health overview"><GenericTable rows={onboardingQuery.data?.health ?? []} emptyText="No onboarding health records found." /></SectionCard></TabsContent>
             </Tabs></>}
     </div>
   </DashboardLayout>;
