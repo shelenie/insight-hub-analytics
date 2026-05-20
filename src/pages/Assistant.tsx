@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
@@ -38,7 +38,7 @@ type ContextScope =
   | "import_errors";
 
 type Option = { label: string; requestType: RequestType; contextScope: ContextScope };
-type GenericRow = Record<string, string | number | boolean | null>;
+type GenericRow = Record<string, unknown>;
 
 type RunResult = {
   answerText: string | null;
@@ -64,6 +64,9 @@ const OPTIONS: Option[] = [
   { label: "Import health summary", requestType: "import_health_summary", contextScope: "import_health" },
   { label: "Import error explanation", requestType: "import_error_explanation", contextScope: "import_errors" },
 ];
+
+const PRIMARY_FIELDS = ["title", "request_type", "status", "requested_actor_email", "result_summary", "confidence", "created_at", "processed_at", "error_message"] as const;
+const DETAILS_FIELDS = ["input_payload", "ai_result", "metadata"] as const;
 
 export default function Assistant() {
   const { session } = useAuth();
@@ -143,6 +146,7 @@ export default function Assistant() {
   return (
     <DashboardLayout title="AI Assistant" subtitle="Production helper panel for read-only operational insights">
       <div className="space-y-4">
+
         {!session ? (
           <SectionCard title="Signed out" description="Authentication required">
             <p className="text-sm text-muted-foreground">You are signed out. Sign in to run AI helper requests and view AI history.</p>
@@ -190,6 +194,12 @@ export default function Assistant() {
               <p><span className="font-medium">Created:</span> {latest.createdAt ?? "Unknown"}</p>
               <p><span className="font-medium">Request ID:</span> {latest.requestId ?? "N/A"}</p>
               <p><span className="font-medium">Insight ID:</span> {latest.insightId ?? "N/A"}</p>
+              <details className="rounded-md border border-border/50 bg-card/40 p-2 text-xs text-muted-foreground">
+                <summary className="cursor-pointer font-medium">Raw response details</summary>
+                <div className="mt-2">
+                  <SafeValue value={latest.raw} />
+                </div>
+              </details>
             </div>
           )}
         </SectionCard>
@@ -201,45 +211,81 @@ export default function Assistant() {
         ) : null}
 
         {session && historyError ? (
-          <SectionCard title="Error" description="Could not load all AI helper data">
-            <p className="text-sm text-destructive">{historyError.message}</p>
+          <SectionCard title="AI data unavailable" description="Backend returned an error for AI helper views">
+            <p className="text-sm text-muted-foreground">Some AI helper records are currently unavailable.</p>
+            <details className="mt-2 text-xs text-muted-foreground">
+              <summary className="cursor-pointer">Technical details</summary>
+              <p className="mt-2 break-words">{historyError.message}</p>
+            </details>
           </SectionCard>
         ) : null}
 
         <SectionCard title="Request history" description="Source: v_ai_helper_requests_recent">
-          <GenericRows rows={requestsQuery.data ?? []} emptyText="No recent AI helper requests found." />
+          <HistoryRows rows={requestsQuery.data ?? []} emptyText="No recent AI helper requests found." />
         </SectionCard>
 
         <SectionCard title="Insights history" description="Source: v_ai_helper_insights_recent">
-          <GenericRows rows={insightsQuery.data ?? []} emptyText="No recent AI helper insights found." />
+          <HistoryRows rows={insightsQuery.data ?? []} emptyText="No recent AI helper insights found." />
         </SectionCard>
 
         <SectionCard title="AI health / status" description="Source: v_ai_helper_health">
-          <GenericRows rows={healthQuery.data ?? []} emptyText="No AI helper health records found." />
+          <HistoryRows rows={healthQuery.data ?? []} emptyText="No AI helper health records found." />
         </SectionCard>
       </div>
     </DashboardLayout>
   );
 }
 
-function GenericRows({ rows, emptyText }: { rows: GenericRow[]; emptyText: string }) {
-  if (rows.length === 0) {
-    return <p className="text-sm text-muted-foreground">{emptyText}</p>;
-  }
+function HistoryRows({ rows, emptyText }: { rows: GenericRow[]; emptyText: string }) {
+  if (rows.length === 0) return <p className="text-sm text-muted-foreground">{emptyText}</p>;
+  return <div className="space-y-3">{rows.map((row, index) => <HistoryCard key={index} row={row} />)}</div>;
+}
+
+function HistoryCard({ row }: { row: GenericRow }) {
+  const primary = PRIMARY_FIELDS.filter((field) => field in row);
+  const detailFields = DETAILS_FIELDS.filter((field) => field in row);
+  const extras = Object.entries(row).filter(([key]) => !PRIMARY_FIELDS.includes(key as never) && !DETAILS_FIELDS.includes(key as never));
 
   return (
-    <div className="space-y-3">
-      {rows.map((row, index) => (
-        <div key={index} className="rounded-md border border-border/70 bg-card/60 p-3">
-          {Object.entries(row).map(([key, value]) => (
-            <p key={key} className="text-xs">
-              <span className="font-medium">{key}:</span> {formatValue(value)}
-            </p>
-          ))}
-        </div>
+    <div className="rounded-md border border-border/70 bg-card/60 p-3 text-xs">
+      <div className="space-y-1.5">
+        {primary.map((field) => (
+          <DisplayField key={field} label={field} value={row[field]} />
+        ))}
+      </div>
+
+      {detailFields.map((field) => (
+        <details key={field} className="mt-2 rounded-md border border-border/50 bg-card/40 p-2">
+          <summary className="cursor-pointer font-medium">{field}</summary>
+          <div className="mt-2"><SafeValue value={row[field]} /></div>
+        </details>
       ))}
+
+      {extras.length > 0 ? (
+        <details className="mt-2 rounded-md border border-border/50 bg-card/40 p-2">
+          <summary className="cursor-pointer font-medium">Additional fields</summary>
+          <div className="mt-2 space-y-1.5">{extras.map(([k, v]) => <DisplayField key={k} label={k} value={v} />)}</div>
+        </details>
+      ) : null}
     </div>
   );
+}
+
+function DisplayField({ label, value }: { label: string; value: unknown }) {
+  return (
+    <div>
+      <span className="font-medium">{label}:</span> <SafeValue value={value} inline />
+    </div>
+  );
+}
+
+function SafeValue({ value, inline = false }: { value: unknown; inline?: boolean }) {
+  if (value === null || value === undefined) return <span>—</span>;
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return <span>{String(value)}</span>;
+
+  const content = JSON.stringify(value, null, 2);
+  if (inline) return <span className="font-mono text-[11px] text-muted-foreground">[structured data]</span>;
+  return <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-background/60 p-2 text-[11px]">{content}</pre>;
 }
 
 function firstString(record: Record<string, unknown>, keys: string[]) {
@@ -248,10 +294,6 @@ function firstString(record: Record<string, unknown>, keys: string[]) {
     if (typeof value === "string" && value.trim().length > 0) return value;
   }
   return null;
-}
-
-function formatValue(value: string | number | boolean | null) {
-  return value === null ? "null" : String(value);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
