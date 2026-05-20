@@ -6,6 +6,7 @@ const corsHeaders = {
 };
 
 type Role = "member" | "admin" | "superadmin";
+type AccessPayload = Record<string, unknown>;
 
 function json(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), {
@@ -29,6 +30,33 @@ function capabilitiesForRole(role: Role) {
     can_manage_backup_restore: isSuperadmin,
     can_run_dev_actions: isSuperadmin,
   };
+}
+
+function toObject(payload: unknown): AccessPayload | null {
+  if (!payload) return null;
+  if (Array.isArray(payload)) {
+    const first = payload[0];
+    return first && typeof first === "object" ? (first as AccessPayload) : null;
+  }
+  return typeof payload === "object" ? (payload as AccessPayload) : null;
+}
+
+function pickString(data: AccessPayload | null, keys: string[]): string | null {
+  if (!data) return null;
+  for (const key of keys) {
+    const value = data[key];
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function pickBoolean(data: AccessPayload | null, keys: string[]): boolean | null {
+  if (!data) return null;
+  for (const key of keys) {
+    const value = data[key];
+    if (typeof value === "boolean") return value;
+  }
+  return null;
 }
 
 Deno.serve(async (req) => {
@@ -58,12 +86,34 @@ Deno.serve(async (req) => {
 
   if (accessError) return json({ ok: false, error: accessError.message }, 403);
 
-  const role = String((accessData as { role?: string } | null)?.role ?? "").toLowerCase();
-  if (!(role === "member" || role === "admin" || role === "superadmin")) {
-    return json({ ok: false, error: "Insufficient role" }, 403);
+  const normalized = toObject(accessData);
+  const normalizedRole = (pickString(normalized, ["role", "actor_role", "result_role", "workspace_role", "resolved_role"]) ?? "").toLowerCase();
+  const normalizedAllowed = pickBoolean(normalized, ["allowed", "result_allowed", "is_allowed"]);
+  const normalizedReason = pickString(normalized, ["reason", "result_reason", "error", "message"]);
+
+  console.log("[workspace-role-info] access resolved", {
+    user_email: authData.user.email,
+    workspace_id,
+    available_keys: normalized ? Object.keys(normalized) : [],
+    normalized_role: normalizedRole || null,
+    normalized_allowed: normalizedAllowed,
+  });
+
+  if (normalizedAllowed === false) {
+    return json({ ok: false, error: normalizedReason || "Access denied" }, 403);
   }
 
-  const roleValue = role as Role;
+  if (!(normalizedRole === "member" || normalizedRole === "admin" || normalizedRole === "superadmin")) {
+    return json({
+      ok: false,
+      error: "Unable to resolve valid workspace role",
+      available_keys: normalized ? Object.keys(normalized) : [],
+      normalized_allowed: normalizedAllowed,
+      normalized_reason: normalizedReason,
+    }, 403);
+  }
+
+  const roleValue = normalizedRole as Role;
   const is_member = roleValue === "member";
   const is_admin = roleValue === "admin" || roleValue === "superadmin";
   const is_superadmin = roleValue === "superadmin";

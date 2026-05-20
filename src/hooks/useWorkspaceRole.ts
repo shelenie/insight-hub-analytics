@@ -61,7 +61,7 @@ export function useWorkspaceRole(workspaceId: string) {
     if (invokeError) {
       setRole(null);
       setCapabilities(NO_CAPABILITIES);
-      setError("Role unavailable");
+      setError(invokeError.message || "Role unavailable");
       setIsLoading(false);
       return;
     }
