@@ -80,14 +80,15 @@ Deno.serve(async (req) => {
   if (!workspace_id) return json({ ok: false, error: "workspace_id is required" }, 400);
 
   const { data: accessData, error: accessError } = await adminClient.rpc("check_edge_function_access_by_email", {
-    p_user_email: authData.user.email,
     p_workspace_id: workspace_id,
+    p_function_name: "ai-helper-run",
+    p_actor_email: authData.user.email,
   });
 
   if (accessError) return json({ ok: false, error: accessError.message }, 403);
 
   const normalized = toObject(accessData);
-  const normalizedRole = (pickString(normalized, ["role", "actor_role", "result_role", "workspace_role", "resolved_role"]) ?? "").toLowerCase();
+  const normalizedRole = (pickString(normalized, ["role", "actor_role", "result_role", "result_actor_role", "workspace_role", "resolved_role"]) ?? "").toLowerCase();
   const normalizedAllowed = pickBoolean(normalized, ["allowed", "result_allowed", "is_allowed"]);
   const normalizedReason = pickString(normalized, ["reason", "result_reason", "error", "message"]);
 
