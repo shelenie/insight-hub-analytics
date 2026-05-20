@@ -1,12 +1,20 @@
+import { useMemo } from "react";
+import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
+import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { DeveloperDetails, FriendlyError } from "@/components/common/DeveloperDetails";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 type Row = Record<string, unknown>;
+
+const countView = async (view: string) => {
+  const res = await supabase.from(view).select("*").eq("workspace_id", WORKSPACE_ID);
+  return { count: (res.data ?? []).length, error: res.error?.message ?? null };
+};
 
 export default function Overview() {
   const { session } = useAuth();
@@ -15,31 +23,61 @@ export default function Overview() {
     if (error) throw error;
     return (data as Row | null) ?? null;
   }});
-  const contract = useQuery({ queryKey: ["ui-backend-contract", WORKSPACE_ID], enabled: Boolean(session), queryFn: async () => {
-    const result = await supabase.from("v_ui_backend_contract").select("*").eq("workspace_id", WORKSPACE_ID).limit(20);
-    return { rows: (result.data ?? []) as Row[], unavailableReason: result.error?.message ?? null };
+  const counts = useQuery({ queryKey: ["overview-counts", WORKSPACE_ID], enabled: Boolean(session), queryFn: async () => {
+    const [clients, projects, funnels, sources, ads, mapping, alerts] = await Promise.all([
+      countView("v_clients"), countView("v_projects"), countView("v_funnels"), countView("v_source_entity_bindings"), countView("v_ad_account_bindings"), countView("v_mapping_review_queue"), countView("v_operational_alerts_recent"),
+    ]);
+    return { clients, projects, funnels, sources, ads, mapping, alerts };
+  }});
+  const activity = useQuery({ queryKey: ["overview-activity", WORKSPACE_ID], enabled: Boolean(session), queryFn: async () => {
+    const [importHealth, importErrors, aiHealth] = await Promise.all([
+      supabase.from("v_import_health").select("*").eq("workspace_id", WORKSPACE_ID).limit(10),
+      supabase.from("v_import_error_summary").select("*").eq("workspace_id", WORKSPACE_ID).limit(10),
+      supabase.from("v_ai_helper_health").select("*").eq("workspace_id", WORKSPACE_ID).limit(10),
+    ]);
+    return {
+      hasImports: (importHealth.data ?? []).length > 0,
+      hasImportErrors: (importErrors.data ?? []).length > 0,
+      aiOk: aiHealth.error ? null : (aiHealth.data ?? []).length > 0,
+      errors: { importHealth: importHealth.error?.message, importErrors: importErrors.error?.message, aiHealth: aiHealth.error?.message },
+    };
   }});
 
   const r = readiness.data ?? {};
   const cards = [
     ["Стан системи", r.technical_status === "PASS" ? "Система працює" : "Триває перевірка"],
     ["Підключення даних", Number(r.failed_checks ?? 1) === 0 ? "Критичних помилок немає" : "Є пункти, що потребують уваги"],
-    ["Клієнти / проєкти / воронки", String(r.onboarding_status ?? "unknown") === "ready" ? "Дані доступні" : "Налаштування триває"],
-    ["Рекламні дані", String(r.production_backend_status) === "ads_setup_required" ? "Потрібно підключити рекламні акаунти" : "Рекламні дані доступні"],
+    ["Клієнти / проєкти / воронки", String(r.onboarding_status ?? "") === "ready" ? "Дані доступні" : "Налаштування триває"],
+    ["Рекламні дані", ["ads_setup_required"].includes(String(r.production_backend_status ?? r.snapshot_status)) ? "Потрібно підключити рекламні акаунти" : "Рекламні дані доступні"],
     ["AI-асистент", String(r.ai_helper_status ?? "ready") === "ready" ? "AI-асистент доступний" : "Перевіряємо доступність"],
     ["Сповіщення", String(r.operational_alerts_status ?? "ready") === "ready" ? "Сповіщення працюють" : "Потрібна увага"],
   ];
 
-  return <DashboardLayout title="Overview" subtitle="Огляд робочого простору">
+  const steps = useMemo(() => {
+    const arr: { text: string; href: string; label: string }[] = [];
+    if (["ads_setup_required"].includes(String(r.production_backend_status ?? r.snapshot_status))) arr.push({ text: "Підключіть рекламні акаунти, щоб побачити витрати та ефективність реклами.", href: "/ads-connectors", label: "Перейти до Ads конекторів" });
+    if ((counts.data?.clients.count ?? 0) === 0 || (counts.data?.projects.count ?? 0) === 0 || (counts.data?.funnels.count ?? 0) === 0) arr.push({ text: "Додайте клієнта, проєкт і воронку.", href: "/onboarding", label: "Перейти до онбордингу" });
+    if ((counts.data?.mapping.count ?? 0) > 0) arr.push({ text: "Перевірте мапінг джерел даних.", href: "/bindings", label: "Перейти до звʼязків даних" });
+    if ((counts.data?.alerts.count ?? 0) > 0) arr.push({ text: "Перевірте відкриті сповіщення.", href: "/alerts", label: "Перейти до сповіщень" });
+    if (!arr.length) arr.push({ text: "Основні налаштування виглядають готовими.", href: "/", label: "Готово" });
+    return arr;
+  }, [r.production_backend_status, r.snapshot_status, counts.data]);
+
+  return <DashboardLayout title="Огляд" subtitle="Головний дашборд робочого простору">
     <div className="space-y-4">
-      {!session ? <SectionCard title="Overview"><p className="text-sm text-muted-foreground">Увійдіть, щоб побачити огляд робочого простору.</p></SectionCard> : readiness.isLoading ? <SectionCard title="Overview"><p className="text-sm text-muted-foreground">Завантаження…</p></SectionCard> : null}
+      {!session ? <SectionCard title="Огляд"><p className="text-sm text-muted-foreground">Увійдіть, щоб побачити огляд робочого простору.</p></SectionCard> : null}
       {readiness.error ? <FriendlyError message="Потрібне оновлення backend для цього розділу." technical={readiness.error.message} /> : null}
-      {session && !readiness.error && !readiness.isLoading ? <SectionCard title="Стан робочого простору"><div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">{cards.map(([title, desc]) => <div key={title} className="rounded-md border border-border/70 bg-card/40 p-3"><p className="text-xs text-muted-foreground">{title}</p><p className="font-medium">{desc}</p></div>)}</div>{String(r.snapshot_status) === "ads_setup_required" ? <p className="mt-3 text-sm text-muted-foreground">Щоб побачити рекламні дані, підключіть рекламні акаунти.</p> : null}</SectionCard> : null}
-      <DeveloperDetails>
-        {contract.data?.unavailableReason ? <p>Цей розділ поки недоступний.</p> : <p>Contract rows: {(contract.data?.rows.length ?? 0)}</p>}
-        {contract.data?.unavailableReason ? <p className="break-words mt-2">{contract.data.unavailableReason}</p> : null}
-        <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap">{JSON.stringify({ readiness: readiness.data, contract: contract.data?.rows ?? [] }, null, 2)}</pre>
-      </DeveloperDetails>
+      {session && !readiness.error && <SectionCard title="Стан робочого простору"><div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">{cards.map(([title, desc]) => <div key={String(title)} className="rounded-md border p-3"><p className="text-xs text-muted-foreground">{title}</p><p className="font-medium">{desc}</p></div>)}</div></SectionCard>}
+
+      <SectionCard title="Налаштування робочого простору"><div className="grid grid-cols-2 gap-2 md:grid-cols-4">{[
+        ["Клієнти", counts.data?.clients], ["Проєкти", counts.data?.projects], ["Воронки", counts.data?.funnels], ["Джерела даних", counts.data?.sources], ["Рекламні акаунти", counts.data?.ads], ["Мапінг на перевірку", counts.data?.mapping], ["Відкриті сповіщення", counts.data?.alerts],
+      ].map(([label, item]) => <div key={String(label)} className="rounded-md border p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="text-lg font-semibold">{(item as {error:string|null,count:number}|undefined)?.error ? "Дані поки недоступні" : (item as {count:number}|undefined)?.count ?? "—"}</p></div>)}</div></SectionCard>
+
+      <SectionCard title="Наступні кроки"><div className="space-y-3">{steps.map((s, i) => <div key={i} className="rounded-md border p-3"><p className="text-sm">{s.text}</p><Button asChild variant="outline" size="sm" className="mt-2"><Link to={s.href}>{s.label}</Link></Button></div>)}</div></SectionCard>
+
+      <SectionCard title="Остання активність"><ul className="space-y-2 text-sm"><li>{activity.data?.hasImports ? "Імпорти оновлюються" : "Імпортів поки немає"}</li><li>{activity.data?.hasImportErrors ? "Є помилки імпорту" : "Помилок імпорту немає"}</li><li>{(counts.data?.alerts.count ?? 0) > 0 ? "Є відкриті сповіщення" : "Критичних сповіщень немає"}</li><li>{activity.data?.aiOk === false ? "AI тимчасово недоступний" : "AI працює"}</li></ul></SectionCard>
+
+      <DeveloperDetails><pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap">{JSON.stringify({ readiness: readiness.data, counts: counts.data, activity: activity.data, errors: activity.data?.errors }, null, 2)}</pre></DeveloperDetails>
     </div>
   </DashboardLayout>;
 }

@@ -10,19 +10,19 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 
-type OnboardingRow = Record<string, string | number | boolean | null>;
+type ОнбордингRow = Record<string, string | number | boolean | null>;
 
 type HierarchySummary = {
   clientName: string;
   projects: Map<string, Set<string>>;
 };
 
-type OnboardingData = {
-  hierarchy: OnboardingRow[];
-  clients: OnboardingRow[];
-  projects: OnboardingRow[];
-  funnels: OnboardingRow[];
-  health: OnboardingRow[];
+type ОнбордингData = {
+  hierarchy: ОнбордингRow[];
+  clients: ОнбордингRow[];
+  projects: ОнбордингRow[];
+  funnels: ОнбордингRow[];
+  health: ОнбордингRow[];
 };
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
@@ -37,9 +37,9 @@ export default function Onboarding() {
   const [projectError, setProjectError] = useState("");
   const [funnelError, setFunnelError] = useState("");
   const { capabilities, isLoading: roleLoading, error: roleError } = useWorkspaceRole(WORKSPACE_ID);
-  const canManageOnboarding = capabilities.can_manage_onboarding;
+  const canManageОнбординг = capabilities.can_manage_onboarding;
 
-  const onboardingQuery = useQuery<OnboardingData>({
+  const onboardingQuery = useQuery<ОнбордингData>({
     queryKey: ["onboarding-management-data", WORKSPACE_ID],
     enabled: Boolean(session),
     queryFn: async () => {
@@ -58,16 +58,16 @@ export default function Onboarding() {
       if (healthRes.error) throw healthRes.error;
 
       return {
-        hierarchy: (hierarchyRes.data ?? []) as OnboardingRow[],
-        clients: (clientsRes.data ?? []) as OnboardingRow[],
-        projects: (projectsRes.data ?? []) as OnboardingRow[],
-        funnels: (funnelsRes.data ?? []) as OnboardingRow[],
-        health: (healthRes.data ?? []) as OnboardingRow[],
+        hierarchy: (hierarchyRes.data ?? []) as ОнбордингRow[],
+        clients: (clientsRes.data ?? []) as ОнбордингRow[],
+        projects: (projectsRes.data ?? []) as ОнбордингRow[],
+        funnels: (funnelsRes.data ?? []) as ОнбордингRow[],
+        health: (healthRes.data ?? []) as ОнбордингRow[],
       };
     },
   });
 
-  const refreshOnboarding = async () => {
+  const refreshОнбординг = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["onboarding-management-data", WORKSPACE_ID] }),
       queryClient.invalidateQueries({ queryKey: ["v_clients", WORKSPACE_ID] }),
@@ -91,7 +91,7 @@ export default function Onboarding() {
       toast({ title: "Client saved", description: "Client create/edit completed successfully." });
       setClientForm({ client_id: "", name: "", code: "", status: "active" });
       setClientError("");
-      await refreshOnboarding();
+      await refreshОнбординг();
     },
     onError: (error: Error) => {
       setClientError(error.message);
@@ -112,7 +112,7 @@ export default function Onboarding() {
       toast({ title: "Project saved", description: "Project create/edit completed successfully." });
       setProjectForm({ project_id: "", client_id: "", name: "", code: "", status: "active" });
       setProjectError("");
-      await refreshOnboarding();
+      await refreshОнбординг();
     },
     onError: (error: Error) => {
       setProjectError(error.message);
@@ -133,7 +133,7 @@ export default function Onboarding() {
       toast({ title: "Funnel saved", description: "Funnel create/edit completed successfully." });
       setFunnelForm({ funnel_id: "", project_id: "", name: "", code: "", status: "active" });
       setFunnelError("");
-      await refreshOnboarding();
+      await refreshОнбординг();
     },
     onError: (error: Error) => {
       setFunnelError(error.message);
@@ -144,8 +144,8 @@ export default function Onboarding() {
   const groupedHierarchy = useMemo(() => {
     const byClient = new Map<string, HierarchySummary>();
     for (const row of onboardingQuery.data?.hierarchy ?? []) {
-      const clientName = asText((row.client_name ?? row.name ?? row.title ?? row.client_code) as string | number | boolean | null) || "Unnamed client";
-      const projectName = asText((row.project_name ?? row.name ?? row.title ?? row.project_code) as string | number | boolean | null) || "Unnamed project";
+      const clientName = asText((row.client_name ?? row.name ?? row.title ?? row.client_code) as string | number | boolean | null) || "Клієнт без назви";
+      const projectName = asText((row.project_name ?? row.name ?? row.title ?? row.project_code) as string | number | boolean | null) || "Проєкт без назви";
       const funnelName = asText((row.funnel_name ?? row.name ?? row.title ?? row.funnel_code) as string | number | boolean | null);
       if (!byClient.has(clientName)) byClient.set(clientName, { clientName, projects: new Map() });
       const client = byClient.get(clientName);
@@ -165,49 +165,49 @@ export default function Onboarding() {
     return counts;
   }, [groupedHierarchy]);
 
-  return <DashboardLayout title="Onboarding" subtitle="Manage clients, projects, funnels, hierarchy, and onboarding health from Supabase views">
+  return <DashboardLayout title="Онбординг" subtitle="Клієнти, проєкти, воронки та структура робочого простору">
     <div className="space-y-4">
-      {!session ? <SectionCard title="Onboarding" description="Authentication required"><p className="text-sm text-muted-foreground">You are signed out. Sign in to manage onboarding data.</p></SectionCard>
-        : onboardingQuery.isLoading ? <SectionCard title="Onboarding" description="Loading data"><p className="text-sm text-muted-foreground">Loading onboarding workspace…</p></SectionCard>
-          : onboardingQuery.error ? <SectionCard title="Onboarding" description="Error state"><p className="text-sm text-destructive">This section needs a backend update before it can be shown.</p><details className="mt-2 text-xs text-muted-foreground"><summary>Technical details</summary><p className="mt-2 break-words">{onboardingQuery.error.message}</p></details></SectionCard>
+      {!session ? <SectionCard title="Онбординг" description="Authentication required"><p className="text-sm text-muted-foreground">Ви вийшли з системи. Увійдіть to manage onboarding data.</p></SectionCard>
+        : onboardingQuery.isЗавантаження ? <SectionCard title="Онбординг" description="Завантаження data"><p className="text-sm text-muted-foreground">Завантаження onboarding workspace…</p></SectionCard>
+          : onboardingQuery.error ? <SectionCard title="Онбординг" description="Error state"><p className="text-sm text-destructive">This section needs a backend update before it can be shown.</p><details className="mt-2 text-xs text-muted-foreground"><summary>Technical details</summary><p className="mt-2 break-words">{onboardingQuery.error.message}</p></details></SectionCard>
             : <>
-              {roleLoading ? <SectionCard title="Permissions" description="Loading role"><p className="text-sm text-muted-foreground">Loading workspace role permissions…</p></SectionCard> : null}
-              {!roleLoading && roleError ? <SectionCard title="Permissions" description="Role unavailable"><p className="text-sm text-muted-foreground">Workspace role is unavailable. Write actions are disabled for safety.</p></SectionCard> : null}
-              {!roleLoading && !canManageOnboarding ? <SectionCard title="Permissions" description="Onboarding actions"><p className="text-sm text-muted-foreground">You do not have permission to manage onboarding.</p></SectionCard> : null}
+              {roleЗавантаження ? <SectionCard title="Permissions" description="Завантаження role"><p className="text-sm text-muted-foreground">Завантаження workspace role permissions…</p></SectionCard> : null}
+              {!roleЗавантаження && roleError ? <SectionCard title="Permissions" description="Role unavailable"><p className="text-sm text-muted-foreground">Workspace role is unavailable. Write actions are disabled for safety.</p></SectionCard> : null}
+              {!roleЗавантаження && !canManageОнбординг ? <SectionCard title="Permissions" description="Онбординг actions"><p className="text-sm text-muted-foreground">You do not have permission to manage onboarding.</p></SectionCard> : null}
               <Tabs defaultValue="overview" className="space-y-4">
               <TabsList className="w-full justify-start overflow-x-auto">
-                <TabsTrigger value="overview">Overview / Hierarchy</TabsTrigger><TabsTrigger value="clients">Clients</TabsTrigger><TabsTrigger value="projects">Projects</TabsTrigger><TabsTrigger value="funnels">Funnels</TabsTrigger><TabsTrigger value="health">Health</TabsTrigger>
+                <TabsTrigger value="overview">Структура</TabsTrigger><TabsTrigger value="clients">Клієнти</TabsTrigger><TabsTrigger value="projects">Проєкти</TabsTrigger><TabsTrigger value="funnels">Воронки</TabsTrigger><TabsTrigger value="health">Стан</TabsTrigger>
               </TabsList>
 
-              <TabsContent value="overview"><SectionCard title="Client → Project → Funnel" description="Client, project, and funnel structure">{groupedHierarchy.length === 0 ? <p className="text-sm text-muted-foreground">No clients, projects, or funnels created yet.</p> : <div className="space-y-3">{groupedHierarchy.map((client) => <div key={client.clientName} className="rounded-md border border-border/70 bg-card/60 p-3"><p className="text-sm font-semibold text-foreground">{client.clientName}</p><div className="mt-2 space-y-2">{Array.from(client.projects.entries()).map(([projectName, funnels]) => <div key={`${client.clientName}-${projectName}`} className="rounded-md bg-muted/40 p-2"><p className="text-sm font-medium">{projectName}</p>{funnels.size === 0 ? <p className="mt-1 text-xs text-muted-foreground">No funnels yet.</p> : <ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground">{Array.from(funnels).map((funnelName) => <li key={`${client.clientName}-${projectName}-${funnelName}`}>{funnelName}</li>)}</ul>}</div>)}</div></div>)}</div>}</SectionCard></TabsContent>
+              <TabsContent value="overview"><SectionCard title="Клієнт → Проєкт → Воронка" description="Client, project, and funnel structure">{groupedHierarchy.length === 0 ? <p className="text-sm text-muted-foreground">Дані ще не підключені.</p> : <div className="space-y-3">{groupedHierarchy.map((client) => <div key={client.clientName} className="rounded-md border border-border/70 bg-card/60 p-3"><p className="text-sm font-semibold text-foreground">{client.clientName}</p><div className="mt-2 space-y-2">{Array.from(client.projects.entries()).map(([projectName, funnels]) => <div key={`${client.clientName}-${projectName}`} className="rounded-md bg-muted/40 p-2"><p className="text-sm font-medium">{projectName}</p>{funnels.size === 0 ? <p className="mt-1 text-xs text-muted-foreground">Воронок поки немає.</p> : <ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground">{Array.from(funnels).map((funnelName) => <li key={`${client.clientName}-${projectName}-${funnelName}`}>{funnelName}</li>)}</ul>}</div>)}</div></div>)}</div>}</SectionCard></TabsContent>
 
-              <TabsContent value="clients"><SectionCard title="Clients" description="Manage client records"><UpsertPanel title="Client" editIdLabel="Client ID (optional for edit)" form={clientForm} setForm={setClientForm} isPending={clientMutation.isPending} error={clientError} signedIn={Boolean(session)} canSubmit={canManageOnboarding && Boolean(clientForm.name.trim())} onSubmit={() => {
+              <TabsContent value="clients"><SectionCard title="Клієнти" description="Manage client records"><UpsertPanel title="Client" editIdLabel="Client ID (optional for edit)" form={clientForm} setForm={setClientForm} isPending={clientMutation.isPending} error={clientError} signedIn={Boolean(session)} canSubmit={canManageОнбординг && Boolean(clientForm.name.trim())} onSubmit={() => {
                 if (!clientForm.name.trim()) return setClientError("Client name is required.");
                 setClientError("");
                 clientMutation.mutate({ client_id: clientForm.client_id || undefined, name: clientForm.name.trim(), code: clientForm.code || undefined, status: clientForm.status || undefined });
               }} />
-                <EntityTable rows={onboardingQuery.data?.clients ?? []} columns={["name", "client_code", "status", "created_at", "updated_at"]} countColumnTitle="Projects" countForRow={(row) => projectCountByClient.get(asText(row.name) || "") ?? 0} emptyText="No clients available." />
+                <EntityTable rows={onboardingQuery.data?.clients ?? []} columns={["name", "client_code", "status", "created_at", "updated_at"]} countColumnTitle="Проєкти" countForRow={(row) => projectCountByClient.get(asText(row.name) || "") ?? 0} emptyText="Записів поки немає." />
               </SectionCard></TabsContent>
 
-              <TabsContent value="projects"><SectionCard title="Projects" description="Manage project records"><UpsertPanel title="Project" parentLabel="Client ID" parentValue={projectForm.client_id} onParentChange={(value) => setProjectForm((p) => ({ ...p, client_id: value }))} editIdLabel="Project ID (optional for edit)" form={projectForm} setForm={setProjectForm} isPending={projectMutation.isPending} error={projectError} signedIn={Boolean(session)} canSubmit={canManageOnboarding && Boolean(projectForm.name.trim() && projectForm.client_id.trim())} onSubmit={() => {
+              <TabsContent value="projects"><SectionCard title="Проєкти" description="Manage project records"><UpsertPanel title="Project" parentLabel="Client ID" parentValue={projectForm.client_id} onParentChange={(value) => setProjectForm((p) => ({ ...p, client_id: value }))} editIdLabel="Project ID (optional for edit)" form={projectForm} setForm={setProjectForm} isPending={projectMutation.isPending} error={projectError} signedIn={Boolean(session)} canSubmit={canManageОнбординг && Boolean(projectForm.name.trim() && projectForm.client_id.trim())} onSubmit={() => {
                 if (!projectForm.client_id.trim()) return setProjectError("Client ID is required.");
                 if (!projectForm.name.trim()) return setProjectError("Project name is required.");
                 setProjectError("");
                 projectMutation.mutate({ project_id: projectForm.project_id || undefined, client_id: projectForm.client_id.trim(), name: projectForm.name.trim(), code: projectForm.code || undefined, status: projectForm.status || undefined });
               }} />
-                <EntityTable rows={onboardingQuery.data?.projects ?? []} columns={["name", "client_name", "project_code", "status"]} countColumnTitle="Funnels" countForRow={(row) => funnelCountByProject.get(asText(row.name) || "") ?? 0} emptyText="No projects available." />
+                <EntityTable rows={onboardingQuery.data?.projects ?? []} columns={["name", "client_name", "project_code", "status"]} countColumnTitle="Воронки" countForRow={(row) => funnelCountByProject.get(asText(row.name) || "") ?? 0} emptyText="Записів поки немає." />
               </SectionCard></TabsContent>
 
-              <TabsContent value="funnels"><SectionCard title="Funnels" description="Manage funnel records"><UpsertPanel title="Funnel" parentLabel="Project ID" parentValue={funnelForm.project_id} onParentChange={(value) => setFunnelForm((f) => ({ ...f, project_id: value }))} editIdLabel="Funnel ID (optional for edit)" form={funnelForm} setForm={setFunnelForm} isPending={funnelMutation.isPending} error={funnelError} signedIn={Boolean(session)} canSubmit={canManageOnboarding && Boolean(funnelForm.name.trim() && funnelForm.project_id.trim())} onSubmit={() => {
+              <TabsContent value="funnels"><SectionCard title="Воронки" description="Manage funnel records"><UpsertPanel title="Funnel" parentLabel="Project ID" parentValue={funnelForm.project_id} onParentChange={(value) => setFunnelForm((f) => ({ ...f, project_id: value }))} editIdLabel="Funnel ID (optional for edit)" form={funnelForm} setForm={setFunnelForm} isPending={funnelMutation.isPending} error={funnelError} signedIn={Boolean(session)} canSubmit={canManageОнбординг && Boolean(funnelForm.name.trim() && funnelForm.project_id.trim())} onSubmit={() => {
                 if (!funnelForm.project_id.trim()) return setFunnelError("Project ID is required.");
                 if (!funnelForm.name.trim()) return setFunnelError("Funnel name is required.");
                 setFunnelError("");
                 funnelMutation.mutate({ funnel_id: funnelForm.funnel_id || undefined, project_id: funnelForm.project_id.trim(), name: funnelForm.name.trim(), code: funnelForm.code || undefined, status: funnelForm.status || undefined });
               }} />
-                <EntityTable rows={onboardingQuery.data?.funnels ?? []} columns={["name", "client_name", "project_name", "funnel_code", "status"]} emptyText="No funnels available." />
+                <EntityTable rows={onboardingQuery.data?.funnels ?? []} columns={["name", "client_name", "project_name", "funnel_code", "status"]} emptyText="Записів поки немає." />
               </SectionCard></TabsContent>
 
-              <TabsContent value="health"><SectionCard title="Onboarding health" description="Onboarding health overview"><GenericTable rows={onboardingQuery.data?.health ?? []} emptyText="No onboarding health records found." /></SectionCard></TabsContent>
+              <TabsContent value="health"><SectionCard title="Онбординг health" description="Онбординг health overview"><GenericTable rows={onboardingQuery.data?.health ?? []} emptyText="No onboarding health records found." /></SectionCard></TabsContent>
             </Tabs></>}
     </div>
   </DashboardLayout>;
@@ -229,8 +229,8 @@ function UpsertPanel({ title, parentLabel, parentValue, onParentChange, editIdLa
   </div>;
 }
 
-function EntityTable({ rows, columns, countColumnTitle, countForRow, emptyText }: { rows: OnboardingRow[]; columns: string[]; countColumnTitle?: string; countForRow?: (row: OnboardingRow) => number; emptyText: string; }) { if (rows.length === 0) return <p className="text-sm text-muted-foreground">{emptyText}</p>; return <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead><tr className="border-b border-border/70 text-muted-foreground">{columns.map((column) => <th key={column} className="px-2 py-2 font-medium">{titleize(column)}</th>)}{countColumnTitle ? <th className="px-2 py-2 font-medium">{countColumnTitle}</th> : null}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${asText(row.id) || asText(row.name) || "row"}-${index}`} className="border-b border-border/40 last:border-0">{columns.map((column) => <td key={`${index}-${column}`} className="px-2 py-2 text-foreground">{formatValue(row[column])}</td>)}{countColumnTitle ? <td className="px-2 py-2 text-foreground">{countForRow ? countForRow(row) : "—"}</td> : null}</tr>)}</tbody></table></div>; }
-function GenericTable({ rows, emptyText }: { rows: OnboardingRow[]; emptyText: string }) { if (rows.length === 0) return <p className="text-sm text-muted-foreground">{emptyText}</p>; const columns = Object.keys(rows[0] ?? {}); if (columns.length === 0) return <p className="text-sm text-muted-foreground">Health data exists but has no displayable fields.</p>; return <EntityTable rows={rows} columns={columns} emptyText={emptyText} />; }
+function EntityTable({ rows, columns, countColumnTitle, countForRow, emptyText }: { rows: ОнбордингRow[]; columns: string[]; countColumnTitle?: string; countForRow?: (row: ОнбордингRow) => number; emptyText: string; }) { if (rows.length === 0) return <p className="text-sm text-muted-foreground">{emptyText}</p>; return <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead><tr className="border-b border-border/70 text-muted-foreground">{columns.map((column) => <th key={column} className="px-2 py-2 font-medium">{titleize(column)}</th>)}{countColumnTitle ? <th className="px-2 py-2 font-medium">{countColumnTitle}</th> : null}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${asText(row.id) || asText(row.name) || "row"}-${index}`} className="border-b border-border/40 last:border-0">{columns.map((column) => <td key={`${index}-${column}`} className="px-2 py-2 text-foreground">{formatValue(row[column])}</td>)}{countColumnTitle ? <td className="px-2 py-2 text-foreground">{countForRow ? countForRow(row) : "—"}</td> : null}</tr>)}</tbody></table></div>; }
+function GenericTable({ rows, emptyText }: { rows: ОнбордингRow[]; emptyText: string }) { if (rows.length === 0) return <p className="text-sm text-muted-foreground">{emptyText}</p>; const columns = Object.keys(rows[0] ?? {}); if (columns.length === 0) return <p className="text-sm text-muted-foreground">Стан data exists but has no displayable fields.</p>; return <EntityTable rows={rows} columns={columns} emptyText={emptyText} />; }
 function asText(value: string | number | boolean | null | undefined) { if (value === null || value === undefined) return ""; return String(value); }
 function formatValue(value: string | number | boolean | null | undefined) { if (value === null || value === undefined || value === "") return "—"; return String(value); }
 function titleize(value: string) { return value.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" "); }

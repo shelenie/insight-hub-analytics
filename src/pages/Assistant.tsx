@@ -13,17 +13,17 @@ import { DeveloperDetails, FriendlyError } from "@/components/common/DeveloperDe
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 // types omitted for brevity
 const OPTIONS = [
-  { label: "System readiness", requestType: "production_readiness_summary", contextScope: "production_readiness" },
-  { label: "Clients and funnels", requestType: "onboarding_summary", contextScope: "onboarding" },
-  { label: "Mapping review", requestType: "mapping_review_summary", contextScope: "mapping_review" },
-  { label: "Alerts summary", requestType: "operational_alerts_summary", contextScope: "operational_alerts" },
-  { label: "Full workspace summary", requestType: "full_production_summary", contextScope: "full_production" },
-  { label: "Ads connection health", requestType: "ads_health_summary", contextScope: "ads_health" },
-  { label: "Ads performance", requestType: "ads_performance_summary", contextScope: "ads_performance" },
-  { label: "Explain ads anomaly", requestType: "ads_anomaly_explanation", contextScope: "ads_anomalies" },
-  { label: "Data quality", requestType: "data_quality_summary", contextScope: "data_quality" },
-  { label: "Import health", requestType: "import_health_summary", contextScope: "import_health" },
-  { label: "Import errors", requestType: "import_error_explanation", contextScope: "import_errors" },
+  { label: "Готовність системи", requestType: "production_readiness_summary", contextScope: "production_readiness" },
+  { label: "Клієнти та воронки", requestType: "onboarding_summary", contextScope: "onboarding" },
+  { label: "Мапінг на перевірку", requestType: "mapping_review_summary", contextScope: "mapping_review" },
+  { label: "Сповіщення", requestType: "operational_alerts_summary", contextScope: "operational_alerts" },
+  { label: "Повний огляд", requestType: "full_production_summary", contextScope: "full_production" },
+  { label: "Стан рекламних підключень", requestType: "ads_health_summary", contextScope: "ads_health" },
+  { label: "Ефективність реклами", requestType: "ads_performance_summary", contextScope: "ads_performance" },
+  { label: "Пояснити аномалію в рекламі", requestType: "ads_anomaly_explanation", contextScope: "ads_anomalies" },
+  { label: "Якість даних", requestType: "data_quality_summary", contextScope: "data_quality" },
+  { label: "Стан імпортів", requestType: "import_health_summary", contextScope: "import_health" },
+  { label: "Помилки імпорту", requestType: "import_error_explanation", contextScope: "import_errors" },
 ] as const;
 
 export default function Assistant() {
@@ -52,12 +52,12 @@ export default function Assistant() {
         <p className="text-xs text-muted-foreground mt-3 mb-2">Ваше питання</p>
         <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} className="min-h-24" placeholder="Запитайте про тренди, аномалії, якість даних, імпорти або готовність системи." />
         <Button className="mt-3" onClick={() => run.mutate()} disabled={runDisabled}>{run.isPending ? "Обробляємо…" : "Запитати AI"}</Button>
-        {!roleLoading && !canUseAi ? <p className="mt-2 text-sm text-muted-foreground">You do not have access to this AI action.</p> : null}
+        {!roleLoading && !canUseAi ? <p className="mt-2 text-sm text-muted-foreground">У вас немає доступу до цієї AI-дії.</p> : null}
         {run.error ? <FriendlyError message="Цей розділ поки недоступний." technical={run.error.message} /> : null}
       </SectionCard>
 
       <SectionCard title="Остання відповідь">{!latest ? <p className="text-sm text-muted-foreground">У цій сесії ще немає відповідей AI.</p> : <AiAnswer text={String(latest.answer ?? latest.summary ?? latest.response ?? latest.text ?? "") || "Відповідь поки відсутня."} />}</SectionCard>
-      <SectionCard title="Попередні відповіді AI">{(requests.data ?? []).length === 0 ? <p className="text-sm text-muted-foreground">Попередніх відповідей ще немає.</p> : <div className="space-y-2">{(requests.data ?? []).map((r: Record<string, unknown>, i: number) => <div key={i} className="rounded border p-3 text-sm"><p className="font-medium">{String(r.title ?? "Відповідь AI")}</p>{r.result_summary ? <p className="mt-1 text-muted-foreground">{String(r.result_summary)}</p> : null}{r.created_at ? <p className="mt-1 text-xs text-muted-foreground">{new Date(String(r.created_at)).toLocaleString()}</p> : null}{String(r.status ?? "") === "completed" ? <p className="mt-1 text-xs text-emerald-700">Готово</p> : null}<DeveloperDetails><pre className="max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify(r, null, 2)}</pre></DeveloperDetails></div>)}</div>}</SectionCard>
+      <SectionCard title="Попередні відповіді AI">{(requests.data ?? []).length === 0 ? <p className="text-sm text-muted-foreground">Попередніх відповідей ще немає.</p> : <div className="space-y-2">{(requests.data ?? []).map((r: Record<string, unknown>, i: number) => <div key={i} className="rounded border p-3 text-sm"><p className="font-medium">{String(r.title ?? "Відповідь AI")}</p>{r.result_summary ? <p className="mt-1 text-muted-foreground">{String(r.result_summary)}</p> : null}{r.created_at ? <p className="mt-1 text-xs text-muted-foreground">{new Date(String(r.created_at)).toLocaleString()}</p> : null}<DeveloperDetails><pre className="max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify(r, null, 2)}</pre></DeveloperDetails></div>)}</div>}</SectionCard>
 
       <DeveloperDetails>
         <p>Role: {role ?? "unknown"}</p>
@@ -70,15 +70,12 @@ export default function Assistant() {
 }
 
 function AiAnswer({ text }: { text: string }) {
-  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-  const blocks: Array<{ type: "p" | "li"; text: string }> = [];
-  for (const line of lines) {
-    if (/^(?:[-*]|\d+\.)\s+/.test(line)) blocks.push({ type: "li", text: line.replace(/^(?:[-*]|\d+\.)\s+/, "") });
-    else blocks.push({ type: "p", text: line });
-  }
-  const li = blocks.filter((b) => b.type === "li");
-  const p = blocks.filter((b) => b.type === "p");
-  return <div className="space-y-2 text-sm">{p.map((b, i) => <p key={i}>{renderBold(b.text)}</p>)}{li.length ? <ul className="list-disc pl-5">{li.map((b, i) => <li key={i}>{renderBold(b.text)}</li>)}</ul> : null}</div>;
+  const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("{") && !l.endsWith("}"));
+  return <div className="space-y-2 text-sm">{lines.map((line, i) => {
+    if (/^##\s+/.test(line)) return <p key={i} className="font-semibold">{renderBold(line.replace(/^##\s+/, ""))}</p>;
+    if (/^(?:[-*•])\s+/.test(line)) return <ul key={i} className="list-disc pl-5"><li>{renderBold(line.replace(/^(?:[-*•])\s+/, ""))}</li></ul>;
+    return <p key={i}>{renderBold(line)}</p>;
+  })}</div>;
 }
 
 function renderBold(text: string) {
