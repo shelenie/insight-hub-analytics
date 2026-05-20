@@ -49,21 +49,21 @@ export default function Funnel() {
         {!session ? <Empty text="Sign in to view funnel production data." /> : query.isLoading ? <Empty text="Loading funnel production data…" /> : null}
         {query.data?.events.unavailableReason ? <Empty text="Could not load this section yet." /> : null}
 
-        <SectionCard title="Funnel stage / event counts" description="Source: v_funnel_events" noPadding>
+        <SectionCard title="Funnel stage / event counts" description="Stage conversion overview" noPadding>
           {stageCounts.length === 0 ? <Empty text="No funnel data yet. Connect a source or import data to see this report." /> : (
             <Table><TableHeader><TableRow><TableHead>Stage / event</TableHead><TableHead className="text-right">Count</TableHead></TableRow></TableHeader><TableBody>{stageCounts.map((s) => <TableRow key={s.stage}><TableCell>{s.stage}</TableCell><TableCell className="text-right num">{fmtNum(s.count)}</TableCell></TableRow>)}</TableBody></Table>
           )}
         </SectionCard>
 
-        <SectionCard title="Client / project / funnel hierarchy" description="Source: v_onboarding_hierarchy" noPadding>
+        <SectionCard title="Client / project / funnel hierarchy" description="Client, project, and funnel structure" noPadding>
           <SimpleRows rows={query.data?.onboarding.rows ?? []} emptyText="Hierarchy data is unavailable or empty." columns={["client_name", "project_name", "funnel_name", "status"]} />
         </SectionCard>
 
-        <SectionCard title="Binding status" description="Source: v_project_data_bindings" noPadding>
+        <SectionCard title="Binding status" description="Project data connections" noPadding>
           <SimpleRows rows={query.data?.bindings.rows ?? []} emptyText="Binding status is unavailable or empty." columns={["project_name", "mapping_status", "binding_status", "updated_at"]} />
         </SectionCard>
 
-        <SectionCard title="Ads summary linked to funnel" description="Source: v_ads_performance_summary" noPadding>
+        <SectionCard title="Ads summary linked to funnel" description="Sales performance summary" noPadding>
           <SimpleRows rows={query.data?.adsSummary.rows ?? []} emptyText="Ads summary is unavailable or empty." columns={["platform", "campaign_name", "spend", "clicks", "impressions"]} />
         </SectionCard>
       </div>
