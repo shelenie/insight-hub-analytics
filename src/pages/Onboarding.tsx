@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
+import { DeveloperDetails } from "@/components/common/DeveloperDetails";
 
 type OnboardingRow = Record<string, string | number | boolean | null>;
 
@@ -88,14 +89,14 @@ export default function Onboarding() {
       return data;
     },
     onSuccess: async () => {
-      toast({ title: "Client saved", description: "Client create/edit completed successfully." });
+      toast({ title: "Клієнта збережено", description: "Клієнта успішно створено або оновлено." });
       setClientForm({ client_id: "", name: "", code: "", status: "active" });
       setClientError("");
       await refreshOnboarding();
     },
     onError: (error: Error) => {
       setClientError(error.message);
-      toast({ title: "Client save failed", description: error.message, variant: "destructive" });
+      toast({ title: "Не вдалося зберегти клієнта", description: error.message, variant: "destructive" });
     },
   });
 
@@ -109,14 +110,14 @@ export default function Onboarding() {
       return data;
     },
     onSuccess: async () => {
-      toast({ title: "Project saved", description: "Project create/edit completed successfully." });
+      toast({ title: "Проєкт збережено", description: "Проєкт успішно створено або оновлено." });
       setProjectForm({ project_id: "", client_id: "", name: "", code: "", status: "active" });
       setProjectError("");
       await refreshOnboarding();
     },
     onError: (error: Error) => {
       setProjectError(error.message);
-      toast({ title: "Project save failed", description: error.message, variant: "destructive" });
+      toast({ title: "Не вдалося зберегти проєкт", description: error.message, variant: "destructive" });
     },
   });
 
@@ -130,14 +131,14 @@ export default function Onboarding() {
       return data;
     },
     onSuccess: async () => {
-      toast({ title: "Funnel saved", description: "Funnel create/edit completed successfully." });
+      toast({ title: "Воронку збережено", description: "Воронку успішно створено або оновлено." });
       setFunnelForm({ funnel_id: "", project_id: "", name: "", code: "", status: "active" });
       setFunnelError("");
       await refreshOnboarding();
     },
     onError: (error: Error) => {
       setFunnelError(error.message);
-      toast({ title: "Funnel save failed", description: error.message, variant: "destructive" });
+      toast({ title: "Не вдалося зберегти воронку", description: error.message, variant: "destructive" });
     },
   });
 
@@ -169,7 +170,7 @@ export default function Onboarding() {
     <div className="space-y-4">
       {!session ? <SectionCard title="Онбординг" description="Потрібен вхід"><p className="text-sm text-muted-foreground">Увійдіть, щоб керувати онбордингом.</p></SectionCard>
         : onboardingQuery.isLoading ? <SectionCard title="Онбординг" description="Завантаження"><p className="text-sm text-muted-foreground">Завантажуємо онбординг…</p></SectionCard>
-          : onboardingQuery.error ? <SectionCard title="Онбординг" description="Стан розділу"><p className="text-sm text-destructive">Потрібне оновлення backend для цього розділу.</p><details className="mt-2 text-xs text-muted-foreground"><summary>Technical details</summary><p className="mt-2 break-words">{onboardingQuery.error.message}</p></details></SectionCard>
+          : onboardingQuery.error ? <SectionCard title="Онбординг" description="Стан розділу"><p className="text-sm text-destructive">Потрібне оновлення backend для цього розділу.</p><DeveloperDetails title="Technical details"><p className="mt-2 break-words">{onboardingQuery.error.message}</p></DeveloperDetails></SectionCard>
             : <>
               {roleLoading ? <SectionCard title="Доступ" description="Перевірка доступу"><p className="text-sm text-muted-foreground">Перевіряємо доступ…</p></SectionCard> : null}
               {!roleLoading && roleError ? <SectionCard title="Доступ" description="Стан доступу"><p className="text-sm text-muted-foreground">Доступ тимчасово не підтягнувся. Дії вимкнені.</p></SectionCard> : null}
@@ -181,26 +182,26 @@ export default function Onboarding() {
 
               <TabsContent value="overview"><SectionCard title="Клієнт → Проєкт → Воронка" description="Структура клієнтів, проєктів і воронок">{groupedHierarchy.length === 0 ? <p className="text-sm text-muted-foreground">Дані ще не підключені.</p> : <div className="space-y-3">{groupedHierarchy.map((client) => <div key={client.clientName} className="rounded-md border border-border/70 bg-card/60 p-3"><p className="text-sm font-semibold text-foreground">{client.clientName}</p><div className="mt-2 space-y-2">{Array.from(client.projects.entries()).map(([projectName, funnels]) => <div key={`${client.clientName}-${projectName}`} className="rounded-md bg-muted/40 p-2"><p className="text-sm font-medium">{projectName}</p>{funnels.size === 0 ? <p className="mt-1 text-xs text-muted-foreground">Воронок поки немає.</p> : <ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground">{Array.from(funnels).map((funnelName) => <li key={`${client.clientName}-${projectName}-${funnelName}`}>{funnelName}</li>)}</ul>}</div>)}</div></div>)}</div>}</SectionCard></TabsContent>
 
-              <TabsContent value="clients"><SectionCard title="Клієнти" description="Керування клієнтами"><UpsertPanel title="Client" editIdLabel="Client ID (optional for edit)" form={clientForm} setForm={setClientForm} isPending={clientMutation.isPending} error={clientError} signedIn={Boolean(session)} canSubmit={canManageOnboarding && Boolean(clientForm.name.trim())} onSubmit={() => {
-                if (!clientForm.name.trim()) return setClientError("Client name is required.");
+              <TabsContent value="clients"><SectionCard title="Клієнти" description="Керування клієнтами"><UpsertPanel title="Клієнт" editIdLabel="ID клієнта (для редагування)" form={clientForm} setForm={setClientForm} isPending={clientMutation.isPending} error={clientError} signedIn={Boolean(session)} canSubmit={canManageOnboarding && Boolean(clientForm.name.trim())} onSubmit={() => {
+                if (!clientForm.name.trim()) return setClientError("Вкажіть назву клієнта.");
                 setClientError("");
                 clientMutation.mutate({ client_id: clientForm.client_id || undefined, name: clientForm.name.trim(), code: clientForm.code || undefined, status: clientForm.status || undefined });
               }} />
                 <EntityTable rows={onboardingQuery.data?.clients ?? []} columns={["name", "client_code", "status", "created_at", "updated_at"]} countColumnTitle="Проєкти" countForRow={(row) => projectCountByClient.get(asText(row.name) || "") ?? 0} emptyText="Записів поки немає." />
               </SectionCard></TabsContent>
 
-              <TabsContent value="projects"><SectionCard title="Проєкти" description="Керування проєктами"><UpsertPanel title="Project" parentLabel="Client ID" parentValue={projectForm.client_id} onParentChange={(value) => setProjectForm((p) => ({ ...p, client_id: value }))} editIdLabel="Project ID (optional for edit)" form={projectForm} setForm={setProjectForm} isPending={projectMutation.isPending} error={projectError} signedIn={Boolean(session)} canSubmit={canManageOnboarding && Boolean(projectForm.name.trim() && projectForm.client_id.trim())} onSubmit={() => {
-                if (!projectForm.client_id.trim()) return setProjectError("Client ID is required.");
-                if (!projectForm.name.trim()) return setProjectError("Project name is required.");
+              <TabsContent value="projects"><SectionCard title="Проєкти" description="Керування проєктами"><UpsertPanel title="Проєкт" parentLabel="ID клієнта" parentValue={projectForm.client_id} onParentChange={(value) => setProjectForm((p) => ({ ...p, client_id: value }))} editIdLabel="ID проєкту (для редагування)" form={projectForm} setForm={setProjectForm} isPending={projectMutation.isPending} error={projectError} signedIn={Boolean(session)} canSubmit={canManageOnboarding && Boolean(projectForm.name.trim() && projectForm.client_id.trim())} onSubmit={() => {
+                if (!projectForm.client_id.trim()) return setProjectError("Вкажіть ID клієнта.");
+                if (!projectForm.name.trim()) return setProjectError("Вкажіть назву проєкту.");
                 setProjectError("");
                 projectMutation.mutate({ project_id: projectForm.project_id || undefined, client_id: projectForm.client_id.trim(), name: projectForm.name.trim(), code: projectForm.code || undefined, status: projectForm.status || undefined });
               }} />
                 <EntityTable rows={onboardingQuery.data?.projects ?? []} columns={["name", "client_name", "project_code", "status"]} countColumnTitle="Воронки" countForRow={(row) => funnelCountByProject.get(asText(row.name) || "") ?? 0} emptyText="Записів поки немає." />
               </SectionCard></TabsContent>
 
-              <TabsContent value="funnels"><SectionCard title="Воронки" description="Керування воронками"><UpsertPanel title="Funnel" parentLabel="Project ID" parentValue={funnelForm.project_id} onParentChange={(value) => setFunnelForm((f) => ({ ...f, project_id: value }))} editIdLabel="Funnel ID (optional for edit)" form={funnelForm} setForm={setFunnelForm} isPending={funnelMutation.isPending} error={funnelError} signedIn={Boolean(session)} canSubmit={canManageOnboarding && Boolean(funnelForm.name.trim() && funnelForm.project_id.trim())} onSubmit={() => {
-                if (!funnelForm.project_id.trim()) return setFunnelError("Project ID is required.");
-                if (!funnelForm.name.trim()) return setFunnelError("Funnel name is required.");
+              <TabsContent value="funnels"><SectionCard title="Воронки" description="Керування воронками"><UpsertPanel title="Воронка" parentLabel="ID проєкту" parentValue={funnelForm.project_id} onParentChange={(value) => setFunnelForm((f) => ({ ...f, project_id: value }))} editIdLabel="ID воронки (для редагування)" form={funnelForm} setForm={setFunnelForm} isPending={funnelMutation.isPending} error={funnelError} signedIn={Boolean(session)} canSubmit={canManageOnboarding && Boolean(funnelForm.name.trim() && funnelForm.project_id.trim())} onSubmit={() => {
+                if (!funnelForm.project_id.trim()) return setFunnelError("Вкажіть ID проєкту.");
+                if (!funnelForm.name.trim()) return setFunnelError("Вкажіть назву воронки.");
                 setFunnelError("");
                 funnelMutation.mutate({ funnel_id: funnelForm.funnel_id || undefined, project_id: funnelForm.project_id.trim(), name: funnelForm.name.trim(), code: funnelForm.code || undefined, status: funnelForm.status || undefined });
               }} />
@@ -215,17 +216,17 @@ export default function Onboarding() {
 
 function UpsertPanel({ title, parentLabel, parentValue, onParentChange, editIdLabel, form, setForm, isPending, error, signedIn, canSubmit, onSubmit }: { title: string; parentLabel?: string; parentValue?: string; onParentChange?: (value: string) => void; editIdLabel: string; form: { name: string; code: string; status: string; [k: string]: string }; setForm: React.Dispatch<React.SetStateAction<{ name: string; code: string; status: string; [k: string]: string }>>; isPending: boolean; error: string; signedIn: boolean; canSubmit: boolean; onSubmit: () => void; }) {
   return <div className="mb-4 rounded-md border border-border/70 bg-muted/20 p-3"><p className="mb-2 text-xs text-muted-foreground">Дії перевіряються перед виконанням.</p><div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-    <Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder={`${title} name`} aria-label={`${title} name`} />
-    <Input value={form.code} onChange={(event) => setForm((current) => ({ ...current, code: event.target.value }))} placeholder={`${title} code (optional)`} aria-label={`${title} code`} />
-    <Input value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))} placeholder="Status (optional)" aria-label={`${title} status`} />
+    <Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder={`Назва ${title.toLowerCase()}`} aria-label={`Назва ${title.toLowerCase()}`} />
+    <Input value={form.code} onChange={(event) => setForm((current) => ({ ...current, code: event.target.value }))} placeholder={`Код ${title.toLowerCase()} (необовʼязково)`} aria-label={`Код ${title.toLowerCase()}`} />
+    <Input value={form.status} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))} placeholder="Статус (необовʼязково)" aria-label={`${title} status`} />
     <Input value={form[Object.keys(form)[0].includes("client") ? "client_id" : Object.keys(form)[0].includes("project") ? "project_id" : "funnel_id"] ?? ""} onChange={(event) => {
       const idKey = title.toLowerCase() === "client" ? "client_id" : title.toLowerCase() === "project" ? "project_id" : "funnel_id";
       setForm((current) => ({ ...current, [idKey]: event.target.value }));
     }} placeholder={editIdLabel} aria-label={editIdLabel} />
-    {parentLabel && onParentChange ? <Input value={parentValue ?? ""} onChange={(event) => onParentChange(event.target.value)} placeholder={`${parentLabel} (required)`} aria-label={parentLabel} /> : null}
+    {parentLabel && onParentChange ? <Input value={parentValue ?? ""} onChange={(event) => onParentChange(event.target.value)} placeholder={parentLabel} aria-label={parentLabel} /> : null}
   </div>
     {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}
-    <div className="mt-3 flex gap-2"><Button type="button" onClick={onSubmit} disabled={!signedIn || !canSubmit || isPending}>{isPending ? `${title} saving…` : `Create / Edit ${title}`}</Button></div>
+    <div className="mt-3 flex gap-2"><Button type="button" onClick={onSubmit} disabled={!signedIn || !canSubmit || isPending}>{isPending ? `Зберігаємо ${title.toLowerCase()}…` : `Зберегти ${title.toLowerCase()}`}</Button></div>
   </div>;
 }
 
