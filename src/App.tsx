@@ -11,6 +11,7 @@ import { ProtectedRoute } from "@/auth/ProtectedRoute";
 import { DateFilterProvider } from "@/filters/DateContext";
 import { PreferencesProvider } from "@/preferences/PreferencesProvider";
 import { SavedViewsProvider } from "@/preferences/SavedViewsProvider";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Overview from "./pages/Overview";
 import Funnel from "./pages/Funnel";
 import Campaigns from "./pages/Campaigns";
@@ -37,23 +38,25 @@ const App = () => (
                 <TooltipProvider>
                   <Toaster />
                   <Sonner />
-                  <BrowserRouter basename={import.meta.env.BASE_URL}>
-                    <ScrollToTop />
-                    <Routes>
-                      <Route path="/login" element={<Login />} />
-                      <Route path="/" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
-                      <Route path="/funnel" element={<ProtectedRoute><Funnel /></ProtectedRoute>} />
-                      <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
-                      <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
-                      <Route path="/imports" element={<ProtectedRoute><Imports /></ProtectedRoute>} />
-                      <Route path="/assistant" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
-                      <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-                      <Route path="/bindings" element={<ProtectedRoute><Bindings /></ProtectedRoute>} />
-                      <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
-                      <Route path="/ads-connectors" element={<ProtectedRoute><AdsConnectors /></ProtectedRoute>} />
-                      <Route path="*" element={<NotFound />} />
-                    </Routes>
-                  </BrowserRouter>
+                  <ErrorBoundary>
+                    <BrowserRouter basename={import.meta.env.BASE_URL}>
+                      <ScrollToTop />
+                      <Routes>
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
+                        <Route path="/funnel" element={<ProtectedRoute><Funnel /></ProtectedRoute>} />
+                        <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
+                        <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
+                        <Route path="/imports" element={<ProtectedRoute><Imports /></ProtectedRoute>} />
+                        <Route path="/assistant" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
+                        <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+                        <Route path="/bindings" element={<ProtectedRoute><Bindings /></ProtectedRoute>} />
+                        <Route path="/alerts" element={<ProtectedRoute><Alerts /></ProtectedRoute>} />
+                        <Route path="/ads-connectors" element={<ProtectedRoute><AdsConnectors /></ProtectedRoute>} />
+                        <Route path="*" element={<NotFound />} />
+                      </Routes>
+                    </BrowserRouter>
+                  </ErrorBoundary>
                 </TooltipProvider>
               </DateFilterProvider>
             </SavedViewsProvider>
