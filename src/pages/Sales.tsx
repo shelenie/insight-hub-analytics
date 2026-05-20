@@ -24,7 +24,7 @@ export default function Sales() {
   return <DashboardLayout title={t("salesTitle")} subtitle={t("salesSubtitle")}><div className="space-y-4"><FilterBar freshness={{ source: "v_sales_performance_summary", status: "fresh", lastSync: "live" }} />
     {!session ? <Msg t="Sign in to view sales production data." /> : query.isLoading ? <Msg t="Loading sales production data…" /> : null}
     {unavailable ? <Msg t="Sales production data is unavailable." /> : null}
-    <SectionCard title="Sales summary" description="Source: v_sales_performance_summary" noPadding><Rows rows={query.data?.summary.rows ?? []} empty="No sales production rows." cols={["revenue", "sales_count", "conversion_rate", "project_name", "client_name"]} /></SectionCard>
+    <SectionCard title="Sales summary" description="Source: v_sales_performance_summary" noPadding><Rows rows={query.data?.summary.rows ?? []} empty="No sales data is available yet." cols={["revenue", "sales_count", "conversion_rate", "project_name", "client_name"]} /></SectionCard>
     <SectionCard title="Sales daily" description="Source: v_sales_performance_daily" noPadding><Rows rows={query.data?.daily.rows ?? []} empty="No sales daily rows." cols={["date", "revenue", "sales_count", "conversion_rate"]} /></SectionCard>
     <SectionCard title="Funnel / project context" description="Sources: v_funnel_events, v_onboarding_hierarchy" noPadding><Rows rows={(query.data?.onboarding.rows ?? []).slice(0, 20)} empty="No funnel/project/client context rows." cols={["client_name", "project_name", "funnel_name"]} /></SectionCard>
   </div></DashboardLayout>;

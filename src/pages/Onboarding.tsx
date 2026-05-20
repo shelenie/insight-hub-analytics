@@ -44,10 +44,10 @@ export default function Onboarding() {
     enabled: Boolean(session),
     queryFn: async () => {
       const [hierarchyRes, clientsRes, projectsRes, funnelsRes, healthRes] = await Promise.all([
-        supabase.from("v_onboarding_hierarchy").select("*").eq("workspace_id", WORKSPACE_ID).order("client_name", { ascending: true }),
-        supabase.from("v_clients").select("*").eq("workspace_id", WORKSPACE_ID).order("name", { ascending: true }),
-        supabase.from("v_projects").select("*").eq("workspace_id", WORKSPACE_ID).order("name", { ascending: true }),
-        supabase.from("v_funnels").select("*").eq("workspace_id", WORKSPACE_ID).order("name", { ascending: true }),
+        supabase.from("v_onboarding_hierarchy").select("*").eq("workspace_id", WORKSPACE_ID),
+        supabase.from("v_clients").select("*").eq("workspace_id", WORKSPACE_ID),
+        supabase.from("v_projects").select("*").eq("workspace_id", WORKSPACE_ID),
+        supabase.from("v_funnels").select("*").eq("workspace_id", WORKSPACE_ID),
         supabase.from("v_onboarding_health").select("*").eq("workspace_id", WORKSPACE_ID),
       ]);
 
@@ -144,9 +144,9 @@ export default function Onboarding() {
   const groupedHierarchy = useMemo(() => {
     const byClient = new Map<string, HierarchySummary>();
     for (const row of onboardingQuery.data?.hierarchy ?? []) {
-      const clientName = asText(row.client_name) || "Unnamed client";
-      const projectName = asText(row.project_name) || "Unnamed project";
-      const funnelName = asText(row.funnel_name);
+      const clientName = asText((row.client_name ?? row.name ?? row.title ?? row.client_code) as string | number | boolean | null) || "Unnamed client";
+      const projectName = asText((row.project_name ?? row.name ?? row.title ?? row.project_code) as string | number | boolean | null) || "Unnamed project";
+      const funnelName = asText((row.funnel_name ?? row.name ?? row.title ?? row.funnel_code) as string | number | boolean | null);
       if (!byClient.has(clientName)) byClient.set(clientName, { clientName, projects: new Map() });
       const client = byClient.get(clientName);
       if (!client) continue;
@@ -169,7 +169,7 @@ export default function Onboarding() {
     <div className="space-y-4">
       {!session ? <SectionCard title="Onboarding" description="Authentication required"><p className="text-sm text-muted-foreground">You are signed out. Sign in to manage onboarding data.</p></SectionCard>
         : onboardingQuery.isLoading ? <SectionCard title="Onboarding" description="Loading data"><p className="text-sm text-muted-foreground">Loading onboarding workspace…</p></SectionCard>
-          : onboardingQuery.error ? <SectionCard title="Onboarding" description="Error state"><p className="text-sm text-destructive">Could not load onboarding data: {onboardingQuery.error.message}</p></SectionCard>
+          : onboardingQuery.error ? <SectionCard title="Onboarding" description="Error state"><p className="text-sm text-destructive">This section needs a backend update before it can be shown.</p><details className="mt-2 text-xs text-muted-foreground"><summary>Technical details</summary><p className="mt-2 break-words">{onboardingQuery.error.message}</p></details></SectionCard>
             : <>
               {roleLoading ? <SectionCard title="Permissions" description="Loading role"><p className="text-sm text-muted-foreground">Loading workspace role permissions…</p></SectionCard> : null}
               {!roleLoading && roleError ? <SectionCard title="Permissions" description="Role unavailable"><p className="text-sm text-muted-foreground">Workspace role is unavailable. Write actions are disabled for safety.</p></SectionCard> : null}

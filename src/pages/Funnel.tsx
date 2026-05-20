@@ -47,10 +47,10 @@ export default function Funnel() {
       <div className="space-y-4">
         <FilterBar freshness={{ source: "v_funnel_events", status: "fresh", lastSync: "live" }} />
         {!session ? <Empty text="Sign in to view funnel production data." /> : query.isLoading ? <Empty text="Loading funnel production data…" /> : null}
-        {query.data?.events.unavailableReason ? <Empty text="Funnel production data is unavailable." /> : null}
+        {query.data?.events.unavailableReason ? <Empty text="Could not load this section yet." /> : null}
 
         <SectionCard title="Funnel stage / event counts" description="Source: v_funnel_events" noPadding>
-          {stageCounts.length === 0 ? <Empty text="No production funnel data exists for this workspace." /> : (
+          {stageCounts.length === 0 ? <Empty text="No funnel data yet. Connect a source or import data to see this report." /> : (
             <Table><TableHeader><TableRow><TableHead>Stage / event</TableHead><TableHead className="text-right">Count</TableHead></TableRow></TableHeader><TableBody>{stageCounts.map((s) => <TableRow key={s.stage}><TableCell>{s.stage}</TableCell><TableCell className="text-right num">{fmtNum(s.count)}</TableCell></TableRow>)}</TableBody></Table>
           )}
         </SectionCard>
