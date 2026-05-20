@@ -8,9 +8,8 @@ import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
-type SnapshotValue = string | number | boolean | null;
-type BackendSnapshotRow = Record<string, SnapshotValue>;
-type UiBackendContractRow = Record<string, SnapshotValue>;
+type BackendSnapshotRow = Record<string, unknown>;
+type UiBackendContractRow = Record<string, unknown>;
 
 const KNOWN_SNAPSHOT_FIELDS = [
   "technical_status",
@@ -108,7 +107,7 @@ export default function Overview() {
               {uiContractQuery.data?.rows.map((row, idx) => (
                 <div key={idx} className="rounded-md border border-border/70 bg-card/60 p-2">
                   {Object.entries(row).map(([key, value]) => (
-                    <p key={key}><span className="font-medium">{key}:</span> {String(value ?? "—")}</p>
+                    <p key={key} className="break-words"><span className="font-medium">{key}:</span> <SafeValue value={value} inline /></p>
                   ))}
                 </div>
               ))}
@@ -130,9 +129,9 @@ export default function Overview() {
   );
 }
 
-function ReadinessField({ label, value }: { label: string; value: SnapshotValue | undefined }) {
-  const displayValue = value === undefined ? "Not provided by current backend snapshot" : value ?? "—";
-  return <div className="rounded-md border border-border/70 bg-card/40 p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="font-medium break-words">{String(displayValue)}</p></div>;
+function ReadinessField({ label, value }: { label: string; value: unknown }) {
+  const displayValue = value === undefined ? "Not provided by current backend snapshot" : value;
+  return <div className="rounded-md border border-border/70 bg-card/40 p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="font-medium break-words"><SafeValue value={displayValue} inline /></p></div>;
 }
 
 function AdditionalSnapshotFields({ row }: { row: BackendSnapshotRow }) {
@@ -145,9 +144,51 @@ function AdditionalSnapshotFields({ row }: { row: BackendSnapshotRow }) {
       <p className="mb-2 text-xs font-medium text-muted-foreground">Additional backend snapshot fields</p>
       <div className="space-y-1 text-xs">
         {additional.map(([key, value]) => (
-          <p key={key}><span className="font-medium">{key}:</span> {value ?? "—"}</p>
+          <p key={key}><span className="font-medium">{key}:</span> <SafeValue value={value} inline /></p>
         ))}
       </div>
     </div>
   );
+}
+
+function SafeValue({ value, inline = false }: { value: unknown; inline?: boolean }) {
+  if (value === null || value === undefined) return <span>—</span>;
+  if (typeof value === "boolean" || typeof value === "number") return <span>{String(value)}</span>;
+  if (typeof value === "string") {
+    const formattedDate = formatDateLike(value);
+    return <span className="break-words">{formattedDate ?? value}</span>;
+  }
+  if (Array.isArray(value) || typeof value === "object") {
+    const content = safeJsonStringify(value);
+    if (inline) {
+      return (
+        <details className="inline-block align-middle">
+          <summary className="cursor-pointer text-muted-foreground">[structured data]</summary>
+          <pre className="mt-1 max-h-40 overflow-auto whitespace-pre-wrap rounded bg-background/60 p-2 text-[11px] text-muted-foreground">{content}</pre>
+        </details>
+      );
+    }
+    return (
+      <details className="rounded-md border border-border/50 bg-card/40 p-2 text-xs">
+        <summary className="cursor-pointer font-medium text-muted-foreground">[structured data]</summary>
+        <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded bg-background/60 p-2 text-[11px]">{content}</pre>
+      </details>
+    );
+  }
+  return <span>{String(value)}</span>;
+}
+
+function safeJsonStringify(value: unknown) {
+  try {
+    return JSON.stringify(value, null, 2) ?? "[unserializable value]";
+  } catch {
+    return "[unserializable structured data]";
+  }
+}
+
+function formatDateLike(value: string) {
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) return null;
+  if (!/[tT]|-|:|\//.test(value)) return null;
+  return new Date(parsed).toLocaleString();
 }
