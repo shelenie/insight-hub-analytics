@@ -22,21 +22,21 @@ export default function Overview() {
 
   const r = readiness.data ?? {};
   const cards = [
-    ["System status", r.technical_status === "PASS" ? "System is working" : "System status is being checked"],
-    ["Data connection status", Number(r.failed_checks ?? 1) === 0 ? "No technical issues found" : "Some checks still need attention"],
-    ["Onboarding status", String(r.onboarding_status ?? "unknown") === "ready" ? "Onboarding data is ready" : "Onboarding setup is in progress"],
-    ["Ads data status", String(r.production_backend_status) === "ads_setup_required" ? "Ads accounts still need to be connected" : "Ads data status looks good"],
-    ["AI assistant status", String(r.ai_helper_status ?? "ready") === "ready" ? "AI assistant is available" : "AI assistant status is being checked"],
-    ["Alerts status", String(r.operational_alerts_status ?? "ready") === "ready" ? "Alerts are active" : "Alerts need attention"],
+    ["Стан системи", r.technical_status === "PASS" ? "Система працює" : "Триває перевірка"],
+    ["Підключення даних", Number(r.failed_checks ?? 1) === 0 ? "Критичних помилок немає" : "Є пункти, що потребують уваги"],
+    ["Клієнти / проєкти / воронки", String(r.onboarding_status ?? "unknown") === "ready" ? "Дані доступні" : "Налаштування триває"],
+    ["Рекламні дані", String(r.production_backend_status) === "ads_setup_required" ? "Потрібно підключити рекламні акаунти" : "Рекламні дані доступні"],
+    ["AI-асистент", String(r.ai_helper_status ?? "ready") === "ready" ? "AI-асистент доступний" : "Перевіряємо доступність"],
+    ["Сповіщення", String(r.operational_alerts_status ?? "ready") === "ready" ? "Сповіщення працюють" : "Потрібна увага"],
   ];
 
-  return <DashboardLayout title="Overview" subtitle="Workspace summary">
+  return <DashboardLayout title="Overview" subtitle="Огляд робочого простору">
     <div className="space-y-4">
-      {!session ? <SectionCard title="Overview"><p className="text-sm text-muted-foreground">Sign in to view your workspace summary.</p></SectionCard> : readiness.isLoading ? <SectionCard title="Overview"><p className="text-sm text-muted-foreground">Loading dashboard…</p></SectionCard> : null}
-      {readiness.error ? <FriendlyError message="Could not load this section yet." technical={readiness.error.message} /> : null}
-      {session && !readiness.error && !readiness.isLoading ? <SectionCard title="Workspace health"><div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">{cards.map(([title, desc]) => <div key={title} className="rounded-md border border-border/70 bg-card/40 p-3"><p className="text-xs text-muted-foreground">{title}</p><p className="font-medium">{desc}</p></div>)}</div>{String(r.snapshot_status) === "ads_setup_required" ? <p className="mt-3 text-sm text-muted-foreground">Setup required: connect ads accounts.</p> : null}</SectionCard> : null}
+      {!session ? <SectionCard title="Overview"><p className="text-sm text-muted-foreground">Увійдіть, щоб побачити огляд робочого простору.</p></SectionCard> : readiness.isLoading ? <SectionCard title="Overview"><p className="text-sm text-muted-foreground">Завантаження…</p></SectionCard> : null}
+      {readiness.error ? <FriendlyError message="Потрібне оновлення backend для цього розділу." technical={readiness.error.message} /> : null}
+      {session && !readiness.error && !readiness.isLoading ? <SectionCard title="Стан робочого простору"><div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">{cards.map(([title, desc]) => <div key={title} className="rounded-md border border-border/70 bg-card/40 p-3"><p className="text-xs text-muted-foreground">{title}</p><p className="font-medium">{desc}</p></div>)}</div>{String(r.snapshot_status) === "ads_setup_required" ? <p className="mt-3 text-sm text-muted-foreground">Щоб побачити рекламні дані, підключіть рекламні акаунти.</p> : null}</SectionCard> : null}
       <DeveloperDetails>
-        {contract.data?.unavailableReason ? <p>Developer contract is currently unavailable.</p> : <p>Developer contract loaded: {(contract.data?.rows.length ?? 0)} row(s).</p>}
+        {contract.data?.unavailableReason ? <p>Цей розділ поки недоступний.</p> : <p>Contract rows: {(contract.data?.rows.length ?? 0)}</p>}
         {contract.data?.unavailableReason ? <p className="break-words mt-2">{contract.data.unavailableReason}</p> : null}
         <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap">{JSON.stringify({ readiness: readiness.data, contract: contract.data?.rows ?? [] }, null, 2)}</pre>
       </DeveloperDetails>
