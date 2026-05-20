@@ -11,9 +11,20 @@ import { DeveloperDetails, FriendlyError } from "@/components/common/DeveloperDe
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 type Row = Record<string, unknown>;
 
+function shouldRetryWithoutWorkspace(errorMessage: string | null) {
+  if (!errorMessage) return false;
+  const m = errorMessage.toLowerCase();
+  return m.includes("workspace_id") && (m.includes("column") || m.includes("schema cache") || m.includes("could not find"));
+}
+
 const countView = async (view: string) => {
-  const res = await supabase.from(view).select("*").eq("workspace_id", WORKSPACE_ID);
-  return { count: (res.data ?? []).length, error: res.error?.message ?? null };
+  const scoped = await supabase.from(view).select("*").eq("workspace_id", WORKSPACE_ID);
+  if (!scoped.error) return { count: (scoped.data ?? []).length, error: null };
+  if (shouldRetryWithoutWorkspace(scoped.error.message)) {
+    const fallback = await supabase.from(view).select("*");
+    return { count: (fallback.data ?? []).length, error: fallback.error?.message ?? null };
+  }
+  return { count: 0, error: scoped.error.message };
 };
 
 export default function Overview() {
