@@ -44,14 +44,14 @@ export default function Assistant() {
   const canUseAi = capabilities.can_use_ai_helper;
   const runDisabled = !session || run.isPending || roleLoading || !canUseAi;
 
-  return <DashboardLayout title="AI Assistant" subtitle="AI-помічник для вашого робочого простору">
+  return <DashboardLayout title="AI-асистент" subtitle="Поставте питання по даних робочого простору">
     <div className="space-y-4">
       <SectionCard title="Запитати Insight Hub AI">
         <p className="text-xs text-muted-foreground mb-2">Тип запиту</p>
         <Select value={selected} onValueChange={(v: (typeof OPTIONS)[number]["requestType"]) => setSelected(v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{OPTIONS.map((o) => <SelectItem key={o.requestType} value={o.requestType}>{o.label}</SelectItem>)}</SelectContent></Select>
         <p className="text-xs text-muted-foreground mt-3 mb-2">Ваше питання</p>
-        <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} className="min-h-24" placeholder="Поставте запитання щодо трендів, аномалій, імпортів або якості даних." />
-        <Button className="mt-3" onClick={() => run.mutate()} disabled={runDisabled}>{run.isPending ? "Опрацювання…" : "Запитати AI"}</Button>
+        <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} className="min-h-24" placeholder="Запитайте про тренди, аномалії, якість даних, імпорти або готовність системи." />
+        <Button className="mt-3" onClick={() => run.mutate()} disabled={runDisabled}>{run.isPending ? "Обробляємо…" : "Запитати AI"}</Button>
         {!roleLoading && !canUseAi ? <p className="mt-2 text-sm text-muted-foreground">You do not have access to this AI action.</p> : null}
         {run.error ? <FriendlyError message="Цей розділ поки недоступний." technical={run.error.message} /> : null}
       </SectionCard>
