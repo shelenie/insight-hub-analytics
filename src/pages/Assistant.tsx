@@ -146,6 +146,70 @@ export default function Assistant() {
   return (
     <DashboardLayout title="AI Assistant" subtitle="Production helper panel for read-only operational insights">
       <div className="space-y-4">
+
+        {!session ? (
+          <SectionCard title="Signed out" description="Authentication required">
+            <p className="text-sm text-muted-foreground">You are signed out. Sign in to run AI helper requests and view AI history.</p>
+          </SectionCard>
+        ) : null}
+
+        <SectionCard title="AI action panel" description="Helper-only actions. No backend mutation actions are available.">
+          <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Request type</p>
+              <Select value={selected} onValueChange={(value: RequestType) => setSelected(value)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select request type" />
+                </SelectTrigger>
+                <SelectContent>
+                  {OPTIONS.map((option) => (
+                    <SelectItem key={option.requestType} value={option.requestType}>{option.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">Context scope: <span className="font-mono">{selectedOption.contextScope}</span></p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Prompt / input</p>
+              <Textarea value={prompt} onChange={(event) => setPrompt(event.target.value)} placeholder="Ask the AI helper to summarize, explain anomalies, or highlight operational issues." className="min-h-24" />
+              <Button onClick={() => runMutation.mutate()} disabled={runDisabled}>
+                {runMutation.isPending ? "Running…" : "Run ai-helper-run"}
+              </Button>
+              {!roleLoading && !canUseAi ? <p className="text-sm text-muted-foreground">You do not have permission to use AI helper.</p> : null}
+              {!roleLoading && roleError ? <p className="text-sm text-muted-foreground">Workspace role is unavailable. AI helper actions are disabled for safety.</p> : null}
+              {runMutation.error ? <p className="text-sm text-destructive">Run failed: {runMutation.error.message}</p> : null}
+            </div>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Latest answer" description="Last response from ai-helper-run">
+          {!latest ? (
+            <p className="text-sm text-muted-foreground">No AI runs yet in this session.</p>
+          ) : (
+            <div className="space-y-2 text-sm">
+              <p><span className="font-medium">Answer:</span> {latest.answerText ?? "No answer text returned"}</p>
+              <p><span className="font-medium">Request type:</span> {latest.requestType}</p>
+              <p><span className="font-medium">Context scope:</span> {latest.contextScope}</p>
+              <p><span className="font-medium">Status:</span> {latest.status ?? "Unknown"}</p>
+              <p><span className="font-medium">Created:</span> {latest.createdAt ?? "Unknown"}</p>
+              <p><span className="font-medium">Request ID:</span> {latest.requestId ?? "N/A"}</p>
+              <p><span className="font-medium">Insight ID:</span> {latest.insightId ?? "N/A"}</p>
+              <details className="rounded-md border border-border/50 bg-card/40 p-2 text-xs text-muted-foreground">
+                <summary className="cursor-pointer font-medium">Raw response details</summary>
+                <div className="mt-2">
+                  <SafeValue value={latest.raw} />
+                </div>
+              </details>
+            </div>
+          )}
+        </SectionCard>
+
+        {session && (requestsQuery.isLoading || insightsQuery.isLoading || healthQuery.isLoading) ? (
+          <SectionCard title="Loading" description="Loading AI helper data">
+            <p className="text-sm text-muted-foreground">Loading request history, insights history, and health status…</p>
+          </SectionCard>
+        ) : null}
+
         {session && historyError ? (
           <SectionCard title="AI data unavailable" description="Backend returned an error for AI helper views">
             <p className="text-sm text-muted-foreground">Some AI helper records are currently unavailable.</p>
