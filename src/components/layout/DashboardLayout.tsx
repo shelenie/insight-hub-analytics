@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
@@ -21,6 +21,27 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ title, subtitle, actions, sync, children }: DashboardLayoutProps) {
   const { t } = useI18n();
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const [isApplePlatform, setIsApplePlatform] = useState(false);
+  const shortcutLabel = useMemo(() => (isApplePlatform ? "⌘K" : "Ctrl K"), [isApplePlatform]);
+
+  useEffect(() => {
+    const platform = navigator.platform ?? "";
+    const userAgent = navigator.userAgent ?? "";
+    const isApple = /Mac|iPhone|iPad|iPod/i.test(platform) || /Mac|iPhone|iPad|iPod/i.test(userAgent);
+    setIsApplePlatform(isApple);
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const shouldFocusSearch = isApple ? event.metaKey : event.ctrlKey;
+      if (!shouldFocusSearch || event.key.toLowerCase() !== "k") return;
+      event.preventDefault();
+      searchInputRef.current?.focus();
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   return (
     <SidebarProvider>
       <div className="flex min-h-screen w-full bg-background bg-hero">
@@ -43,11 +64,13 @@ export function DashboardLayout({ title, subtitle, actions, sync, children }: Da
               <div className="relative hidden lg:block">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/70" />
                 <Input
+                  ref={searchInputRef}
                   placeholder={t("searchPlaceholder")}
+                  aria-label={`${t("searchPlaceholder")} (${shortcutLabel})`}
                   className="h-8 w-[260px] rounded-md border-border/70 bg-background/60 pl-8 pr-12 text-[12.5px] shadow-none focus-visible:ring-1 focus-visible:ring-primary/40"
                 />
                 <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 select-none items-center gap-0.5 rounded border border-border/70 bg-muted/60 px-1.5 py-px text-[10px] font-medium text-muted-foreground xl:inline-flex">
-                  ⌘K
+                  {shortcutLabel}
                 </kbd>
               </div>
 
@@ -57,7 +80,11 @@ export function DashboardLayout({ title, subtitle, actions, sync, children }: Da
               <div className="flex items-center gap-0.5 rounded-md border border-border/60 bg-card/40 p-0.5">
                 <LangSwitcher />
                 <ThemeSwitcher />
-                <Button asChild variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted/60"><Link to="/alerts" aria-label="Перейти до сповіщень"><Bell className="h-3.5 w-3.5" /></Link></Button>
+                <Button asChild variant="ghost" size="icon" className="h-7 w-7 rounded-md text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:ring-1 focus-visible:ring-primary/40">
+                  <Link to="/alerts" aria-label="Перейти до сповіщень">
+                    <Bell className="h-3.5 w-3.5" />
+                  </Link>
+                </Button>
               </div>
 
               <div className="mx-1 hidden h-5 w-px bg-border/70 md:block" />
