@@ -40,7 +40,7 @@ export default function Funnel() {
   const getStageCount = useMemo(() => {
     const normalized = new Map<string, number>();
     stageRows.forEach((row) => {
-      const key = String(row.stage_label ?? "").trim().toLowerCase();
+      const key = String(row.stage ?? "").trim().toLowerCase();
       if (!key) return;
       normalized.set(key, Number(row.events_count ?? 0));
     });
