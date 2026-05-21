@@ -5,6 +5,7 @@ import { FilterBar } from "@/components/dashboard/FilterBar";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { fmtNum } from "@/lib/format";
+import { filterPlaceholderRows } from "@/lib/demoFilters";
 import { useI18n } from "@/i18n/I18nProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
@@ -36,6 +37,8 @@ export default function Funnel() {
   const conversion = query.data?.conversionSummary.rows[0] ?? null;
   const stageRows = useMemo(() => query.data?.stageSummary.rows ?? [], [query.data?.stageSummary.rows]);
   const hasData = stageRows.length > 0 || Boolean(conversion);
+  const filteredOnboardingRows = useMemo(() => filterPlaceholderRows(query.data?.onboarding.rows as Record<string, unknown>[] | undefined) as Row[], [query.data?.onboarding.rows]);
+  const filteredBindingsRows = useMemo(() => filterPlaceholderRows(query.data?.bindings.rows as Record<string, unknown>[] | undefined) as Row[], [query.data?.bindings.rows]);
 
   const getStageCount = useMemo(() => {
     const normalized = new Map<string, number>();
@@ -107,7 +110,7 @@ export default function Funnel() {
             <details className="rounded border">
               <summary className="cursor-pointer px-4 py-3 text-sm font-medium">Додатково: контекст клієнта / проєкту / воронки</summary>
               <SectionCard title="Контекст клієнта / проєкту / воронки" description="Довідковий контекст для аналізу воронки" noPadding>
-                <FriendlyTable rows={query.data?.onboarding.rows ?? []} empty="Додатковий контекст поки недоступний." columns={[
+                <FriendlyTable rows={filteredOnboardingRows} empty="Додатковий контекст поки недоступний." columns={[
                   { key: "client_name", label: "Клієнт" },
                   { key: "project_name", label: "Проєкт" },
                   { key: "funnel_name", label: "Воронка" },
@@ -119,7 +122,7 @@ export default function Funnel() {
             <details className="rounded border">
               <summary className="cursor-pointer px-4 py-3 text-sm font-medium">Додатково: звʼязки даних</summary>
               <SectionCard title="Звʼязки даних" description="Стан джерел і мапінгу даних" noPadding>
-                <FriendlyTable rows={query.data?.bindings.rows ?? []} empty="Дані про звʼязки поки недоступні." columns={[
+                <FriendlyTable rows={filteredBindingsRows} empty="Дані про звʼязки поки недоступні." columns={[
                   { key: "project_name", label: "Проєкт" },
                   { key: "source_name", label: "Джерело" },
                   { key: "mapping_status", label: "Статус мапінгу" },

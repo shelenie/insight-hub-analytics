@@ -1,9 +1,11 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { fmtCurrency, fmtNum } from "@/lib/format";
+import { filterPlaceholderRows } from "@/lib/demoFilters";
 import { useI18n } from "@/i18n/I18nProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
@@ -19,7 +21,11 @@ export default function Sales() {
     return { summary, daily, onboarding };
   }});
 
-  const totals = (query.data?.summary.rows ?? []).reduce((acc, row) => ({
+  const summaryRows = query.data?.summary.rows ?? [];
+  const showSummaryEmpty = Boolean(session) && !query.isLoading && (query.data?.summary.unavailableReason != null || summaryRows.length === 0);
+  const filteredOnboardingRows = useMemo(() => filterPlaceholderRows(query.data?.onboarding.rows as Record<string, unknown>[] | undefined) as Row[], [query.data?.onboarding.rows]);
+
+  const totals = summaryRows.reduce((acc, row) => ({
     sales_count: acc.sales_count + Number(row.sales_count ?? 0),
     first_payment_usd: acc.first_payment_usd + Number(row.first_payment_usd ?? 0),
     first_payment_uah: acc.first_payment_uah + Number(row.first_payment_uah ?? 0),
@@ -32,7 +38,7 @@ export default function Sales() {
   return <DashboardLayout title={t("salesTitle")} subtitle={t("salesSubtitle")}><div className="space-y-4"><FilterBar freshness={{ source: "v_unified_sales_performance_summary", status: "fresh", lastSync: "live" }} />
     {!session ? <Msg t="Увійдіть, щоб переглянути дані продажів." /> : query.isLoading ? <Msg t="Завантаження даних продажів…" /> : null}
     <SectionCard title="Підсумок продажів" description="Огляд ефективності продажів" noPadding>
-      {(query.data?.summary.rows ?? []).length === 0 ? <Msg t="Продажі поки не знайдені. Перевірте імпорт продажів." /> : <Kpi rows={[{ label: "Продажі", value: fmtNum(totals.sales_count) }, { label: "Перші платежі USD", value: fmtCurrency(totals.first_payment_usd) }, { label: "Перші платежі UAH", value: fmtCurrency(totals.first_payment_uah) }, { label: "Другі платежі USD", value: fmtCurrency(totals.second_payment_usd) }, { label: "Другі платежі UAH", value: fmtCurrency(totals.second_payment_uah) }, { label: "Загалом USD", value: fmtCurrency(totals.total_payment_usd) }, { label: "Загалом UAH", value: fmtCurrency(totals.total_payment_uah) }]} />}
+      {showSummaryEmpty ? <Msg t="Продажі поки не знайдені. Перевірте імпорт продажів." /> : <Kpi rows={[{ label: "Продажі", value: fmtNum(totals.sales_count) }, { label: "Перші платежі USD", value: fmtCurrency(totals.first_payment_usd) }, { label: "Перші платежі UAH", value: fmtCurrency(totals.first_payment_uah) }, { label: "Другі платежі USD", value: fmtCurrency(totals.second_payment_usd) }, { label: "Другі платежі UAH", value: fmtCurrency(totals.second_payment_uah) }, { label: "Загалом USD", value: fmtCurrency(totals.total_payment_usd) }, { label: "Загалом UAH", value: fmtCurrency(totals.total_payment_uah) }]} />}
     </SectionCard>
     <SectionCard title="Продажі за кампаніями" description="Зведення по кампаніях" noPadding>
       <Rows rows={query.data?.summary.rows ?? []} empty="Продажі поки не знайдені. Перевірте імпорт продажів." cols={["Кампанія", "Перша дата", "Остання дата", "Продажі", "Перші платежі USD", "Перші платежі UAH", "Другі платежі USD", "Другі платежі UAH", "Загалом USD", "Загалом UAH", "Джерело"]} keys={["campaign_name", "first_date", "last_date", "sales_count", "first_payment_usd", "first_payment_uah", "second_payment_usd", "second_payment_uah", "total_payment_usd", "total_payment_uah", "source_layer"]} />
@@ -44,7 +50,7 @@ export default function Sales() {
     <details className="rounded border">
       <summary className="cursor-pointer px-4 py-3 text-sm font-medium">Додатково: контекст клієнта / проєкту / воронки</summary>
       <SectionCard title="Контекст клієнта / проєкту / воронки" description="Довідковий контекст для аналізу продажів" noPadding>
-        <FriendlyRows rows={query.data?.onboarding.rows ?? []} empty="Додатковий контекст поки недоступний." columns={[
+        <FriendlyRows rows={filteredOnboardingRows} empty="Додатковий контекст поки недоступний." columns={[
           { key: "client_name", label: "Клієнт" },
           { key: "project_name", label: "Проєкт" },
           { key: "funnel_name", label: "Воронка" },
