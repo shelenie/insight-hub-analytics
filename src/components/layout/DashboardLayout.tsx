@@ -56,10 +56,7 @@ export function DashboardLayout({ title, subtitle, actions, sync, children }: Da
               <div className="flex items-center gap-0.5 rounded-md border border-border/60 bg-card/40 p-0.5">
                 <LangSwitcher />
                 <ThemeSwitcher />
-                <Button variant="ghost" size="icon" className="relative h-7 w-7 hover:bg-muted/60">
-                  <Bell className="h-3.5 w-3.5" />
-                  <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-destructive ring-2 ring-card" />
-                </Button>
+                <Button asChild variant="ghost" size="icon" className="h-7 w-7 hover:bg-muted/60"><Link to="/alerts" aria-label="Перейти до сповіщень"><Bell className="h-3.5 w-3.5" /></Link></Button>
               </div>
 
               <div className="mx-1 hidden h-5 w-px bg-border/70 md:block" />

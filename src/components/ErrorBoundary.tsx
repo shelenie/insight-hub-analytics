@@ -27,15 +27,15 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     return (
       <div className="min-h-screen bg-background bg-hero p-4 lg:p-8">
         <div className="mx-auto max-w-2xl rounded-lg border border-border/70 bg-card/70 p-5 shadow-sm">
-          <h2 className="text-lg font-semibold">Something went wrong while rendering this page.</h2>
+          <h2 className="text-lg font-semibold">Сторінку не вдалося відкрити.</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             A rendering error occurred. You can reload and try again.
           </p>
           <div className="mt-4">
-            <Button onClick={() => window.location.reload()}>Reload page</Button>
+            <Button onClick={() => window.location.reload()}>Оновити сторінку page</Button>
           </div>
           <details className="mt-4 rounded-md border border-border/60 bg-card/50 p-3 text-xs">
-            <summary className="cursor-pointer font-medium">Technical details</summary>
+            <summary className="cursor-pointer font-medium">Технічні деталі</summary>
             <p className="mt-2 break-words text-muted-foreground">
               {this.state.error?.stack ?? this.state.error?.message ?? "Unknown rendering error"}
             </p>

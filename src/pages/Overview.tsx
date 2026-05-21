@@ -27,6 +27,23 @@ const countView = async (view: string) => {
   return { count: 0, error: scoped.error.message };
 };
 
+
+const OPEN_STATUSES = ["open","active","pending","unresolved"];
+const CLOSED_STATUSES = ["resolved","closed","archived"];
+const countOpenAlerts = async () => {
+  const res = await supabase.from("v_operational_alerts_recent").select("*").eq("workspace_id", WORKSPACE_ID);
+  const rows = (res.data ?? []) as Row[];
+  if (rows.length === 0) return { count: 0, error: res.error?.message ?? null, label: "Відкриті сповіщення" };
+  const hasStatus = rows.some((r) => r.status !== undefined);
+  if (hasStatus) {
+    const count = rows.filter((r) => { const st=String(r.status ?? "").toLowerCase(); return OPEN_STATUSES.includes(st) && !CLOSED_STATUSES.includes(st); }).length;
+    return { count, error: res.error?.message ?? null, label: "Відкриті сповіщення" };
+  }
+  const hasResolved = rows.some((r) => r.resolved_at !== undefined);
+  if (hasResolved) return { count: rows.filter((r)=>!r.resolved_at).length, error: res.error?.message ?? null, label: "Відкриті сповіщення" };
+  return { count: rows.length, error: res.error?.message ?? null, label: "Останні сповіщення" };
+};
+
 export default function Overview() {
   const { session } = useAuth();
   const readiness = useQuery({ queryKey: ["backend-readiness", WORKSPACE_ID], enabled: Boolean(session), queryFn: async () => {
@@ -36,7 +53,7 @@ export default function Overview() {
   }});
   const counts = useQuery({ queryKey: ["overview-counts", WORKSPACE_ID], enabled: Boolean(session), queryFn: async () => {
     const [clients, projects, funnels, sources, ads, mapping, alerts] = await Promise.all([
-      countView("v_clients"), countView("v_projects"), countView("v_funnels"), countView("v_source_entity_bindings"), countView("v_ad_account_bindings"), countView("v_mapping_review_queue"), countView("v_operational_alerts_recent"),
+      countView("v_clients"), countView("v_projects"), countView("v_funnels"), countView("v_source_entity_bindings"), countView("v_ad_account_bindings"), countView("v_mapping_review_queue"), countOpenAlerts(),
     ]);
     return { clients, projects, funnels, sources, ads, mapping, alerts };
   }});
@@ -81,7 +98,7 @@ export default function Overview() {
       {session && !readiness.error && <SectionCard title="Стан робочого простору"><div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">{cards.map(([title, desc]) => <div key={String(title)} className="rounded-md border p-3"><p className="text-xs text-muted-foreground">{title}</p><p className="font-medium">{desc}</p></div>)}</div></SectionCard>}
 
       <SectionCard title="Налаштування робочого простору"><div className="grid grid-cols-2 gap-2 md:grid-cols-4">{[
-        ["Клієнти", counts.data?.clients], ["Проєкти", counts.data?.projects], ["Воронки", counts.data?.funnels], ["Джерела даних", counts.data?.sources], ["Рекламні акаунти", counts.data?.ads], ["Мапінг на перевірку", counts.data?.mapping], ["Відкриті сповіщення", counts.data?.alerts],
+        ["Клієнти", counts.data?.clients], ["Проєкти", counts.data?.projects], ["Воронки", counts.data?.funnels], ["Джерела даних", counts.data?.sources], ["Рекламні акаунти", counts.data?.ads], ["Мапінг на перевірку", counts.data?.mapping], [String((counts.data?.alerts as {label?:string}|undefined)?.label ?? "Відкриті сповіщення"), counts.data?.alerts],
       ].map(([label, item]) => <div key={String(label)} className="rounded-md border p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="text-lg font-semibold">{(item as {error:string|null,count:number}|undefined)?.error ? "Дані поки недоступні" : (item as {count:number}|undefined)?.count ?? "—"}</p></div>)}</div></SectionCard>
 
       <SectionCard title="Наступні кроки"><div className="space-y-3">{steps.map((s, i) => <div key={i} className="rounded-md border p-3"><p className="text-sm">{s.text}</p><Button asChild variant="outline" size="sm" className="mt-2"><Link to={s.href}>{s.label}</Link></Button></div>)}</div></SectionCard>
