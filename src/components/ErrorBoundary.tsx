@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 
 type ErrorBoundaryProps = {
@@ -38,7 +39,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           <div className="mt-4 flex items-center gap-2">
             <Button onClick={() => window.location.reload()}>Оновити сторінку</Button>
             <Button asChild variant="outline">
-              <a href="/">Повернутися до огляду</a>
+              <Link to="/">Повернутися до огляду</Link>
             </Button>
           </div>
           {isDebugMode ? (
