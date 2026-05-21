@@ -4,7 +4,7 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { FilterBar } from "@/components/dashboard/FilterBar";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { fmtCurrency, fmtNum } from "@/lib/format";
+import { fmtNum } from "@/lib/format";
 import { useI18n } from "@/i18n/I18nProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
@@ -12,6 +12,8 @@ import { useAuth } from "@/auth/AuthProvider";
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 type Row = Record<string, string | number | boolean | null>;
 type OptionalViewData = { rows: Row[]; unavailableReason: string | null };
+
+const EMPTY_TEXT = "Дані воронки поки не знайдені. Перевірте імпорт або мапінг джерел.";
 
 export default function Funnel() {
   const { t } = useI18n();
@@ -21,69 +23,103 @@ export default function Funnel() {
     queryKey: ["funnel-page", WORKSPACE_ID],
     enabled: Boolean(session),
     queryFn: async () => {
-      const [events, bindings, onboarding, adsSummary] = await Promise.all([
-        readOptionalView("v_funnel_events", true),
-        readOptionalView("v_project_data_bindings", true),
-        readOptionalView("v_onboarding_hierarchy", true),
-        readOptionalView("v_ads_performance_summary", true),
+      const [stageSummary, conversionSummary] = await Promise.all([
+        readOptionalView("v_unified_funnel_stage_summary", true),
+        readOptionalView("v_unified_funnel_conversion_summary", true),
       ]);
-      return { events, bindings, onboarding, adsSummary };
+      return { stageSummary, conversionSummary };
     },
   });
 
-  const stageCounts = useMemo(() => {
-    const rows = query.data?.events.rows ?? [];
-    const map = new Map<string, number>();
-    rows.forEach((row) => {
-      const stage = String(row.event_name ?? row.stage_name ?? row.funnel_stage ?? "unknown");
-      const count = Number(row.event_count ?? row.count ?? 1);
-      map.set(stage, (map.get(stage) ?? 0) + count);
-    });
-    return Array.from(map.entries()).map(([stage, count]) => ({ stage, count }));
-  }, [query.data]);
+  const conversion = query.data?.conversionSummary.rows[0] ?? null;
+  const stageRows = query.data?.stageSummary.rows ?? [];
+  const hasData = stageRows.length > 0 || Boolean(conversion);
+
+  const stageKpis = useMemo(() => [
+    { label: "Реєстрації", value: conversion?.registrations },
+    { label: "Анкети", value: conversion?.questionnaires },
+    { label: "Заявки", value: conversion?.applications },
+    { label: "Бронювання", value: conversion?.bookings },
+  ], [conversion]);
+
+  const conversionKpis = useMemo(() => [
+    { label: "Реєстрація → Анкета", value: conversion?.registration_to_questionnaire_pct },
+    { label: "Анкета → Заявка", value: conversion?.questionnaire_to_application_pct },
+    { label: "Заявка → Бронювання", value: conversion?.application_to_booking_pct },
+    { label: "Реєстрація → Бронювання", value: conversion?.registration_to_booking_pct },
+  ], [conversion]);
 
   return (
     <DashboardLayout title={t("funnelTitle")} subtitle={t("funnelSubtitle")}>
       <div className="space-y-4">
-        <FilterBar freshness={{ source: "v_funnel_events", status: "fresh", lastSync: "live" }} />
-        {!session ? <Empty text="Sign in to view funnel production data." /> : query.isLoading ? <Empty text="Завантаження funnel production data…" /> : null}
-        {query.data?.events.unavailableReason ? <Empty text="Could not load this section yet." /> : null}
+        <FilterBar freshness={{ source: "v_unified_funnel_stage_summary", status: "fresh", lastSync: "live" }} />
+        {!session ? <Empty text="Sign in to view funnel production data." /> : query.isLoading ? <Empty text="Завантаження даних воронки…" /> : null}
 
-        <SectionCard title="Funnel stage / event counts" description="Stage conversion overview" noPadding>
-          {stageCounts.length === 0 ? <Empty text="No funnel data yet. Connect a source or import data to see this report." /> : (
-            <Table><TableHeader><TableRow><TableHead>Stage / event</TableHead><TableHead className="text-right">Count</TableHead></TableRow></TableHeader><TableBody>{stageCounts.map((s) => <TableRow key={s.stage}><TableCell>{s.stage}</TableCell><TableCell className="text-right num">{fmtNum(s.count)}</TableCell></TableRow>)}</TableBody></Table>
-          )}
-        </SectionCard>
+        {!query.isLoading && !hasData ? <Empty text={EMPTY_TEXT} /> : null}
 
-        <SectionCard title="Client / project / funnel hierarchy" description="Client, project, and funnel structure" noPadding>
-          <SimpleRows rows={query.data?.onboarding.rows ?? []} emptyText="Hierarchy data is unavailable or empty." columns={["client_name", "project_name", "funnel_name", "status"]} />
-        </SectionCard>
+        {hasData ? (
+          <>
+            <SectionCard title="Ключові етапи" description="Основні показники воронки" noPadding>
+              <KpiTable rows={stageKpis} isPercent={false} />
+            </SectionCard>
 
-        <SectionCard title="Binding status" description="Project data connections" noPadding>
-          <SimpleRows rows={query.data?.bindings.rows ?? []} emptyText="Binding status is unavailable or empty." columns={["project_name", "mapping_status", "binding_status", "updated_at"]} />
-        </SectionCard>
+            <SectionCard title="Конверсія між етапами" description="Відсоток переходів" noPadding>
+              <KpiTable rows={conversionKpis} isPercent />
+            </SectionCard>
 
-        <SectionCard title="Ads summary linked to funnel" description="Sales performance summary" noPadding>
-          <SimpleRows rows={query.data?.adsSummary.rows ?? []} emptyText="Ads summary is unavailable or empty." columns={["platform", "campaign_name", "spend", "clicks", "impressions"]} />
-        </SectionCard>
+            <SectionCard title="Етапи воронки" description="Зведення по імпортованих подіях" noPadding>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Етап</TableHead>
+                    <TableHead className="text-right">Події</TableHead>
+                    <TableHead className="text-right">Унікальні контакти</TableHead>
+                    <TableHead>Перша дата</TableHead>
+                    <TableHead>Остання дата</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {stageRows.map((row, idx) => (
+                    <TableRow key={idx}>
+                      <TableCell>{String(row.stage_label ?? "—")}</TableCell>
+                      <TableCell className="text-right num">{fmtNum(Number(row.events_count ?? 0))}</TableCell>
+                      <TableCell className="text-right num">{fmtNum(Number(row.unique_contacts ?? 0))}</TableCell>
+                      <TableCell>{String(row.first_date ?? "—")}</TableCell>
+                      <TableCell>{String(row.last_date ?? "—")}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </SectionCard>
+          </>
+        ) : null}
       </div>
     </DashboardLayout>
   );
 }
 
-function SimpleRows({ rows, columns, emptyText }: { rows: Row[]; columns: string[]; emptyText: string }) {
-  if (rows.length === 0) return <Empty text={emptyText} />;
-  return <Table><TableHeader><TableRow>{columns.map((c) => <TableHead key={c}>{c}</TableHead>)}</TableRow></TableHeader><TableBody>{rows.slice(0, 50).map((row, idx) => <TableRow key={idx}>{columns.map((c) => <TableCell key={c}>{formatValue(row[c], c)}</TableCell>)}</TableRow>)}</TableBody></Table>;
+function KpiTable({ rows, isPercent }: { rows: { label: string; value: Row[string] }[]; isPercent: boolean }) {
+  return (
+    <Table>
+      <TableHeader><TableRow><TableHead>Показник</TableHead><TableHead className="text-right">Значення</TableHead></TableRow></TableHeader>
+      <TableBody>
+        {rows.map((row) => (
+          <TableRow key={row.label}>
+            <TableCell>{row.label}</TableCell>
+            <TableCell className="text-right num">{formatMetric(row.value, isPercent)}</TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
 }
 
-function formatValue(value: Row[string], key: string) {
-  if (value == null) return "—";
-  if (typeof value === "number" && ["spend", "revenue"].includes(key)) return fmtCurrency(value);
-  if (typeof value === "number") return fmtNum(value);
-  return String(value);
+function formatMetric(value: Row[string], isPercent: boolean) {
+  if (typeof value !== "number") return "—";
+  return isPercent ? `${fmtNum(value)}%` : fmtNum(value);
 }
 
-function Empty({ text }: { text: string }) { return <p className="p-4 text-sm text-muted-foreground">{text}</p>; }
+function Empty({ text }: { text: string }) { return <p className="rounded border p-3 text-sm text-muted-foreground">{text}</p>; }
 
 async function readOptionalView(viewName: string, scopedByWorkspace: boolean): Promise<OptionalViewData> {
   let query = supabase.from(viewName).select("*").limit(200);
