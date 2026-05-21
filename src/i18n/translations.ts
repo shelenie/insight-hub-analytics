@@ -27,6 +27,8 @@ export const translations = {
   filters: { uk: "Фільтри", en: "Filters" },
   project: { uk: "Проєкт", en: "Project" },
   reportGroup: { uk: "Група звітів", en: "Report group" },
+  allProjects: { uk: "Усі проєкти", en: "All projects" },
+  allGroups: { uk: "Усі групи", en: "All groups" },
   dateRange: { uk: "Період", en: "Date range" },
   refresh: { uk: "Оновити", en: "Refresh" },
   data: { uk: "Дані:", en: "Data:" },

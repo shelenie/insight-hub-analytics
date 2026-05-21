@@ -9,6 +9,7 @@ import { useAuth } from "@/auth/AuthProvider";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { supabase } from "@/integrations/supabase/client";
 import { DeveloperDetails, FriendlyError } from "@/components/common/DeveloperDetails";
+import { filterPlaceholderRows } from "@/lib/demoFilters";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 // types omitted for brevity
@@ -33,6 +34,7 @@ export default function Assistant() {
   const [prompt, setPrompt] = useState("");
   const [latest, setLatest] = useState<Record<string, unknown> | null>(null);
   const selectedOption = useMemo(() => OPTIONS.find((o) => o.requestType === selected) ?? OPTIONS[0], [selected]);
+  const requestLabelByType = useMemo(() => Object.fromEntries(OPTIONS.map((o) => [o.requestType, o.label])), []);
 
   const requests = useQuery({ queryKey: ["ai-helper-requests", WORKSPACE_ID], enabled: Boolean(session), queryFn: async () => (await supabase.from("v_ai_helper_requests_recent").select("*").eq("workspace_id", WORKSPACE_ID).limit(20)).data ?? [] });
   const run = useMutation({ mutationFn: async () => {
@@ -57,7 +59,7 @@ export default function Assistant() {
       </SectionCard>
 
       <SectionCard title="Остання відповідь">{!latest ? <p className="text-sm text-muted-foreground">У цій сесії ще немає відповідей AI.</p> : <AiAnswer text={String(latest.answer ?? latest.summary ?? latest.response ?? latest.text ?? "") || "Відповідь поки відсутня."} />}</SectionCard>
-      <SectionCard title="Попередні відповіді AI"><details><summary className="cursor-pointer">Показати попередні відповіді AI</summary>{(requests.data ?? []).length === 0 ? <p className="text-sm text-muted-foreground">Попередніх відповідей ще немає.</p> : <div className="space-y-2">{(requests.data ?? []).slice(0,5).map((r: Record<string, unknown>, i: number) => <div key={i} className="rounded border p-3 text-sm"><p className="font-medium">{String(r.title ?? "Відповідь AI")}</p>{r.result_summary ? <div className="mt-1 text-muted-foreground"><AiAnswer text={String(r.result_summary)} /></div> : null}{r.created_at ? <p className="mt-1 text-xs text-muted-foreground">{new Date(String(r.created_at)).toLocaleString()}</p> : null}<DeveloperDetails><pre className="max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify(r, null, 2)}</pre></DeveloperDetails></div>)}</div>}</details></SectionCard>
+      <SectionCard title="Попередні відповіді AI"><details><summary className="cursor-pointer">Показати попередні відповіді AI</summary>{filterPlaceholderRows((requests.data ?? []) as Record<string, unknown>[]).length === 0 ? <p className="text-sm text-muted-foreground">Попередніх відповідей ще немає.</p> : <div className="space-y-2">{filterPlaceholderRows((requests.data ?? []) as Record<string, unknown>[]).slice(0, 5).map((r: Record<string, unknown>, i: number) => { const title = String(r.title ?? "Відповідь AI"); const requestType = typeof r.request_type === "string" ? requestLabelByType[r.request_type] ?? r.request_type : null; const previewSource = String(r.result_summary ?? r.answer ?? r.summary ?? "").replace(/\s+/g, " ").trim(); const preview = previewSource.length > 140 ? `${previewSource.slice(0, 140)}…` : previewSource; return <div key={i} className="rounded border p-3 text-sm"><p className="font-medium">{title}</p>{requestType ? <p className="mt-0.5 text-xs text-muted-foreground">{requestType}</p> : null}{preview ? <p className="mt-1 text-muted-foreground">{preview}</p> : null}{r.created_at ? <p className="mt-1 text-xs text-muted-foreground">{new Date(String(r.created_at)).toLocaleString()}</p> : null}<p className="mt-2 text-xs text-muted-foreground">Деталі доступні в debug mode.</p><DeveloperDetails><pre className="max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify(r, null, 2)}</pre></DeveloperDetails></div>; })}</div>}</details></SectionCard>
 
       <DeveloperDetails>
         <p>Role: {role ?? "unknown"}</p>
