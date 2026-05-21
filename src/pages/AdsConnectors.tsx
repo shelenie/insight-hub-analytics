@@ -8,6 +8,7 @@ import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { DeveloperDetails } from "@/components/common/DeveloperDetails";
 
 type Primitive = string | number | boolean | null;
 type Row = Record<string, Primitive | Primitive[] | Record<string, unknown>>;
@@ -17,6 +18,9 @@ type ConnectorState = { loading: boolean; error: string | null };
 type SyncRunState = { loading: boolean; error: string | null; success: string | null; details: Record<string, unknown> | null };
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
+const FRIENDLY_COLUMN_LABELS: Record<string, string> = {
+  client_name: "Клієнт", project_name: "Проєкт", funnel_name: "Воронка", campaign: "Кампанія", platform: "Платформа", spend: "Витрати", clicks: "Кліки", impressions: "Покази", reach: "Охоплення", ctr: "CTR", cpc: "CPC", cpm: "CPM", status: "Статус", created_at: "Створено", updated_at: "Оновлено", mapping_status: "Статус мапінгу", binding_status: "Статус звʼязку", ad_account_name: "Рекламний акаунт", source_name: "Джерело",
+};
 
 const CONNECTOR_FN: Record<ConnectorKey, string> = {
   meta: "meta-oauth-start",
@@ -124,49 +128,49 @@ export default function AdsConnectors() {
   };
 
   return (
-    <DashboardLayout title="Ads Connectors" subtitle="Manage ads OAuth connections, account bindings, scheduled sync, and ads health context.">
+    <DashboardLayout title="Ads конектори" subtitle="Підключення рекламних акаунтів, синхронізація та стан рекламних даних">
       {!session ? (
-        <SectionCard title="Ads Connectors" description="Authentication required">
+        <SectionCard title="Ads конектори" description="Потрібен вхід">
           <p className="text-sm text-muted-foreground">Ви вийшли з системи. Увійдіть to access Ads Connectors.</p>
         </SectionCard>
-      ) : query.isЗавантаження ? (
-        <SectionCard title="Ads Connectors" description="Завантаження data">
+      ) : query.isLoading ? (
+        <SectionCard title="Ads конектори" description="Завантаження data">
           <p className="text-sm text-muted-foreground">Завантаження ads connectors workspace…</p>
         </SectionCard>
       ) : query.error ? (
-        <SectionCard title="Ads Connectors" description="Error state">
+        <SectionCard title="Ads конектори" description="Стан розділу">
           <p className="text-sm text-destructive">Could not load ads connectors workspace: {query.error.message}</p>
         </SectionCard>
       ) : (
         <>
-        {roleЗавантаження ? <p className="text-xs text-muted-foreground">Завантаження workspace role permissions…</p> : null}
-        {!roleЗавантаження && !canManage ? <p className="text-xs text-muted-foreground">You do not have permission to manage ads connectors.</p> : null}
-        {!roleЗавантаження && roleError ? <p className="text-xs text-muted-foreground">Workspace role unavailable. Write actions are disabled for safety.</p> : null}
+        {roleLoading ? <p className="text-xs text-muted-foreground">Перевіряємо права доступу…</p> : null}
+        {!roleLoading && !canManage ? <p className="text-xs text-muted-foreground">У вас немає доступу до керування Ads-конекторами.</p> : null}
+        {!roleLoading && roleError ? <p className="text-xs text-muted-foreground">Роль робочого простору тимчасово недоступна. Дії вимкнено з міркувань безпеки.</p> : null}
         <Tabs defaultValue="overview" className="space-y-4">
           <TabsList className="w-full justify-start overflow-x-auto">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="connections">Connections</TabsTrigger>
-            <TabsTrigger value="ad-accounts">Ad Accounts</TabsTrigger>
-            <TabsTrigger value="scheduled-sync">Scheduled Sync</TabsTrigger>
+            <TabsTrigger value="overview">Огляд</TabsTrigger>
+            <TabsTrigger value="connections">Підключення</TabsTrigger>
+            <TabsTrigger value="ad-accounts">Рекламні акаунти</TabsTrigger>
+            <TabsTrigger value="scheduled-sync">Планова синхронізація</TabsTrigger>
             <TabsTrigger value="facebook-lead-ads">Facebook Lead Ads</TabsTrigger>
-            <TabsTrigger value="ads-health">Ads Health</TabsTrigger>
-            <TabsTrigger value="recent-issues">Recent Issues</TabsTrigger>
+            <TabsTrigger value="ads-health">Стан реклами</TabsTrigger>
+            <TabsTrigger value="recent-issues">Проблеми</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview">
             <SectionCard title="Overview" description="Connector and ads health snapshot">
               <div className="grid gap-3 text-sm md:grid-cols-2 lg:grid-cols-3">
-                <ReadinessField label="ads_connector_status" value={readString(overview.snapshot, "ads_connector_status")} />
-                <ReadinessField label="production_backend_status" value={readString(overview.snapshot, "production_backend_status") ?? readString(overview.readiness, "production_backend_status")} />
+                <ReadinessField label="Статус конекторів" value={readString(overview.snapshot, "ads_connector_status")} />
+                <ReadinessField label="Статус production" value={readString(overview.snapshot, "production_backend_status") ?? readString(overview.readiness, "production_backend_status")} />
                 <ReadinessField label="latest_ads_health" value={formatValue(overview.adsHealth)} />
               </div>
               {readString(overview.snapshot, "ads_connector_status") === "no_active_connections" && (
-                <p className="mt-3 text-sm text-muted-foreground">Connect a real ads account to activate ads data.</p>
+                <p className="mt-3 text-sm text-muted-foreground">Підключіть реальний рекламний акаунт, щоб активувати рекламні дані.</p>
               )}
             </SectionCard>
           </TabsContent>
 
-          <TabsContent value="connections"><SectionCard title="Connections" description="Use secure OAuth start edge functions.">
+          <TabsContent value="connections"><SectionCard title="Підключення" description="Use secure OAuth start edge functions.">
             <div className="grid gap-3 md:grid-cols-2">
               <ConnectorCard name="Meta Ads" description="Connect via secure Meta OAuth start function." state={connectorState.meta} onConnect={() => void connect("meta")} canManage={canManage} />
               <ConnectorCard name="Google Ads" description="Connect via secure Google Ads OAuth start function." state={connectorState.google} onConnect={() => void connect("google")} canManage={canManage} />
@@ -179,41 +183,38 @@ export default function AdsConnectors() {
             </div>
           </SectionCard></TabsContent>
 
-          <TabsContent value="ad-accounts"><SectionCard title="Ad Accounts" description="Connected ad accounts">
-            <OptionalKnownColumns data={query.data?.adBindings} columns={["platform", "ad_account_name", "external_account_id", "client_name", "project_name", "funnel_name", "mapping_status", "binding_status", "confidence", "created_at", "updated_at"]} emptyText="No ad account bindings found." />
+          <TabsContent value="ad-accounts"><SectionCard title="Рекламні акаунти" description="Connected ad accounts">
+            <OptionalKnownColumns data={query.data?.adBindings} columns={["platform", "ad_account_name", "external_account_id", "client_name", "project_name", "funnel_name", "mapping_status", "binding_status", "confidence", "created_at", "updated_at"]} emptyText="Рекламні акаунти поки не привʼязані." />
           </SectionCard></TabsContent>
 
-          <TabsContent value="scheduled-sync"><SectionCard title="Scheduled Sync" description="Scheduled sync status">
+          <TabsContent value="scheduled-sync"><SectionCard title="Планова синхронізація" description="Scheduled sync status">
             <div className="space-y-4">
-              <OptionalKnownColumns data={query.data?.syncRules} columns={["platform", "cadence", "schedule", "status", "last_run_at", "next_run_at", "updated_at"]} emptyText="No scheduled sync rules found." />
-              <OptionalKnownColumns data={query.data?.syncDue} columns={["platform", "status", "last_run_at", "next_run_at", "due_status", "is_due"]} emptyText="No scheduled sync due records found." />
+              <OptionalKnownColumns data={query.data?.syncRules} columns={["platform", "cadence", "schedule", "status", "last_run_at", "next_run_at", "updated_at"]} emptyText="Правил планової синхронізації поки немає." />
+              <OptionalKnownColumns data={query.data?.syncDue} columns={["platform", "status", "last_run_at", "next_run_at", "due_status", "is_due"]} emptyText="Немає синхронізацій, які потрібно запускати зараз." />
               <div className="rounded-md border border-dashed border-border/70 bg-muted/30 p-3">
                 <Button type="button" onClick={() => void runScheduledSync()} disabled={!session || !canManage || !capabilities.can_run_ads_scheduled_sync || syncRunState.loading}>
-                  {syncRunState.loading ? "Running scheduled sync…" : "Run scheduled sync"}
+                  {syncRunState.loading ? "Запускаємо синхронізацію…" : "Запустити синхронізацію"}
                 </Button>
                 <p className="mt-2 text-xs text-muted-foreground">Scheduled sync is checked securely on submit.</p>
-                {syncRunState.success && <p className="mt-2 text-xs text-emerald-700">{syncRunState.success}</p>}
-                {syncRunState.error && <p className="mt-2 text-xs text-destructive">{syncRunState.error}</p>}
-                {syncRunState.details && (
-                  <pre className="mt-2 overflow-x-auto rounded bg-background p-2 text-xs text-muted-foreground">
-                    {JSON.stringify(syncRunState.details, null, 2)}
-                  </pre>
-                )}
+                {syncRunState.success && <p className="mt-2 text-xs text-emerald-700">Синхронізацію запущено.</p>}
+                {syncRunState.error && <p className="mt-2 text-xs text-destructive">Синхронізація завершилась з помилкою.</p>}
+                {syncRunState.details ? <p className="mt-2 text-xs text-muted-foreground">Деталі доступні в debug mode.</p> : null}
+                <DeveloperDetails>{syncRunState.details ? <pre className="mt-2 overflow-x-auto rounded bg-background p-2 text-xs text-muted-foreground">{JSON.stringify(syncRunState.details, null, 2)}</pre> : null}</DeveloperDetails>
               </div>
             </div>
           </SectionCard></TabsContent>
 
           <TabsContent value="facebook-lead-ads"><div className="space-y-4">
-            <OptionalViewCard title="Lead Ads Health" viewName="v_facebook_lead_ads_health" data={query.data?.fbHealth} emptyText="No Facebook Lead Ads health records found." />
-            <OptionalViewCard title="Lead Forms" viewName="v_facebook_lead_forms" data={query.data?.fbForms} emptyText="No Facebook lead forms found." />
-            <OptionalViewCard title="Recent Leads" viewName="v_facebook_leads_recent" data={query.data?.fbLeads} emptyText="No recent Facebook leads found." />
-            <OptionalViewCard title="Sync Runs (Recent)" viewName="v_facebook_lead_sync_runs_recent" data={query.data?.fbSyncRuns} emptyText="No recent Facebook lead sync runs found." />
+            <OptionalViewCard title="Lead Ads Health" viewName="v_facebook_lead_ads_health" data={query.data?.fbHealth} emptyText="Записів стану Facebook Lead Ads поки немає." />
+            <OptionalViewCard title="Lead Forms" viewName="v_facebook_lead_forms" data={query.data?.fbForms} emptyText="Форми Facebook Lead Ads поки не знайдені." />
+            <OptionalViewCard title="Recent Leads" viewName="v_facebook_leads_recent" data={query.data?.fbLeads} emptyText="Останніх Facebook лідів поки немає." />
+            <OptionalViewCard title="Sync Runs (Recent)" viewName="v_facebook_lead_sync_runs_recent" data={query.data?.fbSyncRuns} emptyText="Останніх запусків синхронізації Facebook Lead Ads поки немає." />
           </div></TabsContent>
 
           <TabsContent value="ads-health"><div className="space-y-4">
-            <OptionalViewCard title="Ads Summary Context" viewName="v_ai_ads_summary_context" data={query.data?.adsSummary} emptyText="No ads summary context records found." />
-            <OptionalViewCard title="Ads Daily Context" viewName="v_ai_ads_daily_context" data={query.data?.adsDaily} emptyText="No ads daily context records found." />
-            <OptionalViewCard title="Ads Anomaly Candidates" viewName="v_ai_ads_anomaly_candidates" data={query.data?.adsAnomalies} emptyText="No ads anomaly candidates found." />
+            <OptionalViewCard title="Ads Summary Context" viewName="v_ai_ads_summary_context" data={query.data?.adsSummary} emptyText="Контексту підсумків реклами поки немає." />
+            <OptionalViewCard title="Ads Daily Context" viewName="v_ai_ads_daily_context" data={query.data?.adsDaily} emptyText="Щоденного контексту реклами поки немає." />
+            <OptionalViewCard title="Ads Anomaly Candidates" viewName="v_ai_ads_anomaly_candidates" data={query.data?.adsAnomalies} emptyText="Кандидатів на аномалії реклами поки немає." />
           </div></TabsContent>
 
           <TabsContent value="recent-issues"><SectionCard title="Recent Issues / Empty states" description="Partial availability and connector issues">
@@ -239,7 +240,7 @@ function ReadinessField({ label, value }: { label: string; value: string | null 
   return <div className="rounded-md border border-border/70 bg-card/60 p-3"><p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p><p className="mt-1 font-medium">{value ?? "Unavailable"}</p></div>;
 }
 function ConnectorCard({ name, description, state, onConnect, canManage }: { name: string; description: string; state: ConnectorState; onConnect: () => void; canManage: boolean }) {
-  return <div className="rounded-md border border-border/70 p-3 text-sm"><p className="font-medium">{name}</p><p className="mt-1 text-muted-foreground">{description}</p><Button type="button" className="mt-3" onClick={onConnect} disabled={state.loading || !canManage}>{state.loading ? "Connecting…" : "Connect"}</Button>{state.error && <p className="mt-2 text-xs text-destructive">{state.error}</p>}</div>;
+  return <div className="rounded-md border border-border/70 p-3 text-sm"><p className="font-medium">{name}</p><p className="mt-1 text-muted-foreground">{description}</p><Button type="button" className="mt-3" onClick={onConnect} disabled={state.loading || !canManage}>{state.loading ? "Підключаємо…" : "Підключити"}</Button>{state.error && <p className="mt-2 text-xs text-destructive">{state.error}</p>}</div>;
 }
 function OptionalViewCard({ title, viewName, data, emptyText }: { title: string; viewName: string; data: OptionalViewData | undefined; emptyText: string }) {
   return <SectionCard title={title} description="Details">{data?.unavailableReason ? <p className="text-sm text-muted-foreground">Цей розділ поки недоступний.</p> : <GenericTable rows={data?.rows ?? []} emptyText={emptyText} />}</SectionCard>;
@@ -253,13 +254,13 @@ function OptionalKnownColumns({ data, columns, emptyText }: { data: OptionalView
 function GenericTable({ rows, emptyText }: { rows: Row[]; emptyText: string }) {
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">{emptyText}</p>;
   const columns = Object.keys(rows[0] ?? {});
-  if (columns.length === 0) return <p className="text-sm text-muted-foreground">Data exists but has no displayable fields.</p>;
+  if (columns.length === 0) return <p className="text-sm text-muted-foreground">Дані є, але немає полів для відображення.</p>;
   return <GenericDataTable rows={rows} columns={columns} />;
 }
 function GenericDataTable({ rows, columns }: { rows: Row[]; columns: string[] }) {
-  return <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead><tr className="border-b border-border/70 text-muted-foreground">{columns.map((column) => <th key={column} className="px-2 py-2 font-medium">{titleize(column)}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${index}-${String(row.id ?? "row")}`} className="border-b border-border/40 last:border-0">{columns.map((column) => <td key={`${index}-${column}`} className="px-2 py-2 text-foreground">{formatValue(row[column])}</td>)}</tr>)}</tbody></table></div>;
+  return <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead><tr className="border-b border-border/70 text-muted-foreground">{columns.map((column) => <th key={column} className="px-2 py-2 font-medium">{friendlyLabel(column)}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${index}-${String(row.id ?? "row")}`} className="border-b border-border/40 last:border-0">{columns.map((column) => <td key={`${index}-${column}`} className="px-2 py-2 text-foreground">{formatValue(row[column])}</td>)}</tr>)}</tbody></table></div>;
 }
-function titleize(value: string) { return value.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" "); }
+function friendlyLabel(value: string) { return FRIENDLY_COLUMN_LABELS[value.toLowerCase()] ?? value.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" "); }
 function formatValue(value: unknown): string { if (value === null || value === undefined || value === "") return "—"; return typeof value === "object" ? JSON.stringify(value) : String(value); }
 function toObject(value: unknown): Record<string, unknown> { return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {}; }
 function readString(row: Row | Record<string, unknown> | undefined, key: string): string | null { const value = row?.[key]; return typeof value === "string" ? value : null; }

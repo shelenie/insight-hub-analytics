@@ -46,7 +46,7 @@ export default function Funnel() {
     <DashboardLayout title={t("funnelTitle")} subtitle={t("funnelSubtitle")}>
       <div className="space-y-4">
         <FilterBar freshness={{ source: "v_funnel_events", status: "fresh", lastSync: "live" }} />
-        {!session ? <Empty text="Sign in to view funnel production data." /> : query.isЗавантаження ? <Empty text="Завантаження funnel production data…" /> : null}
+        {!session ? <Empty text="Sign in to view funnel production data." /> : query.isLoading ? <Empty text="Завантаження funnel production data…" /> : null}
         {query.data?.events.unavailableReason ? <Empty text="Could not load this section yet." /> : null}
 
         <SectionCard title="Funnel stage / event counts" description="Stage conversion overview" noPadding>

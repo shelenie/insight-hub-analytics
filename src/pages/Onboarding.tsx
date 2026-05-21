@@ -28,6 +28,10 @@ type OnboardingData = {
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
+const PLACEHOLDER_PATTERNS = ["test agency","test client","northstar digital clinic","evergreen growth program","main webinar funnel","placeholder","demo","mock","test_upload","backend_test"];
+function isPlaceholderRow(row: OnboardingRow) { const text = Object.values(row).join(" ").toLowerCase(); return PLACEHOLDER_PATTERNS.some((p) => text.includes(p)); }
+function filterRows(rows: OnboardingRow[]) { return rows.filter((r) => !isPlaceholderRow(r)); }
+
 export default function Onboarding() {
   const { session } = useAuth();
   const queryClient = useQueryClient();
@@ -144,7 +148,7 @@ export default function Onboarding() {
 
   const groupedHierarchy = useMemo(() => {
     const byClient = new Map<string, HierarchySummary>();
-    for (const row of onboardingQuery.data?.hierarchy ?? []) {
+    for (const row of filterRows(onboardingQuery.data?.hierarchy ?? [])) {
       const clientName = asText((row.client_name ?? row.name ?? row.title ?? row.client_code) as string | number | boolean | null) || "Клієнт без назви";
       const projectName = asText((row.project_name ?? row.name ?? row.title ?? row.project_code) as string | number | boolean | null) || "Проєкт без назви";
       const funnelName = asText((row.funnel_name ?? row.name ?? row.title ?? row.funnel_code) as string | number | boolean | null);
@@ -187,7 +191,7 @@ export default function Onboarding() {
                 setClientError("");
                 clientMutation.mutate({ client_id: clientForm.client_id || undefined, name: clientForm.name.trim(), code: clientForm.code || undefined, status: clientForm.status || undefined });
               }} />
-                <EntityTable rows={onboardingQuery.data?.clients ?? []} columns={["name", "client_code", "status", "created_at", "updated_at"]} countColumnTitle="Проєкти" countForRow={(row) => projectCountByClient.get(asText(row.name) || "") ?? 0} emptyText="Записів поки немає." />
+                <EntityTable rows={filterRows(onboardingQuery.data?.clients ?? [])} columns={["name", "client_code", "status", "created_at", "updated_at"]} countColumnTitle="Проєкти" countForRow={(row) => projectCountByClient.get(asText(row.name) || "") ?? 0} emptyText="Записів поки немає." />
               </SectionCard></TabsContent>
 
               <TabsContent value="projects"><SectionCard title="Проєкти" description="Керування проєктами"><UpsertPanel title="Проєкт" idKey="project_id" parentLabel="ID клієнта" parentValue={projectForm.client_id} onParentChange={(value) => setProjectForm((p) => ({ ...p, client_id: value }))} editIdLabel="ID проєкту (для редагування)" form={projectForm} setForm={setProjectForm} isPending={projectMutation.isPending} error={projectError} signedIn={Boolean(session)} canSubmit={canManageOnboarding && Boolean(projectForm.name.trim() && projectForm.client_id.trim())} onSubmit={() => {
@@ -196,7 +200,7 @@ export default function Onboarding() {
                 setProjectError("");
                 projectMutation.mutate({ project_id: projectForm.project_id || undefined, client_id: projectForm.client_id.trim(), name: projectForm.name.trim(), code: projectForm.code || undefined, status: projectForm.status || undefined });
               }} />
-                <EntityTable rows={onboardingQuery.data?.projects ?? []} columns={["name", "client_name", "project_code", "status"]} countColumnTitle="Воронки" countForRow={(row) => funnelCountByProject.get(asText(row.name) || "") ?? 0} emptyText="Записів поки немає." />
+                <EntityTable rows={filterRows(onboardingQuery.data?.projects ?? [])} columns={["name", "client_name", "project_code", "status"]} countColumnTitle="Воронки" countForRow={(row) => funnelCountByProject.get(asText(row.name) || "") ?? 0} emptyText="Записів поки немає." />
               </SectionCard></TabsContent>
 
               <TabsContent value="funnels"><SectionCard title="Воронки" description="Керування воронками"><UpsertPanel title="Воронка" idKey="funnel_id" parentLabel="ID проєкту" parentValue={funnelForm.project_id} onParentChange={(value) => setFunnelForm((f) => ({ ...f, project_id: value }))} editIdLabel="ID воронки (для редагування)" form={funnelForm} setForm={setFunnelForm} isPending={funnelMutation.isPending} error={funnelError} signedIn={Boolean(session)} canSubmit={canManageOnboarding && Boolean(funnelForm.name.trim() && funnelForm.project_id.trim())} onSubmit={() => {
@@ -205,10 +209,10 @@ export default function Onboarding() {
                 setFunnelError("");
                 funnelMutation.mutate({ funnel_id: funnelForm.funnel_id || undefined, project_id: funnelForm.project_id.trim(), name: funnelForm.name.trim(), code: funnelForm.code || undefined, status: funnelForm.status || undefined });
               }} />
-                <EntityTable rows={onboardingQuery.data?.funnels ?? []} columns={["name", "client_name", "project_name", "funnel_code", "status"]} emptyText="Записів поки немає." />
+                <EntityTable rows={filterRows(onboardingQuery.data?.funnels ?? [])} columns={["name", "client_name", "project_name", "funnel_code", "status"]} emptyText="Записів поки немає." />
               </SectionCard></TabsContent>
 
-              <TabsContent value="health"><SectionCard title="Стан онбордингу" description="Короткий стан онбордингу"><GenericTable rows={onboardingQuery.data?.health ?? []} emptyText="Даних про стан онбордингу поки немає." /></SectionCard></TabsContent>
+              <TabsContent value="health"><SectionCard title="Стан онбордингу" description="Короткий стан онбордингу"><GenericTable rows={filterRows(onboardingQuery.data?.health ?? [])} emptyText="Даних про стан онбордингу поки немає." /></SectionCard></TabsContent>
             </Tabs></>}
     </div>
   </DashboardLayout>;
