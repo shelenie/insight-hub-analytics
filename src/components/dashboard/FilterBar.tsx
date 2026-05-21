@@ -1,7 +1,6 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Filter, RefreshCw, LayoutGrid, CalendarDays } from "lucide-react";
-import { projects, reportGroups } from "@/data/mock";
 import { useState } from "react";
 import { StatusBadge } from "./StatusBadge";
 import { useI18n } from "@/i18n/I18nProvider";
@@ -19,6 +18,8 @@ interface FilterBarProps {
   onViewModeChange?: (m: "summary" | "daily") => void;
   extra?: React.ReactNode;
   freshness?: { source: string; status: "fresh" | "stale" | "failed"; lastSync: string };
+  projectOptions?: { id: string; label: string }[];
+  groupOptions?: { id: string; label: string }[];
 }
 
 export function FilterBar({
@@ -30,6 +31,8 @@ export function FilterBar({
   onViewModeChange,
   extra,
   freshness,
+  projectOptions,
+  groupOptions,
 }: FilterBarProps) {
   const { t, lang } = useI18n();
   const [project, setProject] = useState("all");
@@ -50,12 +53,13 @@ export function FilterBar({
         {showProject && (
           <Select value={project} onValueChange={setProject}>
             <SelectTrigger className="h-8 w-[170px] text-xs">
-              <SelectValue placeholder={t("project")} />
+            <SelectValue placeholder={t("project")} />
             </SelectTrigger>
             <SelectContent>
-              {projects.map((p) => (
+              <SelectItem value="all" className="text-xs">{t("allProjects")}</SelectItem>
+              {(projectOptions ?? []).map((p) => (
                 <SelectItem key={p.id} value={p.id} className="text-xs">
-                  {lang === "uk" ? p.nameUk : p.name}
+                  {p.label}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -65,12 +69,13 @@ export function FilterBar({
         {showGroup && (
           <Select value={group} onValueChange={setGroup}>
             <SelectTrigger className="h-8 w-[170px] text-xs">
-              <SelectValue placeholder={t("reportGroup")} />
+            <SelectValue placeholder={t("reportGroup")} />
             </SelectTrigger>
             <SelectContent>
-              {reportGroups.map((g) => (
+              <SelectItem value="all" className="text-xs">{t("allGroups")}</SelectItem>
+              {(groupOptions ?? []).map((g) => (
                 <SelectItem key={g.id} value={g.id} className="text-xs">
-                  {lang === "uk" ? g.nameUk : g.name}
+                  {g.label}
                 </SelectItem>
               ))}
             </SelectContent>
