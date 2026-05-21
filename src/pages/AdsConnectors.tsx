@@ -8,6 +8,7 @@ import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { DeveloperDetails } from "@/components/common/DeveloperDetails";
 
 type Primitive = string | number | boolean | null;
 type Row = Record<string, Primitive | Primitive[] | Record<string, unknown>>;
@@ -127,9 +128,9 @@ export default function AdsConnectors() {
   };
 
   return (
-    <DashboardLayout title="Ads конектори" subtitle="Manage ads OAuth connections, account bindings, scheduled sync, and ads health context.">
+    <DashboardLayout title="Ads конектори" subtitle="Підключення рекламних акаунтів, синхронізація та стан рекламних даних">
       {!session ? (
-        <SectionCard title="Ads конектори" description="Authentication required">
+        <SectionCard title="Ads конектори" description="Потрібен вхід">
           <p className="text-sm text-muted-foreground">Ви вийшли з системи. Увійдіть to access Ads Connectors.</p>
         </SectionCard>
       ) : query.isLoading ? (
@@ -137,7 +138,7 @@ export default function AdsConnectors() {
           <p className="text-sm text-muted-foreground">Завантаження ads connectors workspace…</p>
         </SectionCard>
       ) : query.error ? (
-        <SectionCard title="Ads конектори" description="Error state">
+        <SectionCard title="Ads конектори" description="Стан розділу">
           <p className="text-sm text-destructive">Could not load ads connectors workspace: {query.error.message}</p>
         </SectionCard>
       ) : (
@@ -164,12 +165,12 @@ export default function AdsConnectors() {
                 <ReadinessField label="latest_ads_health" value={formatValue(overview.adsHealth)} />
               </div>
               {readString(overview.snapshot, "ads_connector_status") === "no_active_connections" && (
-                <p className="mt-3 text-sm text-muted-foreground">Connect a real ads account to activate ads data.</p>
+                <p className="mt-3 text-sm text-muted-foreground">Підключіть реальний рекламний акаунт, щоб активувати рекламні дані.</p>
               )}
             </SectionCard>
           </TabsContent>
 
-          <TabsContent value="connections"><SectionCard title="Connections" description="Use secure OAuth start edge functions.">
+          <TabsContent value="connections"><SectionCard title="Підключення" description="Use secure OAuth start edge functions.">
             <div className="grid gap-3 md:grid-cols-2">
               <ConnectorCard name="Meta Ads" description="Connect via secure Meta OAuth start function." state={connectorState.meta} onConnect={() => void connect("meta")} canManage={canManage} />
               <ConnectorCard name="Google Ads" description="Connect via secure Google Ads OAuth start function." state={connectorState.google} onConnect={() => void connect("google")} canManage={canManage} />
@@ -182,26 +183,23 @@ export default function AdsConnectors() {
             </div>
           </SectionCard></TabsContent>
 
-          <TabsContent value="ad-accounts"><SectionCard title="Ad Accounts" description="Connected ad accounts">
+          <TabsContent value="ad-accounts"><SectionCard title="Рекламні акаунти" description="Connected ad accounts">
             <OptionalKnownColumns data={query.data?.adBindings} columns={["platform", "ad_account_name", "external_account_id", "client_name", "project_name", "funnel_name", "mapping_status", "binding_status", "confidence", "created_at", "updated_at"]} emptyText="Рекламні акаунти поки не привʼязані." />
           </SectionCard></TabsContent>
 
-          <TabsContent value="scheduled-sync"><SectionCard title="Scheduled Sync" description="Scheduled sync status">
+          <TabsContent value="scheduled-sync"><SectionCard title="Планова синхронізація" description="Scheduled sync status">
             <div className="space-y-4">
-              <OptionalKnownColumns data={query.data?.syncRules} columns={["platform", "cadence", "schedule", "status", "last_run_at", "next_run_at", "updated_at"]} emptyText="No scheduled sync rules found." />
-              <OptionalKnownColumns data={query.data?.syncDue} columns={["platform", "status", "last_run_at", "next_run_at", "due_status", "is_due"]} emptyText="No scheduled sync due records found." />
+              <OptionalKnownColumns data={query.data?.syncRules} columns={["platform", "cadence", "schedule", "status", "last_run_at", "next_run_at", "updated_at"]} emptyText="Правил планової синхронізації поки немає." />
+              <OptionalKnownColumns data={query.data?.syncDue} columns={["platform", "status", "last_run_at", "next_run_at", "due_status", "is_due"]} emptyText="Немає синхронізацій, які потрібно запускати зараз." />
               <div className="rounded-md border border-dashed border-border/70 bg-muted/30 p-3">
                 <Button type="button" onClick={() => void runScheduledSync()} disabled={!session || !canManage || !capabilities.can_run_ads_scheduled_sync || syncRunState.loading}>
-                  {syncRunState.loading ? "Running scheduled sync…" : "Run scheduled sync"}
+                  {syncRunState.loading ? "Запускаємо синхронізацію…" : "Запустити синхронізацію"}
                 </Button>
                 <p className="mt-2 text-xs text-muted-foreground">Scheduled sync is checked securely on submit.</p>
-                {syncRunState.success && <p className="mt-2 text-xs text-emerald-700">{syncRunState.success}</p>}
-                {syncRunState.error && <p className="mt-2 text-xs text-destructive">{syncRunState.error}</p>}
-                {syncRunState.details && (
-                  <pre className="mt-2 overflow-x-auto rounded bg-background p-2 text-xs text-muted-foreground">
-                    {JSON.stringify(syncRunState.details, null, 2)}
-                  </pre>
-                )}
+                {syncRunState.success && <p className="mt-2 text-xs text-emerald-700">Синхронізацію запущено.</p>}
+                {syncRunState.error && <p className="mt-2 text-xs text-destructive">Синхронізація завершилась з помилкою.</p>}
+                {syncRunState.details ? <p className="mt-2 text-xs text-muted-foreground">Деталі доступні в debug mode.</p> : null}
+                <DeveloperDetails>{syncRunState.details ? <pre className="mt-2 overflow-x-auto rounded bg-background p-2 text-xs text-muted-foreground">{JSON.stringify(syncRunState.details, null, 2)}</pre> : null}</DeveloperDetails>
               </div>
             </div>
           </SectionCard></TabsContent>
@@ -242,7 +240,7 @@ function ReadinessField({ label, value }: { label: string; value: string | null 
   return <div className="rounded-md border border-border/70 bg-card/60 p-3"><p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p><p className="mt-1 font-medium">{value ?? "Unavailable"}</p></div>;
 }
 function ConnectorCard({ name, description, state, onConnect, canManage }: { name: string; description: string; state: ConnectorState; onConnect: () => void; canManage: boolean }) {
-  return <div className="rounded-md border border-border/70 p-3 text-sm"><p className="font-medium">{name}</p><p className="mt-1 text-muted-foreground">{description}</p><Button type="button" className="mt-3" onClick={onConnect} disabled={state.loading || !canManage}>{state.loading ? "Connecting…" : "Connect"}</Button>{state.error && <p className="mt-2 text-xs text-destructive">{state.error}</p>}</div>;
+  return <div className="rounded-md border border-border/70 p-3 text-sm"><p className="font-medium">{name}</p><p className="mt-1 text-muted-foreground">{description}</p><Button type="button" className="mt-3" onClick={onConnect} disabled={state.loading || !canManage}>{state.loading ? "Підключаємо…" : "Підключити"}</Button>{state.error && <p className="mt-2 text-xs text-destructive">{state.error}</p>}</div>;
 }
 function OptionalViewCard({ title, viewName, data, emptyText }: { title: string; viewName: string; data: OptionalViewData | undefined; emptyText: string }) {
   return <SectionCard title={title} description="Details">{data?.unavailableReason ? <p className="text-sm text-muted-foreground">Цей розділ поки недоступний.</p> : <GenericTable rows={data?.rows ?? []} emptyText={emptyText} />}</SectionCard>;

@@ -11,6 +11,10 @@ import { DeveloperDetails, FriendlyError } from "@/components/common/DeveloperDe
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 type Row = Record<string, unknown>;
 
+const PLACEHOLDER_PATTERNS = ["test agency","test client","northstar digital clinic","evergreen growth program","main webinar funnel","placeholder","demo","mock","test_upload","backend_test"];
+function isPlaceholderRow(row: Row) { const text = Object.values(row).join(" ").toLowerCase(); return PLACEHOLDER_PATTERNS.some((p) => text.includes(p)); }
+function filterRows(rows: Row[]) { return rows.filter((r) => !isPlaceholderRow(r)); }
+
 function shouldRetryWithoutWorkspace(errorMessage: string | null) {
   if (!errorMessage) return false;
   const m = errorMessage.toLowerCase();
@@ -19,10 +23,10 @@ function shouldRetryWithoutWorkspace(errorMessage: string | null) {
 
 const countView = async (view: string) => {
   const scoped = await supabase.from(view).select("*").eq("workspace_id", WORKSPACE_ID);
-  if (!scoped.error) return { count: (scoped.data ?? []).length, error: null };
+  if (!scoped.error) return { count: filterRows((scoped.data ?? []) as Row[]).length, error: null };
   if (shouldRetryWithoutWorkspace(scoped.error.message)) {
     const fallback = await supabase.from(view).select("*");
-    return { count: (fallback.data ?? []).length, error: fallback.error?.message ?? null };
+    return { count: filterRows((fallback.data ?? []) as Row[]).length, error: fallback.error?.message ?? null };
   }
   return { count: 0, error: scoped.error.message };
 };
@@ -32,7 +36,7 @@ const OPEN_STATUSES = ["open","active","pending","unresolved"];
 const CLOSED_STATUSES = ["resolved","closed","archived"];
 const countOpenAlerts = async () => {
   const res = await supabase.from("v_operational_alerts_recent").select("*").eq("workspace_id", WORKSPACE_ID);
-  const rows = (res.data ?? []) as Row[];
+  const rows = filterRows((res.data ?? []) as Row[]);
   if (rows.length === 0) return { count: 0, error: res.error?.message ?? null, label: "Відкриті сповіщення" };
   const hasStatus = rows.some((r) => r.status !== undefined);
   if (hasStatus) {
