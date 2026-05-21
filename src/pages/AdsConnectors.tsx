@@ -17,6 +17,9 @@ type ConnectorState = { loading: boolean; error: string | null };
 type SyncRunState = { loading: boolean; error: string | null; success: string | null; details: Record<string, unknown> | null };
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
+const FRIENDLY_COLUMN_LABELS: Record<string, string> = {
+  client_name: "Клієнт", project_name: "Проєкт", funnel_name: "Воронка", campaign: "Кампанія", platform: "Платформа", spend: "Витрати", clicks: "Кліки", impressions: "Покази", reach: "Охоплення", ctr: "CTR", cpc: "CPC", cpm: "CPM", status: "Статус", created_at: "Створено", updated_at: "Оновлено", mapping_status: "Статус мапінгу", binding_status: "Статус звʼязку", ad_account_name: "Рекламний акаунт", source_name: "Джерело",
+};
 
 const CONNECTOR_FN: Record<ConnectorKey, string> = {
   meta: "meta-oauth-start",
@@ -156,11 +159,11 @@ export default function AdsConnectors() {
           <TabsContent value="overview">
             <SectionCard title="Overview" description="Connector and ads health snapshot">
               <div className="grid gap-3 text-sm md:grid-cols-2 lg:grid-cols-3">
-                <ReadinessField label="Статус конекторів" value={readString(overview.snapshot, "Статус конекторів")} />
-                <ReadinessField label="Статус production" value={readString(overview.snapshot, "Статус production") ?? readString(overview.readiness, "Статус production")} />
+                <ReadinessField label="Статус конекторів" value={readString(overview.snapshot, "ads_connector_status")} />
+                <ReadinessField label="Статус production" value={readString(overview.snapshot, "production_backend_status") ?? readString(overview.readiness, "production_backend_status")} />
                 <ReadinessField label="latest_ads_health" value={formatValue(overview.adsHealth)} />
               </div>
-              {readString(overview.snapshot, "Статус конекторів") === "no_active_connections" && (
+              {readString(overview.snapshot, "ads_connector_status") === "no_active_connections" && (
                 <p className="mt-3 text-sm text-muted-foreground">Connect a real ads account to activate ads data.</p>
               )}
             </SectionCard>
@@ -259,7 +262,7 @@ function GenericTable({ rows, emptyText }: { rows: Row[]; emptyText: string }) {
 function GenericDataTable({ rows, columns }: { rows: Row[]; columns: string[] }) {
   return <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead><tr className="border-b border-border/70 text-muted-foreground">{columns.map((column) => <th key={column} className="px-2 py-2 font-medium">{friendlyLabel(column)}</th>)}</tr></thead><tbody>{rows.map((row, index) => <tr key={`${index}-${String(row.id ?? "row")}`} className="border-b border-border/40 last:border-0">{columns.map((column) => <td key={`${index}-${column}`} className="px-2 py-2 text-foreground">{formatValue(row[column])}</td>)}</tr>)}</tbody></table></div>;
 }
-function titleize(value: string) { return FRIENDLY_COLUMN_LABELS[value.toLowerCase()] ?? value.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" "); }
+function friendlyLabel(value: string) { return FRIENDLY_COLUMN_LABELS[value.toLowerCase()] ?? value.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" "); }
 function formatValue(value: unknown): string { if (value === null || value === undefined || value === "") return "—"; return typeof value === "object" ? JSON.stringify(value) : String(value); }
 function toObject(value: unknown): Record<string, unknown> { return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {}; }
 function readString(row: Row | Record<string, unknown> | undefined, key: string): string | null { const value = row?.[key]; return typeof value === "string" ? value : null; }
