@@ -13,7 +13,7 @@ export function LangSwitcher() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 gap-1.5 px-2 text-xs font-medium">
+        <Button variant="ghost" size="sm" className="h-7 rounded-md gap-1.5 px-2 text-xs font-medium text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:ring-1 focus-visible:ring-primary/40">
           <Languages className="h-4 w-4" />
           <span className="uppercase">{lang}</span>
         </Button>
