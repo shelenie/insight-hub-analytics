@@ -33,7 +33,7 @@ export default function Campaigns() {
     },
   });
 
-  const summaryRows = useMemo(() => filterPlaceholderRows((query.data?.summary.rows ?? []) as Record<string, unknown>[]).filter((r) => `${r.campaign_name ?? ""}`.toLowerCase().includes(queryText.toLowerCase())) as Row[], [query.data, queryText]);
+  const summaryRows = useMemo(() => (query.data?.summary.rows ?? []).filter((r) => `${r.campaign_name ?? ""}`.toLowerCase().includes(queryText.toLowerCase())), [query.data, queryText]);
   const filteredBindingsRows = useMemo(() => filterPlaceholderRows(query.data?.bindings.rows as Record<string, unknown>[] | undefined) as Row[], [query.data?.bindings.rows]);
   const filteredAnomaliesRows = useMemo(() => filterPlaceholderRows(query.data?.anomalies.rows as Record<string, unknown>[] | undefined) as Row[], [query.data?.anomalies.rows]);
   const showCampaignsEmpty = Boolean(session) && !query.isLoading && (query.data?.summary.unavailableReason != null || summaryRows.length === 0);
