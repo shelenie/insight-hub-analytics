@@ -32,15 +32,25 @@ export default function Funnel() {
   });
 
   const conversion = query.data?.conversionSummary.rows[0] ?? null;
-  const stageRows = query.data?.stageSummary.rows ?? [];
+  const stageRows = useMemo(() => query.data?.stageSummary.rows ?? [], [query.data?.stageSummary.rows]);
   const hasData = stageRows.length > 0 || Boolean(conversion);
 
+  const getStageCount = useMemo(() => {
+    const normalized = new Map<string, number>();
+    stageRows.forEach((row) => {
+      const key = String(row.stage_label ?? "").trim().toLowerCase();
+      if (!key) return;
+      normalized.set(key, Number(row.events_count ?? 0));
+    });
+    return (stage: string) => normalized.get(stage) ?? null;
+  }, [stageRows]);
+
   const stageKpis = useMemo(() => [
-    { label: "Реєстрації", value: conversion?.registrations },
-    { label: "Анкети", value: conversion?.questionnaires },
-    { label: "Заявки", value: conversion?.applications },
-    { label: "Бронювання", value: conversion?.bookings },
-  ], [conversion]);
+    { label: "Реєстрації", value: conversion?.registrations ?? getStageCount("registration") },
+    { label: "Анкети", value: conversion?.questionnaires ?? getStageCount("questionnaire") },
+    { label: "Заявки", value: conversion?.applications ?? getStageCount("application") },
+    { label: "Бронювання", value: conversion?.bookings ?? getStageCount("booking") },
+  ], [conversion, getStageCount]);
 
   const conversionKpis = useMemo(() => [
     { label: "Реєстрація → Анкета", value: conversion?.registration_to_questionnaire_pct },
@@ -53,7 +63,7 @@ export default function Funnel() {
     <DashboardLayout title={t("funnelTitle")} subtitle={t("funnelSubtitle")}>
       <div className="space-y-4">
         <FilterBar freshness={{ source: "v_unified_funnel_stage_summary", status: "fresh", lastSync: "live" }} />
-        {!session ? <Empty text="Sign in to view funnel production data." /> : query.isLoading ? <Empty text="Завантаження даних воронки…" /> : null}
+        {!session ? <Empty text="Увійдіть, щоб переглянути дані воронки." /> : query.isLoading ? <Empty text="Завантаження даних воронки…" /> : null}
 
         {!query.isLoading && !hasData ? <Empty text={EMPTY_TEXT} /> : null}
 
