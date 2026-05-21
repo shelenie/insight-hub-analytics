@@ -15,8 +15,8 @@ export default function Sales() {
   const { t } = useI18n();
   const { session } = useAuth();
   const query = useQuery({ queryKey: ["sales-page", WORKSPACE_ID], enabled: Boolean(session), queryFn: async () => {
-    const [summary, daily] = await Promise.all([read("v_unified_sales_performance_summary"), read("v_unified_sales_performance_daily")]);
-    return { summary, daily };
+    const [summary, daily, onboarding] = await Promise.all([read("v_unified_sales_performance_summary"), read("v_unified_sales_performance_daily"), read("v_onboarding_hierarchy")]);
+    return { summary, daily, onboarding };
   }});
 
   const totals = (query.data?.summary.rows ?? []).reduce((acc, row) => ({
@@ -40,6 +40,18 @@ export default function Sales() {
     <SectionCard title="Продажі по днях" description="Щоденні продажі" noPadding>
       <Rows rows={query.data?.daily.rows ?? []} empty="Продажі поки не знайдені. Перевірте імпорт продажів." cols={["Дата", "Кампанія", "Продажі", "Загалом USD", "Загалом UAH"]} keys={["sale_date", "campaign_name", "sales_count", "total_payment_usd", "total_payment_uah"]} />
     </SectionCard>
+
+    <details className="rounded border">
+      <summary className="cursor-pointer px-4 py-3 text-sm font-medium">Додатково: контекст клієнта / проєкту / воронки</summary>
+      <SectionCard title="Контекст клієнта / проєкту / воронки" description="Довідковий контекст для аналізу продажів" noPadding>
+        <FriendlyRows rows={query.data?.onboarding.rows ?? []} empty="Додатковий контекст поки недоступний." columns={[
+          { key: "client_name", label: "Клієнт" },
+          { key: "project_name", label: "Проєкт" },
+          { key: "funnel_name", label: "Воронка" },
+          { key: "status", label: "Статус" },
+        ]} />
+      </SectionCard>
+    </details>
   </div></DashboardLayout>;
 }
 
@@ -48,3 +60,5 @@ function Kpi({ rows }: { rows: { label: string; value: string }[] }) { return <T
 function fmt(v: Row[string], key: string) { if (typeof v !== "number") return String(v ?? "—"); if (key.includes("payment")) return fmtCurrency(v); return fmtNum(v); }
 const Msg = ({ t }: { t: string }) => <p className="rounded border p-3 text-sm text-muted-foreground">{t}</p>;
 async function read(view: string) { const res = await supabase.from(view).select("*").eq("workspace_id", WORKSPACE_ID).limit(500); return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null }; }
+
+function FriendlyRows({ rows, columns, empty }: { rows: Row[]; columns: { key: string; label: string }[]; empty: string }) { if (!rows.length) return <Msg t={empty} />; return <Table><TableHeader><TableRow>{columns.map((c) => <TableHead key={c.key}>{c.label}</TableHead>)}</TableRow></TableHeader><TableBody>{rows.slice(0, 50).map((r, i) => <TableRow key={i}>{columns.map((c) => <TableCell key={c.key}>{String(r[c.key] ?? "—")}</TableCell>)}</TableRow>)}</TableBody></Table>; }

@@ -23,11 +23,13 @@ export default function Funnel() {
     queryKey: ["funnel-page", WORKSPACE_ID],
     enabled: Boolean(session),
     queryFn: async () => {
-      const [stageSummary, conversionSummary] = await Promise.all([
+      const [stageSummary, conversionSummary, onboarding, bindings] = await Promise.all([
         readOptionalView("v_unified_funnel_stage_summary", true),
         readOptionalView("v_unified_funnel_conversion_summary", true),
+        readOptionalView("v_onboarding_hierarchy", true),
+        readOptionalView("v_project_data_bindings", true),
       ]);
-      return { stageSummary, conversionSummary };
+      return { stageSummary, conversionSummary, onboarding, bindings };
     },
   });
 
@@ -101,6 +103,31 @@ export default function Funnel() {
                 </TableBody>
               </Table>
             </SectionCard>
+
+            <details className="rounded border">
+              <summary className="cursor-pointer px-4 py-3 text-sm font-medium">Додатково: контекст клієнта / проєкту / воронки</summary>
+              <SectionCard title="Контекст клієнта / проєкту / воронки" description="Довідковий контекст для аналізу воронки" noPadding>
+                <FriendlyTable rows={query.data?.onboarding.rows ?? []} empty="Додатковий контекст поки недоступний." columns={[
+                  { key: "client_name", label: "Клієнт" },
+                  { key: "project_name", label: "Проєкт" },
+                  { key: "funnel_name", label: "Воронка" },
+                  { key: "status", label: "Статус" },
+                ]} />
+              </SectionCard>
+            </details>
+
+            <details className="rounded border">
+              <summary className="cursor-pointer px-4 py-3 text-sm font-medium">Додатково: звʼязки даних</summary>
+              <SectionCard title="Звʼязки даних" description="Стан джерел і мапінгу даних" noPadding>
+                <FriendlyTable rows={query.data?.bindings.rows ?? []} empty="Дані про звʼязки поки недоступні." columns={[
+                  { key: "project_name", label: "Проєкт" },
+                  { key: "source_name", label: "Джерело" },
+                  { key: "mapping_status", label: "Статус мапінгу" },
+                  { key: "binding_status", label: "Статус звʼязку" },
+                  { key: "updated_at", label: "Оновлено" },
+                ]} />
+              </SectionCard>
+            </details>
           </>
         ) : null}
       </div>
@@ -137,4 +164,10 @@ async function readOptionalView(viewName: string, scopedByWorkspace: boolean): P
   const result = await query;
   if (result.error) return { rows: [], unavailableReason: result.error.message };
   return { rows: (result.data ?? []) as Row[], unavailableReason: null };
+}
+
+
+function FriendlyTable({ rows, columns, empty }: { rows: Row[]; columns: { key: string; label: string }[]; empty: string }) {
+  if (!rows.length) return <Empty text={empty} />;
+  return <Table><TableHeader><TableRow>{columns.map((c) => <TableHead key={c.key}>{c.label}</TableHead>)}</TableRow></TableHeader><TableBody>{rows.slice(0, 50).map((row, idx) => <TableRow key={idx}>{columns.map((c) => <TableCell key={c.key}>{String(row[c.key] ?? "—")}</TableCell>)}</TableRow>)}</TableBody></Table>;
 }
