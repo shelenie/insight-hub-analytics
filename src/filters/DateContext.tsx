@@ -53,8 +53,8 @@ export function DateFilterProvider({ children }: { children: ReactNode }) {
   }, [mode, preset, exactDate, rangeFrom, rangeTo, today]);
 
   const activeLabel = useMemo(() => {
-    if (mode === "exact") return format(exactDate, "dd MMM yyyy");
-    if (mode === "range") return `${format(rangeFrom, "dd MMM")} – ${format(rangeTo, "dd MMM yyyy")}`;
+    if (mode === "exact") return format(exactDate, "dd.MM.yyyy");
+    if (mode === "range") return `${format(rangeFrom, "dd.MM.yyyy")} — ${format(rangeTo, "dd.MM.yyyy")}`;
     return preset;
   }, [mode, exactDate, rangeFrom, rangeTo, preset]);
 
@@ -69,13 +69,13 @@ export function DateFilterProvider({ children }: { children: ReactNode }) {
     };
     if (mode === "exact") {
       return lang === "uk"
-        ? `Дані за ${format(exactDate, "dd MMM yyyy")}`
-        : `Data for ${format(exactDate, "dd MMM yyyy")}`;
+        ? `Дані за ${format(exactDate, "dd.MM.yyyy")}`
+        : `Data for ${format(exactDate, "dd.MM.yyyy")}`;
     }
     if (mode === "range") {
       return lang === "uk"
-        ? `Період: ${format(rangeFrom, "dd MMM")} – ${format(rangeTo, "dd MMM yyyy")}`
-        : `Range: ${format(rangeFrom, "dd MMM")} – ${format(rangeTo, "dd MMM yyyy")}`;
+        ? `Період: ${format(rangeFrom, "dd.MM.yyyy")} — ${format(rangeTo, "dd.MM.yyyy")}`
+        : `Range: ${format(rangeFrom, "dd.MM.yyyy")} — ${format(rangeTo, "dd.MM.yyyy")}`;
     }
     return presetLabels[preset][lang];
   };
@@ -121,5 +121,5 @@ export function useDateFilter() {
 
 /** Pretty label for a range (helper for badges) */
 export function formatRange(from: Date, to: Date) {
-  return `${format(from, "dd MMM")} – ${format(to, "dd MMM yyyy")}`;
+  return `${format(from, "dd.MM.yyyy")} — ${format(to, "dd.MM.yyyy")}`;
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { addDays, format, parse, subDays, isValid } from "date-fns";
 import {
   Popover, PopoverContent, PopoverTrigger,
@@ -26,23 +26,51 @@ export function DateFilter() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"preset" | "exact" | "range">(f.mode);
   const [exactInput, setExactInput] = useState(format(f.exactDate, "yyyy-MM-dd"));
+  const [draftExactDate, setDraftExactDate] = useState<Date>(f.exactDate);
+  const [draftExactInput, setDraftExactInput] = useState(format(f.exactDate, "yyyy-MM-dd"));
+  const [draftRange, setDraftRange] = useState<{ from?: Date; to?: Date }>({ from: f.rangeFrom, to: f.rangeTo });
+
+  useEffect(() => {
+    if (!open) return;
+    setTab(f.mode);
+    setDraftExactDate(f.exactDate);
+    setDraftExactInput(format(f.exactDate, "yyyy-MM-dd"));
+    setDraftRange({ from: f.rangeFrom, to: f.rangeTo });
+  }, [open, f.mode, f.exactDate, f.rangeFrom, f.rangeTo]);
+
+  useEffect(() => {
+    setExactInput(format(f.exactDate, "yyyy-MM-dd"));
+  }, [f.exactDate]);
 
   function commitExact(d: Date) {
     f.setExactDate(d);
     setExactInput(format(d, "yyyy-MM-dd"));
   }
 
-  function onExactInputBlur() {
-    const parsed = parse(exactInput, "yyyy-MM-dd", new Date());
-    if (isValid(parsed)) commitExact(parsed);
-    else setExactInput(format(f.exactDate, "yyyy-MM-dd"));
+  function onDraftExactInputBlur() {
+    const parsed = parse(draftExactInput, "yyyy-MM-dd", new Date());
+    if (isValid(parsed)) setDraftExactDate(parsed);
+    else setDraftExactInput(format(draftExactDate, "yyyy-MM-dd"));
+  }
+
+  function applyExactDraft() {
+    commitExact(draftExactDate);
+    setDraftExactInput(format(draftExactDate, "yyyy-MM-dd"));
+    setOpen(false);
+  }
+
+  function applyRangeDraft() {
+    if (!draftRange.from || !draftRange.to) return;
+    f.setRange(draftRange.from, draftRange.to);
+    f.setMode("range");
+    setOpen(false);
   }
 
   const triggerLabel =
     f.mode === "exact"
-      ? format(f.exactDate, "dd MMM yyyy")
+      ? format(f.exactDate, "dd.MM.yyyy")
       : f.mode === "range"
-      ? `${format(f.rangeFrom, "dd MMM")} – ${format(f.rangeTo, "dd MMM yyyy")}`
+      ? `${format(f.rangeFrom, "dd.MM.yyyy")} — ${format(f.rangeTo, "dd.MM.yyyy")}`
       : t(`date${f.preset.charAt(0).toUpperCase() + f.preset.slice(1)}` as "dateToday");
 
   return (
@@ -122,22 +150,30 @@ export function DateFilter() {
                   <div className="flex items-center gap-1.5">
                     <Button
                       size="icon" variant="outline" className="h-8 w-8"
-                      onClick={() => commitExact(subDays(f.exactDate, 1))}
+                      onClick={() => {
+                        const nextDate = subDays(draftExactDate, 1);
+                        setDraftExactDate(nextDate);
+                        setDraftExactInput(format(nextDate, "yyyy-MM-dd"));
+                      }}
                       aria-label="Prev day"
                     >
                       <ChevronLeft className="h-3.5 w-3.5" />
                     </Button>
                     <Input
-                      value={exactInput}
-                      onChange={(e) => setExactInput(e.target.value)}
-                      onBlur={onExactInputBlur}
-                      onKeyDown={(e) => { if (e.key === "Enter") onExactInputBlur(); }}
+                      value={draftExactInput}
+                      onChange={(e) => setDraftExactInput(e.target.value)}
+                      onBlur={onDraftExactInputBlur}
+                      onKeyDown={(e) => { if (e.key === "Enter") onDraftExactInputBlur(); }}
                       placeholder="YYYY-MM-DD"
                       className="h-8 flex-1 text-xs num"
                     />
                     <Button
                       size="icon" variant="outline" className="h-8 w-8"
-                      onClick={() => commitExact(addDays(f.exactDate, 1))}
+                      onClick={() => {
+                        const nextDate = addDays(draftExactDate, 1);
+                        setDraftExactDate(nextDate);
+                        setDraftExactInput(format(nextDate, "yyyy-MM-dd"));
+                      }}
                       aria-label="Next day"
                     >
                       <ChevronRight className="h-3.5 w-3.5" />
@@ -145,13 +181,17 @@ export function DateFilter() {
                   </div>
                   <Calendar
                     mode="single"
-                    selected={f.exactDate}
-                    onSelect={(d) => d && commitExact(d)}
+                    selected={draftExactDate}
+                    onSelect={(d) => {
+                      if (!d) return;
+                      setDraftExactDate(d);
+                      setDraftExactInput(format(d, "yyyy-MM-dd"));
+                    }}
                     className="pointer-events-auto rounded-md border bg-popover"
                     initialFocus
                   />
                   <div className="flex justify-end">
-                    <Button size="sm" className="h-8" onClick={() => setOpen(false)}>{t("apply")}</Button>
+                    <Button size="sm" className="h-8" onClick={applyExactDraft}>{t("apply")}</Button>
                   </div>
                 </div>
               )}
@@ -160,21 +200,20 @@ export function DateFilter() {
                 <div className="space-y-2">
                   <div className="text-xs font-medium">{t("dateCustom")}</div>
                   <div className="text-[11px] text-muted-foreground">
-                    {format(f.rangeFrom, "dd MMM yyyy")} – {format(f.rangeTo, "dd MMM yyyy")}
+                    {draftRange.from && draftRange.to
+                      ? `${format(draftRange.from, "dd.MM.yyyy")} — ${format(draftRange.to, "dd.MM.yyyy")}`
+                      : "Оберіть дату початку і дату завершення."}
                   </div>
                   <Calendar
                     mode="range"
-                    selected={{ from: f.rangeFrom, to: f.rangeTo }}
-                    onSelect={(r) => {
-                      if (r?.from && r?.to) f.setRange(r.from, r.to);
-                      else if (r?.from) f.setRange(r.from, r.from);
-                    }}
+                    selected={draftRange}
+                    onSelect={(r) => setDraftRange(r ?? {})}
                     numberOfMonths={2}
                     className="pointer-events-auto rounded-md border bg-popover"
                     initialFocus
                   />
                   <div className="flex justify-end">
-                    <Button size="sm" className="h-8" onClick={() => { f.setMode("range"); setOpen(false); }}>
+                    <Button size="sm" className="h-8" onClick={applyRangeDraft} disabled={!draftRange.from || !draftRange.to}>
                       {t("apply")}
                     </Button>
                   </div>
