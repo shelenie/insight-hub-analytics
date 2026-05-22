@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, useState, ReactNode } from "react";
 import { addDays, format, startOfMonth, startOfQuarter, subDays } from "date-fns";
+import { uk } from "date-fns/locale";
 
 export type DatePresetId =
   | "today" | "yesterday" | "7d" | "30d" | "mtd" | "qtd";
@@ -53,8 +54,8 @@ export function DateFilterProvider({ children }: { children: ReactNode }) {
   }, [mode, preset, exactDate, rangeFrom, rangeTo, today]);
 
   const activeLabel = useMemo(() => {
-    if (mode === "exact") return format(exactDate, "dd.MM.yyyy");
-    if (mode === "range") return `${format(rangeFrom, "dd.MM.yyyy")} — ${format(rangeTo, "dd.MM.yyyy")}`;
+    if (mode === "exact") return format(exactDate, "d MMMM yyyy", { locale: uk });
+    if (mode === "range") return `${format(rangeFrom, "d MMMM yyyy", { locale: uk })} — ${format(rangeTo, "d MMMM yyyy", { locale: uk })}`;
     return preset;
   }, [mode, exactDate, rangeFrom, rangeTo, preset]);
 
@@ -69,13 +70,13 @@ export function DateFilterProvider({ children }: { children: ReactNode }) {
     };
     if (mode === "exact") {
       return lang === "uk"
-        ? `Дані за ${format(exactDate, "dd.MM.yyyy")}`
-        : `Data for ${format(exactDate, "dd.MM.yyyy")}`;
+        ? `Дані за ${format(exactDate, "d MMMM yyyy", { locale: uk })}`
+        : `Data for ${format(exactDate, "d MMMM yyyy", { locale: uk })}`;
     }
     if (mode === "range") {
       return lang === "uk"
-        ? `Період: ${format(rangeFrom, "dd.MM.yyyy")} — ${format(rangeTo, "dd.MM.yyyy")}`
-        : `Range: ${format(rangeFrom, "dd.MM.yyyy")} — ${format(rangeTo, "dd.MM.yyyy")}`;
+        ? `Період: ${format(rangeFrom, "d MMMM yyyy", { locale: uk })} — ${format(rangeTo, "d MMMM yyyy", { locale: uk })}`
+        : `Range: ${format(rangeFrom, "d MMMM yyyy", { locale: uk })} — ${format(rangeTo, "d MMMM yyyy", { locale: uk })}`;
     }
     return presetLabels[preset][lang];
   };
@@ -121,5 +122,5 @@ export function useDateFilter() {
 
 /** Pretty label for a range (helper for badges) */
 export function formatRange(from: Date, to: Date) {
-  return `${format(from, "dd.MM.yyyy")} — ${format(to, "dd.MM.yyyy")}`;
+  return `${format(from, "d MMMM yyyy", { locale: uk })} — ${format(to, "d MMMM yyyy", { locale: uk })}`;
 }
