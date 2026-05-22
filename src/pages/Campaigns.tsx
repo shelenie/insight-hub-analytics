@@ -48,7 +48,6 @@ export default function Campaigns() {
   const [queryText, setQueryText] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [activeTab, setActiveTab] = useState<"campaigns" | "placements">("campaigns");
-  const [placementsUnavailable, setPlacementsUnavailable] = useState(false);
   const from = format(date.resolved.from, "yyyy-MM-dd");
   const to = format(date.resolved.to, "yyyy-MM-dd");
 
@@ -68,11 +67,7 @@ export default function Campaigns() {
   const placementsQuery = useQuery({
     queryKey: ["campaigns-page-placements", WORKSPACE_ID, from, to],
     enabled: Boolean(session),
-    queryFn: async () => {
-      const res = await readPlacementsDaily(from, to);
-      setPlacementsUnavailable(Boolean(res.unavailableReason));
-      return res;
-    },
+    queryFn: async () => readPlacementsDaily(from, to),
   });
 
   const campaignRows = useMemo(() => aggregateCampaigns(query.data?.daily.rows ?? []), [query.data?.daily.rows]);
@@ -156,6 +151,8 @@ export default function Campaigns() {
 
   const noData = Boolean(session) && !query.isLoading && searchedCampaignRows.length === 0;
   const connectorStatus = String(query.data?.health.rows[0]?.ads_connector_status ?? query.data?.health.rows[0]?.status ?? "");
+  const placementsUnavailable = Boolean(placementsQuery.data?.unavailableReason);
+  const shouldShowPlacementsData = !placementsQuery.isLoading && !placementsUnavailable && sortedPlacementRows.length > 0;
 
   return <DashboardLayout title="Кампанії" subtitle="Ефективність рекламних кампаній"><div className="space-y-4"><FilterBar extra={<Input value={queryText} onChange={(e) => { setQueryText(e.target.value); setShowAll(false); }} placeholder={activeTab === "campaigns" ? "Пошук кампанії" : "Пошук плейсменту або URL"} className="h-8 w-[240px] text-xs" />} freshness={{ source: "Імпорт рекламних даних", status: "fresh", lastSync: "live" }} />
     <div className="inline-flex rounded-lg border p-1">
@@ -177,17 +174,21 @@ export default function Campaigns() {
           {!showAll && sortedCampaignRows.length > 25 ? <Button variant="outline" size="sm" onClick={() => setShowAll(true)}>Показати всі</Button> : null}
         </div>
       </SectionCard>
-    </> : <><SectionCard title="Підсумок плейсментів" description="Зведені метрики за вибраний період"><KpiCards rows={placementSummaryCards} /></SectionCard>
-      {placementsUnavailable ? <Msg t="Плейсменти поки недоступні. Кампанії працюють, але дані плейсментів треба перевірити в Supabase." /> : null}
-      {!placementsUnavailable && !placementsQuery.isLoading && sortedPlacementRows.length === 0 ? <Msg t="За вибраний період плейсменти не знайдені. Змініть період або перевірте імпорт вкладок з плейсментами." /> : null}
-      {!placementsUnavailable ? <SectionCard title="Плейсменти" description="Ефективність плейсментів" noPadding>
+    </> : <>
+      {placementsQuery.isLoading ? <Msg t="Завантаження плейсментів…" /> : null}
+      {!placementsQuery.isLoading && placementsUnavailable ? <Msg t="Плейсменти поки недоступні. Кампанії працюють, але дані плейсментів треба перевірити в Supabase." /> : null}
+      {!placementsQuery.isLoading && !placementsUnavailable && sortedPlacementRows.length === 0 ? <Msg t="За вибраний період плейсменти не знайдені. Змініть період або перевірте імпорт вкладок з плейсментами." /> : null}
+      {shouldShowPlacementsData ? <>
+        <SectionCard title="Підсумок плейсментів" description="Зведені метрики за вибраний період"><KpiCards rows={placementSummaryCards} /></SectionCard>
+        <SectionCard title="Плейсменти" description="Ефективність плейсментів" noPadding>
         <div className="px-4 pt-4 text-sm text-muted-foreground">Показано {visiblePlacementRows.length} з {sortedPlacementRows.length} плейсментів</div>
         <Table><TableHeader><TableRow><TableHead>Плейсмент</TableHead><TableHead>URL</TableHead><TableHead>Період</TableHead><TableHead className="text-right">Витрати</TableHead><TableHead className="text-right">Реєстрації</TableHead><TableHead className="text-right">CPL</TableHead><TableHead className="text-right">Кліки</TableHead><TableHead className="text-right">CPC</TableHead><TableHead className="text-right">Охоплення</TableHead><TableHead className="text-right">Конверсія ленда</TableHead></TableRow></TableHeader><TableBody>{visiblePlacementRows.map((r, i) => <TableRow key={`${r.placement_name}-${r.landing_url}-${i}`}><TableCell>{r.placement_name || "—"}</TableCell><TableCell>{r.landing_url ? <a href={r.landing_url} target="_blank" rel="noreferrer" className="underline">Відкрити</a> : "—"}</TableCell><TableCell>{formatPeriod(r.first_date, r.last_date)}</TableCell><TableCell className="text-right num">{fmtCurrency(r.spend)}</TableCell><TableCell className="text-right num">{fmtNum(r.registrations)}</TableCell><TableCell className="text-right num">{r.cpl == null ? "—" : fmtCurrency(r.cpl)}</TableCell><TableCell className="text-right num">{fmtNum(r.clicks)}</TableCell><TableCell className="text-right num">{r.cpc == null ? "—" : fmtCurrency(r.cpc)}</TableCell><TableCell className="text-right num">{fmtNum(r.reach)}</TableCell><TableCell className="text-right num">{r.landing_conversion == null ? "—" : `${(r.landing_conversion * 100).toFixed(1)}%`}</TableCell></TableRow>)}</TableBody></Table>
         <div className="flex items-center justify-between px-4 pb-4 pt-2 text-sm">
           <span className="text-muted-foreground">Показано {visiblePlacementRows.length} з {sortedPlacementRows.length} плейсментів</span>
           {!showAll && sortedPlacementRows.length > 25 ? <Button variant="outline" size="sm" onClick={() => setShowAll(true)}>Показати всі</Button> : null}
         </div>
-      </SectionCard> : null}
+        </SectionCard>
+      </> : null}
     </>}
     <details className="rounded border">
       <summary className="cursor-pointer px-4 py-3 text-sm font-medium">Додатково: стан звʼязків</summary>
