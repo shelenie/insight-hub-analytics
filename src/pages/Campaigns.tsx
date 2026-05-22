@@ -229,7 +229,7 @@ function aggregatePlacements(rows: Row[]): PlacementAgg[] {
 const Msg = ({ t }: { t: string }) => <p className="rounded border p-3 text-sm text-muted-foreground">{t}</p>;
 
 function KpiCards({ rows }: { rows: { label: string; value: string }[] }) {
-  return <div className="grid grid-cols-2 gap-3 md:grid-cols-4 2xl:grid-cols-8">{rows.map((r) => <div key={r.label} className="rounded-lg border p-3"><div className="text-xs text-muted-foreground">{r.label}</div><div className="mt-1 text-lg font-semibold num">{r.value}</div></div>)}</div>;
+  return <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">{rows.map((r) => <div key={r.label} className="rounded-lg border p-3"><div className="text-xs text-muted-foreground">{r.label}</div><div className="mt-1 text-lg font-semibold num">{r.value}</div></div>)}</div>;
 }
 
 function formatPeriod(firstDate: string, lastDate: string) {
