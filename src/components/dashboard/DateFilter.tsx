@@ -93,10 +93,10 @@ export function DateFilter() {
             <span className="truncate">{triggerLabel}</span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="z-50 w-[460px] overflow-hidden border bg-popover p-0 text-popover-foreground shadow-xl md:w-[720px]" align="start">
-          <div className="grid grid-cols-[160px_1fr] bg-popover">
+        <PopoverContent className="w-[460px] p-0" align="start">
+          <div className="grid grid-cols-[160px_1fr]">
             {/* Side: presets + modes */}
-            <div className="border-r bg-popover p-2">
+            <div className="border-r bg-muted/30 p-2">
               <div className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 {t("quickPresets")}
               </div>
@@ -138,7 +138,7 @@ export function DateFilter() {
             </div>
 
             {/* Right: pickers */}
-            <div className="bg-popover p-3">
+            <div className="p-3">
               {tab === "exact" && (
                 <div className="space-y-2">
                   <div className="text-xs font-medium">{t("dateExact")}</div>
@@ -176,13 +176,7 @@ export function DateFilter() {
                   </div>
                   <Calendar
                     mode="single"
-                    selected={draftExactDate}
-                    onSelect={(d) => {
-                      if (!d) return;
-                      setDraftExactDate(d);
-                      setDraftExactInput(format(d, "yyyy-MM-dd"));
-                    }}
-                    className="pointer-events-auto rounded-md border bg-popover"
+
                     initialFocus
                   />
                   <div className="flex justify-end">
@@ -204,7 +198,7 @@ export function DateFilter() {
                     selected={draftRange}
                     onSelect={(r) => setDraftRange(r ?? {})}
                     numberOfMonths={2}
-                    className="pointer-events-auto rounded-md border bg-popover"
+                    className="rounded-md border pointer-events-auto"
                     initialFocus
                   />
                   <div className="flex justify-end">
