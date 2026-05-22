@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { addDays, format, parse, subDays, isValid } from "date-fns";
+import { uk } from "date-fns/locale";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
@@ -25,24 +26,25 @@ export function DateFilter() {
   const f = useDateFilter();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"preset" | "exact" | "range">(f.mode);
-  const [exactInput, setExactInput] = useState(format(f.exactDate, "yyyy-MM-dd"));
-
-  function commitExact(d: Date) {
-    f.setExactDate(d);
-    setExactInput(format(d, "yyyy-MM-dd"));
-  }
+  const [draftExactDate, setDraftExactDate] = useState<Date>(f.exactDate);
+  const [draftExactInput, setDraftExactInput] = useState(format(f.exactDate, "yyyy-MM-dd"));
+  const [draftRange, setDraftRange] = useState<{ from?: Date; to?: Date }>({ from: f.rangeFrom, to: f.rangeTo });
 
   function onExactInputBlur() {
-    const parsed = parse(exactInput, "yyyy-MM-dd", new Date());
-    if (isValid(parsed)) commitExact(parsed);
-    else setExactInput(format(f.exactDate, "yyyy-MM-dd"));
+    const parsed = parse(draftExactInput, "yyyy-MM-dd", new Date());
+    if (isValid(parsed)) {
+      setDraftExactDate(parsed);
+      setDraftExactInput(format(parsed, "yyyy-MM-dd"));
+    } else {
+      setDraftExactInput(format(draftExactDate, "yyyy-MM-dd"));
+    }
   }
 
   const triggerLabel =
     f.mode === "exact"
-      ? format(f.exactDate, "dd.MM.yyyy")
+      ? format(f.exactDate, "d MMMM yyyy", { locale: uk })
       : f.mode === "range"
-      ? `${format(f.rangeFrom, "dd.MM.yyyy")} — ${format(f.rangeTo, "dd.MM.yyyy")}`
+      ? `${format(f.rangeFrom, "d MMMM yyyy", { locale: uk })} — ${format(f.rangeTo, "d MMMM yyyy", { locale: uk })}`
       : t(`date${f.preset.charAt(0).toUpperCase() + f.preset.slice(1)}` as "dateToday");
 
   return (
@@ -59,7 +61,18 @@ export function DateFilter() {
         </Button>
       )}
 
-      <Popover open={open} onOpenChange={setOpen}>
+      <Popover
+        open={open}
+        onOpenChange={(nextOpen) => {
+          setOpen(nextOpen);
+          if (nextOpen) {
+            setTab(f.mode);
+            setDraftExactDate(f.exactDate);
+            setDraftExactInput(format(f.exactDate, "yyyy-MM-dd"));
+            setDraftRange({ from: f.rangeFrom, to: f.rangeTo });
+          }
+        }}
+      >
         <PopoverTrigger asChild>
           <Button
             variant="outline"
@@ -70,7 +83,7 @@ export function DateFilter() {
             <span className="truncate">{triggerLabel}</span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[460px] p-0" align="start">
+        <PopoverContent className="w-[min(92vw,460px)] overflow-hidden border bg-popover p-0 text-popover-foreground shadow-xl" align="start">
           <div className="grid grid-cols-[160px_1fr]">
             {/* Side: presets + modes */}
             <div className="border-r bg-muted/30 p-2">
@@ -122,14 +135,18 @@ export function DateFilter() {
                   <div className="flex items-center gap-1.5">
                     <Button
                       size="icon" variant="outline" className="h-8 w-8"
-                      onClick={() => commitExact(subDays(f.exactDate, 1))}
+                      onClick={() => {
+                        const nextDate = subDays(draftExactDate, 1);
+                        setDraftExactDate(nextDate);
+                        setDraftExactInput(format(nextDate, "yyyy-MM-dd"));
+                      }}
                       aria-label="Prev day"
                     >
                       <ChevronLeft className="h-3.5 w-3.5" />
                     </Button>
                     <Input
-                      value={exactInput}
-                      onChange={(e) => setExactInput(e.target.value)}
+                      value={draftExactInput}
+                      onChange={(e) => setDraftExactInput(e.target.value)}
                       onBlur={onExactInputBlur}
                       onKeyDown={(e) => { if (e.key === "Enter") onExactInputBlur(); }}
                       placeholder="YYYY-MM-DD"
@@ -137,7 +154,11 @@ export function DateFilter() {
                     />
                     <Button
                       size="icon" variant="outline" className="h-8 w-8"
-                      onClick={() => commitExact(addDays(f.exactDate, 1))}
+                      onClick={() => {
+                        const nextDate = addDays(draftExactDate, 1);
+                        setDraftExactDate(nextDate);
+                        setDraftExactInput(format(nextDate, "yyyy-MM-dd"));
+                      }}
                       aria-label="Next day"
                     >
                       <ChevronRight className="h-3.5 w-3.5" />
@@ -145,13 +166,17 @@ export function DateFilter() {
                   </div>
                   <Calendar
                     mode="single"
-                    selected={f.exactDate}
-                    onSelect={(d) => d && commitExact(d)}
-                    className="rounded-md border pointer-events-auto"
+                    selected={draftExactDate}
+                    onSelect={(d) => {
+                      if (!d) return;
+                      setDraftExactDate(d);
+                      setDraftExactInput(format(d, "yyyy-MM-dd"));
+                    }}
+                    className="rounded-md border bg-background pointer-events-auto"
                     initialFocus
                   />
                   <div className="flex justify-end">
-                    <Button size="sm" className="h-8" onClick={() => setOpen(false)}>{t("apply")}</Button>
+                    <Button size="sm" className="h-8" onClick={() => { f.setExactDate(draftExactDate); setOpen(false); }}>{t("apply")}</Button>
                   </div>
                 </div>
               )}
@@ -160,21 +185,24 @@ export function DateFilter() {
                 <div className="space-y-2">
                   <div className="text-xs font-medium">{t("dateCustom")}</div>
                   <div className="text-[11px] text-muted-foreground">
-                    {format(f.rangeFrom, "dd.MM.yyyy")} — {format(f.rangeTo, "dd.MM.yyyy")}
+                    {draftRange.from && draftRange.to
+                      ? `${format(draftRange.from, "d MMMM yyyy", { locale: uk })} — ${format(draftRange.to, "d MMMM yyyy", { locale: uk })}`
+                      : "Оберіть дату початку і дату завершення."}
                   </div>
                   <Calendar
                     mode="range"
-                    selected={{ from: f.rangeFrom, to: f.rangeTo }}
-                    onSelect={(r) => {
-                      if (r?.from && r?.to) f.setRange(r.from, r.to);
-                      else if (r?.from) f.setRange(r.from, r.from);
-                    }}
-                    numberOfMonths={2}
-                    className="rounded-md border pointer-events-auto"
+                    selected={draftRange}
+                    onSelect={(r) => setDraftRange(r ?? {})}
+                    className="rounded-md border bg-background pointer-events-auto"
                     initialFocus
                   />
                   <div className="flex justify-end">
-                    <Button size="sm" className="h-8" onClick={() => { f.setMode("range"); setOpen(false); }}>
+                    <Button size="sm" className="h-8" disabled={!draftRange.from || !draftRange.to} onClick={() => {
+                        if (!draftRange.from || !draftRange.to) return;
+                        f.setRange(draftRange.from, draftRange.to);
+                        f.setMode("range");
+                        setOpen(false);
+                      }}>
                       {t("apply")}
                     </Button>
                   </div>
