@@ -25,7 +25,6 @@ export function DateFilter() {
   const f = useDateFilter();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"preset" | "exact" | "range">(f.mode);
-  const [exactInput, setExactInput] = useState(format(f.exactDate, "yyyy-MM-dd"));
   const [draftExactDate, setDraftExactDate] = useState<Date>(f.exactDate);
   const [draftExactInput, setDraftExactInput] = useState(format(f.exactDate, "yyyy-MM-dd"));
   const [draftRange, setDraftRange] = useState<{ from?: Date; to?: Date }>({ from: f.rangeFrom, to: f.rangeTo });
@@ -38,13 +37,9 @@ export function DateFilter() {
     setDraftRange({ from: f.rangeFrom, to: f.rangeTo });
   }, [open, f.mode, f.exactDate, f.rangeFrom, f.rangeTo]);
 
-  useEffect(() => {
-    setExactInput(format(f.exactDate, "yyyy-MM-dd"));
-  }, [f.exactDate]);
 
   function commitExact(d: Date) {
     f.setExactDate(d);
-    setExactInput(format(d, "yyyy-MM-dd"));
   }
 
   function onDraftExactInputBlur() {
