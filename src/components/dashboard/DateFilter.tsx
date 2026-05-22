@@ -40,9 +40,9 @@ export function DateFilter() {
 
   const triggerLabel =
     f.mode === "exact"
-      ? format(f.exactDate, "dd MMM yyyy")
+      ? format(f.exactDate, "dd.MM.yyyy")
       : f.mode === "range"
-      ? `${format(f.rangeFrom, "dd MMM")} – ${format(f.rangeTo, "dd MMM yyyy")}`
+      ? `${format(f.rangeFrom, "dd.MM.yyyy")} — ${format(f.rangeTo, "dd.MM.yyyy")}`
       : t(`date${f.preset.charAt(0).toUpperCase() + f.preset.slice(1)}` as "dateToday");
 
   return (
@@ -160,7 +160,7 @@ export function DateFilter() {
                 <div className="space-y-2">
                   <div className="text-xs font-medium">{t("dateCustom")}</div>
                   <div className="text-[11px] text-muted-foreground">
-                    {format(f.rangeFrom, "dd MMM yyyy")} – {format(f.rangeTo, "dd MMM yyyy")}
+                    {format(f.rangeFrom, "dd.MM.yyyy")} — {format(f.rangeTo, "dd.MM.yyyy")}
                   </div>
                   <Calendar
                     mode="range"
