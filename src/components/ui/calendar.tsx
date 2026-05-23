@@ -1,4 +1,6 @@
 import * as React from "react";
+import { format } from "date-fns";
+import { uk } from "date-fns/locale";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayPicker } from "react-day-picker";
 
@@ -6,6 +8,12 @@ import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/components/ui/button";
 
 export type CalendarProps = React.ComponentProps<typeof DayPicker>;
+
+
+const formatUkWeekday = (date: Date) => {
+  const weekday = format(date, "EE", { locale: uk });
+  return weekday.charAt(0).toUpperCase() + weekday.slice(1);
+};
 
 function Calendar({ className, classNames, showOutsideDays = true, ...props }: CalendarProps) {
   return (
@@ -40,6 +48,11 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
         day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
         day_hidden: "invisible",
         ...classNames,
+      }}
+      locale={uk}
+      weekStartsOn={1}
+      formatters={{
+        formatWeekdayName: formatUkWeekday,
       }}
       components={{
         IconLeft: ({ ..._props }) => <ChevronLeft className="h-4 w-4" />,

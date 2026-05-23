@@ -27,16 +27,16 @@ export function DateFilter() {
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"preset" | "exact" | "range">(f.mode);
   const [draftExactDate, setDraftExactDate] = useState<Date>(f.exactDate);
-  const [draftExactInput, setDraftExactInput] = useState(format(f.exactDate, "yyyy-MM-dd"));
+  const [draftExactInput, setDraftExactInput] = useState(format(f.exactDate, "dd.MM.yyyy"));
   const [draftRange, setDraftRange] = useState<{ from?: Date; to?: Date }>({ from: f.rangeFrom, to: f.rangeTo });
 
   function onExactInputBlur() {
-    const parsed = parse(draftExactInput, "yyyy-MM-dd", new Date());
+    const parsed = parse(draftExactInput, "dd.MM.yyyy", new Date());
     if (isValid(parsed)) {
       setDraftExactDate(parsed);
-      setDraftExactInput(format(parsed, "yyyy-MM-dd"));
+      setDraftExactInput(format(parsed, "dd.MM.yyyy"));
     } else {
-      setDraftExactInput(format(draftExactDate, "yyyy-MM-dd"));
+      setDraftExactInput(format(draftExactDate, "dd.MM.yyyy"));
     }
   }
 
@@ -68,7 +68,7 @@ export function DateFilter() {
           if (nextOpen) {
             setTab(f.mode);
             setDraftExactDate(f.exactDate);
-            setDraftExactInput(format(f.exactDate, "yyyy-MM-dd"));
+            setDraftExactInput(format(f.exactDate, "dd.MM.yyyy"));
             setDraftRange({ from: f.rangeFrom, to: f.rangeTo });
           }
         }}
@@ -138,7 +138,7 @@ export function DateFilter() {
                       onClick={() => {
                         const nextDate = subDays(draftExactDate, 1);
                         setDraftExactDate(nextDate);
-                        setDraftExactInput(format(nextDate, "yyyy-MM-dd"));
+                        setDraftExactInput(format(nextDate, "dd.MM.yyyy"));
                       }}
                       aria-label="Prev day"
                     >
@@ -149,7 +149,7 @@ export function DateFilter() {
                       onChange={(e) => setDraftExactInput(e.target.value)}
                       onBlur={onExactInputBlur}
                       onKeyDown={(e) => { if (e.key === "Enter") onExactInputBlur(); }}
-                      placeholder="YYYY-MM-DD"
+                      placeholder="ДД.ММ.РРРР"
                       className="h-8 flex-1 text-xs num"
                     />
                     <Button
@@ -157,7 +157,7 @@ export function DateFilter() {
                       onClick={() => {
                         const nextDate = addDays(draftExactDate, 1);
                         setDraftExactDate(nextDate);
-                        setDraftExactInput(format(nextDate, "yyyy-MM-dd"));
+                        setDraftExactInput(format(nextDate, "dd.MM.yyyy"));
                       }}
                       aria-label="Next day"
                     >
@@ -170,7 +170,7 @@ export function DateFilter() {
                     onSelect={(d) => {
                       if (!d) return;
                       setDraftExactDate(d);
-                      setDraftExactInput(format(d, "yyyy-MM-dd"));
+                      setDraftExactInput(format(d, "dd.MM.yyyy"));
                     }}
                     className="rounded-md border bg-background pointer-events-auto"
                     initialFocus
