@@ -44,6 +44,7 @@ export const translations = {
   dateMtd: { uk: "З початку місяця", en: "Month to date" },
   dateQtd: { uk: "З початку кварталу", en: "Quarter to date" },
   dateYtd: { uk: "З початку року", en: "Year to date" },
+  dateAll: { uk: "Весь період", en: "All time" },
   dateCustom: { uk: "Свій період", en: "Custom range" },
   dateExact: { uk: "Конкретна дата", en: "Specific date" },
   dateMode: { uk: "Режим", en: "Mode" },

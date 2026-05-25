@@ -3,7 +3,7 @@ import { addDays, format, startOfMonth, startOfQuarter, startOfYear, subDays } f
 import { uk } from "date-fns/locale";
 
 export type DatePresetId =
-  | "today" | "yesterday" | "7d" | "30d" | "mtd" | "qtd" | "ytd";
+  | "today" | "yesterday" | "7d" | "30d" | "mtd" | "qtd" | "ytd" | "all";
 
 export type DateMode = "preset" | "exact" | "range";
 
@@ -17,6 +17,8 @@ export interface DateContextValue {
   setExactDate: (d: Date) => void;
   setRange: (from: Date, to: Date) => void;
   setMode: (m: DateMode) => void;
+  dataBounds: { from: Date; to: Date } | null;
+  setDataBounds: (bounds: { from: Date; to: Date } | null) => void;
   /** Resolved [from, to] regardless of mode */
   resolved: { from: Date; to: Date };
   /** Short label for the active selection, used under KPI values */
@@ -27,7 +29,7 @@ export interface DateContextValue {
 
 const DateContext = createContext<DateContextValue | undefined>(undefined);
 
-function resolvePreset(id: DatePresetId, today = new Date()): { from: Date; to: Date } {
+function resolvePreset(id: DatePresetId, today = new Date(), dataBounds: { from: Date; to: Date } | null = null): { from: Date; to: Date } {
   switch (id) {
     case "today":     return { from: today, to: today };
     case "yesterday": { const d = subDays(today, 1); return { from: d, to: d }; }
@@ -36,6 +38,7 @@ function resolvePreset(id: DatePresetId, today = new Date()): { from: Date; to: 
     case "mtd":       return { from: startOfMonth(today), to: today };
     case "qtd":       return { from: startOfQuarter(today), to: today };
     case "ytd":       return { from: startOfYear(today), to: today };
+    case "all":       return dataBounds ?? { from: today, to: today };
   }
 }
 
@@ -50,12 +53,13 @@ export function DateFilterProvider({ children }: { children: ReactNode }) {
   const [exactDate, setExactDate] = useState<Date>(today);
   const [rangeFrom, setRangeFrom] = useState<Date>(subDays(today, 13));
   const [rangeTo, setRangeTo] = useState<Date>(today);
+  const [dataBounds, setDataBounds] = useState<{ from: Date; to: Date } | null>(null);
 
   const resolved = useMemo(() => {
     if (mode === "exact") return { from: exactDate, to: exactDate };
     if (mode === "range") return { from: rangeFrom, to: rangeTo };
-    return resolvePreset(preset, today);
-  }, [mode, preset, exactDate, rangeFrom, rangeTo, today]);
+    return resolvePreset(preset, today, dataBounds);
+  }, [mode, preset, exactDate, rangeFrom, rangeTo, today, dataBounds]);
 
   const activeLabel = useMemo(() => {
     if (mode === "exact") return format(exactDate, "d MMMM yyyy", { locale: uk });
@@ -72,6 +76,7 @@ export function DateFilterProvider({ children }: { children: ReactNode }) {
       mtd:       { uk: "З початку місяця", en: "Month to date" },
       qtd:       { uk: "З початку кварталу", en: "Quarter to date" },
       ytd:       { uk: "З початку року", en: "Year to date" },
+      all:       { uk: "Весь період", en: "All time" },
     };
     if (mode === "exact") {
       return lang === "uk"
@@ -82,6 +87,11 @@ export function DateFilterProvider({ children }: { children: ReactNode }) {
       return lang === "uk"
         ? `Період: ${format(rangeFrom, "d MMMM yyyy", { locale: uk })} — ${format(rangeTo, "d MMMM yyyy", { locale: uk })}`
         : `Range: ${format(rangeFrom, "d MMMM yyyy", { locale: uk })} — ${format(rangeTo, "d MMMM yyyy", { locale: uk })}`;
+    }
+    if (preset === "all") {
+      if (!dataBounds) return presetLabels.all[lang];
+      const rangeLabel = `${format(dataBounds.from, "d MMMM yyyy", { locale: uk })} — ${format(dataBounds.to, "d MMMM yyyy", { locale: uk })}`;
+      return lang === "uk" ? `${presetLabels.all.uk}: ${rangeLabel}` : `${presetLabels.all.en}: ${rangeLabel}`;
     }
     return presetLabels[preset][lang];
   };
@@ -109,6 +119,8 @@ export function DateFilterProvider({ children }: { children: ReactNode }) {
         setExactDate: setExactDateWrapper,
         setRange,
         setMode,
+        dataBounds,
+        setDataBounds,
         resolved,
         activeLabel,
         contextLabel,
