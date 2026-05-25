@@ -56,6 +56,8 @@ export default function Campaigns() {
   const to = format(date.resolved.to, "yyyy-MM-dd");
   const comparisonRange = useMemo(() => {
     if (compareMode === "none") return null;
+    // "yesterday" is only meaningful for exact-date mode; range comparisons should use "previous_period".
+    if (compareMode === "yesterday" && date.mode !== "exact") return null;
     const days = differenceInCalendarDays(date.resolved.to, date.resolved.from) + 1;
     const comparisonToDate = addDays(date.resolved.from, -1);
     const comparisonFromDate = addDays(comparisonToDate, -(days - 1));
@@ -63,7 +65,7 @@ export default function Campaigns() {
       from: format(comparisonFromDate, "yyyy-MM-dd"),
       to: format(comparisonToDate, "yyyy-MM-dd"),
     };
-  }, [compareMode, date.resolved.from, date.resolved.to]);
+  }, [compareMode, date.mode, date.resolved.from, date.resolved.to]);
 
   const query = useQuery({
     queryKey: ["campaigns-page", WORKSPACE_ID, from, to],
@@ -198,7 +200,7 @@ export default function Campaigns() {
       ),
     [comparisonPlacementRows],
   );
-  const showDeltas = compareMode !== "none";
+  const showDeltas = compareMode !== "none" && Boolean(comparisonRange);
 
   const summaryCards = [
     kpi("Витрати", totals.spend, comparisonCampaignTotals.spend, "money", compareDisplay, showDeltas),
