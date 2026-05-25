@@ -47,6 +47,8 @@ export default function Campaigns() {
   const date = useDateFilter();
   const [queryText, setQueryText] = useState("");
   const [showAll, setShowAll] = useState(false);
+  const [selectedProject, setSelectedProject] = useState("all");
+  const [selectedGroup, setSelectedGroup] = useState("all");
   const [activeTab, setActiveTab] = useState<"campaigns" | "placements">("campaigns");
   const from = format(date.resolved.from, "yyyy-MM-dd");
   const to = format(date.resolved.to, "yyyy-MM-dd");
@@ -70,17 +72,29 @@ export default function Campaigns() {
     queryFn: async () => readPlacementsDaily(from, to),
   });
 
-  const campaignRows = useMemo(() => aggregateCampaigns(query.data?.daily.rows ?? []), [query.data?.daily.rows]);
+  const dailyRows = useMemo(() => (query.data?.daily.rows ?? []) as Row[], [query.data?.daily.rows]);
+  const placementDailyRows = useMemo(() => (placementsQuery.data?.rows ?? []) as Row[], [placementsQuery.data?.rows]);
+
+  const projectOptions = useMemo(() => buildOptionsFromRows([...dailyRows, ...placementDailyRows], getProjectValue), [dailyRows, placementDailyRows]);
+  const groupOptions = useMemo(() => buildOptionsFromRows([...dailyRows, ...placementDailyRows], getGroupValue), [dailyRows, placementDailyRows]);
+
+  const filteredDailyRows = useMemo(
+    () => dailyRows.filter((row) => matchesFilters(row, selectedProject, selectedGroup)),
+    [dailyRows, selectedProject, selectedGroup],
+  );
+  const filteredPlacementDailyRows = useMemo(
+    () => placementDailyRows.filter((row) => matchesFilters(row, selectedProject, selectedGroup)),
+    [placementDailyRows, selectedProject, selectedGroup],
+  );
+
+  const campaignRows = useMemo(() => aggregateCampaigns(filteredDailyRows), [filteredDailyRows]);
   const searchedCampaignRows = useMemo(
     () => campaignRows.filter((r) => r.campaign_name.toLowerCase().includes(queryText.toLowerCase())),
     [campaignRows, queryText],
   );
   const sortedCampaignRows = useMemo(() => [...searchedCampaignRows].sort((a, b) => b.spend - a.spend), [searchedCampaignRows]);
   const visibleCampaignRows = useMemo(() => (showAll ? sortedCampaignRows.slice(0, 200) : sortedCampaignRows.slice(0, 25)), [showAll, sortedCampaignRows]);
-  const placementRows = useMemo(
-    () => aggregatePlacements((placementsQuery.data?.rows ?? []) as Row[]),
-    [placementsQuery.data?.rows],
-  );
+  const placementRows = useMemo(() => aggregatePlacements(filteredPlacementDailyRows), [filteredPlacementDailyRows]);
   const searchedPlacementRows = useMemo(() => {
     const queryLower = queryText.toLowerCase();
     return placementRows.filter((r) => r.placement_name.toLowerCase().includes(queryLower) || r.landing_url.toLowerCase().includes(queryLower));
@@ -154,7 +168,7 @@ export default function Campaigns() {
   const placementsUnavailable = Boolean(placementsQuery.data?.unavailableReason);
   const shouldShowPlacementsData = !placementsQuery.isLoading && !placementsUnavailable && sortedPlacementRows.length > 0;
 
-  return <DashboardLayout title="Кампанії" subtitle="Ефективність рекламних кампаній"><div className="space-y-4"><FilterBar extra={<Input value={queryText} onChange={(e) => { setQueryText(e.target.value); setShowAll(false); }} placeholder={activeTab === "campaigns" ? "Пошук кампанії" : "Пошук плейсменту або URL"} className="h-8 w-[240px] text-xs" />} freshness={{ source: "Імпорт рекламних даних", status: "fresh", lastSync: "live" }} />
+  return <DashboardLayout title="Кампанії" subtitle="Ефективність рекламних кампаній"><div className="space-y-4"><FilterBar extra={<Input value={queryText} onChange={(e) => { setQueryText(e.target.value); setShowAll(false); }} placeholder={activeTab === "campaigns" ? "Пошук кампанії" : "Пошук плейсменту або URL"} className="h-8 w-[240px] text-xs" />} freshness={{ source: "Імпорт рекламних даних", status: "fresh", lastSync: "live" }} projectOptions={projectOptions} groupOptions={groupOptions} selectedProject={selectedProject} selectedGroup={selectedGroup} onProjectChange={(value) => { setSelectedProject(value); setShowAll(false); }} onGroupChange={(value) => { setSelectedGroup(value); setShowAll(false); }} />
     <div className="inline-flex rounded-lg border p-1">
       <Button variant={activeTab === "campaigns" ? "default" : "ghost"} size="sm" onClick={() => { setActiveTab("campaigns"); setShowAll(false); }}>Кампанії</Button>
       <Button variant={activeTab === "placements" ? "default" : "ghost"} size="sm" onClick={() => { setActiveTab("placements"); setShowAll(false); }}>Плейсменти</Button>
@@ -190,14 +204,16 @@ export default function Campaigns() {
         </SectionCard>
       </> : null}
     </>}
-    <details className="rounded border">
+    {filteredBindingsRows.length > 0 ? <details className="rounded border">
       <summary className="cursor-pointer px-4 py-3 text-sm font-medium">Додатково: стан звʼязків</summary>
       <SectionCard title="Стан звʼязків" description="Підключені рекламні акаунти (опційно)" noPadding><Simple rows={filteredBindingsRows} columns={[{ key: "platform", label: "Платформа" }, { key: "ad_account_name", label: "Рекламний акаунт" }, { key: "mapping_status", label: "Статус мапінгу" }, { key: "binding_status", label: "Статус звʼязку" }, { key: "updated_at", label: "Оновлено" }]} empty="Додаткові дані про звʼязки недоступні." /></SectionCard>
     </details>
-    <details className="rounded border">
+    : null}
+    {filteredAnomaliesRows.length > 0 ? <details className="rounded border">
       <summary className="cursor-pointer px-4 py-3 text-sm font-medium">Додатково: аномалії</summary>
       <SectionCard title="Аномалії" description="Потенційні аномалії кампаній (опційно)" noPadding><Simple rows={filteredAnomaliesRows} columns={[{ key: "severity", label: "Рівень" }, { key: "title", label: "Назва" }, { key: "reason", label: "Причина" }, { key: "created_at", label: "Створено" }]} empty="Додаткові дані про аномалії недоступні." /></SectionCard>
     </details>
+    : null}
   </div></DashboardLayout>;
 }
 function aggregatePlacements(rows: Row[]): PlacementAgg[] {
@@ -229,7 +245,43 @@ function aggregatePlacements(rows: Row[]): PlacementAgg[] {
 const Msg = ({ t }: { t: string }) => <p className="rounded border p-3 text-sm text-muted-foreground">{t}</p>;
 
 function KpiCards({ rows }: { rows: { label: string; value: string }[] }) {
-  return <div className="grid grid-cols-2 gap-3 md:grid-cols-4 2xl:grid-cols-8">{rows.map((r) => <div key={r.label} className="rounded-lg border p-3"><div className="text-xs text-muted-foreground">{r.label}</div><div className="mt-1 text-lg font-semibold num">{r.value}</div></div>)}</div>;
+  return <div className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3">{rows.map((r) => <div key={r.label} className="rounded-lg border p-2.5"><div className="text-xs text-muted-foreground">{r.label}</div><div className="mt-1 text-lg font-semibold num">{r.value}</div></div>)}</div>;
+}
+
+function readField(row: Row, keys: string[]) {
+  for (const key of keys) {
+    const value = row[key];
+    if (value == null) continue;
+    const text = String(value).trim();
+    if (text) return text;
+  }
+  return null;
+}
+
+function getProjectValue(row: Row) {
+  return readField(row, ["project_name", "project_id", "project", "client_project_name"]);
+}
+
+function getGroupValue(row: Row) {
+  return readField(row, ["group_name", "report_group", "group_id", "traffic_group", "ad_group_name", "ad_set_name", "funnel_name"]);
+}
+
+function buildOptionsFromRows(rows: Row[], getter: (row: Row) => string | null) {
+  const map = new Map<string, { id: string; label: string }>();
+  rows.forEach((row) => {
+    const value = getter(row);
+    if (!value) return;
+    if (!map.has(value)) map.set(value, { id: value, label: value });
+  });
+  return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, "uk"));
+}
+
+function matchesFilters(row: Row, selectedProject: string, selectedGroup: string) {
+  const project = getProjectValue(row);
+  const group = getGroupValue(row);
+  const projectMatch = selectedProject === "all" || project === selectedProject;
+  const groupMatch = selectedGroup === "all" || group === selectedGroup;
+  return projectMatch && groupMatch;
 }
 
 function formatPeriod(firstDate: string, lastDate: string) {

@@ -20,6 +20,10 @@ interface FilterBarProps {
   freshness?: { source: string; status: "fresh" | "stale" | "failed"; lastSync: string };
   projectOptions?: { id: string; label: string }[];
   groupOptions?: { id: string; label: string }[];
+  selectedProject?: string;
+  selectedGroup?: string;
+  onProjectChange?: (value: string) => void;
+  onGroupChange?: (value: string) => void;
 }
 
 export function FilterBar({
@@ -33,11 +37,33 @@ export function FilterBar({
   freshness,
   projectOptions,
   groupOptions,
+  selectedProject,
+  selectedGroup,
+  onProjectChange,
+  onGroupChange,
 }: FilterBarProps) {
   const { t, lang } = useI18n();
   const [project, setProject] = useState("all");
   const [group, setGroup] = useState("all");
   const date = useDateFilter();
+  const projectValue = selectedProject ?? project;
+  const groupValue = selectedGroup ?? group;
+
+  const handleProjectChange = (value: string) => {
+    if (onProjectChange) {
+      onProjectChange(value);
+      return;
+    }
+    setProject(value);
+  };
+
+  const handleGroupChange = (value: string) => {
+    if (onGroupChange) {
+      onGroupChange(value);
+      return;
+    }
+    setGroup(value);
+  };
 
   return (
     <div className="space-y-1.5">
@@ -51,7 +77,7 @@ export function FilterBar({
           {showDate && <DateFilter />}
 
         {showProject && (
-          <Select value={project} onValueChange={setProject}>
+          <Select value={projectValue} onValueChange={handleProjectChange}>
             <SelectTrigger className="h-8 w-[170px] text-xs">
             <SelectValue placeholder={t("project")} />
             </SelectTrigger>
@@ -67,7 +93,7 @@ export function FilterBar({
         )}
 
         {showGroup && (
-          <Select value={group} onValueChange={setGroup}>
+          <Select value={groupValue} onValueChange={handleGroupChange}>
             <SelectTrigger className="h-8 w-[170px] text-xs">
             <SelectValue placeholder={t("reportGroup")} />
             </SelectTrigger>
