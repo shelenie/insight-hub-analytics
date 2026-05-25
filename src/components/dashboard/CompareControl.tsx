@@ -8,13 +8,23 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { useEffect } from "react";
 import { usePreferences } from "@/preferences/PreferencesProvider";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useDateFilter } from "@/filters/DateContext";
 import { Check } from "lucide-react";
 
 export function CompareControl() {
   const { t } = useI18n();
+  const date = useDateFilter();
   const { compareMode, compareDisplay, setPref } = usePreferences();
+  const isExactDateMode = date.mode === "exact";
+
+  useEffect(() => {
+    if (compareMode === "yesterday" && !isExactDateMode) {
+      setPref("compareMode", "none");
+    }
+  }, [compareMode, isExactDateMode, setPref]);
 
   const modeLabel =
     compareMode === "yesterday"
@@ -40,9 +50,17 @@ export function CompareControl() {
           {compareMode === "none" && <Check className="h-3.5 w-3.5" />}
           {t("compareNone")}
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => setPref("compareMode", "yesterday")} className="gap-2 text-xs">
+        <DropdownMenuItem
+          onSelect={() => {
+            if (!isExactDateMode) return;
+            setPref("compareMode", "yesterday");
+          }}
+          disabled={!isExactDateMode}
+          className="gap-2 text-xs"
+        >
           {compareMode === "yesterday" && <Check className="h-3.5 w-3.5" />}
-          {t("compareYesterday")}
+          <span>{t("compareYesterday")}</span>
+          {!isExactDateMode && <span className="ml-auto text-[10px] text-muted-foreground">Тільки для конкретної дати</span>}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => setPref("compareMode", "previous_period")} className="gap-2 text-xs">
           {compareMode === "previous_period" && <Check className="h-3.5 w-3.5" />}
