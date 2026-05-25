@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { addDays, differenceInCalendarDays, format } from "date-fns";
+import { addDays, differenceInCalendarDays, format, isValid, parseISO } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { FilterBar } from "@/components/dashboard/FilterBar";
@@ -106,6 +106,25 @@ export default function Campaigns() {
     enabled: Boolean(session) && compareMode !== "none" && Boolean(comparisonRange),
     queryFn: async () => readPlacementsDaily(comparisonRange!.from, comparisonRange!.to),
   });
+
+  const dataBoundsQuery = useQuery({
+    queryKey: ["campaigns-page-data-bounds", WORKSPACE_ID],
+    enabled: Boolean(session),
+    queryFn: async () => readCampaignsDataBounds(),
+  });
+
+  useEffect(() => {
+    const bounds = dataBoundsQuery.data;
+    if (bounds?.from && bounds?.to) {
+      date.setDataBounds({ from: parseISO(bounds.from), to: parseISO(bounds.to) });
+      return;
+    }
+    date.setDataBounds(null);
+  }, [dataBoundsQuery.data, date]);
+
+  useEffect(() => () => {
+    date.setDataBounds(null);
+  }, [date]);
 
   const handleRefresh = () => {
     void query.refetch();
@@ -461,14 +480,17 @@ function matchesFilters(row: Row, selectedProject: string, selectedGroup: string
 
 function formatPeriod(firstDate: string, lastDate: string) {
   if (!firstDate && !lastDate) return "—";
-  const short = (dateText: string) => {
-    if (!dateText) return "—";
-    const [year, month, day] = dateText.split("-");
-    if (!year || !month || !day) return dateText;
-    return `${day}.${month}`;
-  };
-  if (firstDate === lastDate) return short(firstDate);
-  return `${short(firstDate)} — ${short(lastDate)}`;
+  const first = parseISO(firstDate);
+  const last = parseISO(lastDate);
+  if (!isValid(first) || !isValid(last)) {
+    if (firstDate === lastDate) return firstDate || "—";
+    return `${firstDate || "—"} — ${lastDate || "—"}`;
+  }
+  if (firstDate === lastDate) return format(first, "dd.MM");
+  if (format(first, "yyyy") === format(last, "yyyy")) {
+    return `${format(first, "dd.MM")} — ${format(last, "dd.MM")}`;
+  }
+  return `${format(first, "dd.MM.yyyy")} — ${format(last, "dd.MM.yyyy")}`;
 }
 
 function aggregateCampaigns(rows: Row[]): CampaignAgg[] {
@@ -537,4 +559,36 @@ async function readPlacementsDaily(from: string, to: string) {
     .limit(10000);
 
   return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null };
+}
+
+async function readMetricDateBound(viewName: "v_unified_ads_performance_daily" | "v_unified_placements_performance_daily", ascending: boolean) {
+  const res = await supabase
+    .from(viewName)
+    .select("metric_date")
+    .eq("workspace_id", WORKSPACE_ID)
+    .order("metric_date", { ascending })
+    .limit(1);
+
+  if (res.error || !res.data?.length) return null;
+  const metricDate = res.data[0]?.metric_date;
+  return typeof metricDate === "string" && metricDate ? metricDate : null;
+}
+
+async function readCampaignsDataBounds() {
+  const [adsMin, adsMax, placementsMin, placementsMax] = await Promise.all([
+    readMetricDateBound("v_unified_ads_performance_daily", true),
+    readMetricDateBound("v_unified_ads_performance_daily", false),
+    readMetricDateBound("v_unified_placements_performance_daily", true),
+    readMetricDateBound("v_unified_placements_performance_daily", false),
+  ]);
+
+  const mins = [adsMin, placementsMin].filter((value): value is string => Boolean(value));
+  const maxs = [adsMax, placementsMax].filter((value): value is string => Boolean(value));
+
+  if (!mins.length || !maxs.length) return null;
+
+  return {
+    from: mins.reduce((acc, value) => (value < acc ? value : acc)),
+    to: maxs.reduce((acc, value) => (value > acc ? value : acc)),
+  };
 }

@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { useDateFilter, type DatePresetId } from "@/filters/DateContext";
 import { useI18n } from "@/i18n/I18nProvider";
 
-const presets: { id: DatePresetId; key: "dateToday" | "dateYesterday" | "date7d" | "date30d" | "dateMtd" | "dateQtd" | "dateYtd" }[] = [
+const presets: { id: DatePresetId; key: "dateToday" | "dateYesterday" | "date7d" | "date30d" | "dateMtd" | "dateQtd" | "dateYtd" | "dateAll" }[] = [
   { id: "today", key: "dateToday" },
   { id: "yesterday", key: "dateYesterday" },
   { id: "7d", key: "date7d" },
@@ -20,6 +20,7 @@ const presets: { id: DatePresetId; key: "dateToday" | "dateYesterday" | "date7d"
   { id: "mtd", key: "dateMtd" },
   { id: "qtd", key: "dateQtd" },
   { id: "ytd", key: "dateYtd" },
+  { id: "all", key: "dateAll" },
 ];
 
 export function DateFilter() {
@@ -96,19 +97,24 @@ export function DateFilter() {
               <div className="px-2 pb-1 pt-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 {t("quickPresets")}
               </div>
-              {presets.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => { f.setPreset(p.id); setTab("preset"); setOpen(false); }}
-                  className={cn(
-                    "flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-muted",
-                    f.mode === "preset" && f.preset === p.id && "bg-primary-soft text-primary font-medium",
-                  )}
-                >
-                  <span>{t(p.key)}</span>
-                  {f.mode === "preset" && f.preset === p.id && <Check className="h-3 w-3" />}
-                </button>
-              ))}
+              {presets.map((p) => {
+                const isAllDisabled = p.id === "all" && !f.dataBounds;
+                return (
+                  <button
+                    key={p.id}
+                    disabled={isAllDisabled}
+                    onClick={() => { if (!isAllDisabled) { f.setPreset(p.id); setTab("preset"); setOpen(false); } }}
+                    className={cn(
+                      "flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-xs transition-colors hover:bg-muted",
+                      f.mode === "preset" && f.preset === p.id && "bg-primary-soft text-primary font-medium",
+                      isAllDisabled && "cursor-not-allowed opacity-50 hover:bg-transparent",
+                    )}
+                  >
+                    <span>{t(p.key)}</span>
+                    {isAllDisabled ? <span className="text-[10px] text-muted-foreground">Немає даних</span> : f.mode === "preset" && f.preset === p.id ? <Check className="h-3 w-3" /> : null}
+                  </button>
+                );
+              })}
               <div className="my-2 border-t" />
               <div className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
                 {t("dateMode")}
