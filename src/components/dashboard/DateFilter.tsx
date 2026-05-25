@@ -12,13 +12,14 @@ import { cn } from "@/lib/utils";
 import { useDateFilter, type DatePresetId } from "@/filters/DateContext";
 import { useI18n } from "@/i18n/I18nProvider";
 
-const presets: { id: DatePresetId; key: "dateToday" | "dateYesterday" | "date7d" | "date30d" | "dateMtd" | "dateQtd" }[] = [
+const presets: { id: DatePresetId; key: "dateToday" | "dateYesterday" | "date7d" | "date30d" | "dateMtd" | "dateQtd" | "dateYtd" }[] = [
   { id: "today", key: "dateToday" },
   { id: "yesterday", key: "dateYesterday" },
   { id: "7d", key: "date7d" },
   { id: "30d", key: "date30d" },
   { id: "mtd", key: "dateMtd" },
   { id: "qtd", key: "dateQtd" },
+  { id: "ytd", key: "dateYtd" },
 ];
 
 export function DateFilter() {

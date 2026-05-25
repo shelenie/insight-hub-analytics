@@ -43,6 +43,7 @@ export const translations = {
   date30d: { uk: "Останні 30 днів", en: "Last 30 days" },
   dateMtd: { uk: "З початку місяця", en: "Month to date" },
   dateQtd: { uk: "З початку кварталу", en: "Quarter to date" },
+  dateYtd: { uk: "З початку року", en: "Year to date" },
   dateCustom: { uk: "Свій період", en: "Custom range" },
   dateExact: { uk: "Конкретна дата", en: "Specific date" },
   dateMode: { uk: "Режим", en: "Mode" },
