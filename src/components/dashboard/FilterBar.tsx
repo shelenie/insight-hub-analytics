@@ -10,6 +10,8 @@ import { SavedViewsMenu } from "./SavedViewsMenu";
 import { CompareControl } from "./CompareControl";
 
 interface FilterBarProps {
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
   showProject?: boolean;
   showGroup?: boolean;
   showDate?: boolean;
@@ -41,6 +43,8 @@ export function FilterBar({
   selectedGroup,
   onProjectChange,
   onGroupChange,
+  onRefresh,
+  isRefreshing = false,
 }: FilterBarProps) {
   const { t, lang } = useI18n();
   const [project, setProject] = useState("all");
@@ -143,8 +147,14 @@ export function FilterBar({
               <StatusBadge status={freshness.status} label={`${freshness.source} · ${freshness.lastSync}`} />
             </div>
           )}
-          <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs ml-auto">
-            <RefreshCw className="h-3.5 w-3.5" />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1.5 text-xs ml-auto"
+            onClick={onRefresh}
+            disabled={!onRefresh || isRefreshing}
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
             {t("refresh")}
           </Button>
         </div>
