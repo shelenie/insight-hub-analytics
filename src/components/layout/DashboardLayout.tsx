@@ -123,8 +123,8 @@ export function DashboardLayout({ title, subtitle, actions, sync, children }: Da
                       }
                     }
                   }}
-                  placeholder="Пошук розділів"
-                  aria-label={`Пошук розділів (${shortcutLabel})`}
+                  placeholder={t("topSearchPlaceholder")}
+                  aria-label={`${t("topSearchPlaceholder")} (${shortcutLabel})`}
                   className="h-8 w-[260px] rounded-md border-border/70 bg-background/60 pl-8 pr-12 text-[12.5px] shadow-none focus-visible:ring-1 focus-visible:ring-primary/40"
                 />
                 <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 select-none items-center gap-0.5 rounded border border-border/70 bg-muted/60 px-1.5 py-px text-[10px] font-medium text-muted-foreground xl:inline-flex">
@@ -150,7 +150,7 @@ export function DashboardLayout({ title, subtitle, actions, sync, children }: Da
                         ))}
                       </ul>
                     ) : (
-                      <div className="px-3 py-2 text-xs text-muted-foreground">Нічого не знайдено</div>
+                      <div className="px-3 py-2 text-xs text-muted-foreground">{t("topSearchNoResults")}</div>
                     )}
                   </div>
                 )}

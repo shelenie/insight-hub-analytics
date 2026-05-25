@@ -10,6 +10,8 @@ export const translations = {
   workspace: { uk: "Робочий простір", en: "Workspace" },
   systemsOk: { uk: "Усі системи працюють", en: "All systems operational" },
   searchPlaceholder: { uk: "Пошук кампаній, проєктів Insight Hub…", en: "Search Insight Hub campaigns, projects…" },
+  topSearchPlaceholder: { uk: "Пошук розділів", en: "Search sections" },
+  topSearchNoResults: { uk: "Нічого не знайдено", en: "No results" },
 
   // Navigation
   navOverview: { uk: "Огляд", en: "Overview" },
