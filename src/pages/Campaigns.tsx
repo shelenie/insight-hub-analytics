@@ -259,11 +259,11 @@ function readField(row: Row, keys: string[]) {
 }
 
 function getProjectValue(row: Row) {
-  return readField(row, ["project_name", "project_id", "project", "client_project_name"]);
+  return readField(row, ["project_name", "project", "client_project_name", "funnel_name", "project_id"]);
 }
 
 function getGroupValue(row: Row) {
-  return readField(row, ["group_name", "report_group", "group_id", "traffic_group", "ad_group_name", "ad_set_name", "funnel_name"]);
+  return readField(row, ["ad_set_name", "adset_name", "ad_set", "ad_group_name", "group_name", "report_group", "traffic_group", "group_id"]);
 }
 
 function buildOptionsFromRows(rows: Row[], getter: (row: Row) => string | null) {
