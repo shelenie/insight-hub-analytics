@@ -29,9 +29,9 @@ import {
 import { useI18n } from "@/i18n/I18nProvider";
 import type { TranslationKey } from "@/i18n/translations";
 
-const navSections: { label: string; items: { titleKey: TranslationKey; url: string; icon: typeof LayoutDashboard }[] }[] = [
+const navSections: { labelKey: TranslationKey; items: { titleKey: TranslationKey; url: string; icon: typeof LayoutDashboard }[] }[] = [
   {
-    label: "Аналітика",
+    labelKey: "sidebarAnalytics",
     items: [
       { titleKey: "navOverview", url: "/", icon: LayoutDashboard },
       { titleKey: "navFunnel", url: "/funnel", icon: GitBranch },
@@ -41,7 +41,7 @@ const navSections: { label: string; items: { titleKey: TranslationKey; url: stri
     ],
   },
   {
-    label: "Операції",
+    labelKey: "sidebarOperations",
     items: [
       { titleKey: "navOnboarding", url: "/onboarding", icon: Layers3 },
       { titleKey: "navBindingsMapping", url: "/bindings", icon: Link2 },
@@ -50,7 +50,7 @@ const navSections: { label: string; items: { titleKey: TranslationKey; url: stri
     ],
   },
   {
-    label: "AI",
+    labelKey: "sidebarAi",
     items: [{ titleKey: "navAssistant", url: "/assistant", icon: Sparkles }],
   },
 ];
@@ -92,10 +92,10 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
               {navSections.map((section) => (
-                <div key={section.label} className="space-y-1">
+                <div key={section.labelKey} className="space-y-1">
                   {!collapsed && (
                     <p className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
-                      {section.label}
+                      {t(section.labelKey)}
                     </p>
                   )}
                   {section.items.map((item) => {

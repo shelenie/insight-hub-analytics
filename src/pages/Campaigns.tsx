@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { useDateFilter } from "@/filters/DateContext";
 import { usePreferences } from "@/preferences/PreferencesProvider";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 type Row = Record<string, string | number | boolean | null>;
@@ -47,6 +48,7 @@ export default function Campaigns() {
   const { session } = useAuth();
   const date = useDateFilter();
   const { compareMode, compareDisplay, setPref } = usePreferences();
+  const { t } = useI18n();
   const [queryText, setQueryText] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [selectedProject, setSelectedProject] = useState("all");
@@ -247,23 +249,23 @@ export default function Campaigns() {
   const showDeltas = compareMode !== "none" && Boolean(comparisonRange);
 
   const summaryCards = [
-    kpi("Витрати", totals.spend, comparisonCampaignTotals.spend, "money", compareDisplay, showDeltas, "neutral"),
-    kpi("Ліди", totals.leads, comparisonCampaignTotals.leads, "count", compareDisplay, showDeltas, "higher_good"),
+    kpi(t("kpiSpend"), totals.spend, comparisonCampaignTotals.spend, "money", compareDisplay, showDeltas, "neutral"),
+    kpi(t("kpiLeads"), totals.leads, comparisonCampaignTotals.leads, "count", compareDisplay, showDeltas, "higher_good"),
     kpi("CPL", totals.leads > 0 ? totals.spend / totals.leads : null, comparisonCampaignTotals.leads > 0 ? comparisonCampaignTotals.spend / comparisonCampaignTotals.leads : null, "cost_per", compareDisplay, showDeltas, "lower_good"),
-    kpi("Кліки", totals.clicks, comparisonCampaignTotals.clicks, "count", compareDisplay, showDeltas, "higher_good"),
+    kpi(t("kpiClicks"), totals.clicks, comparisonCampaignTotals.clicks, "count", compareDisplay, showDeltas, "higher_good"),
     kpi("CPC", totals.clicks > 0 ? totals.spend / totals.clicks : null, comparisonCampaignTotals.clicks > 0 ? comparisonCampaignTotals.spend / comparisonCampaignTotals.clicks : null, "cost_per", compareDisplay, showDeltas, "lower_good"),
-    kpi("Охоплення", totals.reach, comparisonCampaignTotals.reach, "count", compareDisplay, showDeltas, "higher_good"),
-    kpi("Кампаній", searchedCampaignRows.length, comparisonCampaignRows.length, "count", compareDisplay, showDeltas, "neutral"),
+    kpi(t("kpiReach"), totals.reach, comparisonCampaignTotals.reach, "count", compareDisplay, showDeltas, "higher_good"),
+    kpi(t("kpiCampaigns"), searchedCampaignRows.length, comparisonCampaignRows.length, "count", compareDisplay, showDeltas, "neutral"),
   ];
   const placementSummaryCards = [
-    kpi("Витрати", placementTotals.spend, comparisonPlacementTotals.spend, "money", compareDisplay, showDeltas, "neutral"),
-    kpi("Реєстрації", placementTotals.registrations, comparisonPlacementTotals.registrations, "count", compareDisplay, showDeltas, "higher_good"),
+    kpi(t("kpiSpend"), placementTotals.spend, comparisonPlacementTotals.spend, "money", compareDisplay, showDeltas, "neutral"),
+    kpi(t("kpiRegistrations"), placementTotals.registrations, comparisonPlacementTotals.registrations, "count", compareDisplay, showDeltas, "higher_good"),
     kpi("CPL", placementTotals.registrations > 0 ? placementTotals.spend / placementTotals.registrations : null, comparisonPlacementTotals.registrations > 0 ? comparisonPlacementTotals.spend / comparisonPlacementTotals.registrations : null, "cost_per", compareDisplay, showDeltas, "lower_good"),
-    kpi("Кліки", placementTotals.clicks, comparisonPlacementTotals.clicks, "count", compareDisplay, showDeltas, "higher_good"),
+    kpi(t("kpiClicks"), placementTotals.clicks, comparisonPlacementTotals.clicks, "count", compareDisplay, showDeltas, "higher_good"),
     kpi("CPC", placementTotals.clicks > 0 ? placementTotals.spend / placementTotals.clicks : null, comparisonPlacementTotals.clicks > 0 ? comparisonPlacementTotals.spend / comparisonPlacementTotals.clicks : null, "cost_per", compareDisplay, showDeltas, "lower_good"),
-    kpi("Охоплення", placementTotals.reach, comparisonPlacementTotals.reach, "count", compareDisplay, showDeltas, "higher_good"),
-    kpi("Плейсментів", searchedPlacementRows.length, comparisonPlacementRows.length, "count", compareDisplay, showDeltas, "neutral"),
-    kpi("Конверсія ленда", placementTotals.clicks > 0 ? (placementTotals.registrations / placementTotals.clicks) * 100 : null, comparisonPlacementTotals.clicks > 0 ? (comparisonPlacementTotals.registrations / comparisonPlacementTotals.clicks) * 100 : null, "rate", compareDisplay, showDeltas, "higher_good"),
+    kpi(t("kpiReach"), placementTotals.reach, comparisonPlacementTotals.reach, "count", compareDisplay, showDeltas, "higher_good"),
+    kpi(t("kpiPlacements"), searchedPlacementRows.length, comparisonPlacementRows.length, "count", compareDisplay, showDeltas, "neutral"),
+    kpi(t("kpiLandingConversion"), placementTotals.clicks > 0 ? (placementTotals.registrations / placementTotals.clicks) * 100 : null, comparisonPlacementTotals.clicks > 0 ? (comparisonPlacementTotals.registrations / comparisonPlacementTotals.clicks) * 100 : null, "rate", compareDisplay, showDeltas, "higher_good"),
   ];
 
   const filteredBindingsRows = useMemo(
@@ -280,54 +282,54 @@ export default function Campaigns() {
   const placementsUnavailable = Boolean(placementsQuery.data?.unavailableReason);
   const shouldShowPlacementsData = !placementsQuery.isLoading && !placementsUnavailable && sortedPlacementRows.length > 0;
 
-  return <DashboardLayout title="Кампанії" subtitle="Ефективність рекламних кампаній"><div className="space-y-4"><FilterBar extra={<Input value={queryText} onChange={(e) => { setQueryText(e.target.value); setShowAll(false); }} placeholder={activeTab === "campaigns" ? "Пошук кампанії" : "Пошук плейсменту або URL"} className="h-8 w-[240px] text-xs" />} freshness={{ source: "Імпорт рекламних даних", status: "fresh", lastSync: "live" }} projectOptions={projectOptions} groupOptions={groupOptions} selectedProject={selectedProject} selectedGroup={selectedGroup} onProjectChange={(value) => { setSelectedProject(value); setShowAll(false); }} onGroupChange={(value) => { setSelectedGroup(value); setShowAll(false); }} onRefresh={handleRefresh} isRefreshing={isRefreshing} />
+  return <DashboardLayout title={t("campaignsTitle")} subtitle={t("campaignsSubtitle")}><div className="space-y-4"><FilterBar extra={<Input value={queryText} onChange={(e) => { setQueryText(e.target.value); setShowAll(false); }} placeholder={activeTab === "campaigns" ? t("campaignsSearchCampaign") : t("campaignsSearchPlacement")} className="h-8 w-[240px] text-xs" />} freshness={{ source: t("campaignsFreshnessSource"), status: "fresh", lastSync: "live" }} projectOptions={projectOptions} groupOptions={groupOptions} selectedProject={selectedProject} selectedGroup={selectedGroup} onProjectChange={(value) => { setSelectedProject(value); setShowAll(false); }} onGroupChange={(value) => { setSelectedGroup(value); setShowAll(false); }} onRefresh={handleRefresh} isRefreshing={isRefreshing} />
     <div className="inline-flex rounded-lg border p-1">
-      <Button variant={activeTab === "campaigns" ? "default" : "ghost"} size="sm" onClick={() => { setActiveTab("campaigns"); setShowAll(false); }}>Кампанії</Button>
-      <Button variant={activeTab === "placements" ? "default" : "ghost"} size="sm" onClick={() => { setActiveTab("placements"); setShowAll(false); }}>Плейсменти</Button>
+      <Button variant={activeTab === "campaigns" ? "default" : "ghost"} size="sm" onClick={() => { setActiveTab("campaigns"); setShowAll(false); }}>{t("campaignsTabCampaigns")}</Button>
+      <Button variant={activeTab === "placements" ? "default" : "ghost"} size="sm" onClick={() => { setActiveTab("placements"); setShowAll(false); }}>{t("campaignsTabPlacements")}</Button>
     </div>
-    {!session ? <Msg t="Увійдіть, щоб переглянути дані кампаній." /> : query.isLoading ? <Msg t="Завантаження даних кампаній…" /> : null}
-    {connectorStatus === "no_active_connections" ? <Msg t="Показані імпортовані рекламні дані. API-конектори можна підключити пізніше для автоматичного оновлення." /> : null}
-    {activeTab === "campaigns" && noData ? <Msg t="За вибраний період рекламних даних не знайдено. Змініть період або перевірте імпорт трафіку." /> : null}
+    {!session ? <Msg t={t("campaignsLoginRequired")} /> : query.isLoading ? <Msg t={t("campaignsLoading")} /> : null}
+    {connectorStatus === "no_active_connections" ? <Msg t={t("campaignsImportedDataNotice")} /> : null}
+    {activeTab === "campaigns" && noData ? <Msg t={t("campaignsNoData")} /> : null}
     {activeTab === "campaigns" && !noData ? <>
-      <SectionCard title="Підсумок реклами" description="Зведені метрики за вибраний період">
+      <SectionCard title={t("campaignsAdSummaryTitle")} description={t("campaignsAdSummaryDescription")}>
         <KpiCards rows={summaryCards} />
       </SectionCard>
-      <SectionCard title="Кампанії" description="Ефективність кампаній" noPadding>
-        <div className="px-4 pt-4 text-sm text-muted-foreground">Показано {visibleCampaignRows.length} з {sortedCampaignRows.length} кампаній</div>
+      <SectionCard title={t("campaignsTitle")} description={t("campaignsTableDescription")} noPadding>
+        <div className="px-4 pt-4 text-sm text-muted-foreground">{t("campaignsShown")} {visibleCampaignRows.length} {t("campaignsOf")} {sortedCampaignRows.length} {t("campaignsCountCampaigns")}</div>
         <div className="overflow-x-auto">
-          <Table><TableHeader><TableRow><TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">Кампанія</TableHead><TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">Період</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">Витрати</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">Ліди</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">CPL</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">Кліки</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">CPC</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">Охопл.</TableHead></TableRow></TableHeader><TableBody>{visibleCampaignRows.map((r, i) => <TableRow key={`${r.campaign_name}-${i}`}><TableCell className="max-w-[360px] truncate py-2 text-sm" title={r.campaign_name}>{r.campaign_name}</TableCell><TableCell className="whitespace-nowrap py-2 text-sm">{formatPeriod(r.first_date, r.last_date)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{fmtCurrency(r.spend)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{fmtNum(r.leads)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{formatCostPer(r.cpl)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{fmtNum(r.clicks)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{formatCostPer(r.cpc)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{fmtNum(r.reach)}</TableCell></TableRow>)}</TableBody></Table>
+          <Table><TableHeader><TableRow><TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">{t("tableCampaign")}</TableHead><TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">{t("tablePeriod")}</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">{t("tableSpend")}</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">{t("tableLeads")}</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">CPL</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">{t("tableClicks")}</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">CPC</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">{t("tableReachShort")}</TableHead></TableRow></TableHeader><TableBody>{visibleCampaignRows.map((r, i) => <TableRow key={`${r.campaign_name}-${i}`}><TableCell className="max-w-[360px] truncate py-2 text-sm" title={r.campaign_name}>{r.campaign_name}</TableCell><TableCell className="whitespace-nowrap py-2 text-sm">{formatPeriod(r.first_date, r.last_date)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{fmtCurrency(r.spend)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{fmtNum(r.leads)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{formatCostPer(r.cpl)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{fmtNum(r.clicks)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{formatCostPer(r.cpc)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{fmtNum(r.reach)}</TableCell></TableRow>)}</TableBody></Table>
         </div>
         <div className="flex items-center justify-between px-4 pb-4 pt-2 text-sm">
-          <span className="text-muted-foreground">Показано {visibleCampaignRows.length} з {sortedCampaignRows.length} кампаній</span>
-          {!showAll && sortedCampaignRows.length > 25 ? <Button variant="outline" size="sm" onClick={() => setShowAll(true)}>Показати всі</Button> : null}
+          <span className="text-muted-foreground">{t("campaignsShown")} {visibleCampaignRows.length} {t("campaignsOf")} {sortedCampaignRows.length} {t("campaignsCountCampaigns")}</span>
+          {!showAll && sortedCampaignRows.length > 25 ? <Button variant="outline" size="sm" onClick={() => setShowAll(true)}>{t("campaignsShowAll")}</Button> : null}
         </div>
       </SectionCard>
     </> : <>
-      {placementsQuery.isLoading ? <Msg t="Завантаження плейсментів…" /> : null}
-      {!placementsQuery.isLoading && placementsUnavailable ? <Msg t="Плейсменти поки недоступні. Кампанії працюють, але дані плейсментів треба перевірити в Supabase." /> : null}
-      {!placementsQuery.isLoading && !placementsUnavailable && sortedPlacementRows.length === 0 ? <Msg t="За вибраний період плейсменти не знайдені. Змініть період або перевірте імпорт вкладок з плейсментами." /> : null}
+      {placementsQuery.isLoading ? <Msg t={t("placementsLoading")} /> : null}
+      {!placementsQuery.isLoading && placementsUnavailable ? <Msg t={t("placementsUnavailable")} /> : null}
+      {!placementsQuery.isLoading && !placementsUnavailable && sortedPlacementRows.length === 0 ? <Msg t={t("placementsNoData")} /> : null}
       {shouldShowPlacementsData ? <>
-        <SectionCard title="Підсумок плейсментів" description="Зведені метрики за вибраний період"><KpiCards rows={placementSummaryCards} /></SectionCard>
-        <SectionCard title="Плейсменти" description="Ефективність плейсментів" noPadding>
-        <div className="px-4 pt-4 text-sm text-muted-foreground">Показано {visiblePlacementRows.length} з {sortedPlacementRows.length} плейсментів</div>
+        <SectionCard title={t("campaignsPlacementsSummaryTitle")} description={t("campaignsPlacementsSummaryDescription")}><KpiCards rows={placementSummaryCards} /></SectionCard>
+        <SectionCard title={t("placementsTableTitle")} description={t("placementsTableDescription")} noPadding>
+        <div className="px-4 pt-4 text-sm text-muted-foreground">{t("campaignsShown")} {visiblePlacementRows.length} {t("campaignsOf")} {sortedPlacementRows.length} {t("campaignsCountPlacements")}</div>
         <div className="overflow-x-auto">
-          <Table><TableHeader><TableRow><TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">Плейсмент</TableHead><TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">URL</TableHead><TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">Період</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">Витрати</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">Реги</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">CPL</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">Кліки</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">CPC</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">Охопл.</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">Конв. ленда</TableHead></TableRow></TableHeader><TableBody>{visiblePlacementRows.map((r, i) => <TableRow key={`${r.placement_name}-${r.landing_url}-${i}`}><TableCell className="max-w-[360px] truncate py-2 text-sm" title={r.placement_name || "—"}>{r.placement_name || "—"}</TableCell><TableCell className="whitespace-nowrap py-2 text-sm">{r.landing_url ? <a href={r.landing_url} target="_blank" rel="noreferrer" className="underline">Відкрити</a> : "—"}</TableCell><TableCell className="whitespace-nowrap py-2 text-sm">{formatPeriod(r.first_date, r.last_date)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{fmtCurrency(r.spend)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{fmtNum(r.registrations)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{formatCostPer(r.cpl)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{fmtNum(r.clicks)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{formatCostPer(r.cpc)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{fmtNum(r.reach)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{r.landing_conversion == null ? "—" : `${(r.landing_conversion * 100).toFixed(1)}%`}</TableCell></TableRow>)}</TableBody></Table>
+          <Table><TableHeader><TableRow><TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">{t("tablePlacement")}</TableHead><TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">{t("tableUrl")}</TableHead><TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">{t("tablePeriod")}</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">{t("tableSpend")}</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">{t("tableRegs")}</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">CPL</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">{t("tableClicks")}</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">CPC</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">{t("tableReachShort")}</TableHead><TableHead className="whitespace-nowrap py-2 text-right text-[10px] leading-tight tracking-normal">{t("tableLandingConvShort")}</TableHead></TableRow></TableHeader><TableBody>{visiblePlacementRows.map((r, i) => <TableRow key={`${r.placement_name}-${r.landing_url}-${i}`}><TableCell className="max-w-[360px] truncate py-2 text-sm" title={r.placement_name || "—"}>{r.placement_name || "—"}</TableCell><TableCell className="whitespace-nowrap py-2 text-sm">{r.landing_url ? <a href={r.landing_url} target="_blank" rel="noreferrer" className="underline">{t("tableOpen")}</a> : "—"}</TableCell><TableCell className="whitespace-nowrap py-2 text-sm">{formatPeriod(r.first_date, r.last_date)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{fmtCurrency(r.spend)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{fmtNum(r.registrations)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{formatCostPer(r.cpl)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{fmtNum(r.clicks)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{formatCostPer(r.cpc)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{fmtNum(r.reach)}</TableCell><TableCell className="whitespace-nowrap py-2 text-right text-sm num">{r.landing_conversion == null ? "—" : `${(r.landing_conversion * 100).toFixed(1)}%`}</TableCell></TableRow>)}</TableBody></Table>
         </div>
         <div className="flex items-center justify-between px-4 pb-4 pt-2 text-sm">
-          <span className="text-muted-foreground">Показано {visiblePlacementRows.length} з {sortedPlacementRows.length} плейсментів</span>
-          {!showAll && sortedPlacementRows.length > 25 ? <Button variant="outline" size="sm" onClick={() => setShowAll(true)}>Показати всі</Button> : null}
+          <span className="text-muted-foreground">{t("campaignsShown")} {visiblePlacementRows.length} {t("campaignsOf")} {sortedPlacementRows.length} {t("campaignsCountPlacements")}</span>
+          {!showAll && sortedPlacementRows.length > 25 ? <Button variant="outline" size="sm" onClick={() => setShowAll(true)}>{t("campaignsShowAll")}</Button> : null}
         </div>
         </SectionCard>
       </> : null}
     </>}
     {filteredBindingsRows.length > 0 ? <details className="rounded border">
-      <summary className="cursor-pointer px-4 py-3 text-sm font-medium">Додатково: стан звʼязків</summary>
-      <SectionCard title="Стан звʼязків" description="Підключені рекламні акаунти (опційно)" noPadding><Simple rows={filteredBindingsRows} columns={[{ key: "platform", label: "Платформа" }, { key: "ad_account_name", label: "Рекламний акаунт" }, { key: "mapping_status", label: "Статус мапінгу" }, { key: "binding_status", label: "Статус звʼязку" }, { key: "updated_at", label: "Оновлено" }]} empty="Додаткові дані про звʼязки недоступні." /></SectionCard>
+      <summary className="cursor-pointer px-4 py-3 text-sm font-medium">{t("campaignsExtraBindings")}</summary>
+      <SectionCard title={t("campaignsBindingsTitle")} description={t("campaignsBindingsDescription")} noPadding><Simple rows={filteredBindingsRows} columns={[{ key: "platform", label: t("tablePlatform") }, { key: "ad_account_name", label: t("tableAdAccount") }, { key: "mapping_status", label: t("tableMappingStatus") }, { key: "binding_status", label: t("tableBindingStatus") }, { key: "updated_at", label: t("tableUpdatedAt") }]} empty={t("bindingsEmpty")} /></SectionCard>
     </details>
     : null}
     {filteredAnomaliesRows.length > 0 ? <details className="rounded border">
-      <summary className="cursor-pointer px-4 py-3 text-sm font-medium">Додатково: аномалії</summary>
-      <SectionCard title="Аномалії" description="Потенційні аномалії кампаній (опційно)" noPadding><Simple rows={filteredAnomaliesRows} columns={[{ key: "severity", label: "Рівень" }, { key: "title", label: "Назва" }, { key: "reason", label: "Причина" }, { key: "created_at", label: "Створено" }]} empty="Додаткові дані про аномалії недоступні." /></SectionCard>
+      <summary className="cursor-pointer px-4 py-3 text-sm font-medium">{t("campaignsExtraAnomalies")}</summary>
+      <SectionCard title={t("campaignsAnomaliesTitle")} description={t("campaignsAnomaliesDescription")} noPadding><Simple rows={filteredAnomaliesRows} columns={[{ key: "severity", label: t("tableSeverity") }, { key: "title", label: t("tableTitle") }, { key: "reason", label: t("tableReason") }, { key: "created_at", label: t("tableCreatedAt") }]} empty={t("anomaliesEmpty")} /></SectionCard>
     </details>
     : null}
   </div></DashboardLayout>;
