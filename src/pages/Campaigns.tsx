@@ -245,7 +245,9 @@ function aggregatePlacements(rows: Row[]): PlacementAgg[] {
 const Msg = ({ t }: { t: string }) => <p className="rounded border p-3 text-sm text-muted-foreground">{t}</p>;
 
 function KpiCards({ rows }: { rows: { label: string; value: string }[] }) {
-  return <div className="grid grid-cols-[repeat(auto-fit,minmax(130px,1fr))] gap-3">{rows.map((r) => <div key={r.label} className="rounded-lg border p-2.5"><div className="text-xs text-muted-foreground">{r.label}</div><div className="mt-1 text-lg font-semibold num">{r.value}</div></div>)}</div>;
+  const wideCols = rows.length >= 8 ? "xl:grid-cols-8" : rows.length === 7 ? "xl:grid-cols-7" : "xl:grid-cols-6";
+
+  return <div className={`grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 ${wideCols}`}>{rows.map((r) => <div key={r.label} className="rounded-lg border p-2"><div className="truncate text-xs text-muted-foreground">{r.label}</div><div className="mt-1 text-base font-semibold num">{r.value}</div></div>)}</div>;
 }
 
 function readField(row: Row, keys: string[]) {
