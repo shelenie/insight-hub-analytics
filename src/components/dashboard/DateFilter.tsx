@@ -164,7 +164,8 @@ export function DateFilter() {
                       <ChevronRight className="h-3.5 w-3.5" />
                     </Button>
                   </div>
-                  <Calendar
+                  <div className="flex justify-center">
+                    <Calendar
                     mode="single"
                     selected={draftExactDate}
                     onSelect={(d) => {
@@ -175,6 +176,7 @@ export function DateFilter() {
                     className="rounded-md border bg-background pointer-events-auto"
                     initialFocus
                   />
+                  </div>
                   <div className="flex justify-end">
                     <Button size="sm" className="h-8" onClick={() => { f.setExactDate(draftExactDate); setOpen(false); }}>{t("apply")}</Button>
                   </div>
@@ -189,13 +191,15 @@ export function DateFilter() {
                       ? `${format(draftRange.from, "d MMMM yyyy", { locale: uk })} — ${format(draftRange.to, "d MMMM yyyy", { locale: uk })}`
                       : "Оберіть дату початку і дату завершення."}
                   </div>
-                  <Calendar
+                  <div className="flex justify-center">
+                    <Calendar
                     mode="range"
                     selected={draftRange}
                     onSelect={(r) => setDraftRange(r ?? {})}
                     className="rounded-md border bg-background pointer-events-auto"
                     initialFocus
                   />
+                  </div>
                   <div className="flex justify-end">
                     <Button size="sm" className="h-8" disabled={!draftRange.from || !draftRange.to} onClick={() => {
                         if (!draftRange.from || !draftRange.to) return;
