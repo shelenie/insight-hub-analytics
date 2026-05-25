@@ -1,9 +1,9 @@
 import { createContext, useContext, useMemo, useState, ReactNode } from "react";
-import { addDays, format, startOfMonth, startOfQuarter, subDays } from "date-fns";
+import { addDays, format, startOfMonth, startOfQuarter, startOfYear, subDays } from "date-fns";
 import { uk } from "date-fns/locale";
 
 export type DatePresetId =
-  | "today" | "yesterday" | "7d" | "30d" | "mtd" | "qtd";
+  | "today" | "yesterday" | "7d" | "30d" | "mtd" | "qtd" | "ytd";
 
 export type DateMode = "preset" | "exact" | "range";
 
@@ -35,6 +35,7 @@ function resolvePreset(id: DatePresetId, today = new Date()): { from: Date; to: 
     case "30d":       return { from: subDays(today, 29), to: today };
     case "mtd":       return { from: startOfMonth(today), to: today };
     case "qtd":       return { from: startOfQuarter(today), to: today };
+    case "ytd":       return { from: startOfYear(today), to: today };
   }
 }
 
@@ -70,6 +71,7 @@ export function DateFilterProvider({ children }: { children: ReactNode }) {
       "30d":     { uk: "Останні 30 днів", en: "Last 30 days" },
       mtd:       { uk: "З початку місяця", en: "Month to date" },
       qtd:       { uk: "З початку кварталу", en: "Quarter to date" },
+      ytd:       { uk: "З початку року", en: "Year to date" },
     };
     if (mode === "exact") {
       return lang === "uk"
