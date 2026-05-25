@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { addDays, differenceInCalendarDays, format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -46,7 +46,7 @@ type PlacementAgg = {
 export default function Campaigns() {
   const { session } = useAuth();
   const date = useDateFilter();
-  const { compareMode, compareDisplay } = usePreferences();
+  const { compareMode, compareDisplay, setPref } = usePreferences();
   const [queryText, setQueryText] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [selectedProject, setSelectedProject] = useState("all");
@@ -54,6 +54,17 @@ export default function Campaigns() {
   const [activeTab, setActiveTab] = useState<"campaigns" | "placements">("campaigns");
   const from = format(date.resolved.from, "yyyy-MM-dd");
   const to = format(date.resolved.to, "yyyy-MM-dd");
+  const dateSignature = `${date.mode}:${from}:${to}:${date.preset ?? ""}`;
+  const previousDateSignatureRef = useRef(dateSignature);
+
+  useEffect(() => {
+    if (previousDateSignatureRef.current !== dateSignature) {
+      previousDateSignatureRef.current = dateSignature;
+      // Comparison is reset on date changes to avoid stale deltas being shown for a new date selection.
+      if (compareMode !== "none") setPref("compareMode", "none");
+    }
+  }, [dateSignature, compareMode, setPref]);
+
   const comparisonRange = useMemo(() => {
     if (compareMode === "none") return null;
     // "yesterday" is only meaningful for exact-date mode; range comparisons should use "previous_period".
@@ -95,6 +106,20 @@ export default function Campaigns() {
     enabled: Boolean(session) && compareMode !== "none" && Boolean(comparisonRange),
     queryFn: async () => readPlacementsDaily(comparisonRange!.from, comparisonRange!.to),
   });
+
+  const handleRefresh = () => {
+    void query.refetch();
+    void placementsQuery.refetch();
+    if (compareMode !== "none" && comparisonRange) {
+      void comparisonQuery.refetch();
+      void comparisonPlacementsQuery.refetch();
+    }
+  };
+
+  const isRefreshing =
+    query.isFetching ||
+    placementsQuery.isFetching ||
+    (compareMode !== "none" && Boolean(comparisonRange) && (comparisonQuery.isFetching || comparisonPlacementsQuery.isFetching));
 
   const dailyRows = useMemo(() => (query.data?.daily.rows ?? []) as Row[], [query.data?.daily.rows]);
   const placementDailyRows = useMemo(() => (placementsQuery.data?.rows ?? []) as Row[], [placementsQuery.data?.rows]);
@@ -236,7 +261,7 @@ export default function Campaigns() {
   const placementsUnavailable = Boolean(placementsQuery.data?.unavailableReason);
   const shouldShowPlacementsData = !placementsQuery.isLoading && !placementsUnavailable && sortedPlacementRows.length > 0;
 
-  return <DashboardLayout title="Кампанії" subtitle="Ефективність рекламних кампаній"><div className="space-y-4"><FilterBar extra={<Input value={queryText} onChange={(e) => { setQueryText(e.target.value); setShowAll(false); }} placeholder={activeTab === "campaigns" ? "Пошук кампанії" : "Пошук плейсменту або URL"} className="h-8 w-[240px] text-xs" />} freshness={{ source: "Імпорт рекламних даних", status: "fresh", lastSync: "live" }} projectOptions={projectOptions} groupOptions={groupOptions} selectedProject={selectedProject} selectedGroup={selectedGroup} onProjectChange={(value) => { setSelectedProject(value); setShowAll(false); }} onGroupChange={(value) => { setSelectedGroup(value); setShowAll(false); }} />
+  return <DashboardLayout title="Кампанії" subtitle="Ефективність рекламних кампаній"><div className="space-y-4"><FilterBar extra={<Input value={queryText} onChange={(e) => { setQueryText(e.target.value); setShowAll(false); }} placeholder={activeTab === "campaigns" ? "Пошук кампанії" : "Пошук плейсменту або URL"} className="h-8 w-[240px] text-xs" />} freshness={{ source: "Імпорт рекламних даних", status: "fresh", lastSync: "live" }} projectOptions={projectOptions} groupOptions={groupOptions} selectedProject={selectedProject} selectedGroup={selectedGroup} onProjectChange={(value) => { setSelectedProject(value); setShowAll(false); }} onGroupChange={(value) => { setSelectedGroup(value); setShowAll(false); }} onRefresh={handleRefresh} isRefreshing={isRefreshing} />
     <div className="inline-flex rounded-lg border p-1">
       <Button variant={activeTab === "campaigns" ? "default" : "ghost"} size="sm" onClick={() => { setActiveTab("campaigns"); setShowAll(false); }}>Кампанії</Button>
       <Button variant={activeTab === "placements" ? "default" : "ghost"} size="sm" onClick={() => { setActiveTab("placements"); setShowAll(false); }}>Плейсменти</Button>
