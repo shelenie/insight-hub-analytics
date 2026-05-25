@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { format } from "date-fns";
+import { addDays, differenceInCalendarDays, format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { FilterBar } from "@/components/dashboard/FilterBar";
@@ -12,6 +12,7 @@ import { filterPlaceholderRows } from "@/lib/demoFilters";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { useDateFilter } from "@/filters/DateContext";
+import { usePreferences } from "@/preferences/PreferencesProvider";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 type Row = Record<string, string | number | boolean | null>;
@@ -45,6 +46,7 @@ type PlacementAgg = {
 export default function Campaigns() {
   const { session } = useAuth();
   const date = useDateFilter();
+  const { compareMode, compareDisplay } = usePreferences();
   const [queryText, setQueryText] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [selectedProject, setSelectedProject] = useState("all");
@@ -52,6 +54,18 @@ export default function Campaigns() {
   const [activeTab, setActiveTab] = useState<"campaigns" | "placements">("campaigns");
   const from = format(date.resolved.from, "yyyy-MM-dd");
   const to = format(date.resolved.to, "yyyy-MM-dd");
+  const comparisonRange = useMemo(() => {
+    if (compareMode === "none") return null;
+    // "yesterday" is only meaningful for exact-date mode; range comparisons should use "previous_period".
+    if (compareMode === "yesterday" && date.mode !== "exact") return null;
+    const days = differenceInCalendarDays(date.resolved.to, date.resolved.from) + 1;
+    const comparisonToDate = addDays(date.resolved.from, -1);
+    const comparisonFromDate = addDays(comparisonToDate, -(days - 1));
+    return {
+      from: format(comparisonFromDate, "yyyy-MM-dd"),
+      to: format(comparisonToDate, "yyyy-MM-dd"),
+    };
+  }, [compareMode, date.mode, date.resolved.from, date.resolved.to]);
 
   const query = useQuery({
     queryKey: ["campaigns-page", WORKSPACE_ID, from, to],
@@ -71,6 +85,16 @@ export default function Campaigns() {
     enabled: Boolean(session),
     queryFn: async () => readPlacementsDaily(from, to),
   });
+  const comparisonQuery = useQuery({
+    queryKey: ["campaigns-page-comparison", WORKSPACE_ID, compareMode, comparisonRange?.from, comparisonRange?.to],
+    enabled: Boolean(session) && compareMode !== "none" && Boolean(comparisonRange),
+    queryFn: async () => readDaily(comparisonRange!.from, comparisonRange!.to),
+  });
+  const comparisonPlacementsQuery = useQuery({
+    queryKey: ["campaigns-page-placements-comparison", WORKSPACE_ID, compareMode, comparisonRange?.from, comparisonRange?.to],
+    enabled: Boolean(session) && compareMode !== "none" && Boolean(comparisonRange),
+    queryFn: async () => readPlacementsDaily(comparisonRange!.from, comparisonRange!.to),
+  });
 
   const dailyRows = useMemo(() => (query.data?.daily.rows ?? []) as Row[], [query.data?.daily.rows]);
   const placementDailyRows = useMemo(() => (placementsQuery.data?.rows ?? []) as Row[], [placementsQuery.data?.rows]);
@@ -86,6 +110,19 @@ export default function Campaigns() {
     () => placementDailyRows.filter((row) => matchesFilters(row, selectedProject, selectedGroup)),
     [placementDailyRows, selectedProject, selectedGroup],
   );
+  const comparisonDailyRows = useMemo(() => (comparisonQuery.data?.rows ?? []) as Row[], [comparisonQuery.data?.rows]);
+  const comparisonPlacementDailyRows = useMemo(
+    () => (comparisonPlacementsQuery.data?.rows ?? []) as Row[],
+    [comparisonPlacementsQuery.data?.rows],
+  );
+  const filteredComparisonDailyRows = useMemo(
+    () => comparisonDailyRows.filter((row) => matchesFilters(row, selectedProject, selectedGroup)),
+    [comparisonDailyRows, selectedProject, selectedGroup],
+  );
+  const filteredComparisonPlacementDailyRows = useMemo(
+    () => comparisonPlacementDailyRows.filter((row) => matchesFilters(row, selectedProject, selectedGroup)),
+    [comparisonPlacementDailyRows, selectedProject, selectedGroup],
+  );
 
   const campaignRows = useMemo(() => aggregateCampaigns(filteredDailyRows), [filteredDailyRows]);
   const searchedCampaignRows = useMemo(
@@ -95,6 +132,11 @@ export default function Campaigns() {
   const sortedCampaignRows = useMemo(() => [...searchedCampaignRows].sort((a, b) => b.spend - a.spend), [searchedCampaignRows]);
   const visibleCampaignRows = useMemo(() => (showAll ? sortedCampaignRows.slice(0, 200) : sortedCampaignRows.slice(0, 25)), [showAll, sortedCampaignRows]);
   const placementRows = useMemo(() => aggregatePlacements(filteredPlacementDailyRows), [filteredPlacementDailyRows]);
+  const comparisonCampaignRows = useMemo(() => aggregateCampaigns(filteredComparisonDailyRows), [filteredComparisonDailyRows]);
+  const comparisonPlacementRows = useMemo(
+    () => aggregatePlacements(filteredComparisonPlacementDailyRows),
+    [filteredComparisonPlacementDailyRows],
+  );
   const searchedPlacementRows = useMemo(() => {
     const queryLower = queryText.toLowerCase();
     return placementRows.filter((r) => r.placement_name.toLowerCase().includes(queryLower) || r.landing_url.toLowerCase().includes(queryLower));
@@ -130,28 +172,54 @@ export default function Campaigns() {
       ),
     [searchedPlacementRows],
   );
+  const comparisonCampaignTotals = useMemo(
+    () =>
+      comparisonCampaignRows.reduce(
+        (acc, row) => {
+          acc.spend += row.spend;
+          acc.clicks += row.clicks;
+          acc.leads += row.leads;
+          acc.reach += row.reach;
+          return acc;
+        },
+        { spend: 0, clicks: 0, leads: 0, reach: 0 },
+      ),
+    [comparisonCampaignRows],
+  );
+  const comparisonPlacementTotals = useMemo(
+    () =>
+      comparisonPlacementRows.reduce(
+        (acc, row) => {
+          acc.spend += row.spend;
+          acc.clicks += row.clicks;
+          acc.registrations += row.registrations;
+          acc.reach += row.reach;
+          return acc;
+        },
+        { spend: 0, clicks: 0, registrations: 0, reach: 0 },
+      ),
+    [comparisonPlacementRows],
+  );
+  const showDeltas = compareMode !== "none" && Boolean(comparisonRange);
 
   const summaryCards = [
-    { label: "Витрати", value: fmtCurrency(totals.spend) },
-    { label: "Ліди", value: fmtNum(totals.leads) },
-    { label: "CPL", value: totals.leads > 0 ? fmtCurrency(totals.spend / totals.leads) : "—" },
-    { label: "Кліки", value: fmtNum(totals.clicks) },
-    { label: "CPC", value: totals.clicks > 0 ? fmtCurrency(totals.spend / totals.clicks) : "—" },
-    { label: "Охоплення", value: fmtNum(totals.reach) },
-    { label: "Кампаній", value: fmtNum(searchedCampaignRows.length) },
+    kpi("Витрати", totals.spend, comparisonCampaignTotals.spend, "money", compareDisplay, showDeltas),
+    kpi("Ліди", totals.leads, comparisonCampaignTotals.leads, "count", compareDisplay, showDeltas),
+    kpi("CPL", totals.leads > 0 ? totals.spend / totals.leads : null, comparisonCampaignTotals.leads > 0 ? comparisonCampaignTotals.spend / comparisonCampaignTotals.leads : null, "money", compareDisplay, showDeltas),
+    kpi("Кліки", totals.clicks, comparisonCampaignTotals.clicks, "count", compareDisplay, showDeltas),
+    kpi("CPC", totals.clicks > 0 ? totals.spend / totals.clicks : null, comparisonCampaignTotals.clicks > 0 ? comparisonCampaignTotals.spend / comparisonCampaignTotals.clicks : null, "money", compareDisplay, showDeltas),
+    kpi("Охоплення", totals.reach, comparisonCampaignTotals.reach, "count", compareDisplay, showDeltas),
+    kpi("Кампаній", searchedCampaignRows.length, comparisonCampaignRows.length, "count", compareDisplay, showDeltas),
   ];
   const placementSummaryCards = [
-    { label: "Витрати", value: fmtCurrency(placementTotals.spend) },
-    { label: "Реєстрації", value: fmtNum(placementTotals.registrations) },
-    { label: "CPL", value: placementTotals.registrations > 0 ? fmtCurrency(placementTotals.spend / placementTotals.registrations) : "—" },
-    { label: "Кліки", value: fmtNum(placementTotals.clicks) },
-    { label: "CPC", value: placementTotals.clicks > 0 ? fmtCurrency(placementTotals.spend / placementTotals.clicks) : "—" },
-    { label: "Охоплення", value: fmtNum(placementTotals.reach) },
-    { label: "Плейсментів", value: fmtNum(searchedPlacementRows.length) },
-    {
-      label: "Конверсія ленда",
-      value: placementTotals.clicks > 0 ? `${((placementTotals.registrations / placementTotals.clicks) * 100).toFixed(1)}%` : "—",
-    },
+    kpi("Витрати", placementTotals.spend, comparisonPlacementTotals.spend, "money", compareDisplay, showDeltas),
+    kpi("Реєстрації", placementTotals.registrations, comparisonPlacementTotals.registrations, "count", compareDisplay, showDeltas),
+    kpi("CPL", placementTotals.registrations > 0 ? placementTotals.spend / placementTotals.registrations : null, comparisonPlacementTotals.registrations > 0 ? comparisonPlacementTotals.spend / comparisonPlacementTotals.registrations : null, "money", compareDisplay, showDeltas),
+    kpi("Кліки", placementTotals.clicks, comparisonPlacementTotals.clicks, "count", compareDisplay, showDeltas),
+    kpi("CPC", placementTotals.clicks > 0 ? placementTotals.spend / placementTotals.clicks : null, comparisonPlacementTotals.clicks > 0 ? comparisonPlacementTotals.spend / comparisonPlacementTotals.clicks : null, "money", compareDisplay, showDeltas),
+    kpi("Охоплення", placementTotals.reach, comparisonPlacementTotals.reach, "count", compareDisplay, showDeltas),
+    kpi("Плейсментів", searchedPlacementRows.length, comparisonPlacementRows.length, "count", compareDisplay, showDeltas),
+    kpi("Конверсія ленда", placementTotals.clicks > 0 ? (placementTotals.registrations / placementTotals.clicks) * 100 : null, comparisonPlacementTotals.clicks > 0 ? (comparisonPlacementTotals.registrations / comparisonPlacementTotals.clicks) * 100 : null, "rate", compareDisplay, showDeltas),
   ];
 
   const filteredBindingsRows = useMemo(
@@ -247,7 +315,48 @@ const Msg = ({ t }: { t: string }) => <p className="rounded border p-3 text-sm t
 function KpiCards({ rows }: { rows: { label: string; value: string }[] }) {
   const wideCols = rows.length >= 8 ? "xl:grid-cols-8" : rows.length === 7 ? "xl:grid-cols-7" : "xl:grid-cols-6";
 
-  return <div className={`grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 ${wideCols}`}>{rows.map((r) => <div key={r.label} className="rounded-lg border p-2"><div className="truncate text-xs text-muted-foreground">{r.label}</div><div className="mt-1 text-base font-semibold num">{r.value}</div></div>)}</div>;
+  return <div className={`grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 ${wideCols}`}>{rows.map((r) => <div key={r.label} className="rounded-lg border p-2"><div className="truncate text-xs text-muted-foreground">{r.label}</div><div className="mt-1 text-base font-semibold num">{r.value}</div>{"delta" in r && r.delta ? <div className={`mt-1 text-xs ${r.delta.tone === "positive" ? "text-emerald-600" : r.delta.tone === "negative" ? "text-red-600" : "text-muted-foreground"}`}>{r.delta.text}</div> : null}</div>)}</div>;
+}
+
+type KpiKind = "money" | "count" | "rate";
+type KpiCard = { label: string; value: string; delta?: { text: string; tone: "positive" | "negative" | "neutral" } };
+
+function kpi(label: string, current: number | null, comparison: number | null, kind: KpiKind, compareDisplay: "percent" | "absolute", showDelta: boolean): KpiCard {
+  return {
+    label,
+    value: formatKpiValue(current, kind),
+    delta: showDelta ? buildDelta(current, comparison, kind, compareDisplay) : undefined,
+  };
+}
+
+function formatKpiValue(value: number | null, kind: KpiKind) {
+  if (value == null) return "—";
+  if (kind === "money") return fmtCurrency(value);
+  if (kind === "rate") return `${value.toFixed(1)}%`;
+  return fmtNum(value);
+}
+
+function buildDelta(current: number | null, comparison: number | null, kind: KpiKind, compareDisplay: "percent" | "absolute") {
+  if (current == null || comparison == null) return { text: "—", tone: "neutral" as const };
+  const absolute = current - comparison;
+  const percent = comparison === 0 ? null : (absolute / comparison) * 100;
+  const tone = absolute > 0 ? "positive" : absolute < 0 ? "negative" : "neutral";
+  if (compareDisplay === "percent") {
+    if (percent == null) return { text: "—", tone: "neutral" as const };
+    const sign = percent > 0 ? "+" : "";
+    return { text: `${sign}${percent.toFixed(1)}%`, tone };
+  }
+  const sign = absolute > 0 ? "+" : "";
+  if (kind === "money") return { text: formatSignedCurrency(absolute), tone };
+  if (kind === "rate") return { text: `${sign}${absolute.toFixed(1)} п.п.`, tone };
+  return { text: `${sign}${fmtNum(absolute)}`, tone };
+}
+
+function formatSignedCurrency(value: number) {
+  const base = fmtCurrency(Math.abs(value));
+  if (value > 0) return `+${base}`;
+  if (value < 0) return `-${base}`;
+  return base;
 }
 
 function readField(row: Row, keys: string[]) {
