@@ -203,23 +203,23 @@ export default function Campaigns() {
   const showDeltas = compareMode !== "none" && Boolean(comparisonRange);
 
   const summaryCards = [
-    kpi("Витрати", totals.spend, comparisonCampaignTotals.spend, "money", compareDisplay, showDeltas),
-    kpi("Ліди", totals.leads, comparisonCampaignTotals.leads, "count", compareDisplay, showDeltas),
-    kpi("CPL", totals.leads > 0 ? totals.spend / totals.leads : null, comparisonCampaignTotals.leads > 0 ? comparisonCampaignTotals.spend / comparisonCampaignTotals.leads : null, "money", compareDisplay, showDeltas),
-    kpi("Кліки", totals.clicks, comparisonCampaignTotals.clicks, "count", compareDisplay, showDeltas),
-    kpi("CPC", totals.clicks > 0 ? totals.spend / totals.clicks : null, comparisonCampaignTotals.clicks > 0 ? comparisonCampaignTotals.spend / comparisonCampaignTotals.clicks : null, "money", compareDisplay, showDeltas),
-    kpi("Охоплення", totals.reach, comparisonCampaignTotals.reach, "count", compareDisplay, showDeltas),
-    kpi("Кампаній", searchedCampaignRows.length, comparisonCampaignRows.length, "count", compareDisplay, showDeltas),
+    kpi("Витрати", totals.spend, comparisonCampaignTotals.spend, "money", compareDisplay, showDeltas, "neutral"),
+    kpi("Ліди", totals.leads, comparisonCampaignTotals.leads, "count", compareDisplay, showDeltas, "higher_good"),
+    kpi("CPL", totals.leads > 0 ? totals.spend / totals.leads : null, comparisonCampaignTotals.leads > 0 ? comparisonCampaignTotals.spend / comparisonCampaignTotals.leads : null, "money", compareDisplay, showDeltas, "lower_good"),
+    kpi("Кліки", totals.clicks, comparisonCampaignTotals.clicks, "count", compareDisplay, showDeltas, "higher_good"),
+    kpi("CPC", totals.clicks > 0 ? totals.spend / totals.clicks : null, comparisonCampaignTotals.clicks > 0 ? comparisonCampaignTotals.spend / comparisonCampaignTotals.clicks : null, "money", compareDisplay, showDeltas, "lower_good"),
+    kpi("Охоплення", totals.reach, comparisonCampaignTotals.reach, "count", compareDisplay, showDeltas, "higher_good"),
+    kpi("Кампаній", searchedCampaignRows.length, comparisonCampaignRows.length, "count", compareDisplay, showDeltas, "neutral"),
   ];
   const placementSummaryCards = [
-    kpi("Витрати", placementTotals.spend, comparisonPlacementTotals.spend, "money", compareDisplay, showDeltas),
-    kpi("Реєстрації", placementTotals.registrations, comparisonPlacementTotals.registrations, "count", compareDisplay, showDeltas),
-    kpi("CPL", placementTotals.registrations > 0 ? placementTotals.spend / placementTotals.registrations : null, comparisonPlacementTotals.registrations > 0 ? comparisonPlacementTotals.spend / comparisonPlacementTotals.registrations : null, "money", compareDisplay, showDeltas),
-    kpi("Кліки", placementTotals.clicks, comparisonPlacementTotals.clicks, "count", compareDisplay, showDeltas),
-    kpi("CPC", placementTotals.clicks > 0 ? placementTotals.spend / placementTotals.clicks : null, comparisonPlacementTotals.clicks > 0 ? comparisonPlacementTotals.spend / comparisonPlacementTotals.clicks : null, "money", compareDisplay, showDeltas),
-    kpi("Охоплення", placementTotals.reach, comparisonPlacementTotals.reach, "count", compareDisplay, showDeltas),
-    kpi("Плейсментів", searchedPlacementRows.length, comparisonPlacementRows.length, "count", compareDisplay, showDeltas),
-    kpi("Конверсія ленда", placementTotals.clicks > 0 ? (placementTotals.registrations / placementTotals.clicks) * 100 : null, comparisonPlacementTotals.clicks > 0 ? (comparisonPlacementTotals.registrations / comparisonPlacementTotals.clicks) * 100 : null, "rate", compareDisplay, showDeltas),
+    kpi("Витрати", placementTotals.spend, comparisonPlacementTotals.spend, "money", compareDisplay, showDeltas, "neutral"),
+    kpi("Реєстрації", placementTotals.registrations, comparisonPlacementTotals.registrations, "count", compareDisplay, showDeltas, "higher_good"),
+    kpi("CPL", placementTotals.registrations > 0 ? placementTotals.spend / placementTotals.registrations : null, comparisonPlacementTotals.registrations > 0 ? comparisonPlacementTotals.spend / comparisonPlacementTotals.registrations : null, "money", compareDisplay, showDeltas, "lower_good"),
+    kpi("Кліки", placementTotals.clicks, comparisonPlacementTotals.clicks, "count", compareDisplay, showDeltas, "higher_good"),
+    kpi("CPC", placementTotals.clicks > 0 ? placementTotals.spend / placementTotals.clicks : null, comparisonPlacementTotals.clicks > 0 ? comparisonPlacementTotals.spend / comparisonPlacementTotals.clicks : null, "money", compareDisplay, showDeltas, "lower_good"),
+    kpi("Охоплення", placementTotals.reach, comparisonPlacementTotals.reach, "count", compareDisplay, showDeltas, "higher_good"),
+    kpi("Плейсментів", searchedPlacementRows.length, comparisonPlacementRows.length, "count", compareDisplay, showDeltas, "neutral"),
+    kpi("Конверсія ленда", placementTotals.clicks > 0 ? (placementTotals.registrations / placementTotals.clicks) * 100 : null, comparisonPlacementTotals.clicks > 0 ? (comparisonPlacementTotals.registrations / comparisonPlacementTotals.clicks) * 100 : null, "rate", compareDisplay, showDeltas, "higher_good"),
   ];
 
   const filteredBindingsRows = useMemo(
@@ -319,13 +319,22 @@ function KpiCards({ rows }: { rows: { label: string; value: string }[] }) {
 }
 
 type KpiKind = "money" | "count" | "rate";
+type KpiDirection = "higher_good" | "lower_good" | "neutral";
 type KpiCard = { label: string; value: string; delta?: { text: string; tone: "positive" | "negative" | "neutral" } };
 
-function kpi(label: string, current: number | null, comparison: number | null, kind: KpiKind, compareDisplay: "percent" | "absolute", showDelta: boolean): KpiCard {
+function kpi(
+  label: string,
+  current: number | null,
+  comparison: number | null,
+  kind: KpiKind,
+  compareDisplay: "percent" | "absolute",
+  showDelta: boolean,
+  direction: KpiDirection,
+): KpiCard {
   return {
     label,
     value: formatKpiValue(current, kind),
-    delta: showDelta ? buildDelta(current, comparison, kind, compareDisplay) : undefined,
+    delta: showDelta ? buildDelta(current, comparison, kind, compareDisplay, direction) : undefined,
   };
 }
 
@@ -336,11 +345,17 @@ function formatKpiValue(value: number | null, kind: KpiKind) {
   return fmtNum(value);
 }
 
-function buildDelta(current: number | null, comparison: number | null, kind: KpiKind, compareDisplay: "percent" | "absolute") {
+function buildDelta(
+  current: number | null,
+  comparison: number | null,
+  kind: KpiKind,
+  compareDisplay: "percent" | "absolute",
+  direction: KpiDirection,
+) {
   if (current == null || comparison == null) return { text: "—", tone: "neutral" as const };
   const absolute = current - comparison;
   const percent = comparison === 0 ? null : (absolute / comparison) * 100;
-  const tone = absolute > 0 ? "positive" : absolute < 0 ? "negative" : "neutral";
+  const tone = resolveDeltaTone(absolute, direction);
   if (compareDisplay === "percent") {
     if (percent == null) return { text: "—", tone: "neutral" as const };
     const sign = percent > 0 ? "+" : "";
@@ -350,6 +365,12 @@ function buildDelta(current: number | null, comparison: number | null, kind: Kpi
   if (kind === "money") return { text: formatSignedCurrency(absolute), tone };
   if (kind === "rate") return { text: `${sign}${absolute.toFixed(1)} п.п.`, tone };
   return { text: `${sign}${fmtNum(absolute)}`, tone };
+}
+
+function resolveDeltaTone(absolute: number, direction: KpiDirection): "positive" | "negative" | "neutral" {
+  if (absolute === 0 || direction === "neutral") return "neutral";
+  if (direction === "higher_good") return absolute > 0 ? "positive" : "negative";
+  return absolute > 0 ? "negative" : "positive";
 }
 
 function formatSignedCurrency(value: number) {
