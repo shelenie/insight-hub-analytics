@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Search, Bell, ChevronRight, Activity } from "lucide-react";
@@ -21,9 +21,43 @@ interface DashboardLayoutProps {
 
 export function DashboardLayout({ title, subtitle, actions, sync, children }: DashboardLayoutProps) {
   const { t } = useI18n();
+  const navigate = useNavigate();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isApplePlatform, setIsApplePlatform] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const [showSearchResults, setShowSearchResults] = useState(false);
   const shortcutLabel = useMemo(() => (isApplePlatform ? "⌘K" : "Ctrl K"), [isApplePlatform]);
+
+  const searchableRoutes = useMemo(
+    () => [
+      { labelUk: "Огляд", labelEn: "Overview", path: "/", aliases: ["робочий простір", "workspace"] },
+      { labelUk: "Воронка", labelEn: "Funnel", path: "/funnel", aliases: [] },
+      { labelUk: "Кампанії", labelEn: "Campaigns", path: "/campaigns", aliases: [] },
+      { labelUk: "Продажі", labelEn: "Sales", path: "/sales", aliases: [] },
+      { labelUk: "Імпорти", labelEn: "Imports", path: "/imports", aliases: ["якість даних", "data quality"] },
+      { labelUk: "Онбординг", labelEn: "Onboarding", path: "/onboarding", aliases: [] },
+      { labelUk: "Звʼязки даних", labelEn: "Data bindings", path: "/bindings", aliases: ["bindings"] },
+      { labelUk: "Telegram", labelEn: "Alerts", path: "/alerts", aliases: ["сповіщення", "notifications"] },
+      { labelUk: "Ads конектори", labelEn: "Ads connectors", path: "/ads-connectors", aliases: [] },
+      { labelUk: "AI-асистент", labelEn: "AI assistant", path: "/assistant", aliases: [] },
+    ],
+    [],
+  );
+
+  const normalizedQuery = searchValue.trim().toLowerCase();
+  const matchedRoutes = useMemo(() => {
+    if (!normalizedQuery) return [];
+    return searchableRoutes.filter((route) => {
+      const haystack = [route.labelUk, route.labelEn, route.path, ...route.aliases].join(" ").toLowerCase();
+      return haystack.includes(normalizedQuery);
+    });
+  }, [normalizedQuery, searchableRoutes]);
+
+  const navigateToResult = (path: string) => {
+    navigate(path);
+    setSearchValue("");
+    setShowSearchResults(false);
+  };
 
   useEffect(() => {
     const platform = navigator.platform ?? "";
@@ -36,11 +70,12 @@ export function DashboardLayout({ title, subtitle, actions, sync, children }: Da
       if (!shouldFocusSearch || event.key.toLowerCase() !== "k") return;
       event.preventDefault();
       searchInputRef.current?.focus();
+      setShowSearchResults(Boolean(searchValue.trim()));
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [searchValue]);
 
   return (
     <SidebarProvider>
@@ -54,7 +89,9 @@ export function DashboardLayout({ title, subtitle, actions, sync, children }: Da
 
             {/* Context group: workspace › page */}
             <div className="hidden min-w-0 items-center gap-1.5 text-[12.5px] md:flex">
-              <span className="text-muted-foreground/80">{t("workspace")}</span>
+              <Link to="/" aria-label="Перейти до огляду" className="text-muted-foreground/80 transition-colors hover:text-foreground/80">
+                {t("workspace")}
+              </Link>
               <ChevronRight className="h-3 w-3 text-muted-foreground/50" />
               <span className="truncate font-medium tracking-tight text-foreground/90">{title}</span>
             </div>
@@ -65,13 +102,58 @@ export function DashboardLayout({ title, subtitle, actions, sync, children }: Da
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/70" />
                 <Input
                   ref={searchInputRef}
-                  placeholder={t("searchPlaceholder")}
-                  aria-label={`${t("searchPlaceholder")} (${shortcutLabel})`}
+                  value={searchValue}
+                  onChange={(e) => {
+                    setSearchValue(e.target.value);
+                    setShowSearchResults(Boolean(e.target.value.trim()));
+                  }}
+                  onFocus={() => setShowSearchResults(Boolean(searchValue.trim()))}
+                  onBlur={() => {
+                    setTimeout(() => setShowSearchResults(false), 120);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape") {
+                      setSearchValue("");
+                      setShowSearchResults(false);
+                    }
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      if (matchedRoutes.length > 0) {
+                        navigateToResult(matchedRoutes[0].path);
+                      }
+                    }
+                  }}
+                  placeholder="Пошук розділів"
+                  aria-label={`Пошук розділів (${shortcutLabel})`}
                   className="h-8 w-[260px] rounded-md border-border/70 bg-background/60 pl-8 pr-12 text-[12.5px] shadow-none focus-visible:ring-1 focus-visible:ring-primary/40"
                 />
                 <kbd className="pointer-events-none absolute right-2 top-1/2 hidden -translate-y-1/2 select-none items-center gap-0.5 rounded border border-border/70 bg-muted/60 px-1.5 py-px text-[10px] font-medium text-muted-foreground xl:inline-flex">
                   {shortcutLabel}
                 </kbd>
+
+                {showSearchResults && (
+                  <div className="absolute left-0 right-0 mt-1 overflow-hidden rounded-md border border-border/70 bg-popover shadow-lg">
+                    {matchedRoutes.length > 0 ? (
+                      <ul className="py-1">
+                        {matchedRoutes.map((route) => (
+                          <li key={route.path}>
+                            <button
+                              type="button"
+                              className="flex w-full items-center justify-between px-3 py-1.5 text-left text-xs hover:bg-muted/60"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => navigateToResult(route.path)}
+                            >
+                              <span>{route.labelUk}</span>
+                              <span className="text-muted-foreground">{route.path}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="px-3 py-2 text-xs text-muted-foreground">Нічого не знайдено</div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div className="mx-1 hidden h-5 w-px bg-border/70 lg:block" />
