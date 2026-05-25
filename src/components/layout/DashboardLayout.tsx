@@ -20,7 +20,7 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ title, subtitle, actions, sync, children }: DashboardLayoutProps) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const navigate = useNavigate();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isApplePlatform, setIsApplePlatform] = useState(false);
@@ -89,7 +89,7 @@ export function DashboardLayout({ title, subtitle, actions, sync, children }: Da
 
             {/* Context group: workspace › page */}
             <div className="hidden min-w-0 items-center gap-1.5 text-[12.5px] md:flex">
-              <Link to="/" aria-label="Перейти до огляду" className="text-muted-foreground/80 transition-colors hover:text-foreground/80">
+              <Link to="/" aria-label={t("goToOverview")} className="text-muted-foreground/80 transition-colors hover:text-foreground/80">
                 {t("workspace")}
               </Link>
               <ChevronRight className="h-3 w-3 text-muted-foreground/50" />
@@ -143,7 +143,7 @@ export function DashboardLayout({ title, subtitle, actions, sync, children }: Da
                               onMouseDown={(e) => e.preventDefault()}
                               onClick={() => navigateToResult(route.path)}
                             >
-                              <span>{route.labelUk}</span>
+                              <span>{lang === "en" ? route.labelEn : route.labelUk}</span>
                               <span className="text-muted-foreground">{route.path}</span>
                             </button>
                           </li>
@@ -203,7 +203,7 @@ export function DashboardLayout({ title, subtitle, actions, sync, children }: Da
 }
 
 function SyncPill({ sync }: { sync: { source?: string; lastSync: string; status?: "fresh" | "stale" | "failed" } }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const status = sync.status ?? "fresh";
   const dot =
     status === "fresh"
