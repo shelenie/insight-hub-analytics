@@ -29,12 +29,15 @@ export function DateFilter() {
   const [draftExactDate, setDraftExactDate] = useState<Date>(f.exactDate);
   const [draftExactInput, setDraftExactInput] = useState(format(f.exactDate, "dd.MM.yyyy"));
   const [draftRange, setDraftRange] = useState<{ from?: Date; to?: Date }>({ from: f.rangeFrom, to: f.rangeTo });
+  const [exactMonth, setExactMonth] = useState<Date>(f.exactDate);
+  const [rangeMonth, setRangeMonth] = useState<Date>(f.rangeFrom ?? f.rangeTo ?? f.exactDate);
 
   function onExactInputBlur() {
     const parsed = parse(draftExactInput, "dd.MM.yyyy", new Date());
     if (isValid(parsed)) {
       setDraftExactDate(parsed);
       setDraftExactInput(format(parsed, "dd.MM.yyyy"));
+      setExactMonth(parsed);
     } else {
       setDraftExactInput(format(draftExactDate, "dd.MM.yyyy"));
     }
@@ -70,6 +73,8 @@ export function DateFilter() {
             setDraftExactDate(f.exactDate);
             setDraftExactInput(format(f.exactDate, "dd.MM.yyyy"));
             setDraftRange({ from: f.rangeFrom, to: f.rangeTo });
+            setExactMonth(f.exactDate);
+            setRangeMonth(f.rangeFrom ?? f.rangeTo ?? f.exactDate);
           }
         }}
       >
@@ -139,6 +144,7 @@ export function DateFilter() {
                         const nextDate = subDays(draftExactDate, 1);
                         setDraftExactDate(nextDate);
                         setDraftExactInput(format(nextDate, "dd.MM.yyyy"));
+                        setExactMonth(nextDate);
                       }}
                       aria-label="Prev day"
                     >
@@ -158,6 +164,7 @@ export function DateFilter() {
                         const nextDate = addDays(draftExactDate, 1);
                         setDraftExactDate(nextDate);
                         setDraftExactInput(format(nextDate, "dd.MM.yyyy"));
+                        setExactMonth(nextDate);
                       }}
                       aria-label="Next day"
                     >
@@ -172,7 +179,10 @@ export function DateFilter() {
                       if (!d) return;
                       setDraftExactDate(d);
                       setDraftExactInput(format(d, "dd.MM.yyyy"));
+                      setExactMonth(d);
                     }}
+                    month={exactMonth}
+                    onMonthChange={setExactMonth}
                     className="rounded-md border bg-background pointer-events-auto"
                     initialFocus
                   />
@@ -195,7 +205,12 @@ export function DateFilter() {
                     <Calendar
                     mode="range"
                     selected={draftRange}
-                    onSelect={(r) => setDraftRange(r ?? {})}
+                    onSelect={(r) => {
+                      if (r?.from) setRangeMonth(r.from);
+                      setDraftRange(r ?? {});
+                    }}
+                    month={rangeMonth}
+                    onMonthChange={setRangeMonth}
                     className="rounded-md border bg-background pointer-events-auto"
                     initialFocus
                   />

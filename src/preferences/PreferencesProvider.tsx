@@ -26,7 +26,7 @@ const DEFAULTS: Preferences = {
   tableDensity: "comfortable",
   currency: "USD",
   showAiSummary: true,
-  compareMode: "previous_period",
+  compareMode: "none",
   compareDisplay: "percent",
 };
 
@@ -45,7 +45,7 @@ function loadPrefs(): Preferences {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULTS;
     const parsed = JSON.parse(raw) as Partial<Preferences>;
-    return { ...DEFAULTS, ...parsed };
+    return { ...DEFAULTS, ...parsed, compareMode: "none" };
   } catch {
     return DEFAULTS;
   }

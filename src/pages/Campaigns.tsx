@@ -230,18 +230,18 @@ export default function Campaigns() {
   const summaryCards = [
     kpi("Витрати", totals.spend, comparisonCampaignTotals.spend, "money", compareDisplay, showDeltas, "neutral"),
     kpi("Ліди", totals.leads, comparisonCampaignTotals.leads, "count", compareDisplay, showDeltas, "higher_good"),
-    kpi("CPL", totals.leads > 0 ? totals.spend / totals.leads : null, comparisonCampaignTotals.leads > 0 ? comparisonCampaignTotals.spend / comparisonCampaignTotals.leads : null, "money", compareDisplay, showDeltas, "lower_good"),
+    kpi("CPL", totals.leads > 0 ? totals.spend / totals.leads : null, comparisonCampaignTotals.leads > 0 ? comparisonCampaignTotals.spend / comparisonCampaignTotals.leads : null, "cost_per", compareDisplay, showDeltas, "lower_good"),
     kpi("Кліки", totals.clicks, comparisonCampaignTotals.clicks, "count", compareDisplay, showDeltas, "higher_good"),
-    kpi("CPC", totals.clicks > 0 ? totals.spend / totals.clicks : null, comparisonCampaignTotals.clicks > 0 ? comparisonCampaignTotals.spend / comparisonCampaignTotals.clicks : null, "money", compareDisplay, showDeltas, "lower_good"),
+    kpi("CPC", totals.clicks > 0 ? totals.spend / totals.clicks : null, comparisonCampaignTotals.clicks > 0 ? comparisonCampaignTotals.spend / comparisonCampaignTotals.clicks : null, "cost_per", compareDisplay, showDeltas, "lower_good"),
     kpi("Охоплення", totals.reach, comparisonCampaignTotals.reach, "count", compareDisplay, showDeltas, "higher_good"),
     kpi("Кампаній", searchedCampaignRows.length, comparisonCampaignRows.length, "count", compareDisplay, showDeltas, "neutral"),
   ];
   const placementSummaryCards = [
     kpi("Витрати", placementTotals.spend, comparisonPlacementTotals.spend, "money", compareDisplay, showDeltas, "neutral"),
     kpi("Реєстрації", placementTotals.registrations, comparisonPlacementTotals.registrations, "count", compareDisplay, showDeltas, "higher_good"),
-    kpi("CPL", placementTotals.registrations > 0 ? placementTotals.spend / placementTotals.registrations : null, comparisonPlacementTotals.registrations > 0 ? comparisonPlacementTotals.spend / comparisonPlacementTotals.registrations : null, "money", compareDisplay, showDeltas, "lower_good"),
+    kpi("CPL", placementTotals.registrations > 0 ? placementTotals.spend / placementTotals.registrations : null, comparisonPlacementTotals.registrations > 0 ? comparisonPlacementTotals.spend / comparisonPlacementTotals.registrations : null, "cost_per", compareDisplay, showDeltas, "lower_good"),
     kpi("Кліки", placementTotals.clicks, comparisonPlacementTotals.clicks, "count", compareDisplay, showDeltas, "higher_good"),
-    kpi("CPC", placementTotals.clicks > 0 ? placementTotals.spend / placementTotals.clicks : null, comparisonPlacementTotals.clicks > 0 ? comparisonPlacementTotals.spend / comparisonPlacementTotals.clicks : null, "money", compareDisplay, showDeltas, "lower_good"),
+    kpi("CPC", placementTotals.clicks > 0 ? placementTotals.spend / placementTotals.clicks : null, comparisonPlacementTotals.clicks > 0 ? comparisonPlacementTotals.spend / comparisonPlacementTotals.clicks : null, "cost_per", compareDisplay, showDeltas, "lower_good"),
     kpi("Охоплення", placementTotals.reach, comparisonPlacementTotals.reach, "count", compareDisplay, showDeltas, "higher_good"),
     kpi("Плейсментів", searchedPlacementRows.length, comparisonPlacementRows.length, "count", compareDisplay, showDeltas, "neutral"),
     kpi("Конверсія ленда", placementTotals.clicks > 0 ? (placementTotals.registrations / placementTotals.clicks) * 100 : null, comparisonPlacementTotals.clicks > 0 ? (comparisonPlacementTotals.registrations / comparisonPlacementTotals.clicks) * 100 : null, "rate", compareDisplay, showDeltas, "higher_good"),
@@ -343,7 +343,7 @@ function KpiCards({ rows }: { rows: { label: string; value: string }[] }) {
   return <div className={`grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 ${wideCols}`}>{rows.map((r) => <div key={r.label} className="rounded-lg border p-2"><div className="truncate text-xs text-muted-foreground">{r.label}</div><div className="mt-1 text-base font-semibold num">{r.value}</div>{"delta" in r && r.delta ? <div className={`mt-1 text-xs ${r.delta.tone === "positive" ? "text-emerald-600" : r.delta.tone === "negative" ? "text-red-600" : "text-muted-foreground"}`}>{r.delta.text}</div> : null}</div>)}</div>;
 }
 
-type KpiKind = "money" | "count" | "rate";
+type KpiKind = "money" | "count" | "rate" | "cost_per";
 type KpiDirection = "higher_good" | "lower_good" | "neutral";
 type KpiCard = { label: string; value: string; delta?: { text: string; tone: "positive" | "negative" | "neutral" } };
 
@@ -366,6 +366,7 @@ function kpi(
 function formatKpiValue(value: number | null, kind: KpiKind) {
   if (value == null) return "—";
   if (kind === "money") return fmtCurrency(value);
+  if (kind === "cost_per") return formatCostPer(value);
   if (kind === "rate") return `${value.toFixed(1)}%`;
   return fmtNum(value);
 }
@@ -388,6 +389,7 @@ function buildDelta(
   }
   const sign = absolute > 0 ? "+" : "";
   if (kind === "money") return { text: formatSignedCurrency(absolute), tone };
+  if (kind === "cost_per") return { text: formatSignedCostPer(absolute), tone };
   if (kind === "rate") return { text: `${sign}${absolute.toFixed(1)} п.п.`, tone };
   return { text: `${sign}${fmtNum(absolute)}`, tone };
 }
@@ -400,6 +402,18 @@ function resolveDeltaTone(absolute: number, direction: KpiDirection): "positive"
 
 function formatSignedCurrency(value: number) {
   const base = fmtCurrency(Math.abs(value));
+  if (value > 0) return `+${base}`;
+  if (value < 0) return `-${base}`;
+  return base;
+}
+
+function formatCostPer(value: number | null) {
+  if (value == null) return "—";
+  return `$${value.toFixed(2)}`;
+}
+
+function formatSignedCostPer(value: number) {
+  const base = `$${Math.abs(value).toFixed(2)}`;
   if (value > 0) return `+${base}`;
   if (value < 0) return `-${base}`;
   return base;
