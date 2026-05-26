@@ -365,7 +365,7 @@ export const translations = {
   dailyTrendDesc: { uk: "Реєстрації та продажі", en: "Registrations & sales" },
   planVsFact: { uk: "План vs факт продажів", en: "Sales plan vs fact" },
   weekly: { uk: "Тижнево", en: "Weekly" },
-  conversionsDataStatus: { uk: "Дані: v_unified_conversions_* views · LIVE", en: "Data: v_unified_conversions_* views · LIVE" },
+  conversionsDataStatus: { uk: "Дані: ІМПОРТ КОНВЕРСІЙ · LIVE", en: "Data: CONVERSIONS IMPORT · LIVE" },
   conversionsSignIn: { uk: "Увійдіть, щоб переглянути конверсії.", en: "Sign in to view conversions." },
   conversionsLoading: { uk: "Завантаження конверсій…", en: "Loading conversions…" },
   conversionsNoData: { uk: "Дані конверсій поки не знайдені. Перевірте імпорт реєстрацій, анкет, заявок, бронювань або платежів.", en: "No conversion data found yet. Check registration, questionnaire, application, booking, or payment imports." },
@@ -421,6 +421,10 @@ export const translations = {
   conversionsPaymentsLabel: { uk: "Платежі", en: "Payments" },
   conversionsExtraContext: { uk: "Додатково: контекст клієнта / проєкту / воронки", en: "Additional: client/project/funnel context" },
   conversionsExtraBindings: { uk: "Додатково: звʼязки даних", en: "Additional: data bindings" },
+  conversionsContextClient: { uk: "Клієнт", en: "Client" },
+  conversionsContextProject: { uk: "Проєкт", en: "Project" },
+  conversionsContextFunnel: { uk: "Воронка", en: "Funnel" },
+  conversionsContextStatus: { uk: "Статус", en: "Status" },
 
   // Campaigns
   totalSpend: { uk: "Усього витрат", en: "Total spend" },

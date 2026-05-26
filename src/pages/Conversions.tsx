@@ -52,9 +52,9 @@ export default function Conversions() {
     enabled: Boolean(session),
     queryFn: async () => {
       const [stageEvents, paymentRecords, paymentLines, onboarding, bindings] = await Promise.all([
-        readView("v_unified_conversions_stage_events", true, fromIso, toIso),
-        readView("v_unified_conversions_payment_records", true, fromIso, toIso),
-        readView("v_unified_conversions_payment_lines", true, fromIso, toIso),
+        readViewPaged("v_unified_conversions_stage_events", true, fromIso, toIso, "metric_date"),
+        readViewPaged("v_unified_conversions_payment_records", true, fromIso, toIso, "metric_date"),
+        readViewPaged("v_unified_conversions_payment_lines", true, fromIso, toIso, "metric_date"),
         readView("v_onboarding_hierarchy", true),
         readView("v_project_data_bindings", true),
       ]);
@@ -72,14 +72,18 @@ export default function Conversions() {
   return <DashboardLayout title={t("funnelTitle")} subtitle={t("funnelSubtitle")}>
     <div className="space-y-4">
       <div className="rounded border p-3">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
           <p className="text-xs font-medium">{t("filters")}</p>
           <DateFilter />
-          <p className="inline-flex rounded border px-2 py-1 text-xs text-muted-foreground">{t("conversionsDataStatus")}</p>
+          </div>
+          <div className="ml-auto flex flex-wrap items-center gap-2">
+          <p className="inline-flex items-center gap-1.5 rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{t("conversionsDataStatus")}</p>
           <Button size="sm" variant="outline" className="h-8" onClick={() => { boundsQuery.refetch(); dataQuery.refetch(); }} disabled={isRefreshing}>
             <RefreshCw className={`mr-1 h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
             {t("refresh")}
           </Button>
+          </div>
         </div>
         <p className="mt-2 text-xs text-muted-foreground">{date.contextLabel(lang)}</p>
       </div>
@@ -139,7 +143,7 @@ export default function Conversions() {
 
         <SectionCard title={t("conversionsStageTableTitle")} description={t("conversionsStageTableDesc")} noPadding><Table><TableHeader><TableRow><TableHead>{t("conversionsThStage")}</TableHead><TableHead className="text-right">{t("conversionsThEvents")}</TableHead><TableHead className="text-right">{t("conversionsThUniqueContacts")}</TableHead><TableHead>{t("conversionsThFirstDate")}</TableHead><TableHead>{t("conversionsThLastDate")}</TableHead></TableRow></TableHeader><TableBody>{aggregates.stageRows.map((row, idx) => <TableRow key={idx}><TableCell>{getStageLabel(String(row.stage ?? "").toLowerCase(), row.stage_label, lang)}</TableCell><TableCell className="text-right num">{fmtNum(Number(row.events_count ?? 0))}</TableCell><TableCell className="text-right num">{fmtNum(Number(row.unique_contacts ?? 0))}</TableCell><TableCell>{formatShortDate(row.first_date)}</TableCell><TableCell>{formatShortDate(row.last_date)}</TableCell></TableRow>)}</TableBody></Table></SectionCard>
 
-        {filteredOnboardingRows.length > 0 ? <details className="rounded border"><summary className="cursor-pointer px-4 py-3 text-sm font-medium">{t("conversionsExtraContext")}</summary><SectionCard title={t("conversionsExtraContext")} noPadding><FriendlyTable rows={filteredOnboardingRows} columns={[{ key: "client_name", label: "client_name" }, { key: "project_name", label: "project_name" }, { key: "funnel_name", label: "funnel_name" }, { key: "status", label: "status" }]} empty={t("conversionsViewUnavailable")} /></SectionCard></details> : null}
+        {filteredOnboardingRows.length > 0 ? <details className="rounded border"><summary className="cursor-pointer px-4 py-3 text-sm font-medium">{t("conversionsExtraContext")}</summary><SectionCard title={t("conversionsExtraContext")} noPadding><FriendlyTable rows={filterMeaningfulContextRows(filteredOnboardingRows)} columns={[{ key: "client_name", label: t("conversionsContextClient") }, { key: "project_name", label: t("conversionsContextProject") }, { key: "funnel_name", label: t("conversionsContextFunnel") }, { key: "status", label: t("conversionsContextStatus") }]} empty={t("conversionsViewUnavailable")} /></SectionCard></details> : null}
         {filteredBindingsRows.length > 0 ? <details className="rounded border"><summary className="cursor-pointer px-4 py-3 text-sm font-medium">{t("conversionsExtraBindings")}</summary><SectionCard title={t("conversionsExtraBindings")} noPadding><FriendlyTable rows={filteredBindingsRows} columns={[{ key: "project_name", label: "project_name" }, { key: "source_name", label: "source_name" }, { key: "mapping_status", label: "mapping_status" }, { key: "binding_status", label: "binding_status" }, { key: "updated_at", label: "updated_at" }]} empty={t("conversionsViewUnavailable")} /></SectionCard></details> : null}
       </> : null}
     </div>
@@ -186,7 +190,34 @@ function computeAggregates(stageEvents: Row[], paymentRecordsRows: Row[], paymen
   };
 }
 
-async function readView(viewName: string, scopedByWorkspace: boolean, from?: string, to?: string): Promise<Row[]> { let query = supabase.from(viewName).select("*").limit(5000); if (scopedByWorkspace) query = query.eq("workspace_id", WORKSPACE_ID); if (from && to) query = query.gte("metric_date", from).lte("metric_date", to); const res = await query; return (res.data ?? []) as Row[]; }
+async function readView(viewName: string, scopedByWorkspace: boolean, from?: string, to?: string): Promise<Row[]> { let query = supabase.from(viewName).select("*"); if (scopedByWorkspace) query = query.eq("workspace_id", WORKSPACE_ID); if (from && to) query = query.gte("metric_date", from).lte("metric_date", to); const res = await query; return (res.data ?? []) as Row[]; }
+async function readViewPaged(viewName: string, scopedByWorkspace: boolean, from?: string, to?: string, orderBy?: string): Promise<Row[]> {
+  const pageSize = 1000;
+  const maxRows = 50000;
+  const rows: Row[] = [];
+  for (let fromIndex = 0; fromIndex < maxRows; fromIndex += pageSize) {
+    const toIndex = fromIndex + pageSize - 1;
+    let query = supabase.from(viewName).select("*");
+    if (scopedByWorkspace) query = query.eq("workspace_id", WORKSPACE_ID);
+    if (from && to) query = query.gte("metric_date", from).lte("metric_date", to);
+    if (orderBy) query = query.order(orderBy, { ascending: true });
+    const res = await query.range(fromIndex, toIndex);
+    const page = (res.data ?? []) as Row[];
+    rows.push(...page);
+    if (page.length < pageSize) return rows;
+  }
+  console.warn(`[Conversions] Reached max rows cap (${maxRows}) for ${viewName}. Results may be truncated.`);
+  return rows;
+}
+function filterMeaningfulContextRows(rows: Row[]) {
+  return rows.filter((row) => {
+    const client = String(row.client_name ?? "").trim();
+    const project = String(row.project_name ?? "").trim();
+    const funnel = String(row.funnel_name ?? "").trim();
+    const isEmpty = (value: string) => value === "" || value === "—";
+    return !(isEmpty(client) && isEmpty(project) && isEmpty(funnel));
+  });
+}
 function MetricCard({ label, value, helper, percent, raw }: { label: string; value: unknown; helper?: string; percent?: boolean; raw?: boolean }) { const formatted = raw ? String(value ?? "—") : formatMetric(value as Row[string], Boolean(percent)); return <div className="rounded border p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-xl font-semibold num">{formatted}</p>{helper ? <p className="mt-1 text-xs text-muted-foreground">{helper}</p> : null}</div>; }
 function safePct(num: number, den: number) { if (!den) return null; return (num / den) * 100; }
 function parseDate(value: unknown): Date | null { if (!value) return null; const d = new Date(String(value)); return Number.isNaN(d.getTime()) ? null : d; }
