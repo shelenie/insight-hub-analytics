@@ -52,9 +52,9 @@ export default function Conversions() {
     enabled: Boolean(session),
     queryFn: async () => {
       const [stageEvents, paymentRecords, paymentLines, onboarding, bindings] = await Promise.all([
-        readViewPaged("v_unified_conversions_stage_events", true, fromIso, toIso, "metric_date"),
-        readViewPaged("v_unified_conversions_payment_records", true, fromIso, toIso, "metric_date"),
-        readViewPaged("v_unified_conversions_payment_lines", true, fromIso, toIso, "metric_date"),
+        readViewPaged("v_unified_conversions_stage_events", true, fromIso, toIso, ["metric_date", "stage", "contact_key"]),
+        readViewPaged("v_unified_conversions_payment_records", true, fromIso, toIso, ["metric_date", "customer_key", "phone_key", "payment_category"]),
+        readViewPaged("v_unified_conversions_payment_lines", true, fromIso, toIso, ["metric_date", "sale_status_norm", "amount_usd", "amount_uah"]),
         readView("v_onboarding_hierarchy", true),
         readView("v_project_data_bindings", true),
       ]);
@@ -64,6 +64,7 @@ export default function Conversions() {
 
   const aggregates = useMemo(() => computeAggregates(dataQuery.data?.stageEvents ?? [], dataQuery.data?.paymentRecords ?? [], dataQuery.data?.paymentLines ?? []), [dataQuery.data]);
   const filteredOnboardingRows = useMemo(() => filterPlaceholderRows(dataQuery.data?.onboarding as Record<string, unknown>[] | undefined) as Row[], [dataQuery.data?.onboarding]);
+  const meaningfulOnboardingRows = useMemo(() => filterMeaningfulContextRows(filteredOnboardingRows), [filteredOnboardingRows]);
   const filteredBindingsRows = useMemo(() => filterPlaceholderRows(dataQuery.data?.bindings as Record<string, unknown>[] | undefined) as Row[], [dataQuery.data?.bindings]);
 
   const isRefreshing = boundsQuery.isRefetching || dataQuery.isRefetching;
@@ -143,7 +144,7 @@ export default function Conversions() {
 
         <SectionCard title={t("conversionsStageTableTitle")} description={t("conversionsStageTableDesc")} noPadding><Table><TableHeader><TableRow><TableHead>{t("conversionsThStage")}</TableHead><TableHead className="text-right">{t("conversionsThEvents")}</TableHead><TableHead className="text-right">{t("conversionsThUniqueContacts")}</TableHead><TableHead>{t("conversionsThFirstDate")}</TableHead><TableHead>{t("conversionsThLastDate")}</TableHead></TableRow></TableHeader><TableBody>{aggregates.stageRows.map((row, idx) => <TableRow key={idx}><TableCell>{getStageLabel(String(row.stage ?? "").toLowerCase(), row.stage_label, lang)}</TableCell><TableCell className="text-right num">{fmtNum(Number(row.events_count ?? 0))}</TableCell><TableCell className="text-right num">{fmtNum(Number(row.unique_contacts ?? 0))}</TableCell><TableCell>{formatShortDate(row.first_date)}</TableCell><TableCell>{formatShortDate(row.last_date)}</TableCell></TableRow>)}</TableBody></Table></SectionCard>
 
-        {filteredOnboardingRows.length > 0 ? <details className="rounded border"><summary className="cursor-pointer px-4 py-3 text-sm font-medium">{t("conversionsExtraContext")}</summary><SectionCard title={t("conversionsExtraContext")} noPadding><FriendlyTable rows={filterMeaningfulContextRows(filteredOnboardingRows)} columns={[{ key: "client_name", label: t("conversionsContextClient") }, { key: "project_name", label: t("conversionsContextProject") }, { key: "funnel_name", label: t("conversionsContextFunnel") }, { key: "status", label: t("conversionsContextStatus") }]} empty={t("conversionsViewUnavailable")} /></SectionCard></details> : null}
+        {meaningfulOnboardingRows.length > 0 ? <details className="rounded border"><summary className="cursor-pointer px-4 py-3 text-sm font-medium">{t("conversionsExtraContext")}</summary><SectionCard title={t("conversionsExtraContext")} noPadding><FriendlyTable rows={meaningfulOnboardingRows} columns={[{ key: "client_name", label: t("conversionsContextClient") }, { key: "project_name", label: t("conversionsContextProject") }, { key: "funnel_name", label: t("conversionsContextFunnel") }, { key: "status", label: t("conversionsContextStatus") }]} empty={t("conversionsViewUnavailable")} /></SectionCard></details> : null}
         {filteredBindingsRows.length > 0 ? <details className="rounded border"><summary className="cursor-pointer px-4 py-3 text-sm font-medium">{t("conversionsExtraBindings")}</summary><SectionCard title={t("conversionsExtraBindings")} noPadding><FriendlyTable rows={filteredBindingsRows} columns={[{ key: "project_name", label: "project_name" }, { key: "source_name", label: "source_name" }, { key: "mapping_status", label: "mapping_status" }, { key: "binding_status", label: "binding_status" }, { key: "updated_at", label: "updated_at" }]} empty={t("conversionsViewUnavailable")} /></SectionCard></details> : null}
       </> : null}
     </div>
@@ -190,8 +191,8 @@ function computeAggregates(stageEvents: Row[], paymentRecordsRows: Row[], paymen
   };
 }
 
-async function readView(viewName: string, scopedByWorkspace: boolean, from?: string, to?: string): Promise<Row[]> { let query = supabase.from(viewName).select("*"); if (scopedByWorkspace) query = query.eq("workspace_id", WORKSPACE_ID); if (from && to) query = query.gte("metric_date", from).lte("metric_date", to); const res = await query; return (res.data ?? []) as Row[]; }
-async function readViewPaged(viewName: string, scopedByWorkspace: boolean, from?: string, to?: string, orderBy?: string): Promise<Row[]> {
+async function readView(viewName: string, scopedByWorkspace: boolean, from?: string, to?: string): Promise<Row[]> { let query = supabase.from(viewName).select("*"); if (scopedByWorkspace) query = query.eq("workspace_id", WORKSPACE_ID); if (from && to) query = query.gte("metric_date", from).lte("metric_date", to); const res = await query; if (res.error) throw new Error(`[Conversions][readView] Failed to read ${viewName}: ${res.error.message}`); return (res.data ?? []) as Row[]; }
+async function readViewPaged(viewName: string, scopedByWorkspace: boolean, from?: string, to?: string, orderBy: string[] = []): Promise<Row[]> {
   const pageSize = 1000;
   const maxRows = 50000;
   const rows: Row[] = [];
@@ -200,8 +201,9 @@ async function readViewPaged(viewName: string, scopedByWorkspace: boolean, from?
     let query = supabase.from(viewName).select("*");
     if (scopedByWorkspace) query = query.eq("workspace_id", WORKSPACE_ID);
     if (from && to) query = query.gte("metric_date", from).lte("metric_date", to);
-    if (orderBy) query = query.order(orderBy, { ascending: true });
+    for (const orderColumn of orderBy) query = query.order(orderColumn, { ascending: true });
     const res = await query.range(fromIndex, toIndex);
+    if (res.error) throw new Error(`[Conversions][readViewPaged] Failed to read ${viewName} rows ${fromIndex}-${toIndex}: ${res.error.message}`);
     const page = (res.data ?? []) as Row[];
     rows.push(...page);
     if (page.length < pageSize) return rows;
