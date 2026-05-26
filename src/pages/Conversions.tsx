@@ -10,7 +10,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { fmtNum } from "@/lib/format";
 import { filterPlaceholderRows } from "@/lib/demoFilters";
 import { useI18n } from "@/i18n/I18nProvider";
-import { translations } from "@/i18n/translations";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { useDateFilter } from "@/filters/DateContext";
@@ -81,6 +80,7 @@ export default function Conversions() {
           <DateFilter />
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
+          <p className="text-xs text-muted-foreground">{t("conversionsDataLabel")}</p>
           <p className="inline-flex items-center gap-1.5 rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{t("conversionsDataStatus")}</p>
           <Button size="sm" variant="outline" className="h-8" onClick={() => { boundsQuery.refetch(); dataQuery.refetch(); }} disabled={isRefreshing}>
             <RefreshCw className={`mr-1 h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
@@ -131,22 +131,28 @@ export default function Conversions() {
           <MetricCard label={t("conversionsTariffTotal")} value={money(aggregates.tariffTotal, "USD", lang)} raw />
         </div></SectionCard>
         {aggregates.paymentCategoryRows.length > 0 ? <SectionCard title={t("conversionsPaymentTypeStructureTitle")} description={t("conversionsPaymentTypeStructureDesc")} noPadding>
+          <p className="px-4 pb-2 text-xs text-muted-foreground">{t("conversionsPaymentTypeStructureHelper")}</p>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>{t("conversionsPaymentTypeThType")}</TableHead>
                 <TableHead className="text-right">{t("conversionsPaymentTypeThTotal")}</TableHead>
-                <TableHead className="text-right">{t("conversionsPaymentTypeThWorking")}</TableHead>
+                <TableHead className="text-right">{t("conversionsPaymentTypeThIncluded")}</TableHead>
+                <TableHead className="text-right">{t("conversionsPaymentTypeThRefund")}</TableHead>
+                <TableHead className="text-right">{t("conversionsPaymentTypeThNeedsReview")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {aggregates.paymentCategoryRows.map((row, idx) => (
-                <TableRow key={`${row.category}-${idx}`}>
-                  <TableCell>{getPaymentCategoryLabel(row.category, lang)}</TableCell>
+              {aggregates.paymentCategoryRows.map((row, idx) => {
+                const labelKey = getPaymentCategoryLabelKey(row.category);
+                return <TableRow key={`${row.category}-${idx}`}>
+                  <TableCell>{labelKey ? t(labelKey) : row.category}</TableCell>
                   <TableCell className="text-right num">{fmtNum(row.total_records)}</TableCell>
-                  <TableCell className="text-right num">{fmtNum(row.working_records)}</TableCell>
-                </TableRow>
-              ))}
+                  <TableCell className="text-right num">{fmtNum(row.included_records)}</TableCell>
+                  <TableCell className="text-right num">{fmtNum(row.refund_records)}</TableCell>
+                  <TableCell className="text-right num">{fmtNum(row.needs_review_records)}</TableCell>
+                </TableRow>;
+              })}
             </TableBody>
           </Table>
         </SectionCard> : null}
@@ -190,15 +196,17 @@ function computeAggregates(stageEvents: Row[], paymentRecordsRows: Row[], paymen
   const goodPayments = (r: Row) => !["refund", "needs_review"].includes(String(r.sale_status_norm ?? "").toLowerCase());
   const paymentPhones = new Set<string>(); const payerSet = new Set<string>();
   let activePaymentRows = 0, refundPaymentRows = 0, needsReviewPaymentRows = 0, fullPaymentRows = 0, installmentRows = 0, depositRows = 0, additionalPaymentRows = 0, debtTotal = 0, tariffTotal = 0;
-  const paymentCategoryCounts = new Map<string, { total_records: number; working_records: number }>();
+  const paymentCategoryCounts = new Map<string, { total_records: number; included_records: number; refund_records: number; needs_review_records: number }>();
   for (const row of paymentRecordsRows) {
     const status = String(row.sale_status_norm ?? "").toLowerCase();
     if (status === "active") activePaymentRows++; if (status === "refund") refundPaymentRows++; if (status === "needs_review") needsReviewPaymentRows++;
     const paymentCategoryRaw = String(row.payment_category ?? "").toLowerCase();
     const paymentCategory = paymentCategoryRaw || "unknown";
-    const categoryStats = paymentCategoryCounts.get(paymentCategory) ?? { total_records: 0, working_records: 0 };
+    const categoryStats = paymentCategoryCounts.get(paymentCategory) ?? { total_records: 0, included_records: 0, refund_records: 0, needs_review_records: 0 };
     categoryStats.total_records += 1;
-    if (goodPayments(row)) categoryStats.working_records += 1;
+    if (status === "refund") categoryStats.refund_records += 1;
+    else if (status === "needs_review") categoryStats.needs_review_records += 1;
+    else categoryStats.included_records += 1;
     paymentCategoryCounts.set(paymentCategory, categoryStats);
     const cust = String(row.customer_key ?? ""); if (cust) payerSet.add(cust);
     if (goodPayments(row)) {
@@ -265,17 +273,23 @@ function toNumber(value: unknown): number | null { if (typeof value === "number"
 function formatMetric(value: Row[string], isPercent: boolean) { const n = toNumber(value); if (n == null) return "—"; return isPercent ? `${fmtNum(n)}%` : fmtNum(n); }
 function money(value: unknown, currency: "USD" | "UAH", lang: "uk" | "en") { const n = toNumber(value); if (n == null) return "—"; return new Intl.NumberFormat(lang === "uk" ? "uk-UA" : "en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(n); }
 function getStageLabel(stage: string, fallback: unknown, lang: "uk" | "en") { const mapped: Record<string, { uk: string; en: string }> = { registration: { uk: "Реєстрації", en: "Registrations" }, questionnaire: { uk: "Анкети", en: "Questionnaires" }, application: { uk: "Заявки", en: "Applications" }, booking: { uk: "Бронювання", en: "Bookings" }, sale: { uk: "Платежі", en: "Payments" }, payment: { uk: "Платежі", en: "Payments" } }; const known = mapped[stage]; if (known) return known[lang]; return String(fallback ?? "—"); }
-function getPaymentCategoryLabel(category: string, lang: "uk" | "en") {
-  const mapped: Record<string, { uk: string; en: string }> = {
-    full_payment: { uk: translations.conversionsPaymentCategoryFull.uk, en: translations.conversionsPaymentCategoryFull.en },
-    installment: { uk: translations.conversionsPaymentCategoryInstallment.uk, en: translations.conversionsPaymentCategoryInstallment.en },
-    deposit: { uk: translations.conversionsPaymentCategoryDeposit.uk, en: translations.conversionsPaymentCategoryDeposit.en },
-    additional_payment: { uk: translations.conversionsPaymentCategoryAdditional.uk, en: translations.conversionsPaymentCategoryAdditional.en },
-    unknown: { uk: translations.conversionsPaymentCategoryUnknown.uk, en: translations.conversionsPaymentCategoryUnknown.en },
-    other: { uk: translations.conversionsPaymentCategoryOther.uk, en: translations.conversionsPaymentCategoryOther.en },
-  };
-  const known = mapped[category];
-  return known ? known[lang] : category;
+function getPaymentCategoryLabelKey(category: string) {
+  switch (category) {
+    case "full_payment":
+      return "conversionsPaymentCategoryFull";
+    case "installment":
+      return "conversionsPaymentCategoryInstallment";
+    case "deposit":
+      return "conversionsPaymentCategoryDeposit";
+    case "additional_payment":
+      return "conversionsPaymentCategoryAdditional";
+    case "unknown":
+      return "conversionsPaymentCategoryUnknown";
+    case "other":
+      return "conversionsPaymentCategoryOther";
+    default:
+      return null;
+  }
 }
 function formatShortDate(value: unknown) { if (value == null || String(value).trim() === "") return "—"; const raw = String(value); const parsed = new Date(raw); if (Number.isNaN(parsed.getTime())) return raw; const day = String(parsed.getUTCDate()).padStart(2, "0"); const month = String(parsed.getUTCMonth() + 1).padStart(2, "0"); const year = parsed.getUTCFullYear(); const currentYear = new Date().getUTCFullYear(); return year === currentYear ? `${day}.${month}` : `${day}.${month}.${year}`; }
 function Empty({ text }: { text: string }) { return <p className="rounded border p-3 text-sm text-muted-foreground">{text}</p>; }
