@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { fmtNum } from "@/lib/format";
 import { filterPlaceholderRows } from "@/lib/demoFilters";
 import { useI18n } from "@/i18n/I18nProvider";
+import { translations } from "@/i18n/translations";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { useDateFilter } from "@/filters/DateContext";
@@ -69,6 +70,7 @@ export default function Conversions() {
 
   const isRefreshing = boundsQuery.isRefetching || dataQuery.isRefetching;
   const hasData = aggregates.stageRows.length > 0 || aggregates.paymentRecords > 0 || aggregates.paymentLinesCount > 0;
+  const hasError = dataQuery.isError || boundsQuery.isError;
 
   return <DashboardLayout title={t("funnelTitle")} subtitle={t("funnelSubtitle")}>
     <div className="space-y-4">
@@ -90,9 +92,10 @@ export default function Conversions() {
       </div>
 
       {!session ? <Empty text={t("conversionsSignIn")} /> : (dataQuery.isLoading || boundsQuery.isLoading) ? <Empty text={t("conversionsLoading")} /> : null}
-      {!dataQuery.isLoading && !boundsQuery.isLoading && session && !hasData ? <Empty text={t("conversionsNoDataSelectedPeriod")} /> : null}
+      {session && hasError ? <Empty text={t("conversionsLoadError")} /> : null}
+      {!dataQuery.isLoading && !boundsQuery.isLoading && session && !hasError && !hasData ? <Empty text={t("conversionsNoDataSelectedPeriod")} /> : null}
 
-      {hasData ? <>
+      {hasData && !hasError ? <>
         <SectionCard title={t("conversionsStageSection")} description={t("conversionsStageSectionDesc")}>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             <MetricCard label={t("conversionsRegistrations")} value={aggregates.registrations} helper={`${t("conversionsUniqueContacts")}: ${fmtNum(aggregates.stageUnique.registration)}`} />
@@ -127,7 +130,7 @@ export default function Conversions() {
           <MetricCard label={t("conversionsDebt")} value={money(aggregates.debtTotal, "USD", lang)} raw />
           <MetricCard label={t("conversionsTariffTotal")} value={money(aggregates.tariffTotal, "USD", lang)} raw />
         </div></SectionCard>
-        <SectionCard title={t("conversionsPaymentTypeStructureTitle")} description={t("conversionsPaymentTypeStructureDesc")} noPadding>
+        {aggregates.paymentCategoryRows.length > 0 ? <SectionCard title={t("conversionsPaymentTypeStructureTitle")} description={t("conversionsPaymentTypeStructureDesc")} noPadding>
           <Table>
             <TableHeader>
               <TableRow>
@@ -146,7 +149,7 @@ export default function Conversions() {
               ))}
             </TableBody>
           </Table>
-        </SectionCard>
+        </SectionCard> : null}
 
         <SectionCard title={t("conversionsMatchingTitle")} description={t("conversionsMatchingSubtitle")}>
           <p className="mb-3 text-xs text-muted-foreground">{t("conversionsMatchingExplain")}</p>
@@ -264,12 +267,12 @@ function money(value: unknown, currency: "USD" | "UAH", lang: "uk" | "en") { con
 function getStageLabel(stage: string, fallback: unknown, lang: "uk" | "en") { const mapped: Record<string, { uk: string; en: string }> = { registration: { uk: "Реєстрації", en: "Registrations" }, questionnaire: { uk: "Анкети", en: "Questionnaires" }, application: { uk: "Заявки", en: "Applications" }, booking: { uk: "Бронювання", en: "Bookings" }, sale: { uk: "Платежі", en: "Payments" }, payment: { uk: "Платежі", en: "Payments" } }; const known = mapped[stage]; if (known) return known[lang]; return String(fallback ?? "—"); }
 function getPaymentCategoryLabel(category: string, lang: "uk" | "en") {
   const mapped: Record<string, { uk: string; en: string }> = {
-    full_payment: { uk: "Повна оплата", en: "Full payment" },
-    installment: { uk: "Розтермінування", en: "Installment" },
-    deposit: { uk: "Бронь / депозит", en: "Deposit" },
-    additional_payment: { uk: "Доплата", en: "Additional payment" },
-    unknown: { uk: "Невідомо", en: "Unknown" },
-    other: { uk: "Інше", en: "Other" },
+    full_payment: { uk: translations.conversionsPaymentCategoryFull.uk, en: translations.conversionsPaymentCategoryFull.en },
+    installment: { uk: translations.conversionsPaymentCategoryInstallment.uk, en: translations.conversionsPaymentCategoryInstallment.en },
+    deposit: { uk: translations.conversionsPaymentCategoryDeposit.uk, en: translations.conversionsPaymentCategoryDeposit.en },
+    additional_payment: { uk: translations.conversionsPaymentCategoryAdditional.uk, en: translations.conversionsPaymentCategoryAdditional.en },
+    unknown: { uk: translations.conversionsPaymentCategoryUnknown.uk, en: translations.conversionsPaymentCategoryUnknown.en },
+    other: { uk: translations.conversionsPaymentCategoryOther.uk, en: translations.conversionsPaymentCategoryOther.en },
   };
   const known = mapped[category];
   return known ? known[lang] : category;
