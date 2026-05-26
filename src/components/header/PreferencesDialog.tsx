@@ -84,7 +84,7 @@ export function PreferencesDialog({ trigger }: { trigger?: React.ReactNode }) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="/" className="text-xs">{t("navOverview")}</SelectItem>
-                <SelectItem value="/funnel" className="text-xs">{t("navFunnel")}</SelectItem>
+                <SelectItem value="/conversions" className="text-xs">{t("navFunnel")}</SelectItem>
                 <SelectItem value="/campaigns" className="text-xs">{t("navCampaigns")}</SelectItem>
                 <SelectItem value="/sales" className="text-xs">{t("navSales")}</SelectItem>
                 <SelectItem value="/imports" className="text-xs">{t("navImports")}</SelectItem>

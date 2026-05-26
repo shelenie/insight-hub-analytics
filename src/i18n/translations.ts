@@ -15,7 +15,7 @@ export const translations = {
 
   // Navigation
   navOverview: { uk: "Огляд", en: "Overview" },
-  navFunnel: { uk: "Воронка", en: "Funnel / Report" },
+  navFunnel: { uk: "Конверсії", en: "Conversions" },
   navCampaigns: { uk: "Кампанії", en: "Campaigns" },
   navSales: { uk: "Продажі", en: "Sales / Revenue" },
   navImports: { uk: "Імпорти / Якість даних", en: "Imports / Data Health" },
@@ -354,8 +354,8 @@ export const translations = {
   },
 
   // Funnel
-  funnelTitle: { uk: "Воронка / Звіт", en: "Funnel / Report" },
-  funnelSubtitle: { uk: "Головний робочий екран аналітика", en: "Main analyst working screen" },
+  funnelTitle: { uk: "Конверсії", en: "Conversions" },
+  funnelSubtitle: { uk: "Етапи воронки, переходи між ними та платежі", en: "Funnel stages, stage-to-stage movement, and payments" },
   conversionFlow: { uk: "Послідовність конверсій", en: "Conversion flow" },
   conversionFlowDesc: {
     uk: "Перехід між кроками воронки",

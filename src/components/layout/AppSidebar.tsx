@@ -34,7 +34,7 @@ const navSections: { labelKey: TranslationKey; items: { titleKey: TranslationKey
     labelKey: "sidebarAnalytics",
     items: [
       { titleKey: "navOverview", url: "/", icon: LayoutDashboard },
-      { titleKey: "navFunnel", url: "/funnel", icon: GitBranch },
+      { titleKey: "navFunnel", url: "/conversions", icon: GitBranch },
       { titleKey: "navCampaigns", url: "/campaigns", icon: Megaphone },
       { titleKey: "navSales", url: "/sales", icon: DollarSign },
       { titleKey: "navImports", url: "/imports", icon: Database },

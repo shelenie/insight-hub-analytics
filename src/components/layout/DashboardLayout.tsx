@@ -31,7 +31,7 @@ export function DashboardLayout({ title, subtitle, actions, sync, children }: Da
   const searchableRoutes = useMemo(
     () => [
       { labelUk: "Огляд", labelEn: "Overview", path: "/", aliases: ["робочий простір", "workspace"] },
-      { labelUk: "Воронка", labelEn: "Funnel", path: "/funnel", aliases: [] },
+      { labelUk: "Конверсії", labelEn: "Conversions", path: "/conversions", aliases: [] },
       { labelUk: "Кампанії", labelEn: "Campaigns", path: "/campaigns", aliases: [] },
       { labelUk: "Продажі", labelEn: "Sales", path: "/sales", aliases: [] },
       { labelUk: "Імпорти", labelEn: "Imports", path: "/imports", aliases: ["якість даних", "data quality"] },

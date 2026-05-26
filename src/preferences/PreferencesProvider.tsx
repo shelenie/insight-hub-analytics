@@ -1,6 +1,6 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-export type LandingPage = "/" | "/funnel" | "/campaigns" | "/sales" | "/imports" | "/assistant";
+export type LandingPage = "/" | "/conversions" | "/campaigns" | "/sales" | "/imports" | "/assistant";
 export type DefaultDateMode = "preset" | "exact" | "range";
 export type DefaultViewMode = "summary" | "daily";
 export type TableDensity = "comfortable" | "compact";
