@@ -1,4 +1,5 @@
 name: Deploy GitHub Pages
+# Publishes the latest Vite build to GitHub Pages after pushes to main.
 
 on:
   push:
