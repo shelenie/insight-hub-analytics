@@ -127,6 +127,26 @@ export default function Conversions() {
           <MetricCard label={t("conversionsDebt")} value={money(aggregates.debtTotal, "USD", lang)} raw />
           <MetricCard label={t("conversionsTariffTotal")} value={money(aggregates.tariffTotal, "USD", lang)} raw />
         </div></SectionCard>
+        <SectionCard title={t("conversionsPaymentTypeStructureTitle")} description={t("conversionsPaymentTypeStructureDesc")} noPadding>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("conversionsPaymentTypeThType")}</TableHead>
+                <TableHead className="text-right">{t("conversionsPaymentTypeThTotal")}</TableHead>
+                <TableHead className="text-right">{t("conversionsPaymentTypeThWorking")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {aggregates.paymentCategoryRows.map((row, idx) => (
+                <TableRow key={`${row.category}-${idx}`}>
+                  <TableCell>{getPaymentCategoryLabel(row.category, lang)}</TableCell>
+                  <TableCell className="text-right num">{fmtNum(row.total_records)}</TableCell>
+                  <TableCell className="text-right num">{fmtNum(row.working_records)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </SectionCard>
 
         <SectionCard title={t("conversionsMatchingTitle")} description={t("conversionsMatchingSubtitle")}>
           <p className="mb-3 text-xs text-muted-foreground">{t("conversionsMatchingExplain")}</p>
@@ -167,9 +187,16 @@ function computeAggregates(stageEvents: Row[], paymentRecordsRows: Row[], paymen
   const goodPayments = (r: Row) => !["refund", "needs_review"].includes(String(r.sale_status_norm ?? "").toLowerCase());
   const paymentPhones = new Set<string>(); const payerSet = new Set<string>();
   let activePaymentRows = 0, refundPaymentRows = 0, needsReviewPaymentRows = 0, fullPaymentRows = 0, installmentRows = 0, depositRows = 0, additionalPaymentRows = 0, debtTotal = 0, tariffTotal = 0;
+  const paymentCategoryCounts = new Map<string, { total_records: number; working_records: number }>();
   for (const row of paymentRecordsRows) {
     const status = String(row.sale_status_norm ?? "").toLowerCase();
     if (status === "active") activePaymentRows++; if (status === "refund") refundPaymentRows++; if (status === "needs_review") needsReviewPaymentRows++;
+    const paymentCategoryRaw = String(row.payment_category ?? "").toLowerCase();
+    const paymentCategory = paymentCategoryRaw || "unknown";
+    const categoryStats = paymentCategoryCounts.get(paymentCategory) ?? { total_records: 0, working_records: 0 };
+    categoryStats.total_records += 1;
+    if (goodPayments(row)) categoryStats.working_records += 1;
+    paymentCategoryCounts.set(paymentCategory, categoryStats);
     const cust = String(row.customer_key ?? ""); if (cust) payerSet.add(cust);
     if (goodPayments(row)) {
       const cat = String(row.payment_category ?? "").toLowerCase();
@@ -182,11 +209,19 @@ function computeAggregates(stageEvents: Row[], paymentRecordsRows: Row[], paymen
   for (const row of paymentLines) if (goodPayments(row)) { collectedUsdTotal += toNumber(row.amount_usd) ?? 0; collectedUahTotal += toNumber(row.amount_uah) ?? 0; }
   const matchedPhones = [...bookingPhones].filter((p) => paymentPhones.has(p)).length;
   const stageRows = [...byStage.entries()].map(([stage, v]) => ({ stage, stage_label: stage, events_count: v.count, unique_contacts: v.contacts.size, first_date: v.first, last_date: v.last })).sort((a,b)=>STAGE_ORDER.indexOf(a.stage)-STAGE_ORDER.indexOf(b.stage));
+  const paymentCategoryRank: Record<string, number> = { full_payment: 1, installment: 2, deposit: 3, additional_payment: 4, unknown: 5, other: 6 };
+  const paymentCategoryRows = [...paymentCategoryCounts.entries()].map(([category, counts]) => ({ category, ...counts })).sort((a, b) => {
+    const rankA = paymentCategoryRank[a.category] ?? 100;
+    const rankB = paymentCategoryRank[b.category] ?? 100;
+    if (rankA !== rankB) return rankA - rankB;
+    return a.category.localeCompare(b.category);
+  });
   return {
     stageRows, paymentLinesCount: paymentLines.length,
     registrations: byStage.get("registration")?.count ?? 0, questionnaires: byStage.get("questionnaire")?.count ?? 0, applications: byStage.get("application")?.count ?? 0, bookings: byStage.get("booking")?.count ?? 0,
     stageUnique: { registration: byStage.get("registration")?.contacts.size ?? 0, questionnaire: byStage.get("questionnaire")?.contacts.size ?? 0, application: byStage.get("application")?.contacts.size ?? 0, booking: byStage.get("booking")?.contacts.size ?? 0 },
     paymentRecords: paymentRecordsRows.length, uniquePayers: payerSet.size, activePaymentRows, refundPaymentRows, needsReviewPaymentRows, fullPaymentRows, installmentRows, depositRows, additionalPaymentRows, debtTotal, tariffTotal,
+    paymentCategoryRows,
     collectedUsdTotal, collectedUahTotal, bookingPhones: bookingPhones.size, paymentPhones: paymentPhones.size, matchedPhones, paymentsWithoutBooking: paymentPhones.size - matchedPhones, bookingsWithoutPayment: bookingPhones.size - matchedPhones,
   };
 }
@@ -227,6 +262,18 @@ function toNumber(value: unknown): number | null { if (typeof value === "number"
 function formatMetric(value: Row[string], isPercent: boolean) { const n = toNumber(value); if (n == null) return "—"; return isPercent ? `${fmtNum(n)}%` : fmtNum(n); }
 function money(value: unknown, currency: "USD" | "UAH", lang: "uk" | "en") { const n = toNumber(value); if (n == null) return "—"; return new Intl.NumberFormat(lang === "uk" ? "uk-UA" : "en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(n); }
 function getStageLabel(stage: string, fallback: unknown, lang: "uk" | "en") { const mapped: Record<string, { uk: string; en: string }> = { registration: { uk: "Реєстрації", en: "Registrations" }, questionnaire: { uk: "Анкети", en: "Questionnaires" }, application: { uk: "Заявки", en: "Applications" }, booking: { uk: "Бронювання", en: "Bookings" }, sale: { uk: "Платежі", en: "Payments" }, payment: { uk: "Платежі", en: "Payments" } }; const known = mapped[stage]; if (known) return known[lang]; return String(fallback ?? "—"); }
+function getPaymentCategoryLabel(category: string, lang: "uk" | "en") {
+  const mapped: Record<string, { uk: string; en: string }> = {
+    full_payment: { uk: "Повна оплата", en: "Full payment" },
+    installment: { uk: "Розтермінування", en: "Installment" },
+    deposit: { uk: "Бронь / депозит", en: "Deposit" },
+    additional_payment: { uk: "Доплата", en: "Additional payment" },
+    unknown: { uk: "Невідомо", en: "Unknown" },
+    other: { uk: "Інше", en: "Other" },
+  };
+  const known = mapped[category];
+  return known ? known[lang] : category;
+}
 function formatShortDate(value: unknown) { if (value == null || String(value).trim() === "") return "—"; const raw = String(value); const parsed = new Date(raw); if (Number.isNaN(parsed.getTime())) return raw; const day = String(parsed.getUTCDate()).padStart(2, "0"); const month = String(parsed.getUTCMonth() + 1).padStart(2, "0"); const year = parsed.getUTCFullYear(); const currentYear = new Date().getUTCFullYear(); return year === currentYear ? `${day}.${month}` : `${day}.${month}.${year}`; }
 function Empty({ text }: { text: string }) { return <p className="rounded border p-3 text-sm text-muted-foreground">{text}</p>; }
 function FriendlyTable({ rows, columns, empty }: { rows: Row[]; columns: { key: string; label: string }[]; empty: string }) { if (!rows.length) return <Empty text={empty} />; return <Table><TableHeader><TableRow>{columns.map((c) => <TableHead key={c.key}>{c.label}</TableHead>)}</TableRow></TableHeader><TableBody>{rows.slice(0, 50).map((row, idx) => <TableRow key={idx}>{columns.map((c) => <TableCell key={c.key}>{String(row[c.key] ?? "—")}</TableCell>)}</TableRow>)}</TableBody></Table>; }
