@@ -79,7 +79,7 @@ export default function Conversions() {
             <SectionCard title={t("conversionsStageSection")} description={t("conversionsStageSectionDesc")}>
               <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
                 {stageCards.map((card) => (
-                  <MetricCard key={card.key} label={card.label} value={card.count} helper={card.unique != null ? `${t("conversionsUniqueContacts")}: ${fmtNum(Number(card.unique))}` : undefined} />
+                  <MetricCard key={card.key} label={card.label} value={card.count} helper={toNumber(card.unique) != null ? `${t("conversionsUniqueContacts")}: ${fmtNum(toNumber(card.unique) ?? 0)}` : undefined} />
                 ))}
               </div>
             </SectionCard>
@@ -137,8 +137,8 @@ export default function Conversions() {
                 <TableBody>
                   {stageTableRows.map((row, idx) => {
                     const stage = String(row.stage ?? "").toLowerCase();
-                    const label = stage === "sale" ? t("conversionsPaymentsLabel") : String(row.stage_label ?? "—");
-                    return <TableRow key={idx}><TableCell>{label}</TableCell><TableCell className="text-right num">{fmtNum(Number(row.events_count ?? 0))}</TableCell><TableCell className="text-right num">{fmtNum(Number(row.unique_contacts ?? 0))}</TableCell><TableCell>{String(row.first_date ?? "—")}</TableCell><TableCell>{String(row.last_date ?? "—")}</TableCell></TableRow>;
+                    const label = getStageLabel(stage, row.stage_label, lang);
+                    return <TableRow key={idx}><TableCell>{label}</TableCell><TableCell className="text-right num">{formatMetric(row.events_count, false)}</TableCell><TableCell className="text-right num">{formatMetric(row.unique_contacts, false)}</TableCell><TableCell>{formatShortDate(row.first_date)}</TableCell><TableCell>{formatShortDate(row.last_date)}</TableCell></TableRow>;
                   })}
                 </TableBody>
               </Table>
@@ -160,14 +160,51 @@ function MetricCard({ label, value, helper, percent, raw }: { label: string; val
   return <div className="rounded border p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-xl font-semibold num">{formatted}</p>{helper ? <p className="mt-1 text-xs text-muted-foreground">{helper}</p> : null}</div>;
 }
 
+function toNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
 function formatMetric(value: Row[string], isPercent: boolean) {
-  if (typeof value !== "number") return "—";
-  return isPercent ? `${fmtNum(value)}%` : fmtNum(value);
+  const n = toNumber(value);
+  if (n == null) return "—";
+  return isPercent ? `${fmtNum(n)}%` : fmtNum(n);
 }
 
 function money(value: unknown, currency: "USD" | "UAH", lang: "uk" | "en") {
-  if (typeof value !== "number") return "—";
-  return new Intl.NumberFormat(lang === "uk" ? "uk-UA" : "en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(value);
+  const n = toNumber(value);
+  if (n == null) return "—";
+  return new Intl.NumberFormat(lang === "uk" ? "uk-UA" : "en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(n);
+}
+
+function getStageLabel(stage: string, fallback: unknown, lang: "uk" | "en") {
+  const mapped: Record<string, { uk: string; en: string }> = {
+    registration: { uk: "Реєстрації", en: "Registrations" },
+    questionnaire: { uk: "Анкети", en: "Questionnaires" },
+    application: { uk: "Заявки", en: "Applications" },
+    booking: { uk: "Бронювання", en: "Bookings" },
+    sale: { uk: "Платежі", en: "Payments" },
+    payment: { uk: "Платежі", en: "Payments" },
+  };
+  const known = mapped[stage];
+  if (known) return known[lang];
+  return String(fallback ?? "—");
+}
+
+function formatShortDate(value: unknown) {
+  if (value == null || String(value).trim() === "") return "—";
+  const raw = String(value);
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return raw;
+  const day = String(parsed.getUTCDate()).padStart(2, "0");
+  const month = String(parsed.getUTCMonth() + 1).padStart(2, "0");
+  const year = parsed.getUTCFullYear();
+  const currentYear = new Date().getUTCFullYear();
+  return year === currentYear ? `${day}.${month}` : `${day}.${month}.${year}`;
 }
 
 function Empty({ text }: { text: string }) { return <p className="rounded border p-3 text-sm text-muted-foreground">{text}</p>; }

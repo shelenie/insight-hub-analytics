@@ -369,7 +369,7 @@ export const translations = {
   conversionsSignIn: { uk: "Увійдіть, щоб переглянути конверсії.", en: "Sign in to view conversions." },
   conversionsLoading: { uk: "Завантаження конверсій…", en: "Loading conversions…" },
   conversionsNoData: { uk: "Дані конверсій поки не знайдені. Перевірте імпорт реєстрацій, анкет, заявок, бронювань або платежів.", en: "No conversion data found yet. Check registration, questionnaire, application, booking, or payment imports." },
-  conversionsViewUnavailable: { uk: "View unavailable", en: "View unavailable" },
+  conversionsViewUnavailable: { uk: "Дані view недоступні", en: "View unavailable" },
   conversionsStageSection: { uk: "Етапи воронки", en: "Funnel stages" },
   conversionsStageSectionDesc: { uk: "Ключові етапи без платіжних записів", en: "Core stages excluding payment records" },
   conversionsRegistrations: { uk: "Реєстрації", en: "Registrations" },
