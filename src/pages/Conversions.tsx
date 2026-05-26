@@ -32,8 +32,8 @@ export default function Conversions() {
   const bounds = useMemo(() => {
     const row = boundsQuery.data?.[0];
     if (!row) return null;
-    const from = parseDate(row.min_metric_date);
-    const to = parseDate(row.max_metric_date);
+    const from = parseDate(row.first_date);
+    const to = parseDate(row.last_date);
     if (!from || !to) return null;
     return { from, to };
   }, [boundsQuery.data]);
