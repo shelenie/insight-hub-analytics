@@ -52,9 +52,9 @@ export default function Conversions() {
     enabled: Boolean(session),
     queryFn: async () => {
       const [stageEvents, paymentRecords, paymentLines, onboarding, bindings] = await Promise.all([
-        readViewPaged("v_unified_conversions_stage_events", true, fromIso, toIso, ["metric_date", "stage", "contact_key"]),
-        readViewPaged("v_unified_conversions_payment_records", true, fromIso, toIso, ["metric_date", "customer_key", "phone_key", "payment_category"]),
-        readViewPaged("v_unified_conversions_payment_lines", true, fromIso, toIso, ["metric_date", "sale_status_norm", "amount_usd", "amount_uah"]),
+        readViewPaged("v_unified_conversions_stage_events", true, fromIso, toIso, ["metric_date", "stage", "source_table", "source_row_id", "contact_key"]),
+        readViewPaged("v_unified_conversions_payment_records", true, fromIso, toIso, ["metric_date", "payment_record_id", "customer_key", "phone_key", "payment_category"]),
+        readViewPaged("v_unified_conversions_payment_lines", true, fromIso, toIso, ["metric_date", "payment_record_id", "payment_line_type", "customer_key", "phone_key"]),
         readView("v_onboarding_hierarchy", true),
         readView("v_project_data_bindings", true),
       ]);
