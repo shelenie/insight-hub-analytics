@@ -13,7 +13,7 @@ import { PreferencesProvider } from "@/preferences/PreferencesProvider";
 import { SavedViewsProvider } from "@/preferences/SavedViewsProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import Overview from "./pages/Overview";
-import Funnel from "./pages/Funnel";
+import Conversions from "./pages/Conversions";
 import Campaigns from "./pages/Campaigns";
 import Sales from "./pages/Sales";
 import Imports from "./pages/Imports";
@@ -44,7 +44,7 @@ const App = () => (
                       <Routes>
                         <Route path="/login" element={<Login />} />
                         <Route path="/" element={<ProtectedRoute><Overview /></ProtectedRoute>} />
-                        <Route path="/conversions" element={<ProtectedRoute><Funnel /></ProtectedRoute>} />
+                        <Route path="/conversions" element={<ProtectedRoute><Conversions /></ProtectedRoute>} />
                         <Route path="/campaigns" element={<ProtectedRoute><Campaigns /></ProtectedRoute>} />
                         <Route path="/sales" element={<ProtectedRoute><Sales /></ProtectedRoute>} />
                         <Route path="/imports" element={<ProtectedRoute><Imports /></ProtectedRoute>} />
