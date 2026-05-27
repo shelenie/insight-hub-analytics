@@ -40,6 +40,11 @@ export default function Sales() {
   const filteredOnboardingRows = useMemo(() => filterPlaceholderRows(query.data?.onboarding.rows as Record<string, unknown>[] | undefined) as Row[], [query.data?.onboarding.rows]);
   const contextRows = useMemo(() => filteredOnboardingRows.filter((row) => hasMeaningfulContext(row.client_name, row.project_name, row.funnel_name)), [filteredOnboardingRows]);
 
+  const handleRefresh = () => {
+    void query.refetch();
+  };
+  const isRefreshing = query.isFetching;
+
   const totals = summaryRows.reduce((acc, row) => ({
     sales_count: acc.sales_count + Number(row.sales_count ?? 0),
     first_payment_usd: acc.first_payment_usd + Number(row.first_payment_usd ?? 0),
@@ -50,7 +55,7 @@ export default function Sales() {
     total_payment_uah: acc.total_payment_uah + Number(row.total_payment_uah ?? 0),
   }), { sales_count: 0, first_payment_usd: 0, first_payment_uah: 0, second_payment_usd: 0, second_payment_uah: 0, total_payment_usd: 0, total_payment_uah: 0 });
 
-  return <DashboardLayout title={t("salesTitle")} subtitle={t("salesSubtitle")}><div className="space-y-4 overflow-x-hidden"><FilterBar showProject={false} showGroup={false} freshness={{ source: locale === "uk" ? "ІМПОРТ ПРОДАЖІВ" : "SALES IMPORT", status: "fresh", lastSync: "live" }} onRefresh={() => { void query.refetch(); }} isRefreshing={query.isFetching} />
+  return <DashboardLayout title={t("salesTitle")} subtitle={t("salesSubtitle")}><div className="space-y-4 overflow-x-hidden"><FilterBar showProject={false} showGroup={false} freshness={{ source: locale === "uk" ? "ІМПОРТ ПРОДАЖІВ" : "SALES IMPORT", status: "fresh", lastSync: "live" }} onRefresh={handleRefresh} isRefreshing={isRefreshing} />
     {!session ? <Msg t={locale === "uk" ? "Увійдіть, щоб переглянути дані продажів." : "Sign in to view sales data."} /> : query.isLoading ? <Msg t={t("salesLoading")} /> : null}
     {!query.isLoading && hasSalesDataError ? <Msg t={t("salesLoadError")} /> : null}
 
@@ -134,7 +139,7 @@ function CampaignRows({ rows, empty, locale }: { rows: Row[]; empty: string; loc
     locale === "uk" ? "Другі USD" : "Second USD",
     locale === "uk" ? "Загалом USD" : "Total USD",
     locale === "uk" ? "Загалом UAH" : "Total UAH",
-  ].map((c) => <TableHead key={c} className="text-xs uppercase tracking-wide whitespace-nowrap">{c === (locale === "uk" ? "Залишок USD" : "Remaining USD") ? <span title={locale === "uk" ? "Неоплачена частина тарифу / покупки" : "Unpaid part of the tariff / purchase"}>{c}</span> : c}</TableHead>)}</TableRow></TableHeader><TableBody>
+  ].map((c) => <TableHead key={c} className="text-xs uppercase tracking-wide whitespace-nowrap">{c}</TableHead>)}</TableRow></TableHeader><TableBody>
     {rows.slice(0, 200).map((r, i) => <TableRow key={i}>
       <TableCell className="max-w-[220px] truncate text-sm" title={String(r.campaign_name ?? "—")}>{String(r.campaign_name ?? "—")}</TableCell>
       <TableCell className="whitespace-nowrap text-sm">{formatPeriod(r.first_date, r.last_date)}</TableCell>
@@ -155,7 +160,7 @@ function DailyRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale
     locale === "uk" ? "Продажі" : "Sales",
     locale === "uk" ? "Загалом USD" : "Total USD",
     locale === "uk" ? "Загалом UAH" : "Total UAH",
-  ].map((c) => <TableHead key={c} className="text-xs uppercase tracking-wide whitespace-nowrap">{c === (locale === "uk" ? "Залишок USD" : "Remaining USD") ? <span title={locale === "uk" ? "Неоплачена частина тарифу / покупки" : "Unpaid part of the tariff / purchase"}>{c}</span> : c}</TableHead>)}</TableRow></TableHeader><TableBody>
+  ].map((c) => <TableHead key={c} className="text-xs uppercase tracking-wide whitespace-nowrap">{c}</TableHead>)}</TableRow></TableHeader><TableBody>
     {rows.slice(0, 200).map((r, i) => <TableRow key={i}>
       <TableCell className="whitespace-nowrap text-sm">{formatDay(r.sale_date)}</TableCell>
       <TableCell className="max-w-[220px] truncate text-sm" title={String(r.campaign_name ?? "—")}>{String(r.campaign_name ?? "—")}</TableCell>
@@ -265,12 +270,12 @@ function formatSaleStatus(value: Row[string], locale: "uk" | "en") {
   return display(value);
 }
 
-
 function isDemoBuyerRow(row: Row) {
   const email = display(row.email).toLowerCase();
   const customerName = display(row.customer_name).toLowerCase();
   return email.includes("example.com") || email.includes("refund.dev") || email.includes("alex.dev") || email.includes("ira.dev") || customerName.includes("тест") || customerName.includes("test");
 }
+
 function formatDay(v: Row[string]) {
   const d = toDate(v);
   if (!d) return "—";
