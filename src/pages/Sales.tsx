@@ -22,18 +22,21 @@ export default function Sales() {
   const fromIso = format(date.resolved.from, "yyyy-MM-dd");
   const toIso = format(date.resolved.to, "yyyy-MM-dd");
   const query = useQuery({ queryKey: ["sales-page", WORKSPACE_ID, fromIso, toIso, date.mode, date.preset], enabled: Boolean(session), queryFn: async () => {
-    const [summary, daily, onboarding] = await Promise.all([
+    const [summary, daily, onboarding, buyers] = await Promise.all([
       readSalesSummary(fromIso, toIso),
       readSalesDaily(fromIso, toIso),
       readOnboarding(),
+      readSalesBuyers(fromIso, toIso),
     ]);
-    return { summary, daily, onboarding };
+    return { summary, daily, onboarding, buyers };
   }});
 
   const summaryRows = query.data?.summary.rows ?? [];
   const dailyRows = query.data?.daily.rows ?? [];
-  const hasError = Boolean(query.data?.summary.unavailableReason || query.data?.daily.unavailableReason || query.isError);
-  const showSummaryEmpty = Boolean(session) && !query.isLoading && !hasError && summaryRows.length === 0;
+  const buyerRows = query.data?.buyers.rows ?? [];
+  const hasSalesDataError = Boolean(query.data?.summary.unavailableReason || query.data?.daily.unavailableReason || query.isError);
+  const hasBuyerError = Boolean(query.data?.buyers.unavailableReason);
+  const showSummaryEmpty = Boolean(session) && !query.isLoading && !hasSalesDataError && summaryRows.length === 0;
   const filteredOnboardingRows = useMemo(() => filterPlaceholderRows(query.data?.onboarding.rows as Record<string, unknown>[] | undefined) as Row[], [query.data?.onboarding.rows]);
   const contextRows = useMemo(() => filteredOnboardingRows.filter((row) => hasMeaningfulContext(row.client_name, row.project_name, row.funnel_name)), [filteredOnboardingRows]);
 
@@ -49,10 +52,10 @@ export default function Sales() {
 
   return <DashboardLayout title={t("salesTitle")} subtitle={t("salesSubtitle")}><div className="space-y-4 overflow-x-hidden"><FilterBar freshness={{ source: locale === "uk" ? "ІМПОРТ ПРОДАЖІВ" : "SALES IMPORT", status: "fresh", lastSync: "live", label: locale === "uk" ? "Дані" : "Data" }} />
     {!session ? <Msg t={locale === "uk" ? "Увійдіть, щоб переглянути дані продажів." : "Sign in to view sales data."} /> : query.isLoading ? <Msg t={t("salesLoading")} /> : null}
-    {!query.isLoading && hasError ? <Msg t={t("salesLoadError")} /> : null}
+    {!query.isLoading && hasSalesDataError ? <Msg t={t("salesLoadError")} /> : null}
 
     <SectionCard title={locale === "uk" ? "Підсумок продажів" : "Sales summary"} description={locale === "uk" ? "Ключові фінансові показники за вибраний період" : "Key financial metrics for the selected period"}>
-      {hasError ? <Msg t={t("salesLoadError")} /> : showSummaryEmpty ? <Msg t={t("salesEmpty")} /> : <Kpi rows={[
+      {hasSalesDataError ? <Msg t={t("salesLoadError")} /> : showSummaryEmpty ? <Msg t={t("salesEmpty")} /> : <Kpi rows={[
         { label: locale === "uk" ? "Продажі" : "Sales", value: fmtNum(totals.sales_count), compact: false },
         { label: locale === "uk" ? "Перші платежі USD" : "First payments USD", value: fmtUsd(totals.first_payment_usd), compact: true },
         { label: locale === "uk" ? "Перші платежі UAH" : "First payments UAH", value: fmtUah(totals.first_payment_uah), compact: true },
@@ -61,6 +64,10 @@ export default function Sales() {
         { label: locale === "uk" ? "Загалом USD" : "Total USD", value: fmtUsd(totals.total_payment_usd), compact: true },
         { label: locale === "uk" ? "Загалом UAH" : "Total UAH", value: fmtUah(totals.total_payment_uah), compact: true },
       ]} />}
+    </SectionCard>
+
+    <SectionCard title={locale === "uk" ? "Покупці" : "Buyer contacts"} description={locale === "uk" ? "Контакти людей із платіжними записами за вибраний період" : "Contacts with payment records for the selected period"} noPadding>
+      {hasBuyerError ? <Msg t={locale === "uk" ? "Не вдалося завантажити контакти покупців." : "Could not load buyer contacts."} /> : <BuyerRows rows={buyerRows} empty={locale === "uk" ? "Покупців за вибраний період не знайдено." : "No buyer contacts found for the selected period."} locale={locale} />}
     </SectionCard>
 
     <SectionCard title={locale === "uk" ? "Продажі за кампаніями" : "Sales by campaign"} description={locale === "uk" ? "Компактне зведення за кампаніями" : "Compact campaign summary"} noPadding>
@@ -83,6 +90,36 @@ export default function Sales() {
       </SectionCard>
     </details> : null}
   </div></DashboardLayout>;
+}
+
+function BuyerRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale: "uk" | "en" }) {
+  if (!rows.length) return <Msg t={empty} />;
+  return <div className="overflow-x-auto"><Table className="min-w-[1120px]"><TableHeader><TableRow>{[
+    locale === "uk" ? "Дата" : "Date",
+    locale === "uk" ? "Імʼя" : "Name",
+    locale === "uk" ? "Телефон" : "Phone",
+    "Email",
+    locale === "uk" ? "Тип оплати" : "Payment type",
+    locale === "uk" ? "Статус" : "Status",
+    locale === "uk" ? "Сплачено USD" : "Paid USD",
+    locale === "uk" ? "Сплачено UAH" : "Paid UAH",
+    locale === "uk" ? "Борг" : "Debt",
+  ].map((c) => <TableHead key={c} className="whitespace-nowrap text-xs uppercase tracking-wide">{c}</TableHead>)}</TableRow></TableHeader><TableBody>
+    {rows.map((r, i) => {
+      const email = display(r.email);
+      return <TableRow key={`${String(r.phone_key ?? "")}-${String(r.metric_date ?? "")}-${i}`}>
+        <TableCell className="whitespace-nowrap text-sm">{formatDay(r.metric_date)}</TableCell>
+        <TableCell className="max-w-[170px] truncate text-sm" title={display(r.customer_name)}>{display(r.customer_name)}</TableCell>
+        <TableCell className="max-w-[150px] truncate text-sm" title={display(r.phone_key)}>{display(r.phone_key)}</TableCell>
+        <TableCell className="max-w-[210px] truncate text-sm" title={email}>{email}</TableCell>
+        <TableCell className="max-w-[150px] truncate text-sm" title={formatPaymentType(r)}>{formatPaymentType(r)}</TableCell>
+        <TableCell className="whitespace-nowrap text-sm">{formatSaleStatus(r.sale_status_norm, locale)}</TableCell>
+        <TableCell className="text-right num text-sm">{fmtOptionalUsd(sumOptional(r.first_payment_usd, r.second_payment_usd))}</TableCell>
+        <TableCell className="text-right num text-sm">{fmtOptionalUah(sumOptional(r.first_payment_uah, r.second_payment_uah))}</TableCell>
+        <TableCell className="text-right num text-sm">{fmtOptionalUsd(toOptionalNumber(r.debt_amount))}</TableCell>
+      </TableRow>;
+    })}
+  </TableBody></Table></div>;
 }
 
 function CampaignRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale: "uk" | "en" }) {
@@ -157,12 +194,56 @@ async function readSalesDaily(fromIso: string, toIso: string) {
   return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null };
 }
 
+async function readSalesBuyers(fromIso: string, toIso: string) {
+  const res = await supabase
+    .from("v_unified_conversions_payment_records")
+    .select("metric_date,customer_name,email,phone_key,payment_type_norm,payment_category,sale_status_norm,tariff_price,debt_amount,first_payment_date,first_payment_usd,first_payment_uah,second_payment_date,second_payment_usd,second_payment_uah")
+    .eq("workspace_id", WORKSPACE_ID)
+    .gte("metric_date", fromIso)
+    .lte("metric_date", toIso)
+    .limit(500);
+  return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null };
+}
+
 function FriendlyRows({ rows, columns }: { rows: Row[]; columns: { key: string; label: string }[] }) {
   return <div className="overflow-x-auto"><Table className="min-w-[560px]"><TableHeader><TableRow>{columns.map((c) => <TableHead className="text-xs uppercase tracking-wide whitespace-nowrap" key={c.key}>{c.label}</TableHead>)}</TableRow></TableHeader><TableBody>{rows.slice(0, 50).map((r, i) => <TableRow key={i}>{columns.map((c) => <TableCell className="text-sm" key={c.key}>{String(r[c.key] ?? "—")}</TableCell>)}</TableRow>)}</TableBody></Table></div>;
 }
 
 function fmtUsd(value: number) { return `$${fmtNum(value)}`; }
 function fmtUah(value: number) { return `₴${fmtNum(value)}`; }
+function fmtOptionalUsd(value: number | null) { return value == null ? "—" : fmtUsd(value); }
+function fmtOptionalUah(value: number | null) { return value == null ? "—" : fmtUah(value); }
+
+function sumOptional(...values: Row[string][]) {
+  const numbers = values.map(toOptionalNumber).filter((value): value is number => value != null);
+  if (!numbers.length) return null;
+  return numbers.reduce((sum, value) => sum + value, 0);
+}
+
+function toOptionalNumber(value: Row[string]) {
+  if (value == null || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function display(value: Row[string]) {
+  if (value == null) return "—";
+  const text = String(value).trim();
+  return text || "—";
+}
+
+function formatPaymentType(row: Row) {
+  const labels = [display(row.payment_type_norm), display(row.payment_category)].filter((value, index, list) => value !== "—" && list.indexOf(value) === index);
+  return labels.length ? labels.join(" / ") : "—";
+}
+
+function formatSaleStatus(value: Row[string], locale: "uk" | "en") {
+  const normalized = display(value).toLowerCase();
+  if (normalized === "refund") return "Refund";
+  if (normalized === "needs_review") return locale === "uk" ? "На перевірці" : "Needs review";
+  if (normalized === "active") return locale === "uk" ? "Активний" : "Active";
+  return display(value);
+}
 
 function formatDay(v: Row[string]) {
   const d = toDate(v);
