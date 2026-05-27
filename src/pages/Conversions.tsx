@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { type ReactNode, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { RefreshCw } from "lucide-react";
@@ -107,11 +107,11 @@ export default function Conversions() {
 
         <SectionCard title={t("conversionsBetweenStages")} description={t("conversionsBetweenStagesDesc")}>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            <MetricCard label={t("conversionsRegToQuestionnaire")} value={safePct(aggregates.questionnaires, aggregates.registrations)} percent />
-            <MetricCard label={t("conversionsQuestionnaireToApplication")} value={safePct(aggregates.applications, aggregates.questionnaires)} percent />
-            <MetricCard label={t("conversionsApplicationToBooking")} value={safePct(aggregates.bookings, aggregates.applications)} percent />
-            <MetricCard label={t("conversionsRegToBooking")} value={safePct(aggregates.bookings, aggregates.registrations)} percent />
-            <MetricCard label={t("conversionsRegToPayment")} value={safePct(aggregates.paymentRecords, aggregates.registrations)} percent />
+            <MetricCard label={t("conversionsRegToQuestionnaire")} value={safePct(aggregates.questionnaires, aggregates.registrations)} percent helper={<RatioHelper counts={`${fmtNum(aggregates.questionnaires)} ${t("conversionsQuestionnairesLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.questionnaires, aggregates.registrations)} hint={t("conversionsAbove100Hint")} />} />
+            <MetricCard label={t("conversionsQuestionnaireToApplication")} value={safePct(aggregates.applications, aggregates.questionnaires)} percent helper={<RatioHelper counts={`${fmtNum(aggregates.applications)} ${t("conversionsApplicationsLower")} / ${fmtNum(aggregates.questionnaires)} ${t("conversionsQuestionnairesLower")}`} ratio={safePct(aggregates.applications, aggregates.questionnaires)} hint={t("conversionsAbove100Hint")} />} />
+            <MetricCard label={t("conversionsApplicationToBooking")} value={safePct(aggregates.bookings, aggregates.applications)} percent helper={<RatioHelper counts={`${fmtNum(aggregates.bookings)} ${t("conversionsBookingsLower")} / ${fmtNum(aggregates.applications)} ${t("conversionsApplicationsLower")}`} ratio={safePct(aggregates.bookings, aggregates.applications)} hint={t("conversionsAbove100Hint")} />} />
+            <MetricCard label={t("conversionsRegToBooking")} value={safePct(aggregates.bookings, aggregates.registrations)} percent helper={<RatioHelper counts={`${fmtNum(aggregates.bookings)} ${t("conversionsBookingsLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.bookings, aggregates.registrations)} hint={t("conversionsAbove100Hint")} />} />
+            <MetricCard label={t("conversionsRegToPayment")} value={safePct(aggregates.paymentRecords, aggregates.registrations)} percent helper={<RatioHelper counts={`${fmtNum(aggregates.paymentRecords)} ${t("conversionsPaymentsLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.paymentRecords, aggregates.registrations)} hint={t("conversionsAbove100Hint")} />} />
           </div>
         </SectionCard>
 
@@ -270,7 +270,8 @@ function filterMeaningfulContextRows(rows: Row[]) {
     return !(isEmpty(client) && isEmpty(project) && isEmpty(funnel));
   });
 }
-function MetricCard({ label, value, helper, percent, raw }: { label: string; value: unknown; helper?: string; percent?: boolean; raw?: boolean }) { const formatted = raw ? String(value ?? "—") : formatMetric(value as Row[string], Boolean(percent)); return <div className="rounded border p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-xl font-semibold num">{formatted}</p>{helper ? <p className="mt-1 text-xs text-muted-foreground">{helper}</p> : null}</div>; }
+function MetricCard({ label, value, helper, percent, raw }: { label: string; value: unknown; helper?: ReactNode; percent?: boolean; raw?: boolean }) { const formatted = raw ? String(value ?? "—") : formatMetric(value as Row[string], Boolean(percent)); return <div className="rounded border p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-xl font-semibold num">{formatted}</p>{helper ? <div className="mt-1 text-xs text-muted-foreground">{helper}</div> : null}</div>; }
+function RatioHelper({ counts, ratio, hint }: { counts: string; ratio: number | null; hint: string }) { return <><p>{counts}</p>{ratio !== null && ratio > 100 ? <p className="text-amber-700/90 dark:text-amber-300/90">{hint}</p> : null}</>; }
 function safePct(num: number, den: number) { if (!den) return null; return (num / den) * 100; }
 function parseDate(value: unknown): Date | null { if (!value) return null; const d = new Date(String(value)); return Number.isNaN(d.getTime()) ? null : d; }
 function toNumber(value: unknown): number | null { if (typeof value === "number" && Number.isFinite(value)) return value; if (typeof value === "string" && value.trim() !== "") { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : null; } return null; }
