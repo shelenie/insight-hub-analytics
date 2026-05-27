@@ -117,7 +117,7 @@ function BuyerRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale
         <TableCell className="max-w-[140px] truncate text-sm" title={formatPaymentType(r, locale)}>{formatPaymentType(r, locale)}</TableCell>
         <TableCell className="text-right num whitespace-nowrap text-sm">{fmtOptionalUsd(sumOptional(r.first_payment_usd, r.second_payment_usd))}</TableCell>
         <TableCell className="text-right num whitespace-nowrap text-sm">{fmtOptionalUahExact(sumOptional(r.first_payment_uah, r.second_payment_uah))}</TableCell>
-        <TableCell className="text-right num whitespace-nowrap text-sm">{fmtOptionalUahExact(toOptionalNumber(r.debt_amount))}</TableCell>
+        <TableCell className="text-right num whitespace-nowrap text-sm">{fmtOptionalUsd(toOptionalNumber(r.debt_amount))}</TableCell>
         <TableCell className="whitespace-nowrap text-sm">{formatSaleStatus(r.sale_status_norm, locale)}</TableCell>
       </TableRow>;
     })}
@@ -235,16 +235,26 @@ function display(value: Row[string]) {
 }
 
 function formatPaymentType(row: Row, locale: "uk" | "en") {
-  const normalized = [row.payment_type_norm, row.payment_category].map((v) => display(v).toLowerCase()).find((v) => v !== "—");
   const labels: Record<string, { uk: string; en: string }> = {
     full_payment: { uk: "Повна оплата", en: "Full payment" },
+    full: { uk: "Повна оплата", en: "Full payment" },
+    "повна": { uk: "Повна оплата", en: "Full payment" },
     installment: { uk: "Розтермінування", en: "Installment" },
+    "розтермінування": { uk: "Розтермінування", en: "Installment" },
     deposit: { uk: "Бронь / депозит", en: "Deposit" },
+    "бронь": { uk: "Бронь / депозит", en: "Deposit" },
     additional_payment: { uk: "Доплата", en: "Additional payment" },
+    "доплата": { uk: "Доплата", en: "Additional payment" },
     unknown: { uk: "Невідомо", en: "Unknown" },
   };
-  if (normalized && labels[normalized]) return labels[normalized][locale];
-  return display(row.payment_type_norm) !== "—" ? display(row.payment_type_norm) : display(row.payment_category);
+
+  const category = display(row.payment_category).toLowerCase();
+  if (category !== "—" && labels[category]) return labels[category][locale];
+
+  const typeNorm = display(row.payment_type_norm).toLowerCase();
+  if (typeNorm !== "—" && labels[typeNorm]) return labels[typeNorm][locale];
+
+  return display(row.payment_category) !== "—" ? display(row.payment_category) : display(row.payment_type_norm);
 }
 
 function formatSaleStatus(value: Row[string], locale: "uk" | "en") {
