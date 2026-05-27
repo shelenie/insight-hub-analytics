@@ -336,8 +336,11 @@ export const translations = {
   myAccount: { uk: "Мій акаунт", en: "My account" },
 
   // Sales
-  salesTitle: { uk: "Продажі / Виторг", en: "Sales / Revenue" },
-  salesSubtitle: { uk: "Внутрішня аналітика продажів", en: "Internal sales analytics" },
+  salesTitle: { uk: "Продажі / Виручка", en: "Sales / Revenue" },
+  salesSubtitle: { uk: "Фінансова аналітика продажів", en: "Sales financial analytics" },
+  salesLoading: { uk: "Завантаження даних продажів…", en: "Loading sales data…" },
+  salesLoadError: { uk: "Не вдалося завантажити дані продажів.", en: "Could not load sales data." },
+  salesEmpty: { uk: "За вибраний період дані продажів не знайдені.", en: "No sales data found for the selected period." },
   salesBySource: { uk: "Продажі за джерелом", en: "Sales by source" },
   salesByLeadType: { uk: "Продажі за типом ліда", en: "Sales by lead type" },
   salesByTariff: { uk: "Продажі за тарифом", en: "Sales by tariff" },
