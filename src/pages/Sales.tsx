@@ -93,7 +93,7 @@ export default function Sales() {
   const totals = useMemo(() => aggregateSalesTotals(summaryRows), [summaryRows]);
   const comparisonTotals = useMemo(() => aggregateSalesTotals(comparisonRows), [comparisonRows]);
   const showDeltas = compareMode !== "none" && Boolean(comparisonRange) && !comparisonQuery.isLoading;
-  const currencyNote = buildCurrencyNote(totals, lang);
+  const currencyNote = buildCurrencyNote(lang);
 
   return <DashboardLayout title={t("salesTitle")} subtitle={t("salesSubtitle")}><div className="space-y-4 overflow-x-hidden"><FilterBar showProject={false} showGroup={false} freshness={{ source: lang === "uk" ? "ІМПОРТ ПРОДАЖІВ" : "SALES IMPORT", status: "fresh", lastSync: "live" }} onRefresh={handleRefresh} isRefreshing={isRefreshing} />
     {!session ? <Msg t={lang === "uk" ? "Увійдіть, щоб переглянути дані продажів." : "Sign in to view sales data."} /> : query.isLoading ? <Msg t={t("salesLoading")} /> : null}
@@ -287,15 +287,10 @@ function fmtUahExact(value: number) { return `₴${new Intl.NumberFormat("en-US"
 function fmtOptionalUsd(value: number | null) { return value == null ? "—" : fmtUsd(value); }
 function fmtOptionalUahExact(value: number | null) { return value == null ? "—" : fmtUahExact(value); }
 
-function buildCurrencyNote(totals: SalesTotals, locale: "uk" | "en") {
-  const base = locale === "uk"
-    ? "Курс USD/UAH не рахується у браузері: сторінка показує USD і UAH так, як вони приходять із backend-даних."
-    : "USD/UAH exchange is not calculated in the browser: this page displays USD and UAH exactly as provided by backend data.";
-  if (totals.total_payment_usd <= 0 || totals.total_payment_uah <= 0) return base;
-  const impliedRate = totals.total_payment_uah / totals.total_payment_usd;
+function buildCurrencyNote(locale: "uk" | "en") {
   return locale === "uk"
-    ? `${base} Орієнтовне співвідношення за підсумками періоду: ₴${impliedRate.toFixed(2)} за $1.`
-    : `${base} Implied period ratio: ₴${impliedRate.toFixed(2)} per $1.`;
+    ? "Курс USD/UAH не рахується у браузері. Сторінка показує USD і UAH окремо так, як вони приходять із backend-даних."
+    : "USD/UAH exchange is not calculated in the browser. This page displays USD and UAH separately exactly as provided by backend data.";
 }
 
 function buildDelta(current: number | null, comparison: number | null, formatter: (value: number) => string, compareDisplay: "percent" | "absolute", showDelta: boolean): Delta | undefined {
