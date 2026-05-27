@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { FilterBar } from "@/components/dashboard/FilterBar";
@@ -9,6 +10,7 @@ import { filterPlaceholderRows } from "@/lib/demoFilters";
 import { useI18n } from "@/i18n/I18nProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
+import { useDateFilter } from "@/filters/DateContext";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 type Row = Record<string, string | number | boolean | null>;
@@ -16,14 +18,22 @@ type Row = Record<string, string | number | boolean | null>;
 export default function Sales() {
   const { t, locale } = useI18n();
   const { session } = useAuth();
-  const query = useQuery({ queryKey: ["sales-page", WORKSPACE_ID], enabled: Boolean(session), queryFn: async () => {
-    const [summary, daily, onboarding] = await Promise.all([read("v_unified_sales_performance_summary"), read("v_unified_sales_performance_daily"), read("v_onboarding_hierarchy")]);
+  const date = useDateFilter();
+  const fromIso = format(date.resolved.from, "yyyy-MM-dd");
+  const toIso = format(date.resolved.to, "yyyy-MM-dd");
+  const query = useQuery({ queryKey: ["sales-page", WORKSPACE_ID, fromIso, toIso, date.mode, date.preset], enabled: Boolean(session), queryFn: async () => {
+    const [summary, daily, onboarding] = await Promise.all([
+      readSalesSummary(fromIso, toIso),
+      readSalesDaily(fromIso, toIso),
+      readOnboarding(),
+    ]);
     return { summary, daily, onboarding };
   }});
 
   const summaryRows = query.data?.summary.rows ?? [];
   const dailyRows = query.data?.daily.rows ?? [];
-  const showSummaryEmpty = Boolean(session) && !query.isLoading && (query.data?.summary.unavailableReason != null || summaryRows.length === 0);
+  const hasError = Boolean(query.data?.summary.unavailableReason || query.data?.daily.unavailableReason || query.isError);
+  const showSummaryEmpty = Boolean(session) && !query.isLoading && !hasError && summaryRows.length === 0;
   const filteredOnboardingRows = useMemo(() => filterPlaceholderRows(query.data?.onboarding.rows as Record<string, unknown>[] | undefined) as Row[], [query.data?.onboarding.rows]);
   const contextRows = useMemo(() => filteredOnboardingRows.filter((row) => hasMeaningfulContext(row.client_name, row.project_name, row.funnel_name)), [filteredOnboardingRows]);
 
@@ -39,10 +49,10 @@ export default function Sales() {
 
   return <DashboardLayout title={t("salesTitle")} subtitle={t("salesSubtitle")}><div className="space-y-4 overflow-x-hidden"><FilterBar freshness={{ source: locale === "uk" ? "ІМПОРТ ПРОДАЖІВ" : "SALES IMPORT", status: "fresh", lastSync: "live", label: locale === "uk" ? "Дані" : "Data" }} />
     {!session ? <Msg t={locale === "uk" ? "Увійдіть, щоб переглянути дані продажів." : "Sign in to view sales data."} /> : query.isLoading ? <Msg t={t("salesLoading")} /> : null}
-    {!query.isLoading && query.data?.summary.unavailableReason ? <Msg t={t("salesLoadError")} /> : null}
+    {!query.isLoading && hasError ? <Msg t={t("salesLoadError")} /> : null}
 
     <SectionCard title={locale === "uk" ? "Підсумок продажів" : "Sales summary"} description={locale === "uk" ? "Ключові фінансові показники за вибраний період" : "Key financial metrics for the selected period"}>
-      {showSummaryEmpty ? <Msg t={t("salesEmpty")} /> : <Kpi rows={[
+      {hasError ? <Msg t={t("salesLoadError")} /> : showSummaryEmpty ? <Msg t={t("salesEmpty")} /> : <Kpi rows={[
         { label: locale === "uk" ? "Продажі" : "Sales", value: fmtNum(totals.sales_count), compact: false },
         { label: locale === "uk" ? "Перші платежі USD" : "First payments USD", value: fmtUsd(totals.first_payment_usd), compact: true },
         { label: locale === "uk" ? "Перші платежі UAH" : "First payments UAH", value: fmtUah(totals.first_payment_uah), compact: true },
@@ -123,7 +133,29 @@ function Kpi({ rows }: { rows: { label: string; value: string; compact: boolean 
 
 const Msg = ({ t }: { t: string }) => <p className="rounded border p-3 text-sm text-muted-foreground">{t}</p>;
 
-async function read(view: string) { const res = await supabase.from(view).select("*").eq("workspace_id", WORKSPACE_ID).limit(500); return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null }; }
+async function readOnboarding() { const res = await supabase.from("v_onboarding_hierarchy").select("*").eq("workspace_id", WORKSPACE_ID).limit(500); return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null }; }
+
+async function readSalesSummary(fromIso: string, toIso: string) {
+  const res = await supabase
+    .from("v_unified_sales_performance_summary")
+    .select("*")
+    .eq("workspace_id", WORKSPACE_ID)
+    .lte("first_date", toIso)
+    .gte("last_date", fromIso)
+    .limit(500);
+  return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null };
+}
+
+async function readSalesDaily(fromIso: string, toIso: string) {
+  const res = await supabase
+    .from("v_unified_sales_performance_daily")
+    .select("*")
+    .eq("workspace_id", WORKSPACE_ID)
+    .gte("sale_date", fromIso)
+    .lte("sale_date", toIso)
+    .limit(500);
+  return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null };
+}
 
 function FriendlyRows({ rows, columns }: { rows: Row[]; columns: { key: string; label: string }[] }) {
   return <div className="overflow-x-auto"><Table className="min-w-[560px]"><TableHeader><TableRow>{columns.map((c) => <TableHead className="text-xs uppercase tracking-wide whitespace-nowrap" key={c.key}>{c.label}</TableHead>)}</TableRow></TableHeader><TableBody>{rows.slice(0, 50).map((r, i) => <TableRow key={i}>{columns.map((c) => <TableCell className="text-sm" key={c.key}>{String(r[c.key] ?? "—")}</TableCell>)}</TableRow>)}</TableBody></Table></div>;
