@@ -104,9 +104,9 @@ function BuyerRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale
     locale === "uk" ? "Тип оплати" : "Payment type",
     locale === "uk" ? "Сплачено USD" : "Paid USD",
     locale === "uk" ? "Сплачено UAH" : "Paid UAH",
-    locale === "uk" ? "Борг" : "Debt",
+    locale === "uk" ? "Залишок USD" : "Remaining USD",
     locale === "uk" ? "Статус" : "Status",
-  ].map((c) => <TableHead key={c} className="whitespace-nowrap text-xs uppercase tracking-wide">{c}</TableHead>)}</TableRow></TableHeader><TableBody>
+  ].map((c) => <TableHead key={c} className="whitespace-nowrap text-xs uppercase tracking-wide">{c === (locale === "uk" ? "Залишок USD" : "Remaining USD") ? <span title={locale === "uk" ? "Неоплачена частина тарифу / покупки" : "Unpaid part of the tariff / purchase"}>{c}</span> : c}</TableHead>)}</TableRow></TableHeader><TableBody>
     {visibleRows.map((r, i) => {
       const email = display(r.email);
       return <TableRow key={`${String(r.phone_key ?? "")}-${String(r.metric_date ?? "")}-${i}`}>
@@ -134,7 +134,7 @@ function CampaignRows({ rows, empty, locale }: { rows: Row[]; empty: string; loc
     locale === "uk" ? "Другі USD" : "Second USD",
     locale === "uk" ? "Загалом USD" : "Total USD",
     locale === "uk" ? "Загалом UAH" : "Total UAH",
-  ].map((c) => <TableHead key={c} className="text-xs uppercase tracking-wide whitespace-nowrap">{c}</TableHead>)}</TableRow></TableHeader><TableBody>
+  ].map((c) => <TableHead key={c} className="text-xs uppercase tracking-wide whitespace-nowrap">{c === (locale === "uk" ? "Залишок USD" : "Remaining USD") ? <span title={locale === "uk" ? "Неоплачена частина тарифу / покупки" : "Unpaid part of the tariff / purchase"}>{c}</span> : c}</TableHead>)}</TableRow></TableHeader><TableBody>
     {rows.slice(0, 200).map((r, i) => <TableRow key={i}>
       <TableCell className="max-w-[220px] truncate text-sm" title={String(r.campaign_name ?? "—")}>{String(r.campaign_name ?? "—")}</TableCell>
       <TableCell className="whitespace-nowrap text-sm">{formatPeriod(r.first_date, r.last_date)}</TableCell>
@@ -155,7 +155,7 @@ function DailyRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale
     locale === "uk" ? "Продажі" : "Sales",
     locale === "uk" ? "Загалом USD" : "Total USD",
     locale === "uk" ? "Загалом UAH" : "Total UAH",
-  ].map((c) => <TableHead key={c} className="text-xs uppercase tracking-wide whitespace-nowrap">{c}</TableHead>)}</TableRow></TableHeader><TableBody>
+  ].map((c) => <TableHead key={c} className="text-xs uppercase tracking-wide whitespace-nowrap">{c === (locale === "uk" ? "Залишок USD" : "Remaining USD") ? <span title={locale === "uk" ? "Неоплачена частина тарифу / покупки" : "Unpaid part of the tariff / purchase"}>{c}</span> : c}</TableHead>)}</TableRow></TableHeader><TableBody>
     {rows.slice(0, 200).map((r, i) => <TableRow key={i}>
       <TableCell className="whitespace-nowrap text-sm">{formatDay(r.sale_date)}</TableCell>
       <TableCell className="max-w-[220px] truncate text-sm" title={String(r.campaign_name ?? "—")}>{String(r.campaign_name ?? "—")}</TableCell>
