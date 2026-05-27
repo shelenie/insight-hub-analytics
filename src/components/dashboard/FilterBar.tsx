@@ -80,60 +80,60 @@ export function FilterBar({
 
           {showDate && <DateFilter />}
 
-        {showProject && (
-          <Select value={projectValue} onValueChange={handleProjectChange}>
-            <SelectTrigger className="h-8 w-[170px] text-xs">
-            <SelectValue placeholder={t("project")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" className="text-xs">{t("allProjects")}</SelectItem>
-              {(projectOptions ?? []).map((p) => (
-                <SelectItem key={p.id} value={p.id} className="text-xs">
-                  {p.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+          {showProject && (
+            <Select value={projectValue} onValueChange={handleProjectChange}>
+              <SelectTrigger className="h-8 w-[170px] text-xs">
+                <SelectValue placeholder={t("project")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">{t("allProjects")}</SelectItem>
+                {(projectOptions ?? []).map((p) => (
+                  <SelectItem key={p.id} value={p.id} className="text-xs">
+                    {p.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
-        {showGroup && (
-          <Select value={groupValue} onValueChange={handleGroupChange}>
-            <SelectTrigger className="h-8 w-[170px] text-xs">
-            <SelectValue placeholder={t("reportGroup")} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all" className="text-xs">{t("allGroups")}</SelectItem>
-              {(groupOptions ?? []).map((g) => (
-                <SelectItem key={g.id} value={g.id} className="text-xs">
-                  {g.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+          {showGroup && (
+            <Select value={groupValue} onValueChange={handleGroupChange}>
+              <SelectTrigger className="h-8 w-[170px] text-xs">
+                <SelectValue placeholder={t("reportGroup")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all" className="text-xs">{t("allGroups")}</SelectItem>
+                {(groupOptions ?? []).map((g) => (
+                  <SelectItem key={g.id} value={g.id} className="text-xs">
+                    {g.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
 
-        {showViewMode && (
-          <div className="flex items-center rounded-md border bg-background p-0.5">
-            <button
-              onClick={() => onViewModeChange?.("summary")}
-              className={`flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors ${
-                viewMode === "summary" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <LayoutGrid className="h-3 w-3" />
-              {t("summaryView")}
-            </button>
-            <button
-              onClick={() => onViewModeChange?.("daily")}
-              className={`flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors ${
-                viewMode === "daily" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              <CalendarDays className="h-3 w-3" />
-              {t("dailyView")}
-            </button>
-          </div>
-        )}
+          {showViewMode && (
+            <div className="flex items-center rounded-md border bg-background p-0.5">
+              <button
+                onClick={() => onViewModeChange?.("summary")}
+                className={`flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors ${
+                  viewMode === "summary" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <LayoutGrid className="h-3 w-3" />
+                {t("summaryView")}
+              </button>
+              <button
+                onClick={() => onViewModeChange?.("daily")}
+                className={`flex items-center gap-1 rounded px-2 py-1 text-xs font-medium transition-colors ${
+                  viewMode === "daily" ? "bg-muted text-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <CalendarDays className="h-3 w-3" />
+                {t("dailyView")}
+              </button>
+            </div>
+          )}
 
           {extra}
         </div>
@@ -141,22 +141,24 @@ export function FilterBar({
         <div className="flex flex-wrap items-center gap-2">
           <SavedViewsMenu />
           <CompareControl />
-          {freshness && (
-            <div className="hidden md:flex items-center gap-2 text-[11px] text-muted-foreground whitespace-nowrap">
-              <span>{t("data")}</span>
-              <StatusBadge status={freshness.status} label={`${freshness.source} · ${freshness.lastSync}`} />
-            </div>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 gap-1.5 text-xs ml-auto"
-            onClick={onRefresh}
-            disabled={!onRefresh || isRefreshing}
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-            {t("refresh")}
-          </Button>
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            {freshness && (
+              <div className="hidden md:flex items-center gap-2 text-[11px] text-muted-foreground whitespace-nowrap">
+                <span>{t("data")}</span>
+                <StatusBadge status={freshness.status} label={`${freshness.source} · ${freshness.lastSync}`} />
+              </div>
+            )}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 gap-1.5 text-xs"
+              onClick={onRefresh}
+              disabled={!onRefresh || isRefreshing}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+              {t("refresh")}
+            </Button>
+          </div>
         </div>
       </div>
 
