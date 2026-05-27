@@ -81,7 +81,7 @@ export default function Conversions() {
           </div>
           <div className="ml-auto flex flex-wrap items-center gap-2">
           <p className="text-xs text-muted-foreground">{t("conversionsDataLabel")}</p>
-          <p className="inline-flex items-center gap-1.5 rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-1 text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{t("conversionsDataStatus")}</p>
+          <p className="inline-flex h-5 items-center gap-1.5 whitespace-nowrap rounded-md border border-success/25 bg-success-soft px-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-success"><span className="h-1.5 w-1.5 rounded-full bg-success" />{t("conversionsDataStatus")}</p>
           <Button size="sm" variant="outline" className="h-8" onClick={() => { boundsQuery.refetch(); dataQuery.refetch(); }} disabled={isRefreshing}>
             <RefreshCw className={`mr-1 h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
             {t("refresh")}
@@ -97,7 +97,7 @@ export default function Conversions() {
 
       {hasData && !hasError ? <>
         <SectionCard title={t("conversionsStageSection")} description={t("conversionsStageSectionDesc")}>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard label={t("conversionsRegistrations")} value={aggregates.registrations} helper={`${t("conversionsUniqueContacts")}: ${fmtNum(aggregates.stageUnique.registration)}`} />
             <MetricCard label={t("conversionsQuestionnaires")} value={aggregates.questionnaires} helper={`${t("conversionsUniqueContacts")}: ${fmtNum(aggregates.stageUnique.questionnaire)}`} />
             <MetricCard label={t("conversionsApplications")} value={aggregates.applications} helper={`${t("conversionsUniqueContacts")}: ${fmtNum(aggregates.stageUnique.application)}`} />
@@ -106,7 +106,7 @@ export default function Conversions() {
         </SectionCard>
 
         <SectionCard title={t("conversionsBetweenStages")} description={t("conversionsBetweenStagesDesc")}>
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <MetricCard label={t("conversionsRegToQuestionnaire")} value={safePct(aggregates.questionnaires, aggregates.registrations)} percent />
             <MetricCard label={t("conversionsQuestionnaireToApplication")} value={safePct(aggregates.applications, aggregates.questionnaires)} percent />
             <MetricCard label={t("conversionsApplicationToBooking")} value={safePct(aggregates.bookings, aggregates.applications)} percent />
@@ -115,23 +115,27 @@ export default function Conversions() {
           </div>
         </SectionCard>
 
-        <SectionCard title={t("conversionsPaymentsSection")} description={t("conversionsPaymentsSectionDesc")}><div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          <MetricCard label={t("conversionsPaymentRecords")} value={aggregates.paymentRecords} />
-          <MetricCard label={t("conversionsUniquePayers")} value={aggregates.uniquePayers} />
-          <MetricCard label={t("conversionsActivePayments")} value={aggregates.activePaymentRows} />
-          <MetricCard label={t("conversionsFullPayments")} value={aggregates.fullPaymentRows} />
-          <MetricCard label={t("conversionsInstallments")} value={aggregates.installmentRows} />
-          <MetricCard label={t("conversionsDeposits")} value={aggregates.depositRows} />
-          <MetricCard label={t("conversionsAdditionalPayments")} value={aggregates.additionalPaymentRows} />
-          <MetricCard label={t("conversionsRefunds")} value={aggregates.refundPaymentRows} />
-          <MetricCard label={t("conversionsNeedsReview")} value={aggregates.needsReviewPaymentRows} />
-          <MetricCard label={t("conversionsCollectedUsd")} value={money(aggregates.collectedUsdTotal, "USD", lang)} raw />
-          <MetricCard label={t("conversionsCollectedUah")} value={money(aggregates.collectedUahTotal, "UAH", lang)} raw />
-          <MetricCard label={t("conversionsDebt")} value={money(aggregates.debtTotal, "USD", lang)} raw />
-          <MetricCard label={t("conversionsTariffTotal")} value={money(aggregates.tariffTotal, "USD", lang)} raw />
-        </div></SectionCard>
+        <SectionCard title={t("conversionsPaymentsSection")} description={t("conversionsPaymentsSectionDesc")}>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+            <MetricCard label={t("conversionsPaymentRecords")} value={aggregates.paymentRecords} />
+            <MetricCard label={t("conversionsUniquePayers")} value={aggregates.uniquePayers} />
+            <MetricCard label={t("conversionsActivePayments")} value={aggregates.activePaymentRows} />
+            <MetricCard label={t("conversionsFullPayments")} value={aggregates.fullPaymentRows} />
+            <MetricCard label={t("conversionsInstallments")} value={aggregates.installmentRows} />
+            <MetricCard label={t("conversionsDeposits")} value={aggregates.depositRows} />
+            <MetricCard label={t("conversionsAdditionalPayments")} value={aggregates.additionalPaymentRows} />
+            <MetricCard label={t("conversionsRefunds")} value={aggregates.refundPaymentRows} />
+            <MetricCard label={t("conversionsNeedsReview")} value={aggregates.needsReviewPaymentRows} />
+          </div>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <MetricCard label={t("conversionsCollectedUsd")} value={money(aggregates.collectedUsdTotal, "USD", lang)} raw />
+            <MetricCard label={t("conversionsCollectedUah")} value={money(aggregates.collectedUahTotal, "UAH", lang)} raw />
+            <MetricCard label={t("conversionsDebt")} value={money(aggregates.debtTotal, "USD", lang)} raw />
+            <MetricCard label={t("conversionsTariffTotal")} value={money(aggregates.tariffTotal, "USD", lang)} raw />
+          </div>
+        </SectionCard>
         {aggregates.paymentCategoryRows.length > 0 ? <SectionCard title={t("conversionsPaymentTypeStructureTitle")} description={t("conversionsPaymentTypeStructureDesc")} noPadding>
-          <p className="px-4 pb-2 text-xs text-muted-foreground">{t("conversionsPaymentTypeStructureHelper")}</p>
+          <p className="px-4 pb-1 pt-2 text-xs text-muted-foreground">{t("conversionsPaymentTypeStructureHelper")}</p>
           <Table>
             <TableHeader>
               <TableRow>
