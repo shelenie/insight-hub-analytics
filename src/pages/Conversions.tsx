@@ -113,6 +113,16 @@ export default function Conversions() {
             <MetricCard label={t("conversionsRegToBooking")} value={safePct(aggregates.bookings, aggregates.registrations)} percent helper={<RatioHelper counts={`${fmtNum(aggregates.bookings)} ${t("conversionsBookingsLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.bookings, aggregates.registrations)} hint={t("conversionsAbove100Hint")} />} />
             <MetricCard label={t("conversionsRegToPayment")} value={safePct(aggregates.paymentRecords, aggregates.registrations)} percent helper={<RatioHelper counts={`${fmtNum(aggregates.paymentRecords)} ${t("conversionsPaymentsLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.paymentRecords, aggregates.registrations)} hint={t("conversionsAbove100Hint")} />} />
           </div>
+          <details className="mt-3 rounded border">
+            <summary className="cursor-pointer px-3 py-2 text-xs font-medium">{t("conversionsStageMeaningTitle")}</summary>
+            <div className="space-y-1 px-3 pb-3 text-xs text-muted-foreground">
+              <p>{t("conversionsStageMeaningRegistrations")}</p>
+              <p>{t("conversionsStageMeaningQuestionnaires")}</p>
+              <p>{t("conversionsStageMeaningApplications")}</p>
+              <p>{t("conversionsStageMeaningBookings")}</p>
+              <p>{t("conversionsStageMeaningPayments")}</p>
+            </div>
+          </details>
         </SectionCard>
 
         <SectionCard title={t("conversionsPaymentsSection")} description={t("conversionsPaymentsSectionDesc")}>
