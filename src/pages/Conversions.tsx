@@ -180,9 +180,19 @@ export default function Conversions() {
             <MetricCard label={t("conversionsBookingToPaymentMatch")} value={safePct(aggregates.matchedPhones, aggregates.bookingPhones)} percent />
             <MetricCard label={t("conversionsPaymentsWithoutBooking")} value={aggregates.paymentsWithoutBooking} />
             <MetricCard label={t("conversionsBookingsWithoutPayment")} value={aggregates.bookingsWithoutPayment} />
-            <MetricCard label={t("conversionsRawPaymentsBookingsRatio")} value={safePct(aggregates.paymentRecords, aggregates.bookings)} percent />
           </div>
-          <p className="mt-3 rounded border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-900 dark:text-amber-100">{t("conversionsRatioWarning")}</p>
+          <div className="mt-3 max-w-sm rounded border p-3">
+            <p className="text-xs font-medium">{t("conversionsRawPaymentsBookingsRatio")}</p>
+            <p className="mt-1 text-2xl font-semibold leading-none num">
+              {aggregates.bookings > 0 ? `${(aggregates.paymentRecords / aggregates.bookings).toFixed(1)}×` : "—"}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {aggregates.bookings > 0
+                ? `${fmtNum(aggregates.paymentRecords)} ${t("conversionsPaymentsLower")} / ${fmtNum(aggregates.bookings)} ${t("conversionsBookingsLower")}`
+                : t("conversionsNoBookingsInPeriod")}
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">{t("conversionsRatioWarning")}</p>
+          </div>
         </SectionCard>
 
         <SectionCard title={t("conversionsStageTableTitle")} description={t("conversionsStageTableDesc")} noPadding><Table><TableHeader><TableRow><TableHead>{t("conversionsThStage")}</TableHead><TableHead className="text-right">{t("conversionsThEvents")}</TableHead><TableHead className="text-right">{t("conversionsThUniqueContacts")}</TableHead><TableHead>{t("conversionsThFirstDate")}</TableHead><TableHead>{t("conversionsThLastDate")}</TableHead></TableRow></TableHeader><TableBody>{aggregates.stageRows.map((row, idx) => <TableRow key={idx}><TableCell>{getStageLabel(String(row.stage ?? "").toLowerCase(), row.stage_label, lang)}</TableCell><TableCell className="text-right num">{fmtNum(Number(row.events_count ?? 0))}</TableCell><TableCell className="text-right num">{fmtNum(Number(row.unique_contacts ?? 0))}</TableCell><TableCell>{formatShortDate(row.first_date)}</TableCell><TableCell>{formatShortDate(row.last_date)}</TableCell></TableRow>)}</TableBody></Table></SectionCard>
