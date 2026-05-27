@@ -16,20 +16,24 @@ const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 type Row = Record<string, string | number | boolean | null>;
 
 export default function Sales() {
-  const { t, locale } = useI18n();
+  const { t, lang } = useI18n();
   const { session } = useAuth();
   const date = useDateFilter();
   const fromIso = format(date.resolved.from, "yyyy-MM-dd");
   const toIso = format(date.resolved.to, "yyyy-MM-dd");
-  const query = useQuery({ queryKey: ["sales-page", WORKSPACE_ID, fromIso, toIso, date.mode, date.preset], enabled: Boolean(session), queryFn: async () => {
-    const [summary, daily, onboarding, buyers] = await Promise.all([
-      readSalesSummary(fromIso, toIso),
-      readSalesDaily(fromIso, toIso),
-      readOnboarding(),
-      readSalesBuyers(fromIso, toIso),
-    ]);
-    return { summary, daily, onboarding, buyers };
-  }});
+  const query = useQuery({
+    queryKey: ["sales-page", WORKSPACE_ID, fromIso, toIso, date.mode, date.preset],
+    enabled: Boolean(session),
+    queryFn: async () => {
+      const [summary, daily, onboarding, buyers] = await Promise.all([
+        readSalesSummary(fromIso, toIso),
+        readSalesDaily(fromIso, toIso),
+        readOnboarding(),
+        readSalesBuyers(fromIso, toIso),
+      ]);
+      return { summary, daily, onboarding, buyers };
+    },
+  });
 
   const summaryRows = query.data?.summary.rows ?? [];
   const dailyRows = query.data?.daily.rows ?? [];
@@ -55,42 +59,42 @@ export default function Sales() {
     total_payment_uah: acc.total_payment_uah + Number(row.total_payment_uah ?? 0),
   }), { sales_count: 0, first_payment_usd: 0, first_payment_uah: 0, second_payment_usd: 0, second_payment_uah: 0, total_payment_usd: 0, total_payment_uah: 0 });
 
-  return <DashboardLayout title={t("salesTitle")} subtitle={t("salesSubtitle")}><div className="space-y-4 overflow-x-hidden"><FilterBar showProject={false} showGroup={false} freshness={{ source: locale === "uk" ? "ІМПОРТ ПРОДАЖІВ" : "SALES IMPORT", status: "fresh", lastSync: "live" }} onRefresh={handleRefresh} isRefreshing={isRefreshing} />
-    {!session ? <Msg t={locale === "uk" ? "Увійдіть, щоб переглянути дані продажів." : "Sign in to view sales data."} /> : query.isLoading ? <Msg t={t("salesLoading")} /> : null}
+  return <DashboardLayout title={t("salesTitle")} subtitle={t("salesSubtitle")}><div className="space-y-4 overflow-x-hidden"><FilterBar showProject={false} showGroup={false} freshness={{ source: lang === "uk" ? "ІМПОРТ ПРОДАЖІВ" : "SALES IMPORT", status: "fresh", lastSync: "live" }} onRefresh={handleRefresh} isRefreshing={isRefreshing} />
+    {!session ? <Msg t={lang === "uk" ? "Увійдіть, щоб переглянути дані продажів." : "Sign in to view sales data."} /> : query.isLoading ? <Msg t={t("salesLoading")} /> : null}
     {!query.isLoading && hasSalesDataError ? <Msg t={t("salesLoadError")} /> : null}
 
-    <SectionCard title={locale === "uk" ? "Підсумок продажів" : "Sales summary"} description={locale === "uk" ? "Ключові фінансові показники за вибраний період" : "Key financial metrics for the selected period"}>
+    <SectionCard title={lang === "uk" ? "Підсумок продажів" : "Sales summary"} description={lang === "uk" ? "Ключові фінансові показники за вибраний період" : "Key financial metrics for the selected period"}>
       {hasSalesDataError ? <Msg t={t("salesLoadError")} /> : showSummaryEmpty ? <Msg t={t("salesEmpty")} /> : <Kpi rows={[
-        { label: locale === "uk" ? "Продажі" : "Sales", value: fmtNum(totals.sales_count), compact: false },
-        { label: locale === "uk" ? "Перші платежі USD" : "First payments USD", value: fmtUsd(totals.first_payment_usd), compact: true },
-        { label: locale === "uk" ? "Перші платежі UAH" : "First payments UAH", value: fmtUah(totals.first_payment_uah), compact: true },
-        { label: locale === "uk" ? "Другі платежі USD" : "Second payments USD", value: fmtUsd(totals.second_payment_usd), compact: true },
-        { label: locale === "uk" ? "Другі платежі UAH" : "Second payments UAH", value: fmtUah(totals.second_payment_uah), compact: true },
-        { label: locale === "uk" ? "Загалом USD" : "Total USD", value: fmtUsd(totals.total_payment_usd), compact: true },
-        { label: locale === "uk" ? "Загалом UAH" : "Total UAH", value: fmtUah(totals.total_payment_uah), compact: true },
+        { label: lang === "uk" ? "Продажі" : "Sales", value: fmtNum(totals.sales_count), compact: false },
+        { label: lang === "uk" ? "Перші платежі USD" : "First payments USD", value: fmtUsd(totals.first_payment_usd), compact: true },
+        { label: lang === "uk" ? "Перші платежі UAH" : "First payments UAH", value: fmtUah(totals.first_payment_uah), compact: true },
+        { label: lang === "uk" ? "Другі платежі USD" : "Second payments USD", value: fmtUsd(totals.second_payment_usd), compact: true },
+        { label: lang === "uk" ? "Другі платежі UAH" : "Second payments UAH", value: fmtUah(totals.second_payment_uah), compact: true },
+        { label: lang === "uk" ? "Загалом USD" : "Total USD", value: fmtUsd(totals.total_payment_usd), compact: true },
+        { label: lang === "uk" ? "Загалом UAH" : "Total UAH", value: fmtUah(totals.total_payment_uah), compact: true },
       ]} />}
     </SectionCard>
 
-    <SectionCard title={locale === "uk" ? "Покупці" : "Buyer contacts"} description={locale === "uk" ? "Контакти людей із платіжними записами за вибраний період" : "Contacts with payment records for the selected period"} noPadding>
-      {hasBuyerError ? <Msg t={locale === "uk" ? "Не вдалося завантажити контакти покупців." : "Could not load buyer contacts."} /> : <BuyerRows rows={buyerRows} empty={locale === "uk" ? "Покупців за вибраний період не знайдено." : "No buyer contacts found for the selected period."} locale={locale} />}
+    <SectionCard title={lang === "uk" ? "Покупці" : "Buyer contacts"} description={lang === "uk" ? "Контакти людей із платіжними записами за вибраний період" : "Contacts with payment records for the selected period"} noPadding>
+      {hasBuyerError ? <Msg t={lang === "uk" ? "Не вдалося завантажити контакти покупців." : "Could not load buyer contacts."} /> : <BuyerRows rows={buyerRows} empty={lang === "uk" ? "Покупців за вибраний період не знайдено." : "No buyer contacts found for the selected period."} locale={lang} />}
     </SectionCard>
 
-    <SectionCard title={locale === "uk" ? "Продажі за кампаніями" : "Sales by campaign"} description={locale === "uk" ? "Зведення по кампаніях" : "Compact campaign summary"} noPadding>
-      <CampaignRows rows={summaryRows} empty={t("salesEmpty")} locale={locale} />
+    <SectionCard title={lang === "uk" ? "Продажі за кампаніями" : "Sales by campaign"} description={lang === "uk" ? "Зведення по кампаніях" : "Compact campaign summary"} noPadding>
+      <CampaignRows rows={summaryRows} empty={t("salesEmpty")} locale={lang} />
     </SectionCard>
 
-    <SectionCard title={locale === "uk" ? "Продажі по днях" : "Sales by day"} description={locale === "uk" ? "Щоденні продажі" : "Daily sales trend"} noPadding>
-      <DailyRows rows={dailyRows} empty={t("salesEmpty")} locale={locale} />
+    <SectionCard title={lang === "uk" ? "Продажі по днях" : "Sales by day"} description={lang === "uk" ? "Щоденні продажі" : "Daily sales trend"} noPadding>
+      <DailyRows rows={dailyRows} empty={t("salesEmpty")} locale={lang} />
     </SectionCard>
 
     {contextRows.length > 0 ? <details className="rounded border" open={false}>
-      <summary className="cursor-pointer px-4 py-3 text-sm font-medium">{locale === "uk" ? "Додатково: контекст клієнта / проєкту / воронки" : "Additional: client / project / funnel context"}</summary>
-      <SectionCard title={locale === "uk" ? "Контекст клієнта / проєкту / воронки" : "Client / project / funnel context"} description={locale === "uk" ? "Довідковий контекст для аналізу продажів" : "Reference context for sales analytics"} noPadding>
+      <summary className="cursor-pointer px-4 py-3 text-sm font-medium">{lang === "uk" ? "Додатково: контекст клієнта / проєкту / воронки" : "Additional: client / project / funnel context"}</summary>
+      <SectionCard title={lang === "uk" ? "Контекст клієнта / проєкту / воронки" : "Client / project / funnel context"} description={lang === "uk" ? "Довідковий контекст для аналізу продажів" : "Reference context for sales analytics"} noPadding>
         <FriendlyRows rows={contextRows} columns={[
-          { key: "client_name", label: locale === "uk" ? "Клієнт" : "Client" },
-          { key: "project_name", label: locale === "uk" ? "Проєкт" : "Project" },
-          { key: "funnel_name", label: locale === "uk" ? "Воронка" : "Funnel" },
-          { key: "status", label: locale === "uk" ? "Статус" : "Status" },
+          { key: "client_name", label: lang === "uk" ? "Клієнт" : "Client" },
+          { key: "project_name", label: lang === "uk" ? "Проєкт" : "Project" },
+          { key: "funnel_name", label: lang === "uk" ? "Воронка" : "Funnel" },
+          { key: "status", label: lang === "uk" ? "Статус" : "Status" },
         ]} />
       </SectionCard>
     </details> : null}
@@ -101,29 +105,29 @@ function BuyerRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale
   // Hide obvious demo/test buyer rows from production-facing Sales UI.
   const visibleRows = rows.filter((row) => !isDemoBuyerRow(row));
   if (!visibleRows.length) return <Msg t={empty} />;
-  return <div className="overflow-x-auto"><Table className="min-w-[940px] w-full"><TableHeader><TableRow>{[
+  return <div className="overflow-x-hidden"><Table className="w-full table-fixed"><TableHeader><TableRow>{[
     locale === "uk" ? "Дата" : "Date",
     locale === "uk" ? "Імʼя" : "Name",
     locale === "uk" ? "Телефон" : "Phone",
     "Email",
     locale === "uk" ? "Тип оплати" : "Payment type",
-    locale === "uk" ? "Сплачено USD" : "Paid USD",
-    locale === "uk" ? "Сплачено UAH" : "Paid UAH",
-    locale === "uk" ? "Залишок USD" : "Remaining USD",
+    locale === "uk" ? "USD" : "USD",
+    locale === "uk" ? "UAH" : "UAH",
+    locale === "uk" ? "Залишок" : "Remaining",
     locale === "uk" ? "Статус" : "Status",
-  ].map((c) => <TableHead key={c} className="whitespace-nowrap text-xs uppercase tracking-wide">{c === (locale === "uk" ? "Залишок USD" : "Remaining USD") ? <span title={locale === "uk" ? "Неоплачена частина тарифу / покупки" : "Unpaid part of the tariff / purchase"}>{c}</span> : c}</TableHead>)}</TableRow></TableHeader><TableBody>
+  ].map((c) => <TableHead key={c} className="px-2 text-[10px] uppercase tracking-wide">{c === (locale === "uk" ? "Залишок" : "Remaining") ? <span title={locale === "uk" ? "Неоплачена частина тарифу / покупки в USD" : "Unpaid part of the tariff / purchase in USD"}>{c}</span> : c}</TableHead>)}</TableRow></TableHeader><TableBody>
     {visibleRows.map((r, i) => {
       const email = display(r.email);
       return <TableRow key={`${String(r.phone_key ?? "")}-${String(r.metric_date ?? "")}-${i}`}>
-        <TableCell className="whitespace-nowrap text-sm">{formatDay(r.metric_date)}</TableCell>
-        <TableCell className="max-w-[160px] truncate text-sm" title={display(r.customer_name)}>{display(r.customer_name)}</TableCell>
-        <TableCell className="max-w-[130px] truncate text-sm" title={display(r.phone_key)}>{display(r.phone_key)}</TableCell>
-        <TableCell className="max-w-[190px] truncate text-sm" title={email}>{email}</TableCell>
-        <TableCell className="max-w-[140px] truncate text-sm" title={formatPaymentType(r, locale)}>{formatPaymentType(r, locale)}</TableCell>
-        <TableCell className="text-right num whitespace-nowrap text-sm">{fmtOptionalUsd(sumOptional(r.first_payment_usd, r.second_payment_usd))}</TableCell>
-        <TableCell className="text-right num whitespace-nowrap text-sm">{fmtOptionalUahExact(sumOptional(r.first_payment_uah, r.second_payment_uah))}</TableCell>
-        <TableCell className="text-right num whitespace-nowrap text-sm">{fmtOptionalUsd(toOptionalNumber(r.debt_amount))}</TableCell>
-        <TableCell className="whitespace-nowrap text-sm">{formatSaleStatus(r.sale_status_norm, locale)}</TableCell>
+        <TableCell className="w-[8%] whitespace-nowrap px-2 text-xs">{formatDay(r.metric_date)}</TableCell>
+        <TableCell className="w-[14%] truncate px-2 text-sm" title={display(r.customer_name)}>{display(r.customer_name)}</TableCell>
+        <TableCell className="w-[13%] truncate px-2 text-sm" title={display(r.phone_key)}>{display(r.phone_key)}</TableCell>
+        <TableCell className="w-[18%] truncate px-2 text-sm" title={email}>{email}</TableCell>
+        <TableCell className="w-[13%] truncate px-2 text-sm" title={formatPaymentType(r, locale)}>{formatPaymentType(r, locale)}</TableCell>
+        <TableCell className="w-[8%] whitespace-nowrap px-2 text-right text-sm num">{fmtOptionalUsd(getPaidUsd(r))}</TableCell>
+        <TableCell className="w-[8%] whitespace-nowrap px-2 text-right text-sm num">{fmtOptionalUahExact(getPaidUah(r))}</TableCell>
+        <TableCell className="w-[8%] whitespace-nowrap px-2 text-right text-sm num">{fmtOptionalUsd(toOptionalNumber(r.debt_amount))}</TableCell>
+        <TableCell className="w-[10%] whitespace-nowrap px-2 text-sm">{formatSaleStatus(r.sale_status_norm, locale)}</TableCell>
       </TableRow>;
     })}
   </TableBody></Table></div>;
@@ -204,10 +208,11 @@ async function readSalesDaily(fromIso: string, toIso: string) {
 async function readSalesBuyers(fromIso: string, toIso: string) {
   const res = await supabase
     .from("v_unified_conversions_payment_records")
-    .select("metric_date,customer_name,email,phone_key,payment_type_norm,payment_category,sale_status_norm,tariff_price,debt_amount,first_payment_date,first_payment_usd,first_payment_uah,second_payment_date,second_payment_usd,second_payment_uah")
+    .select("*")
     .eq("workspace_id", WORKSPACE_ID)
     .gte("metric_date", fromIso)
     .lte("metric_date", toIso)
+    .order("metric_date", { ascending: false })
     .limit(500);
   return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null };
 }
@@ -221,13 +226,30 @@ function fmtUah(value: number) { return `₴${fmtNum(value)}`; }
 function fmtOptionalUsd(value: number | null) { return value == null ? "—" : fmtUsd(value); }
 function fmtOptionalUahExact(value: number | null) { return value == null ? "—" : `₴${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value)}`; }
 
+function getPaidUsd(row: Row) {
+  return coalesceNumber(row.total_payment_usd, sumOptional(row.first_payment_usd, row.second_payment_usd), row.payment_usd, row.paid_usd, row.amount_usd);
+}
+
+function getPaidUah(row: Row) {
+  return coalesceNumber(row.total_payment_uah, sumOptional(row.first_payment_uah, row.second_payment_uah), row.payment_uah, row.paid_uah, row.amount_uah);
+}
+
+function coalesceNumber(...values: (Row[string] | number | null)[]) {
+  for (const value of values) {
+    const number = typeof value === "number" ? value : toOptionalNumber(value);
+    if (number != null) return number;
+  }
+  return null;
+}
+
 function sumOptional(...values: Row[string][]) {
   const numbers = values.map(toOptionalNumber).filter((value): value is number => value != null);
   if (!numbers.length) return null;
   return numbers.reduce((sum, value) => sum + value, 0);
 }
 
-function toOptionalNumber(value: Row[string]) {
+function toOptionalNumber(value: Row[string] | number | null) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
   if (value == null || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
