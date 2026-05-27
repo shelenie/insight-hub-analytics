@@ -50,7 +50,7 @@ export default function Sales() {
     total_payment_uah: acc.total_payment_uah + Number(row.total_payment_uah ?? 0),
   }), { sales_count: 0, first_payment_usd: 0, first_payment_uah: 0, second_payment_usd: 0, second_payment_uah: 0, total_payment_usd: 0, total_payment_uah: 0 });
 
-  return <DashboardLayout title={t("salesTitle")} subtitle={t("salesSubtitle")}><div className="space-y-4 overflow-x-hidden"><FilterBar freshness={{ source: locale === "uk" ? "ІМПОРТ ПРОДАЖІВ" : "SALES IMPORT", status: "fresh", lastSync: "live", label: locale === "uk" ? "Дані" : "Data" }} />
+  return <DashboardLayout title={t("salesTitle")} subtitle={t("salesSubtitle")}><div className="space-y-4 overflow-x-hidden"><FilterBar freshness={{ source: locale === "uk" ? "ІМПОРТ ПРОДАЖІВ" : "SALES IMPORT", status: "fresh", lastSync: "live" }} onRefresh={() => { void query.refetch(); }} isRefreshing={query.isFetching} />
     {!session ? <Msg t={locale === "uk" ? "Увійдіть, щоб переглянути дані продажів." : "Sign in to view sales data."} /> : query.isLoading ? <Msg t={t("salesLoading")} /> : null}
     {!query.isLoading && hasSalesDataError ? <Msg t={t("salesLoadError")} /> : null}
 
@@ -70,11 +70,11 @@ export default function Sales() {
       {hasBuyerError ? <Msg t={locale === "uk" ? "Не вдалося завантажити контакти покупців." : "Could not load buyer contacts."} /> : <BuyerRows rows={buyerRows} empty={locale === "uk" ? "Покупців за вибраний період не знайдено." : "No buyer contacts found for the selected period."} locale={locale} />}
     </SectionCard>
 
-    <SectionCard title={locale === "uk" ? "Продажі за кампаніями" : "Sales by campaign"} description={locale === "uk" ? "Компактне зведення за кампаніями" : "Compact campaign summary"} noPadding>
+    <SectionCard title={locale === "uk" ? "Продажі за кампаніями" : "Sales by campaign"} description={locale === "uk" ? "Зведення по кампаніях" : "Compact campaign summary"} noPadding>
       <CampaignRows rows={summaryRows} empty={t("salesEmpty")} locale={locale} />
     </SectionCard>
 
-    <SectionCard title={locale === "uk" ? "Продажі по днях" : "Sales by day"} description={locale === "uk" ? "Щоденна динаміка продажів" : "Daily sales trend"} noPadding>
+    <SectionCard title={locale === "uk" ? "Продажі по днях" : "Sales by day"} description={locale === "uk" ? "Щоденні продажі" : "Daily sales trend"} noPadding>
       <DailyRows rows={dailyRows} empty={t("salesEmpty")} locale={locale} />
     </SectionCard>
 
@@ -93,30 +93,32 @@ export default function Sales() {
 }
 
 function BuyerRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale: "uk" | "en" }) {
-  if (!rows.length) return <Msg t={empty} />;
-  return <div className="overflow-x-auto"><Table className="min-w-[1120px]"><TableHeader><TableRow>{[
+  // Hide obvious demo/test buyer rows from production-facing Sales UI.
+  const visibleRows = rows.filter((row) => !isDemoBuyerRow(row));
+  if (!visibleRows.length) return <Msg t={empty} />;
+  return <div className="overflow-x-auto"><Table className="min-w-[940px] w-full"><TableHeader><TableRow>{[
     locale === "uk" ? "Дата" : "Date",
     locale === "uk" ? "Імʼя" : "Name",
     locale === "uk" ? "Телефон" : "Phone",
     "Email",
     locale === "uk" ? "Тип оплати" : "Payment type",
-    locale === "uk" ? "Статус" : "Status",
     locale === "uk" ? "Сплачено USD" : "Paid USD",
     locale === "uk" ? "Сплачено UAH" : "Paid UAH",
     locale === "uk" ? "Борг" : "Debt",
+    locale === "uk" ? "Статус" : "Status",
   ].map((c) => <TableHead key={c} className="whitespace-nowrap text-xs uppercase tracking-wide">{c}</TableHead>)}</TableRow></TableHeader><TableBody>
-    {rows.map((r, i) => {
+    {visibleRows.map((r, i) => {
       const email = display(r.email);
       return <TableRow key={`${String(r.phone_key ?? "")}-${String(r.metric_date ?? "")}-${i}`}>
         <TableCell className="whitespace-nowrap text-sm">{formatDay(r.metric_date)}</TableCell>
-        <TableCell className="max-w-[170px] truncate text-sm" title={display(r.customer_name)}>{display(r.customer_name)}</TableCell>
-        <TableCell className="max-w-[150px] truncate text-sm" title={display(r.phone_key)}>{display(r.phone_key)}</TableCell>
-        <TableCell className="max-w-[210px] truncate text-sm" title={email}>{email}</TableCell>
-        <TableCell className="max-w-[150px] truncate text-sm" title={formatPaymentType(r)}>{formatPaymentType(r)}</TableCell>
+        <TableCell className="max-w-[160px] truncate text-sm" title={display(r.customer_name)}>{display(r.customer_name)}</TableCell>
+        <TableCell className="max-w-[130px] truncate text-sm" title={display(r.phone_key)}>{display(r.phone_key)}</TableCell>
+        <TableCell className="max-w-[190px] truncate text-sm" title={email}>{email}</TableCell>
+        <TableCell className="max-w-[140px] truncate text-sm" title={formatPaymentType(r, locale)}>{formatPaymentType(r, locale)}</TableCell>
+        <TableCell className="text-right num whitespace-nowrap text-sm">{fmtOptionalUsd(sumOptional(r.first_payment_usd, r.second_payment_usd))}</TableCell>
+        <TableCell className="text-right num whitespace-nowrap text-sm">{fmtOptionalUahExact(sumOptional(r.first_payment_uah, r.second_payment_uah))}</TableCell>
+        <TableCell className="text-right num whitespace-nowrap text-sm">{fmtOptionalUahExact(toOptionalNumber(r.debt_amount))}</TableCell>
         <TableCell className="whitespace-nowrap text-sm">{formatSaleStatus(r.sale_status_norm, locale)}</TableCell>
-        <TableCell className="text-right num text-sm">{fmtOptionalUsd(sumOptional(r.first_payment_usd, r.second_payment_usd))}</TableCell>
-        <TableCell className="text-right num text-sm">{fmtOptionalUah(sumOptional(r.first_payment_uah, r.second_payment_uah))}</TableCell>
-        <TableCell className="text-right num text-sm">{fmtOptionalUsd(toOptionalNumber(r.debt_amount))}</TableCell>
       </TableRow>;
     })}
   </TableBody></Table></div>;
@@ -212,7 +214,7 @@ function FriendlyRows({ rows, columns }: { rows: Row[]; columns: { key: string; 
 function fmtUsd(value: number) { return `$${fmtNum(value)}`; }
 function fmtUah(value: number) { return `₴${fmtNum(value)}`; }
 function fmtOptionalUsd(value: number | null) { return value == null ? "—" : fmtUsd(value); }
-function fmtOptionalUah(value: number | null) { return value == null ? "—" : fmtUah(value); }
+function fmtOptionalUahExact(value: number | null) { return value == null ? "—" : `₴${new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(value)}`; }
 
 function sumOptional(...values: Row[string][]) {
   const numbers = values.map(toOptionalNumber).filter((value): value is number => value != null);
@@ -232,19 +234,33 @@ function display(value: Row[string]) {
   return text || "—";
 }
 
-function formatPaymentType(row: Row) {
-  const labels = [display(row.payment_type_norm), display(row.payment_category)].filter((value, index, list) => value !== "—" && list.indexOf(value) === index);
-  return labels.length ? labels.join(" / ") : "—";
+function formatPaymentType(row: Row, locale: "uk" | "en") {
+  const normalized = [row.payment_type_norm, row.payment_category].map((v) => display(v).toLowerCase()).find((v) => v !== "—");
+  const labels: Record<string, { uk: string; en: string }> = {
+    full_payment: { uk: "Повна оплата", en: "Full payment" },
+    installment: { uk: "Розтермінування", en: "Installment" },
+    deposit: { uk: "Бронь / депозит", en: "Deposit" },
+    additional_payment: { uk: "Доплата", en: "Additional payment" },
+    unknown: { uk: "Невідомо", en: "Unknown" },
+  };
+  if (normalized && labels[normalized]) return labels[normalized][locale];
+  return display(row.payment_type_norm) !== "—" ? display(row.payment_type_norm) : display(row.payment_category);
 }
 
 function formatSaleStatus(value: Row[string], locale: "uk" | "en") {
   const normalized = display(value).toLowerCase();
-  if (normalized === "refund") return "Refund";
+  if (normalized === "refund") return locale === "uk" ? "Повернення" : "Refund";
   if (normalized === "needs_review") return locale === "uk" ? "На перевірці" : "Needs review";
   if (normalized === "active") return locale === "uk" ? "Активний" : "Active";
   return display(value);
 }
 
+
+function isDemoBuyerRow(row: Row) {
+  const email = display(row.email).toLowerCase();
+  const customerName = display(row.customer_name).toLowerCase();
+  return email.includes("example.com") || email.includes("refund.dev") || email.includes("alex.dev") || email.includes("ira.dev") || customerName.includes("тест") || customerName.includes("test");
+}
 function formatDay(v: Row[string]) {
   const d = toDate(v);
   if (!d) return "—";
