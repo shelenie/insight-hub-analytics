@@ -1,9 +1,10 @@
-.overflow-x-auto:has(> table) {
+.overflow-x-auto > .relative.w-full.overflow-auto {
   max-height: 420px;
   overflow: auto !important;
 }
 
-.overflow-x-auto:has(> table) th.sticky,
+.overflow-x-auto > .relative.w-full.overflow-auto thead,
+.overflow-x-auto > .relative.w-full.overflow-auto th.sticky,
 th.sticky.top-\[68px\] {
   top: 0 !important;
 }
