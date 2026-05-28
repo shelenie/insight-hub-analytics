@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect, useMemo, useState } from "react";
+import { addDays, differenceInCalendarDays, format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { FilterBar } from "@/components/dashboard/FilterBar";
@@ -11,20 +11,24 @@ import { useI18n } from "@/i18n/I18nProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { useDateFilter } from "@/filters/DateContext";
+import { usePreferences } from "@/preferences/PreferencesProvider";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 type Row = Record<string, string | number | boolean | null>;
+type Delta = { text: string; tone: "positive" | "negative" | "neutral" };
 const STAGE_ORDER = ["registration", "questionnaire", "application", "booking", "sale", "payment"];
 const SELECTED_ROW_CLASS = "cursor-pointer bg-primary/10 hover:bg-primary/15 [&>td:first-child]:border-l-4 [&>td:first-child]:border-primary";
 const HOVER_ROW_CLASS = "cursor-pointer hover:bg-muted/50";
-const TABLE_HEAD_CLASS = "whitespace-nowrap px-4 text-left text-xs uppercase tracking-wide";
-const TABLE_CELL_CLASS = "whitespace-nowrap px-4 text-sm";
-const TABLE_NUM_CLASS = "whitespace-nowrap px-4 text-right text-sm num";
+const TABLE_HEAD_CLASS = "whitespace-nowrap px-3 text-left text-xs uppercase tracking-wide";
+const TABLE_NUM_HEAD_CLASS = "whitespace-nowrap px-3 text-right text-xs uppercase tracking-wide";
+const TABLE_CELL_CLASS = "whitespace-nowrap px-3 text-sm";
+const TABLE_NUM_CLASS = "whitespace-nowrap px-3 text-right text-sm num";
 
 export default function Conversions() {
   const { t, lang } = useI18n();
   const { session } = useAuth();
   const date = useDateFilter();
+  const { compareMode, compareDisplay } = usePreferences();
 
   const boundsQuery = useQuery({
     queryKey: ["conversions-bounds", WORKSPACE_ID],
@@ -50,6 +54,18 @@ export default function Conversions() {
   const fromIso = format(effectiveFrom, "yyyy-MM-dd");
   const toIso = format(effectiveTo, "yyyy-MM-dd");
 
+  const comparisonRange = useMemo(() => {
+    if (compareMode === "none") return null;
+    if (compareMode === "yesterday" && date.mode !== "exact") return null;
+    const days = differenceInCalendarDays(effectiveTo, effectiveFrom) + 1;
+    const comparisonToDate = addDays(effectiveFrom, -1);
+    const comparisonFromDate = addDays(comparisonToDate, -(days - 1));
+    return {
+      from: format(comparisonFromDate, "yyyy-MM-dd"),
+      to: format(comparisonToDate, "yyyy-MM-dd"),
+    };
+  }, [compareMode, date.mode, effectiveFrom, effectiveTo]);
+
   const dataQuery = useQuery({
     queryKey: ["conversions-page", WORKSPACE_ID, fromIso, toIso, date.mode, date.preset],
     enabled: Boolean(session),
@@ -65,17 +81,33 @@ export default function Conversions() {
     },
   });
 
+  const comparisonQuery = useQuery({
+    queryKey: ["conversions-comparison", WORKSPACE_ID, compareMode, comparisonRange?.from, comparisonRange?.to],
+    enabled: Boolean(session) && compareMode !== "none" && Boolean(comparisonRange),
+    queryFn: async () => {
+      const [stageEvents, paymentRecords, paymentLines] = await Promise.all([
+        readViewPaged("v_unified_conversions_stage_events", true, comparisonRange!.from, comparisonRange!.to, ["metric_date", "stage", "source_table", "source_row_id", "contact_key", "phone_key"]),
+        readViewPaged("v_unified_conversions_payment_records", true, comparisonRange!.from, comparisonRange!.to, ["metric_date", "payment_record_id", "customer_key", "phone_key"]),
+        readViewPaged("v_unified_conversions_payment_lines", true, comparisonRange!.from, comparisonRange!.to, ["metric_date", "payment_record_id", "payment_line_type", "customer_key", "phone_key"]),
+      ]);
+      return { stageEvents, paymentRecords, paymentLines };
+    },
+  });
+
   const aggregates = useMemo(() => computeAggregates(dataQuery.data?.stageEvents ?? [], dataQuery.data?.paymentRecords ?? [], dataQuery.data?.paymentLines ?? []), [dataQuery.data]);
+  const comparisonAggregates = useMemo(() => computeAggregates(comparisonQuery.data?.stageEvents ?? [], comparisonQuery.data?.paymentRecords ?? [], comparisonQuery.data?.paymentLines ?? []), [comparisonQuery.data]);
   const filteredOnboardingRows = useMemo(() => filterPlaceholderRows(dataQuery.data?.onboarding as Record<string, unknown>[] | undefined) as Row[], [dataQuery.data?.onboarding]);
   const meaningfulOnboardingRows = useMemo(() => filterMeaningfulContextRows(filteredOnboardingRows), [filteredOnboardingRows]);
   const filteredBindingsRows = useMemo(() => filterPlaceholderRows(dataQuery.data?.bindings as Record<string, unknown>[] | undefined) as Row[], [dataQuery.data?.bindings]);
 
-  const isRefreshing = boundsQuery.isRefetching || dataQuery.isRefetching;
+  const isRefreshing = boundsQuery.isRefetching || dataQuery.isRefetching || comparisonQuery.isRefetching;
   const hasData = aggregates.stageRows.length > 0 || aggregates.paymentRecords > 0 || aggregates.paymentLinesCount > 0;
   const hasError = dataQuery.isError || boundsQuery.isError;
+  const showDeltas = compareMode !== "none" && Boolean(comparisonRange) && !comparisonQuery.isLoading;
   const handleRefresh = () => {
     void boundsQuery.refetch();
     void dataQuery.refetch();
+    if (compareMode !== "none" && comparisonRange) void comparisonQuery.refetch();
   };
 
   return <DashboardLayout title={t("funnelTitle")} subtitle={t("funnelSubtitle")}>
@@ -95,20 +127,20 @@ export default function Conversions() {
       {hasData && !hasError ? <>
         <SectionCard title={t("conversionsStageSection")} description={t("conversionsStageSectionDesc")}>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <MetricCard label={t("conversionsRegistrations")} value={aggregates.registrations} helper={`${t("conversionsUniqueContacts")}: ${fmtNum(aggregates.stageUnique.registration)}`} />
-            <MetricCard label={t("conversionsQuestionnaires")} value={aggregates.questionnaires} helper={`${t("conversionsUniqueContacts")}: ${fmtNum(aggregates.stageUnique.questionnaire)}`} />
-            <MetricCard label={t("conversionsApplications")} value={aggregates.applications} helper={`${t("conversionsUniqueContacts")}: ${fmtNum(aggregates.stageUnique.application)}`} />
-            <MetricCard label={t("conversionsBookings")} value={aggregates.bookings} helper={`${t("conversionsUniqueContacts")}: ${fmtNum(aggregates.stageUnique.booking)}`} />
+            <MetricCard label={t("conversionsRegistrations")} value={aggregates.registrations} delta={buildDelta(aggregates.registrations, comparisonAggregates.registrations, compareDisplay, showDeltas)} helper={`${t("conversionsUniqueContacts")}: ${fmtNum(aggregates.stageUnique.registration)}`} />
+            <MetricCard label={t("conversionsQuestionnaires")} value={aggregates.questionnaires} delta={buildDelta(aggregates.questionnaires, comparisonAggregates.questionnaires, compareDisplay, showDeltas)} helper={`${t("conversionsUniqueContacts")}: ${fmtNum(aggregates.stageUnique.questionnaire)}`} />
+            <MetricCard label={t("conversionsApplications")} value={aggregates.applications} delta={buildDelta(aggregates.applications, comparisonAggregates.applications, compareDisplay, showDeltas)} helper={`${t("conversionsUniqueContacts")}: ${fmtNum(aggregates.stageUnique.application)}`} />
+            <MetricCard label={t("conversionsBookings")} value={aggregates.bookings} delta={buildDelta(aggregates.bookings, comparisonAggregates.bookings, compareDisplay, showDeltas)} helper={`${t("conversionsUniqueContacts")}: ${fmtNum(aggregates.stageUnique.booking)}`} />
           </div>
         </SectionCard>
 
         <SectionCard title={t("conversionsBetweenStages")} description={t("conversionsBetweenStagesDesc")}>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            <MetricCard label={t("conversionsRegToQuestionnaire")} value={safePct(aggregates.questionnaires, aggregates.registrations)} percent helper={<RatioHelper counts={`${fmtNum(aggregates.questionnaires)} ${t("conversionsQuestionnairesLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.questionnaires, aggregates.registrations)} hint={t("conversionsAbove100Hint")} />} />
-            <MetricCard label={t("conversionsQuestionnaireToApplication")} value={safePct(aggregates.applications, aggregates.questionnaires)} percent helper={<RatioHelper counts={`${fmtNum(aggregates.applications)} ${t("conversionsApplicationsLower")} / ${fmtNum(aggregates.questionnaires)} ${t("conversionsQuestionnairesLower")}`} ratio={safePct(aggregates.applications, aggregates.questionnaires)} hint={t("conversionsAbove100Hint")} />} />
-            <MetricCard label={t("conversionsApplicationToBooking")} value={safePct(aggregates.bookings, aggregates.applications)} percent helper={<RatioHelper counts={`${fmtNum(aggregates.bookings)} ${t("conversionsBookingsLower")} / ${fmtNum(aggregates.applications)} ${t("conversionsApplicationsLower")}`} ratio={safePct(aggregates.bookings, aggregates.applications)} hint={t("conversionsAbove100Hint")} />} />
-            <MetricCard label={t("conversionsRegToBooking")} value={safePct(aggregates.bookings, aggregates.registrations)} percent helper={<RatioHelper counts={`${fmtNum(aggregates.bookings)} ${t("conversionsBookingsLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.bookings, aggregates.registrations)} hint={t("conversionsAbove100Hint")} />} />
-            <MetricCard label={t("conversionsRegToPayment")} value={safePct(aggregates.paymentRecords, aggregates.registrations)} percent helper={<RatioHelper counts={`${fmtNum(aggregates.paymentRecords)} ${t("conversionsPaymentsLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.paymentRecords, aggregates.registrations)} hint={t("conversionsAbove100Hint")} />} />
+            <MetricCard label={t("conversionsRegToQuestionnaire")} value={safePct(aggregates.questionnaires, aggregates.registrations)} percent delta={buildDelta(safePct(aggregates.questionnaires, aggregates.registrations), safePct(comparisonAggregates.questionnaires, comparisonAggregates.registrations), compareDisplay, showDeltas, true)} helper={<RatioHelper counts={`${fmtNum(aggregates.questionnaires)} ${t("conversionsQuestionnairesLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.questionnaires, aggregates.registrations)} hint={t("conversionsAbove100Hint")} />} />
+            <MetricCard label={t("conversionsQuestionnaireToApplication")} value={safePct(aggregates.applications, aggregates.questionnaires)} percent delta={buildDelta(safePct(aggregates.applications, aggregates.questionnaires), safePct(comparisonAggregates.applications, comparisonAggregates.questionnaires), compareDisplay, showDeltas, true)} helper={<RatioHelper counts={`${fmtNum(aggregates.applications)} ${t("conversionsApplicationsLower")} / ${fmtNum(aggregates.questionnaires)} ${t("conversionsQuestionnairesLower")}`} ratio={safePct(aggregates.applications, aggregates.questionnaires)} hint={t("conversionsAbove100Hint")} />} />
+            <MetricCard label={t("conversionsApplicationToBooking")} value={safePct(aggregates.bookings, aggregates.applications)} percent delta={buildDelta(safePct(aggregates.bookings, aggregates.applications), safePct(comparisonAggregates.bookings, comparisonAggregates.applications), compareDisplay, showDeltas, true)} helper={<RatioHelper counts={`${fmtNum(aggregates.bookings)} ${t("conversionsBookingsLower")} / ${fmtNum(aggregates.applications)} ${t("conversionsApplicationsLower")}`} ratio={safePct(aggregates.bookings, aggregates.applications)} hint={t("conversionsAbove100Hint")} />} />
+            <MetricCard label={t("conversionsRegToBooking")} value={safePct(aggregates.bookings, aggregates.registrations)} percent delta={buildDelta(safePct(aggregates.bookings, aggregates.registrations), safePct(comparisonAggregates.bookings, comparisonAggregates.registrations), compareDisplay, showDeltas, true)} helper={<RatioHelper counts={`${fmtNum(aggregates.bookings)} ${t("conversionsBookingsLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.bookings, aggregates.registrations)} hint={t("conversionsAbove100Hint")} />} />
+            <MetricCard label={t("conversionsRegToPayment")} value={safePct(aggregates.paymentRecords, aggregates.registrations)} percent delta={buildDelta(safePct(aggregates.paymentRecords, aggregates.registrations), safePct(comparisonAggregates.paymentRecords, comparisonAggregates.registrations), compareDisplay, showDeltas, true)} helper={<RatioHelper counts={`${fmtNum(aggregates.paymentRecords)} ${t("conversionsPaymentsLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.paymentRecords, aggregates.registrations)} hint={t("conversionsAbove100Hint")} />} />
           </div>
           <details className="mt-3 rounded border">
             <summary className="cursor-pointer px-3 py-2 text-xs font-medium">{t("conversionsStageMeaningTitle")}</summary>
@@ -124,15 +156,15 @@ export default function Conversions() {
 
         <SectionCard title={t("conversionsPaymentsSection")} description={t("conversionsPaymentsSectionDesc")}>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-            <MetricCard label={t("conversionsPaymentRecords")} value={aggregates.paymentRecords} />
-            <MetricCard label={t("conversionsUniquePayers")} value={aggregates.uniquePayers} />
-            <MetricCard label={t("conversionsActivePayments")} value={aggregates.activePaymentRows} />
-            <MetricCard label={t("conversionsFullPayments")} value={aggregates.fullPaymentRows} />
-            <MetricCard label={t("conversionsInstallments")} value={aggregates.installmentRows} />
-            <MetricCard label={t("conversionsDeposits")} value={aggregates.depositRows} />
-            <MetricCard label={t("conversionsAdditionalPayments")} value={aggregates.additionalPaymentRows} />
-            <MetricCard label={t("conversionsRefunds")} value={aggregates.refundPaymentRows} />
-            <MetricCard label={t("conversionsNeedsReview")} value={aggregates.needsReviewPaymentRows} />
+            <MetricCard label={t("conversionsPaymentRecords")} value={aggregates.paymentRecords} delta={buildDelta(aggregates.paymentRecords, comparisonAggregates.paymentRecords, compareDisplay, showDeltas)} />
+            <MetricCard label={t("conversionsUniquePayers")} value={aggregates.uniquePayers} delta={buildDelta(aggregates.uniquePayers, comparisonAggregates.uniquePayers, compareDisplay, showDeltas)} />
+            <MetricCard label={t("conversionsActivePayments")} value={aggregates.activePaymentRows} delta={buildDelta(aggregates.activePaymentRows, comparisonAggregates.activePaymentRows, compareDisplay, showDeltas)} />
+            <MetricCard label={t("conversionsFullPayments")} value={aggregates.fullPaymentRows} delta={buildDelta(aggregates.fullPaymentRows, comparisonAggregates.fullPaymentRows, compareDisplay, showDeltas)} />
+            <MetricCard label={t("conversionsInstallments")} value={aggregates.installmentRows} delta={buildDelta(aggregates.installmentRows, comparisonAggregates.installmentRows, compareDisplay, showDeltas)} />
+            <MetricCard label={t("conversionsDeposits")} value={aggregates.depositRows} delta={buildDelta(aggregates.depositRows, comparisonAggregates.depositRows, compareDisplay, showDeltas)} />
+            <MetricCard label={t("conversionsAdditionalPayments")} value={aggregates.additionalPaymentRows} delta={buildDelta(aggregates.additionalPaymentRows, comparisonAggregates.additionalPaymentRows, compareDisplay, showDeltas)} />
+            <MetricCard label={t("conversionsRefunds")} value={aggregates.refundPaymentRows} delta={buildDelta(aggregates.refundPaymentRows, comparisonAggregates.refundPaymentRows, compareDisplay, showDeltas)} />
+            <MetricCard label={t("conversionsNeedsReview")} value={aggregates.needsReviewPaymentRows} delta={buildDelta(aggregates.needsReviewPaymentRows, comparisonAggregates.needsReviewPaymentRows, compareDisplay, showDeltas)} />
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <MetricCard label={t("conversionsCollectedUsd")} value={money(aggregates.collectedUsdTotal, "USD", lang)} raw />
@@ -147,12 +179,12 @@ export default function Conversions() {
         <SectionCard title={t("conversionsMatchingTitle")} description={t("conversionsMatchingSubtitle")}>
           <p className="mb-3 text-xs text-muted-foreground">{t("conversionsMatchingExplain")}</p>
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-            <MetricCard label={t("conversionsBookingPhones")} value={aggregates.bookingPhones} />
-            <MetricCard label={t("conversionsPaymentPhones")} value={aggregates.paymentPhones} />
-            <MetricCard label={t("conversionsMatchedPhones")} value={aggregates.matchedPhones} />
-            <MetricCard label={t("conversionsBookingToPaymentMatch")} value={safePct(aggregates.matchedPhones, aggregates.bookingPhones)} percent />
-            <MetricCard label={t("conversionsPaymentsWithoutBooking")} value={aggregates.paymentsWithoutBooking} />
-            <MetricCard label={t("conversionsBookingsWithoutPayment")} value={aggregates.bookingsWithoutPayment} />
+            <MetricCard label={t("conversionsBookingPhones")} value={aggregates.bookingPhones} delta={buildDelta(aggregates.bookingPhones, comparisonAggregates.bookingPhones, compareDisplay, showDeltas)} />
+            <MetricCard label={t("conversionsPaymentPhones")} value={aggregates.paymentPhones} delta={buildDelta(aggregates.paymentPhones, comparisonAggregates.paymentPhones, compareDisplay, showDeltas)} />
+            <MetricCard label={t("conversionsMatchedPhones")} value={aggregates.matchedPhones} delta={buildDelta(aggregates.matchedPhones, comparisonAggregates.matchedPhones, compareDisplay, showDeltas)} />
+            <MetricCard label={t("conversionsBookingToPaymentMatch")} value={safePct(aggregates.matchedPhones, aggregates.bookingPhones)} percent delta={buildDelta(safePct(aggregates.matchedPhones, aggregates.bookingPhones), safePct(comparisonAggregates.matchedPhones, comparisonAggregates.bookingPhones), compareDisplay, showDeltas, true)} />
+            <MetricCard label={t("conversionsPaymentsWithoutBooking")} value={aggregates.paymentsWithoutBooking} delta={buildDelta(aggregates.paymentsWithoutBooking, comparisonAggregates.paymentsWithoutBooking, compareDisplay, showDeltas)} />
+            <MetricCard label={t("conversionsBookingsWithoutPayment")} value={aggregates.bookingsWithoutPayment} delta={buildDelta(aggregates.bookingsWithoutPayment, comparisonAggregates.bookingsWithoutPayment, compareDisplay, showDeltas)} />
           </div>
           <div className="mt-3 max-w-sm rounded border p-3">
             <p className="text-xs font-medium">{t("conversionsRawPaymentsBookingsRatio")}</p>
@@ -178,13 +210,13 @@ function PaymentTypeTable({ rows, t }: { rows: Array<{ category: string; total_r
   return <SectionCard title={t("conversionsPaymentTypeStructureTitle")} description={t("conversionsPaymentTypeStructureDesc")} noPadding>
     <p className="px-4 pb-1 pt-2 text-xs text-muted-foreground">{t("conversionsPaymentTypeStructureHelper")}</p>
     <Table className="w-full table-fixed">
-      <colgroup><col /><col style={{ width: 150 }} /><col style={{ width: 150 }} /><col style={{ width: 150 }} /><col style={{ width: 170 }} /></colgroup>
+      <colgroup><col /><col style={{ width: 96 }} /><col style={{ width: 118 }} /><col style={{ width: 96 }} /><col style={{ width: 124 }} /></colgroup>
       <TableHeader><TableRow>
         <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsPaymentTypeThType")}</TableHead>
-        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsPaymentTypeThTotal")}</TableHead>
-        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsPaymentTypeThIncluded")}</TableHead>
-        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsPaymentTypeThRefund")}</TableHead>
-        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsPaymentTypeThNeedsReview")}</TableHead>
+        <TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsPaymentTypeThTotal")}</TableHead>
+        <TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsPaymentTypeThIncluded")}</TableHead>
+        <TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsPaymentTypeThRefund")}</TableHead>
+        <TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsPaymentTypeThNeedsReview")}</TableHead>
       </TableRow></TableHeader>
       <TableBody>{rows.map((row, idx) => {
         const labelKey = getPaymentCategoryLabelKey(row.category);
@@ -206,11 +238,11 @@ function StageTable({ rows, t, lang }: { rows: Row[]; t: (key: string) => string
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   return <SectionCard title={t("conversionsStageTableTitle")} description={t("conversionsStageTableDesc")} noPadding>
     <Table className="w-full table-fixed">
-      <colgroup><col /><col style={{ width: 190 }} /><col style={{ width: 210 }} /><col style={{ width: 170 }} /><col style={{ width: 170 }} /></colgroup>
+      <colgroup><col /><col style={{ width: 92 }} /><col style={{ width: 150 }} /><col style={{ width: 112 }} /><col style={{ width: 122 }} /></colgroup>
       <TableHeader><TableRow>
         <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsThStage")}</TableHead>
-        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsThEvents")}</TableHead>
-        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsThUniqueContacts")}</TableHead>
+        <TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsThEvents")}</TableHead>
+        <TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsThUniqueContacts")}</TableHead>
         <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsThFirstDate")}</TableHead>
         <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsThLastDate")}</TableHead>
       </TableRow></TableHeader>
@@ -306,38 +338,17 @@ async function readViewPaged(viewName: string, scopedByWorkspace: boolean, from?
   console.warn(`[Conversions] Reached max rows cap (${maxRows}) for ${viewName}. Results may be truncated.`);
   return rows;
 }
-function filterMeaningfulContextRows(rows: Row[]) {
-  return rows.filter((row) => {
-    const client = String(row.client_name ?? "").trim();
-    const project = String(row.project_name ?? "").trim();
-    const funnel = String(row.funnel_name ?? "").trim();
-    const isEmpty = (value: string) => value === "" || value === "—";
-    return !(isEmpty(client) && isEmpty(project) && isEmpty(funnel));
-  });
-}
-function MetricCard({ label, value, helper, percent, raw }: { label: string; value: unknown; helper?: ReactNode; percent?: boolean; raw?: boolean }) { const formatted = raw ? String(value ?? "—") : formatMetric(value as Row[string], Boolean(percent)); return <div className="rounded border p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-xl font-semibold num">{formatted}</p>{helper ? <div className="mt-1 text-xs text-muted-foreground">{helper}</div> : null}</div>; }
+function filterMeaningfulContextRows(rows: Row[]) { return rows.filter((row) => { const client = String(row.client_name ?? "").trim(); const project = String(row.project_name ?? "").trim(); const funnel = String(row.funnel_name ?? "").trim(); const isEmpty = (value: string) => value === "" || value === "—"; return !(isEmpty(client) && isEmpty(project) && isEmpty(funnel)); }); }
+function MetricCard({ label, value, helper, percent, raw, delta }: { label: string; value: unknown; helper?: ReactNode; percent?: boolean; raw?: boolean; delta?: Delta }) { const formatted = raw ? String(value ?? "—") : formatMetric(value as Row[string], Boolean(percent)); return <div className="rounded border p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-xl font-semibold num">{formatted}</p>{delta ? <p className={`mt-1 text-xs font-medium ${delta.tone === "positive" ? "text-emerald-600" : delta.tone === "negative" ? "text-red-600" : "text-muted-foreground"}`}>{delta.text}</p> : null}{helper ? <div className="mt-1 text-xs text-muted-foreground">{helper}</div> : null}</div>; }
 function RatioHelper({ counts, ratio, hint }: { counts: string; ratio: number | null; hint: string }) { return <><p>{counts}</p>{ratio !== null && ratio > 100 ? <p className="text-amber-700/90 dark:text-amber-300/90">{hint}</p> : null}</>; }
 function safePct(num: number, den: number) { if (!den) return null; return (num / den) * 100; }
 function parseDate(value: unknown): Date | null { if (!value) return null; const d = new Date(String(value)); return Number.isNaN(d.getTime()) ? null : d; }
 function toNumber(value: unknown): number | null { if (typeof value === "number" && Number.isFinite(value)) return value; if (typeof value === "string" && value.trim() !== "") { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : null; } return null; }
 function formatMetric(value: Row[string], isPercent: boolean) { const n = toNumber(value); if (n == null) return "—"; return isPercent ? `${fmtNum(n)}%` : fmtNum(n); }
 function money(value: unknown, currency: "USD" | "UAH", lang: "uk" | "en") { const n = toNumber(value); if (n == null) return "—"; return new Intl.NumberFormat(lang === "uk" ? "uk-UA" : "en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(n); }
+function buildDelta(current: number | null, comparison: number | null, compareDisplay: "percent" | "absolute", showDelta: boolean, isPercentMetric = false): Delta | undefined { if (!showDelta) return undefined; if (current == null || comparison == null) return { text: "—", tone: "neutral" }; const absolute = current - comparison; const tone = absolute > 0 ? "positive" : absolute < 0 ? "negative" : "neutral"; if (compareDisplay === "percent") { if (comparison === 0) { if (current === 0) return { text: "0.0%", tone: "neutral" }; return { text: current > 0 ? "+100.0%" : "-100.0%", tone }; } const percent = (absolute / Math.abs(comparison)) * 100; return { text: `${percent > 0 ? "+" : ""}${percent.toFixed(1)}%`, tone }; } const valueText = isPercentMetric ? `${Math.abs(absolute).toFixed(1)} п.п.` : fmtNum(Math.abs(absolute)); if (absolute > 0) return { text: `+${valueText}`, tone }; if (absolute < 0) return { text: `-${valueText}`, tone }; return { text: isPercentMetric ? "0.0 п.п." : "0", tone }; }
 function getStageLabel(stage: string, fallback: unknown, lang: "uk" | "en") { const mapped: Record<string, { uk: string; en: string }> = { registration: { uk: "Реєстрації", en: "Registrations" }, questionnaire: { uk: "Анкети", en: "Questionnaires" }, application: { uk: "Заявки", en: "Applications" }, booking: { uk: "Бронювання", en: "Bookings" }, sale: { uk: "Платежі", en: "Payments" }, payment: { uk: "Платежі", en: "Payments" } }; const known = mapped[stage]; if (known) return known[lang]; return String(fallback ?? "—"); }
-function getPaymentCategoryLabelKey(category: string) {
-  switch (category) {
-    case "full_payment": return "conversionsPaymentCategoryFull";
-    case "installment": return "conversionsPaymentCategoryInstallment";
-    case "deposit": return "conversionsPaymentCategoryDeposit";
-    case "additional_payment": return "conversionsPaymentCategoryAdditional";
-    case "unknown": return "conversionsPaymentCategoryUnknown";
-    case "other": return "conversionsPaymentCategoryOther";
-    default: return null;
-  }
-}
+function getPaymentCategoryLabelKey(category: string) { switch (category) { case "full_payment": return "conversionsPaymentCategoryFull"; case "installment": return "conversionsPaymentCategoryInstallment"; case "deposit": return "conversionsPaymentCategoryDeposit"; case "additional_payment": return "conversionsPaymentCategoryAdditional"; case "unknown": return "conversionsPaymentCategoryUnknown"; case "other": return "conversionsPaymentCategoryOther"; default: return null; } }
 function formatShortDate(value: unknown) { if (value == null || String(value).trim() === "") return "—"; const raw = String(value); const parsed = new Date(raw); if (Number.isNaN(parsed.getTime())) return raw; const day = String(parsed.getUTCDate()).padStart(2, "0"); const month = String(parsed.getUTCMonth() + 1).padStart(2, "0"); const year = parsed.getUTCFullYear(); const currentYear = new Date().getUTCFullYear(); return year === currentYear ? `${day}.${month}` : `${day}.${month}.${year}`; }
 function Empty({ text }: { text: string }) { return <p className="rounded border p-3 text-sm text-muted-foreground">{text}</p>; }
-function FriendlyTable({ rows, columns, empty }: { rows: Row[]; columns: { key: string; label: string }[]; empty: string }) {
-  const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
-  if (!rows.length) return <Empty text={empty} />;
-  return <Table className="w-full table-fixed"><TableHeader><TableRow>{columns.map((c) => <TableHead className={TABLE_HEAD_CLASS} key={c.key}>{c.label}</TableHead>)}</TableRow></TableHeader><TableBody>{rows.slice(0, 50).map((row, idx) => { const rowKey = `${idx}`; const selected = selectedRowKey === rowKey; return <TableRow key={rowKey} onClick={() => setSelectedRowKey((current) => current === rowKey ? null : rowKey)} className={selected ? SELECTED_ROW_CLASS : HOVER_ROW_CLASS}>{columns.map((c) => <TableCell className={TABLE_CELL_CLASS} key={c.key}>{String(row[c.key] ?? "—")}</TableCell>)}</TableRow>; })}</TableBody></Table>;
-}
+function FriendlyTable({ rows, columns, empty }: { rows: Row[]; columns: { key: string; label: string }[]; empty: string }) { const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null); if (!rows.length) return <Empty text={empty} />; return <Table className="w-full table-fixed"><TableHeader><TableRow>{columns.map((c) => <TableHead className={TABLE_HEAD_CLASS} key={c.key}>{c.label}</TableHead>)}</TableRow></TableHeader><TableBody>{rows.slice(0, 50).map((row, idx) => { const rowKey = `${idx}`; const selected = selectedRowKey === rowKey; return <TableRow key={rowKey} onClick={() => setSelectedRowKey((current) => current === rowKey ? null : rowKey)} className={selected ? SELECTED_ROW_CLASS : HOVER_ROW_CLASS}>{columns.map((c) => <TableCell className={TABLE_CELL_CLASS} key={c.key}>{String(row[c.key] ?? "—")}</TableCell>)}</TableRow>; })}</TableBody></Table>; }
