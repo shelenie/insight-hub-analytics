@@ -12,6 +12,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { useDateFilter } from "@/filters/DateContext";
 import { usePreferences } from "@/preferences/PreferencesProvider";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 type Row = Record<string, string | number | boolean | null>;
@@ -40,6 +44,9 @@ export default function Sales() {
   const date = useDateFilter();
   const { compareMode, compareDisplay } = usePreferences();
   const [selectedSaleDate, setSelectedSaleDate] = useState("all");
+  const [buyersSearch, setBuyersSearch] = useState("");
+  const [campaignSearch, setCampaignSearch] = useState("");
+  const [dailySearch, setDailySearch] = useState("");
   const fromIso = format(date.resolved.from, "yyyy-MM-dd");
   const toIso = format(date.resolved.to, "yyyy-MM-dd");
 
@@ -117,16 +124,16 @@ export default function Sales() {
       </>}
     </SectionCard>
 
-    <SectionCard title={lang === "uk" ? "Покупці" : "Buyer contacts"} description={lang === "uk" ? "Контакти людей із платіжними записами за вибраний період" : "Contacts with payment records for the selected period"} noPadding>
-      {hasBuyerError ? <Msg t={lang === "uk" ? "Не вдалося завантажити контакти покупців." : "Could not load buyer contacts."} /> : <BuyerRows rows={buyerRows} empty={lang === "uk" ? "Покупців за вибраний період не знайдено." : "No buyer contacts found for the selected period."} locale={lang} />}
+    <SectionCard title={lang === "uk" ? "Покупці" : "Buyer contacts"} description={lang === "uk" ? "Контакти людей із платіжними записами за вибраний період" : "Contacts with payment records for the selected period"} noPadding actions={<TableActions locale={lang} search={buyersSearch} onSearch={setBuyersSearch} onCsv={() => exportBuyerCsv(buyerRows, lang, buyersSearch)} onXlsx={() => alertXlsxBlocked(lang)} />}>
+      {hasBuyerError ? <Msg t={lang === "uk" ? "Не вдалося завантажити контакти покупців." : "Could not load buyer contacts."} /> : <BuyerRows rows={buyerRows} empty={lang === "uk" ? "Покупців за вибраний період не знайдено." : "No buyer contacts found for the selected period."} locale={lang} search={buyersSearch} />}
     </SectionCard>
 
-    <SectionCard title={lang === "uk" ? "Продажі за кампаніями" : "Sales by campaign"} description={lang === "uk" ? "Зведення по кампаніях" : "Compact campaign summary"} noPadding>
-      <CampaignRows rows={summaryRows} empty={t("salesEmpty")} locale={lang} />
+    <SectionCard title={lang === "uk" ? "Продажі за кампаніями" : "Sales by campaign"} description={lang === "uk" ? "Зведення по кампаніях" : "Compact campaign summary"} noPadding actions={<TableActions locale={lang} search={campaignSearch} onSearch={setCampaignSearch} onCsv={() => exportCampaignCsv(summaryRows, lang, campaignSearch)} onXlsx={() => alertXlsxBlocked(lang)} />}>
+      <CampaignRows rows={summaryRows} empty={t("salesEmpty")} locale={lang} search={campaignSearch} />
     </SectionCard>
 
-    <SectionCard title={lang === "uk" ? "Продажі по днях" : "Sales by day"} description={lang === "uk" ? "Щоденні продажі" : "Daily sales trend"} noPadding actions={dailyDateOptions.length > 1 ? <label className="flex items-center gap-2 text-xs text-muted-foreground"><span>{lang === "uk" ? "День" : "Day"}</span><select className="h-8 rounded-md border bg-background px-2 text-xs text-foreground" value={selectedSaleDate} onChange={(event) => setSelectedSaleDate(event.target.value)}><option value="all">{lang === "uk" ? "Усі дні" : "All days"}</option>{dailyDateOptions.map((day) => <option key={day} value={day}>{formatDay(day)}</option>)}</select></label> : null}>
-      <DailyRows rows={filteredDailyRows} empty={t("salesEmpty")} locale={lang} />
+    <SectionCard title={lang === "uk" ? "Продажі по днях" : "Sales by day"} description={lang === "uk" ? "Щоденні продажі" : "Daily sales trend"} noPadding actions={<div className="flex flex-wrap items-center gap-2">{dailyDateOptions.length > 1 ? <div className="flex items-center gap-2 text-xs text-muted-foreground"><span>{lang === "uk" ? "День" : "Day"}</span><Select value={selectedSaleDate} onValueChange={setSelectedSaleDate}><SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{lang === "uk" ? "Усі дні" : "All days"}</SelectItem>{dailyDateOptions.map((day) => <SelectItem key={day} value={day}>{formatDay(day)}</SelectItem>)}</SelectContent></Select></div> : null}<TableActions locale={lang} search={dailySearch} onSearch={setDailySearch} onCsv={() => exportDailyCsv(filteredDailyRows, lang, dailySearch)} onXlsx={() => alertXlsxBlocked(lang)} /></div>}>
+      <DailyRows rows={filteredDailyRows} empty={t("salesEmpty")} locale={lang} search={dailySearch} />
     </SectionCard>
 
     {contextRows.length > 0 ? <details className="rounded border" open={false}>
@@ -143,9 +150,15 @@ export default function Sales() {
   </div></DashboardLayout>;
 }
 
-function BuyerRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale: "uk" | "en" }) {
+function TableActions({ locale, search, onSearch, onCsv, onXlsx }: { locale: "uk" | "en"; search: string; onSearch: (value: string) => void; onCsv: () => void; onXlsx: () => void }) {
+  return <div className="flex items-center gap-2"><Input value={search} onChange={(event) => onSearch(event.target.value)} placeholder={locale === "uk" ? "Пошук..." : "Search..."} className="h-8 w-[220px]" />
+    <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm">{locale === "uk" ? "Завантажити файл" : "Download file"}</Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={onCsv}>CSV</DropdownMenuItem><DropdownMenuItem onClick={onXlsx}>XLSX</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
+  </div>;
+}
+
+function BuyerRows({ rows, empty, locale, search }: { rows: Row[]; empty: string; locale: "uk" | "en"; search: string }) {
   // Hide obvious demo/test buyer rows from production-facing Sales UI.
-  const visibleRows = [...rows].filter((row) => !isDemoBuyerRow(row)).sort((a, b) => String(a.metric_date ?? "").localeCompare(String(b.metric_date ?? "")));
+  const visibleRows = [...rows].filter((row) => !isDemoBuyerRow(row)).filter((row) => searchBuyerRow(row, search, locale)).sort((a, b) => String(a.metric_date ?? "").localeCompare(String(b.metric_date ?? "")));
   if (!visibleRows.length) return <Msg t={empty} />;
   return <div className="overflow-x-auto"><Table className="min-w-[1320px] w-full"><TableHeader><TableRow>{[
     locale === "uk" ? "Дата" : "Date",
@@ -183,8 +196,9 @@ function BuyerRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale
   </TableBody></Table></div>;
 }
 
-function CampaignRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale: "uk" | "en" }) {
-  if (!rows.length) return <Msg t={empty} />;
+function CampaignRows({ rows, empty, locale, search }: { rows: Row[]; empty: string; locale: "uk" | "en"; search: string }) {
+  const visibleRows = rows.filter((row) => searchCampaignRow(row, search));
+  if (!visibleRows.length) return <Msg t={empty} />;
   return <div className="overflow-x-auto"><Table className="min-w-[920px]"><TableHeader><TableRow>{[
     locale === "uk" ? "Кампанія" : "Campaign",
     locale === "uk" ? "Період" : "Period",
@@ -194,7 +208,7 @@ function CampaignRows({ rows, empty, locale }: { rows: Row[]; empty: string; loc
     locale === "uk" ? "Загалом USD" : "Total USD",
     locale === "uk" ? "Загалом UAH" : "Total UAH",
   ].map((c) => <TableHead key={c} className="whitespace-nowrap px-3 text-xs uppercase tracking-wide">{c}</TableHead>)}</TableRow></TableHeader><TableBody>
-    {rows.slice(0, 200).map((r, i) => <TableRow key={i}>
+    {visibleRows.slice(0, 200).map((r, i) => <TableRow key={i}>
       <TableCell className="max-w-[320px] truncate px-3 text-sm" title={String(r.campaign_name ?? "—")}>{String(r.campaign_name ?? "—")}</TableCell>
       <TableCell className="whitespace-nowrap px-3 text-sm">{formatPeriod(r.first_date, r.last_date)}</TableCell>
       <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtNum(Number(r.sales_count ?? 0))}</TableCell>
@@ -206,8 +220,8 @@ function CampaignRows({ rows, empty, locale }: { rows: Row[]; empty: string; loc
   </TableBody></Table></div>;
 }
 
-function DailyRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale: "uk" | "en" }) {
-  const visibleRows = [...rows].sort((a, b) => String(a.sale_date ?? "").localeCompare(String(b.sale_date ?? "")));
+function DailyRows({ rows, empty, locale, search }: { rows: Row[]; empty: string; locale: "uk" | "en"; search: string }) {
+  const visibleRows = [...rows].filter((row) => searchDailyRow(row, search)).sort((a, b) => String(a.sale_date ?? "").localeCompare(String(b.sale_date ?? "")));
   if (!visibleRows.length) return <Msg t={empty} />;
   return <div className="overflow-x-auto"><Table className="min-w-[980px] w-full"><TableHeader><TableRow>{[
     locale === "uk" ? "Дата" : "Date",
@@ -417,4 +431,58 @@ function hasMeaningfulContext(client: Row[string], project: Row[string], funnel:
     const normalized = String(value).trim();
     return normalized !== "" && normalized !== "—";
   });
+}
+
+function normalize(text: string) { return text.trim().toLowerCase(); }
+function includesSearch(values: Array<string>, search: string) {
+  const needle = normalize(search);
+  if (!needle) return true;
+  return values.some((value) => normalize(value).includes(needle));
+}
+function searchBuyerRow(row: Row, search: string, locale: "uk" | "en") {
+  return includesSearch([
+    formatDay(row.metric_date),
+    display(row.customer_name),
+    display(row.phone_key),
+    display(row.email),
+    formatPaymentType(row, locale),
+    formatSaleStatus(row.sale_status_norm, locale),
+  ], search);
+}
+function searchCampaignRow(row: Row, search: string) {
+  return includesSearch([display(row.campaign_name), formatPeriod(row.first_date, row.last_date)], search);
+}
+function searchDailyRow(row: Row, search: string) {
+  return includesSearch([display(row.campaign_name), formatDay(row.sale_date)], search);
+}
+function toCsv(rows: string[][]) { return rows.map((r) => r.map((cell) => `"${cell.replaceAll("\"", "\"\"")}"`).join(",")).join("\n"); }
+function downloadText(filename: string, contents: string, mime: string) {
+  const blob = new Blob([contents], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+function exportBuyerCsv(rows: Row[], locale: "uk" | "en", search: string) {
+  const visible = rows.filter((row) => !isDemoBuyerRow(row)).filter((row) => searchBuyerRow(row, search, locale)).sort((a, b) => String(a.metric_date ?? "").localeCompare(String(b.metric_date ?? "")));
+  const header = locale === "uk" ? ["Дата", "Імʼя", "Телефон", "Email", "Тип оплати", "USD", "UAH", "Залишок", "Статус"] : ["Date", "Name", "Phone", "Email", "Payment type", "USD", "UAH", "Remaining", "Status"];
+  const data = visible.map((r) => [formatDay(r.metric_date), display(r.customer_name), display(r.phone_key), display(r.email), formatPaymentType(r, locale), fmtOptionalUsd(getPaidUsd(r)), fmtOptionalUahExact(getPaidUah(r)), fmtOptionalUsd(toOptionalNumber(r.debt_amount)), formatSaleStatus(r.sale_status_norm, locale)]);
+  downloadText("sales-buyers.csv", toCsv([header, ...data]), "text/csv;charset=utf-8");
+}
+function exportCampaignCsv(rows: Row[], locale: "uk" | "en", search: string) {
+  const visible = rows.filter((row) => searchCampaignRow(row, search)).slice(0, 200);
+  const header = locale === "uk" ? ["Кампанія", "Період", "Продажі", "Перші USD", "Додаткові USD", "Загалом USD", "Загалом UAH"] : ["Campaign", "Period", "Sales", "First USD", "Additional USD", "Total USD", "Total UAH"];
+  const data = visible.map((r) => [display(r.campaign_name), formatPeriod(r.first_date, r.last_date), fmtNum(Number(r.sales_count ?? 0)), fmtUsd(Number(r.first_payment_usd ?? 0)), fmtUsd(Number(r.second_payment_usd ?? 0)), fmtUsd(Number(r.total_payment_usd ?? 0)), fmtUahExact(Number(r.total_payment_uah ?? 0))]);
+  downloadText("sales-campaigns.csv", toCsv([header, ...data]), "text/csv;charset=utf-8");
+}
+function exportDailyCsv(rows: Row[], locale: "uk" | "en", search: string) {
+  const visible = [...rows].filter((row) => searchDailyRow(row, search)).sort((a, b) => String(a.sale_date ?? "").localeCompare(String(b.sale_date ?? ""))).slice(0, 200);
+  const header = locale === "uk" ? ["Дата", "Кампанія", "Продажі", "Загалом USD", "Загалом UAH"] : ["Date", "Campaign", "Sales", "Total USD", "Total UAH"];
+  const data = visible.map((r) => [formatDay(r.sale_date), display(r.campaign_name), fmtNum(Number(r.sales_count ?? 0)), fmtUsd(Number(r.total_payment_usd ?? 0)), fmtUahExact(Number(r.total_payment_uah ?? 0))]);
+  downloadText("sales-by-day.csv", toCsv([header, ...data]), "text/csv;charset=utf-8");
+}
+function alertXlsxBlocked(locale: "uk" | "en") {
+  window.alert(locale === "uk" ? "XLSX експорт заблоковано політикою реєстру npm у цьому середовищі." : "XLSX export is blocked by npm registry policy in this environment.");
 }
