@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import * as XLSX from "xlsx";
 import { addDays, differenceInCalendarDays, format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -12,6 +13,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { useDateFilter } from "@/filters/DateContext";
 import { usePreferences } from "@/preferences/PreferencesProvider";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 type Row = Record<string, string | number | boolean | null>;
@@ -141,10 +145,23 @@ export default function Sales() {
 }
 
 function BuyerRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale: "uk" | "en" }) {
+  const [search, setSearch] = useState("");
   // Hide obvious demo/test buyer rows from production-facing Sales UI.
-  const visibleRows = rows.filter((row) => !isDemoBuyerRow(row));
+  const visibleRows = useMemo(() => rows.filter((row) => !isDemoBuyerRow(row)), [rows]);
+  const filteredRows = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const baseRows = [...visibleRows].sort((a, b) => String(a.metric_date ?? "").localeCompare(String(b.metric_date ?? "")));
+    if (!term) return baseRows;
+    return baseRows.filter((row) => [row.metric_date, row.customer_name, row.phone_key, row.email, row.payment_category, row.payment_type_norm, row.sale_status_norm].some((value) => String(value ?? "").toLowerCase().includes(term)));
+  }, [search, visibleRows]);
   if (!visibleRows.length) return <Msg t={empty} />;
-  return <div className="overflow-x-hidden"><Table className="w-full table-fixed"><TableHeader><TableRow>{[
+  return <>
+    <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+      <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={locale === "uk" ? "Пошук у таблиці покупців" : "Search buyers table"} className="h-8 w-full max-w-xs" />
+      <Button variant="outline" size="sm" onClick={() => exportRowsCsv(filteredRows, locale === "uk" ? "pokupci" : "buyers")}>CSV</Button>
+      <Button variant="outline" size="sm" onClick={() => exportRowsXlsx(filteredRows, locale === "uk" ? "pokupci" : "buyers")}>XLSX</Button>
+    </div>
+    <div className="overflow-x-hidden"><Table className="w-full table-fixed"><TableHeader><TableRow>{[
     locale === "uk" ? "Дата" : "Date",
     locale === "uk" ? "Імʼя" : "Name",
     locale === "uk" ? "Телефон" : "Phone",
@@ -155,7 +172,7 @@ function BuyerRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale
     locale === "uk" ? "Залишок" : "Remaining",
     locale === "uk" ? "Статус" : "Status",
   ].map((c) => <TableHead key={c} className="px-2 text-[10px] uppercase tracking-wide">{c === (locale === "uk" ? "Залишок" : "Remaining") ? <span title={locale === "uk" ? "Неоплачена частина тарифу / покупки в USD" : "Unpaid part of the tariff / purchase in USD"}>{c}</span> : c}</TableHead>)}</TableRow></TableHeader><TableBody>
-    {visibleRows.map((r, i) => {
+    {filteredRows.map((r, i) => {
       const email = display(r.email);
       const paidUsd = getPaidUsd(r);
       const paidUah = getPaidUah(r);
@@ -175,12 +192,24 @@ function BuyerRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale
         <TableCell className="w-[10%] whitespace-nowrap px-2 text-sm">{formatSaleStatus(r.sale_status_norm, locale)}</TableCell>
       </TableRow>;
     })}
-  </TableBody></Table></div>;
+  </TableBody></Table></div></>;
 }
 
 function CampaignRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale: "uk" | "en" }) {
+  const [search, setSearch] = useState("");
+  const filteredRows = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    if (!term) return rows.slice(0, 200);
+    return rows.filter((row) => [row.campaign_name, row.first_date, row.last_date].some((value) => String(value ?? "").toLowerCase().includes(term))).slice(0, 200);
+  }, [rows, search]);
   if (!rows.length) return <Msg t={empty} />;
-  return <div className="overflow-x-auto"><Table className="min-w-[860px]"><TableHeader><TableRow>{[
+  return <>
+    <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+      <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={locale === "uk" ? "Пошук у таблиці кампаній" : "Search campaign table"} className="h-8 w-full max-w-xs" />
+      <Button variant="outline" size="sm" onClick={() => exportRowsCsv(filteredRows, locale === "uk" ? "kampanii" : "campaign-sales")}>CSV</Button>
+      <Button variant="outline" size="sm" onClick={() => exportRowsXlsx(filteredRows, locale === "uk" ? "kampanii" : "campaign-sales")}>XLSX</Button>
+    </div>
+    <div className="overflow-x-auto"><Table className="min-w-[860px]"><TableHeader><TableRow>{[
     locale === "uk" ? "Кампанія" : "Campaign",
     locale === "uk" ? "Період" : "Period",
     locale === "uk" ? "Продажі" : "Sales",
@@ -189,7 +218,7 @@ function CampaignRows({ rows, empty, locale }: { rows: Row[]; empty: string; loc
     locale === "uk" ? "Загалом USD" : "Total USD",
     locale === "uk" ? "Загалом UAH" : "Total UAH",
   ].map((c) => <TableHead key={c} className="text-xs uppercase tracking-wide whitespace-nowrap">{c}</TableHead>)}</TableRow></TableHeader><TableBody>
-    {rows.slice(0, 200).map((r, i) => <TableRow key={i}>
+    {filteredRows.map((r, i) => <TableRow key={i}>
       <TableCell className="max-w-[220px] truncate text-sm" title={String(r.campaign_name ?? "—")}>{String(r.campaign_name ?? "—")}</TableCell>
       <TableCell className="whitespace-nowrap text-sm">{formatPeriod(r.first_date, r.last_date)}</TableCell>
       <TableCell className="text-right num text-sm">{fmtNum(Number(r.sales_count ?? 0))}</TableCell>
@@ -198,26 +227,51 @@ function CampaignRows({ rows, empty, locale }: { rows: Row[]; empty: string; loc
       <TableCell className="text-right num text-sm">{fmtUsd(Number(r.total_payment_usd ?? 0))}</TableCell>
       <TableCell className="text-right num text-sm">{fmtUahExact(Number(r.total_payment_uah ?? 0))}</TableCell>
     </TableRow>)}
-  </TableBody></Table></div>;
+  </TableBody></Table></div></>;
 }
 
 function DailyRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale: "uk" | "en" }) {
+  const [search, setSearch] = useState("");
+  const [dayFilter, setDayFilter] = useState("all");
+  const dayOptions = useMemo(() => Array.from(new Set(rows.map((row) => String(row.sale_date ?? "")).filter(Boolean))).sort(), [rows]);
+  const filteredRows = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return rows.filter((row) => {
+      const dayOk = dayFilter === "all" || String(row.sale_date ?? "") === dayFilter;
+      if (!dayOk) return false;
+      if (!term) return true;
+      return [row.sale_date, row.campaign_name].some((value) => String(value ?? "").toLowerCase().includes(term));
+    }).slice(0, 200);
+  }, [dayFilter, rows, search]);
   if (!rows.length) return <Msg t={empty} />;
-  return <div className="overflow-x-auto"><Table className="min-w-[720px]"><TableHeader><TableRow>{[
+  return <>
+    <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+      <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={locale === "uk" ? "Пошук у таблиці днів" : "Search daily table"} className="h-8 w-full max-w-xs" />
+      <Select value={dayFilter} onValueChange={setDayFilter}>
+        <SelectTrigger className="h-8 w-[180px]"><SelectValue placeholder={locale === "uk" ? "Оберіть день" : "Select day"} /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">{locale === "uk" ? "Усі дні" : "All days"}</SelectItem>
+          {dayOptions.map((day) => <SelectItem key={day} value={day}>{formatDay(day)}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      <Button variant="outline" size="sm" onClick={() => exportRowsCsv(filteredRows, locale === "uk" ? "prodazhi-po-dniakh" : "sales-by-day")}>CSV</Button>
+      <Button variant="outline" size="sm" onClick={() => exportRowsXlsx(filteredRows, locale === "uk" ? "prodazhi-po-dniakh" : "sales-by-day")}>XLSX</Button>
+    </div>
+    <div className="overflow-x-auto"><Table className="min-w-[720px]"><TableHeader><TableRow>{[
     locale === "uk" ? "Дата" : "Date",
     locale === "uk" ? "Кампанія" : "Campaign",
     locale === "uk" ? "Продажі" : "Sales",
     locale === "uk" ? "Загалом USD" : "Total USD",
     locale === "uk" ? "Загалом UAH" : "Total UAH",
   ].map((c) => <TableHead key={c} className="text-xs uppercase tracking-wide whitespace-nowrap">{c}</TableHead>)}</TableRow></TableHeader><TableBody>
-    {rows.slice(0, 200).map((r, i) => <TableRow key={i}>
+    {filteredRows.map((r, i) => <TableRow key={i}>
       <TableCell className="whitespace-nowrap text-sm">{formatDay(r.sale_date)}</TableCell>
       <TableCell className="max-w-[220px] truncate text-sm" title={String(r.campaign_name ?? "—")}>{String(r.campaign_name ?? "—")}</TableCell>
       <TableCell className="text-right num text-sm">{fmtNum(Number(r.sales_count ?? 0))}</TableCell>
       <TableCell className="text-right num text-sm">{fmtUsd(Number(r.total_payment_usd ?? 0))}</TableCell>
       <TableCell className="text-right num text-sm">{fmtUahExact(Number(r.total_payment_uah ?? 0))}</TableCell>
     </TableRow>)}
-  </TableBody></Table></div>;
+  </TableBody></Table></div></>;
 }
 
 function Kpi({ rows }: { rows: KpiRow[] }) {
@@ -257,7 +311,7 @@ async function readSalesBuyers(fromIso: string, toIso: string) {
     .eq("workspace_id", WORKSPACE_ID)
     .gte("metric_date", fromIso)
     .lte("metric_date", toIso)
-    .order("metric_date", { ascending: false })
+    .order("metric_date", { ascending: true })
     .limit(500);
   return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null };
 }
@@ -411,4 +465,29 @@ function hasMeaningfulContext(client: Row[string], project: Row[string], funnel:
     const normalized = String(value).trim();
     return normalized !== "" && normalized !== "—";
   });
+}
+
+function exportRowsCsv(rows: Row[], fileName: string) {
+  const ws = XLSX.utils.json_to_sheet(rows);
+  const csv = XLSX.utils.sheet_to_csv(ws);
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  downloadBlob(blob, `${fileName}.csv`);
+}
+
+function exportRowsXlsx(rows: Row[], fileName: string) {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.json_to_sheet(rows);
+  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+  const xlsxBuffer = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+  const blob = new Blob([xlsxBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  downloadBlob(blob, `${fileName}.xlsx`);
+}
+
+function downloadBlob(blob: Blob, fileName: string) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
