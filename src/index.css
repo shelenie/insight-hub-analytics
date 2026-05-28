@@ -267,3 +267,20 @@
     border-radius: 9999px;
   }
 }
+
+@layer utilities {
+  /* Compact reserved spacing added by Conversions ratio cards. */
+  p[class*="min-h-[2.75rem]"] {
+    min-height: 2rem !important;
+  }
+
+  div[class*="min-h-[2rem]"] {
+    min-height: 1.25rem !important;
+    margin-top: 0.125rem !important;
+  }
+
+  div[class*="min-h-[2rem]"]:empty {
+    min-height: 0 !important;
+    margin-top: 0 !important;
+  }
+}
