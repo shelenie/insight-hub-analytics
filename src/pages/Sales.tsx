@@ -43,15 +43,15 @@ type BuyerColumnKey = "date" | "name" | "phone" | "email" | "type" | "usd" | "ua
 type BuyerColumn = { key: BuyerColumnKey; label: string; width: number; minWidth: number; align?: "left" | "right"; tooltip?: string };
 
 const BUYER_COLUMN_DEFAULT_WIDTHS: Record<BuyerColumnKey, number> = {
-  date: 120,
-  name: 210,
-  phone: 170,
-  email: 260,
-  type: 190,
-  usd: 110,
-  uah: 120,
-  remaining: 120,
-  status: 120,
+  date: 108,
+  name: 170,
+  phone: 150,
+  email: 220,
+  type: 160,
+  usd: 90,
+  uah: 96,
+  remaining: 104,
+  status: 106,
 };
 
 export default function Sales() {
@@ -174,27 +174,29 @@ function TableActions({ locale, search, onSearch, onCsv, onXlsx }: { locale: "uk
 
 function BuyerRows({ rows, empty, locale, search }: { rows: Row[]; empty: string; locale: "uk" | "en"; search: string }) {
   const [widths, setWidths] = useState<Record<BuyerColumnKey, number>>(BUYER_COLUMN_DEFAULT_WIDTHS);
+  const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const columns = useMemo<BuyerColumn[]>(() => [
-    { key: "date", label: locale === "uk" ? "Дата" : "Date", width: 120, minWidth: 96 },
-    { key: "name", label: locale === "uk" ? "Імʼя" : "Name", width: 210, minWidth: 140 },
-    { key: "phone", label: locale === "uk" ? "Телефон" : "Phone", width: 170, minWidth: 130 },
-    { key: "email", label: "Email", width: 260, minWidth: 170 },
-    { key: "type", label: locale === "uk" ? "Тип оплати" : "Payment type", width: 190, minWidth: 150 },
-    { key: "usd", label: "USD", width: 110, minWidth: 90, align: "right" },
-    { key: "uah", label: "UAH", width: 120, minWidth: 95, align: "right" },
-    { key: "remaining", label: locale === "uk" ? "Залишок" : "Remaining", width: 120, minWidth: 100, align: "right", tooltip: locale === "uk" ? "Неоплачена частина тарифу / покупки в USD" : "Unpaid part of the tariff / purchase in USD" },
-    { key: "status", label: locale === "uk" ? "Статус" : "Status", width: 120, minWidth: 100 },
+    { key: "date", label: locale === "uk" ? "Дата" : "Date", width: 108, minWidth: 92 },
+    { key: "name", label: locale === "uk" ? "Імʼя" : "Name", width: 170, minWidth: 130 },
+    { key: "phone", label: locale === "uk" ? "Телефон" : "Phone", width: 150, minWidth: 120 },
+    { key: "email", label: "Email", width: 220, minWidth: 150 },
+    { key: "type", label: locale === "uk" ? "Тип оплати" : "Payment type", width: 160, minWidth: 130 },
+    { key: "usd", label: "USD", width: 90, minWidth: 80, align: "right" },
+    { key: "uah", label: "UAH", width: 96, minWidth: 84, align: "right" },
+    { key: "remaining", label: locale === "uk" ? "Залишок" : "Remaining", width: 104, minWidth: 92, align: "right", tooltip: locale === "uk" ? "Неоплачена частина тарифу / покупки в USD" : "Unpaid part of the tariff / purchase in USD" },
+    { key: "status", label: locale === "uk" ? "Статус" : "Status", width: 106, minWidth: 90 },
   ], [locale]);
-  // Hide obvious demo/test buyer rows from production-facing Sales UI.
   const visibleRows = [...rows].filter((row) => !isDemoBuyerRow(row)).filter((row) => searchBuyerRow(row, search, locale)).sort((a, b) => String(a.metric_date ?? "").localeCompare(String(b.metric_date ?? "")));
   if (!visibleRows.length) return <Msg t={empty} />;
-  return <div className="max-h-[560px] overflow-auto"><Table className="w-full table-fixed" style={{ minWidth: totalBuyerTableWidth(columns, widths) }}><colgroup>{columns.map((column) => <col key={column.key} style={{ width: widths[column.key] ?? column.width }} />)}</colgroup><TableHeader><TableRow>{columns.map((column) => <TableHead key={column.key} className={`sticky top-0 z-20 select-none whitespace-nowrap bg-card px-3 text-[11px] uppercase tracking-wide shadow-[inset_0_-1px_0_hsl(var(--border))] ${column.align === "right" ? "text-right" : "text-left"}`}><span title={column.tooltip}>{column.label}</span><span role="separator" aria-orientation="vertical" aria-label={locale === "uk" ? `Змінити ширину: ${column.label}` : `Resize column: ${column.label}`} onMouseDown={(event) => startBuyerColumnResize(event, column, widths, setWidths)} className="absolute right-0 top-0 h-full w-2 cursor-col-resize touch-none border-r border-transparent hover:border-primary/50" /></TableHead>)}</TableRow></TableHeader><TableBody>
+  return <div className="max-h-[520px] overflow-auto"><Table className="w-full table-fixed" style={{ minWidth: totalBuyerTableWidth(columns, widths) }}><colgroup>{columns.map((column) => <col key={column.key} style={{ width: widths[column.key] ?? column.width }} />)}</colgroup><TableHeader className="sticky top-0 z-30 bg-card"><TableRow>{columns.map((column) => <TableHead key={column.key} className={`relative select-none whitespace-nowrap bg-card px-3 text-[11px] uppercase tracking-wide shadow-[inset_0_-1px_0_hsl(var(--border))] ${column.align === "right" ? "text-right" : "text-left"}`}><span title={column.tooltip}>{column.label}</span><span role="separator" aria-orientation="vertical" aria-label={locale === "uk" ? `Змінити ширину: ${column.label}` : `Resize column: ${column.label}`} title={locale === "uk" ? "Потягніть, щоб змінити ширину колонки" : "Drag to resize column"} onMouseDown={(event) => startBuyerColumnResize(event, column, widths, setWidths)} className="absolute right-0 top-1/2 h-6 w-[4px] -translate-y-1/2 cursor-col-resize touch-none rounded-full bg-border transition hover:bg-primary" /></TableHead>)}</TableRow></TableHeader><TableBody>
     {visibleRows.map((r, i) => {
       const email = display(r.email);
       const paidUsd = getPaidUsd(r);
       const paidUah = getPaidUah(r);
       const hasPaidAmount = paidUsd != null || paidUah != null;
-      return <TableRow key={`${String(r.phone_key ?? "")}-${String(r.metric_date ?? "")}-${i}`}>
+      const rowKey = buyerRowKey(r, i);
+      const isSelected = selectedRowKey === rowKey;
+      return <TableRow key={rowKey} onClick={() => setSelectedRowKey((current) => current === rowKey ? null : rowKey)} className={`cursor-pointer ${isSelected ? "bg-primary/10 hover:bg-primary/15" : "hover:bg-muted/50"}`}>
         <TableCell className="whitespace-nowrap px-3 text-sm">{formatDay(r.metric_date)}</TableCell>
         <TableCell className="truncate whitespace-nowrap px-3 text-sm" title={display(r.customer_name)}>{display(r.customer_name)}</TableCell>
         <TableCell className="truncate whitespace-nowrap px-3 text-sm" title={display(r.phone_key)}>{display(r.phone_key)}</TableCell>
@@ -215,30 +217,36 @@ function BuyerRows({ rows, empty, locale, search }: { rows: Row[]; empty: string
 }
 
 function CampaignRows({ rows, empty, locale, search }: { rows: Row[]; empty: string; locale: "uk" | "en"; search: string }) {
+  const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const visibleRows = rows.filter((row) => searchCampaignRow(row, search));
   if (!visibleRows.length) return <Msg t={empty} />;
-  return <div className="overflow-x-auto"><Table className="min-w-[920px]"><TableHeader><TableRow>{[
+  return <div className="overflow-hidden"><Table className="w-full table-fixed"><colgroup><col /><col style={{ width: 150 }} /><col style={{ width: 78 }} /><col style={{ width: 100 }} /><col style={{ width: 116 }} /><col style={{ width: 106 }} /><col style={{ width: 116 }} /></colgroup><TableHeader><TableRow>{[
     locale === "uk" ? "Кампанія" : "Campaign",
     locale === "uk" ? "Період" : "Period",
     locale === "uk" ? "Продажі" : "Sales",
     locale === "uk" ? "Перші USD" : "First USD",
-    locale === "uk" ? "Додаткові USD" : "Additional USD",
-    locale === "uk" ? "Загалом USD" : "Total USD",
-    locale === "uk" ? "Загалом UAH" : "Total UAH",
-  ].map((c) => <TableHead key={c} className="whitespace-nowrap px-3 text-xs uppercase tracking-wide">{c}</TableHead>)}</TableRow></TableHeader><TableBody>
-    {visibleRows.slice(0, 200).map((r, i) => <TableRow key={i}>
-      <TableCell className="max-w-[320px] truncate px-3 text-sm" title={String(r.campaign_name ?? "—")}>{String(r.campaign_name ?? "—")}</TableCell>
-      <TableCell className="whitespace-nowrap px-3 text-sm">{formatPeriod(r.first_date, r.last_date)}</TableCell>
-      <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtNum(Number(r.sales_count ?? 0))}</TableCell>
-      <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtUsd(Number(r.first_payment_usd ?? 0))}</TableCell>
-      <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtUsd(Number(r.second_payment_usd ?? 0))}</TableCell>
-      <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtUsd(Number(r.total_payment_usd ?? 0))}</TableCell>
-      <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtUahExact(Number(r.total_payment_uah ?? 0))}</TableCell>
-    </TableRow>)}
+    locale === "uk" ? "Дод. USD" : "Add. USD",
+    locale === "uk" ? "Всього USD" : "Total USD",
+    locale === "uk" ? "Всього UAH" : "Total UAH",
+  ].map((c, index) => <TableHead key={c} className={`whitespace-nowrap px-3 text-xs uppercase tracking-wide ${index >= 2 ? "text-right" : "text-left"}`}>{c}</TableHead>)}</TableRow></TableHeader><TableBody>
+    {visibleRows.slice(0, 200).map((r, i) => {
+      const rowKey = campaignRowKey(r, i);
+      const isSelected = selectedRowKey === rowKey;
+      return <TableRow key={rowKey} onClick={() => setSelectedRowKey((current) => current === rowKey ? null : rowKey)} className={`cursor-pointer ${isSelected ? "bg-primary/10 hover:bg-primary/15" : "hover:bg-muted/50"}`}>
+        <TableCell className="truncate px-3 text-sm" title={String(r.campaign_name ?? "—")}>{String(r.campaign_name ?? "—")}</TableCell>
+        <TableCell className="whitespace-nowrap px-3 text-sm">{formatPeriod(r.first_date, r.last_date)}</TableCell>
+        <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtNum(Number(r.sales_count ?? 0))}</TableCell>
+        <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtUsd(Number(r.first_payment_usd ?? 0))}</TableCell>
+        <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtUsd(Number(r.second_payment_usd ?? 0))}</TableCell>
+        <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtUsd(Number(r.total_payment_usd ?? 0))}</TableCell>
+        <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtUahExact(Number(r.total_payment_uah ?? 0))}</TableCell>
+      </TableRow>;
+    })}
   </TableBody></Table></div>;
 }
 
 function DailyRows({ rows, empty, locale, search }: { rows: Row[]; empty: string; locale: "uk" | "en"; search: string }) {
+  const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const visibleRows = [...rows].filter((row) => searchDailyRow(row, search)).sort((a, b) => String(a.sale_date ?? "").localeCompare(String(b.sale_date ?? "")));
   if (!visibleRows.length) return <Msg t={empty} />;
   return <div className="overflow-hidden"><Table className="w-full table-fixed"><colgroup><col style={{ width: 116 }} /><col /><col style={{ width: 84 }} /><col style={{ width: 126 }} /><col style={{ width: 136 }} /></colgroup><TableHeader><TableRow>{[
@@ -248,13 +256,17 @@ function DailyRows({ rows, empty, locale, search }: { rows: Row[]; empty: string
     locale === "uk" ? "Загалом USD" : "Total USD",
     locale === "uk" ? "Загалом UAH" : "Total UAH",
   ].map((c, index) => <TableHead key={c} className={`whitespace-nowrap px-3 text-xs uppercase tracking-wide ${index >= 2 ? "text-right" : "text-left"}`}>{c}</TableHead>)}</TableRow></TableHeader><TableBody>
-    {visibleRows.slice(0, 200).map((r, i) => <TableRow key={i}>
-      <TableCell className="whitespace-nowrap px-3 text-sm">{formatDay(r.sale_date)}</TableCell>
-      <TableCell className="truncate px-3 text-sm" title={String(r.campaign_name ?? "—")}>{String(r.campaign_name ?? "—")}</TableCell>
-      <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtNum(Number(r.sales_count ?? 0))}</TableCell>
-      <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtUsd(Number(r.total_payment_usd ?? 0))}</TableCell>
-      <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtUahExact(Number(r.total_payment_uah ?? 0))}</TableCell>
-    </TableRow>)}
+    {visibleRows.slice(0, 200).map((r, i) => {
+      const rowKey = dailyRowKey(r, i);
+      const isSelected = selectedRowKey === rowKey;
+      return <TableRow key={rowKey} onClick={() => setSelectedRowKey((current) => current === rowKey ? null : rowKey)} className={`cursor-pointer ${isSelected ? "bg-primary/10 hover:bg-primary/15" : "hover:bg-muted/50"}`}>
+        <TableCell className="whitespace-nowrap px-3 text-sm">{formatDay(r.sale_date)}</TableCell>
+        <TableCell className="truncate px-3 text-sm" title={String(r.campaign_name ?? "—")}>{String(r.campaign_name ?? "—")}</TableCell>
+        <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtNum(Number(r.sales_count ?? 0))}</TableCell>
+        <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtUsd(Number(r.total_payment_usd ?? 0))}</TableCell>
+        <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtUahExact(Number(r.total_payment_uah ?? 0))}</TableCell>
+      </TableRow>;
+    })}
   </TableBody></Table></div>;
 }
 
@@ -379,6 +391,10 @@ function startBuyerColumnResize(event: ReactMouseEvent<HTMLSpanElement>, column:
   document.addEventListener("mousemove", onMouseMove);
   document.addEventListener("mouseup", onMouseUp);
 }
+
+function buyerRowKey(row: Row, index: number) { return `${display(row.phone_key)}-${display(row.metric_date)}-${index}`; }
+function campaignRowKey(row: Row, index: number) { return `${display(row.campaign_name)}-${display(row.first_date)}-${index}`; }
+function dailyRowKey(row: Row, index: number) { return `${display(row.sale_date)}-${display(row.campaign_name)}-${index}`; }
 
 function getPaidUsd(row: Row) {
   return coalescePaymentAmount(row.total_payment_usd, sumPaymentAmounts(row.first_payment_usd, row.second_payment_usd), row.payment_usd, row.paid_usd, row.amount_usd);
