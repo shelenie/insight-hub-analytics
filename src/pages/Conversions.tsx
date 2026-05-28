@@ -1,11 +1,9 @@
-import { type ReactNode, useEffect, useMemo } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { RefreshCw } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
-import { DateFilter } from "@/components/dashboard/DateFilter";
-import { Button } from "@/components/ui/button";
+import { FilterBar } from "@/components/dashboard/FilterBar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { fmtNum } from "@/lib/format";
 import { filterPlaceholderRows } from "@/lib/demoFilters";
@@ -17,6 +15,11 @@ import { useDateFilter } from "@/filters/DateContext";
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 type Row = Record<string, string | number | boolean | null>;
 const STAGE_ORDER = ["registration", "questionnaire", "application", "booking", "sale", "payment"];
+const SELECTED_ROW_CLASS = "cursor-pointer bg-primary/10 hover:bg-primary/15 [&>td:first-child]:border-l-4 [&>td:first-child]:border-primary";
+const HOVER_ROW_CLASS = "cursor-pointer hover:bg-muted/50";
+const TABLE_HEAD_CLASS = "whitespace-nowrap px-4 text-left text-xs uppercase tracking-wide";
+const TABLE_CELL_CLASS = "whitespace-nowrap px-4 text-sm";
+const TABLE_NUM_CLASS = "whitespace-nowrap px-4 text-right text-sm num";
 
 export default function Conversions() {
   const { t, lang } = useI18n();
@@ -70,26 +73,20 @@ export default function Conversions() {
   const isRefreshing = boundsQuery.isRefetching || dataQuery.isRefetching;
   const hasData = aggregates.stageRows.length > 0 || aggregates.paymentRecords > 0 || aggregates.paymentLinesCount > 0;
   const hasError = dataQuery.isError || boundsQuery.isError;
+  const handleRefresh = () => {
+    void boundsQuery.refetch();
+    void dataQuery.refetch();
+  };
 
   return <DashboardLayout title={t("funnelTitle")} subtitle={t("funnelSubtitle")}>
-    <div className="space-y-4">
-      <div className="rounded border p-3">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2">
-          <p className="text-xs font-medium">{t("filters")}</p>
-          <DateFilter />
-          </div>
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-          <p className="text-xs text-muted-foreground">{t("conversionsDataLabel")}</p>
-          <p className="inline-flex h-5 items-center gap-1.5 whitespace-nowrap rounded-md border border-success/25 bg-success-soft px-1.5 text-[10.5px] font-semibold uppercase tracking-wide text-success"><span className="h-1.5 w-1.5 rounded-full bg-success" />{t("conversionsDataStatus")}</p>
-          <Button size="sm" variant="outline" className="h-8" onClick={() => { boundsQuery.refetch(); dataQuery.refetch(); }} disabled={isRefreshing}>
-            <RefreshCw className={`mr-1 h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-            {t("refresh")}
-          </Button>
-          </div>
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">{date.contextLabel(lang)}</p>
-      </div>
+    <div className="space-y-4 overflow-x-hidden">
+      <FilterBar
+        showProject={false}
+        showGroup={false}
+        freshness={{ source: t("conversionsDataLabel").replace(":", ""), status: "fresh", lastSync: "live" }}
+        onRefresh={handleRefresh}
+        isRefreshing={isRefreshing}
+      />
 
       {!session ? <Empty text={t("conversionsSignIn")} /> : (dataQuery.isLoading || boundsQuery.isLoading) ? <Empty text={t("conversionsLoading")} /> : null}
       {session && hasError ? <Empty text={t("conversionsLoadError")} /> : null}
@@ -144,32 +141,8 @@ export default function Conversions() {
             <MetricCard label={t("conversionsTariffTotal")} value={money(aggregates.tariffTotal, "USD", lang)} raw />
           </div>
         </SectionCard>
-        {aggregates.paymentCategoryRows.length > 0 ? <SectionCard title={t("conversionsPaymentTypeStructureTitle")} description={t("conversionsPaymentTypeStructureDesc")} noPadding>
-          <p className="px-4 pb-1 pt-2 text-xs text-muted-foreground">{t("conversionsPaymentTypeStructureHelper")}</p>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("conversionsPaymentTypeThType")}</TableHead>
-                <TableHead className="text-right">{t("conversionsPaymentTypeThTotal")}</TableHead>
-                <TableHead className="text-right">{t("conversionsPaymentTypeThIncluded")}</TableHead>
-                <TableHead className="text-right">{t("conversionsPaymentTypeThRefund")}</TableHead>
-                <TableHead className="text-right">{t("conversionsPaymentTypeThNeedsReview")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {aggregates.paymentCategoryRows.map((row, idx) => {
-                const labelKey = getPaymentCategoryLabelKey(row.category);
-                return <TableRow key={`${row.category}-${idx}`}>
-                  <TableCell>{labelKey ? t(labelKey) : row.category}</TableCell>
-                  <TableCell className="text-right num">{fmtNum(row.total_records)}</TableCell>
-                  <TableCell className="text-right num">{fmtNum(row.included_records)}</TableCell>
-                  <TableCell className="text-right num">{fmtNum(row.refund_records)}</TableCell>
-                  <TableCell className="text-right num">{fmtNum(row.needs_review_records)}</TableCell>
-                </TableRow>;
-              })}
-            </TableBody>
-          </Table>
-        </SectionCard> : null}
+
+        {aggregates.paymentCategoryRows.length > 0 ? <PaymentTypeTable rows={aggregates.paymentCategoryRows} t={t} /> : null}
 
         <SectionCard title={t("conversionsMatchingTitle")} description={t("conversionsMatchingSubtitle")}>
           <p className="mb-3 text-xs text-muted-foreground">{t("conversionsMatchingExplain")}</p>
@@ -183,19 +156,15 @@ export default function Conversions() {
           </div>
           <div className="mt-3 max-w-sm rounded border p-3">
             <p className="text-xs font-medium">{t("conversionsRawPaymentsBookingsRatio")}</p>
-            <p className="mt-1 text-2xl font-semibold leading-none num">
-              {aggregates.bookings > 0 ? `${(aggregates.paymentRecords / aggregates.bookings).toFixed(1)}×` : "—"}
-            </p>
+            <p className="mt-1 text-2xl font-semibold leading-none num">{aggregates.bookings > 0 ? `${(aggregates.paymentRecords / aggregates.bookings).toFixed(1)}×` : "—"}</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {aggregates.bookings > 0
-                ? `${fmtNum(aggregates.paymentRecords)} ${t("conversionsPaymentsLower")} / ${fmtNum(aggregates.bookings)} ${t("conversionsBookingsLower")}`
-                : t("conversionsNoBookingsInPeriod")}
+              {aggregates.bookings > 0 ? `${fmtNum(aggregates.paymentRecords)} ${t("conversionsPaymentsLower")} / ${fmtNum(aggregates.bookings)} ${t("conversionsBookingsLower")}` : t("conversionsNoBookingsInPeriod")}
             </p>
             <p className="mt-2 text-xs text-muted-foreground">{t("conversionsRatioWarning")}</p>
           </div>
         </SectionCard>
 
-        <SectionCard title={t("conversionsStageTableTitle")} description={t("conversionsStageTableDesc")} noPadding><Table><TableHeader><TableRow><TableHead>{t("conversionsThStage")}</TableHead><TableHead className="text-right">{t("conversionsThEvents")}</TableHead><TableHead className="text-right">{t("conversionsThUniqueContacts")}</TableHead><TableHead>{t("conversionsThFirstDate")}</TableHead><TableHead>{t("conversionsThLastDate")}</TableHead></TableRow></TableHeader><TableBody>{aggregates.stageRows.map((row, idx) => <TableRow key={idx}><TableCell>{getStageLabel(String(row.stage ?? "").toLowerCase(), row.stage_label, lang)}</TableCell><TableCell className="text-right num">{fmtNum(Number(row.events_count ?? 0))}</TableCell><TableCell className="text-right num">{fmtNum(Number(row.unique_contacts ?? 0))}</TableCell><TableCell>{formatShortDate(row.first_date)}</TableCell><TableCell>{formatShortDate(row.last_date)}</TableCell></TableRow>)}</TableBody></Table></SectionCard>
+        <StageTable rows={aggregates.stageRows} t={t} lang={lang} />
 
         {meaningfulOnboardingRows.length > 0 ? <details className="rounded border"><summary className="cursor-pointer px-4 py-3 text-sm font-medium">{t("conversionsExtraContext")}</summary><SectionCard title={t("conversionsExtraContext")} noPadding><FriendlyTable rows={meaningfulOnboardingRows} columns={[{ key: "client_name", label: t("conversionsContextClient") }, { key: "project_name", label: t("conversionsContextProject") }, { key: "funnel_name", label: t("conversionsContextFunnel") }, { key: "status", label: t("conversionsContextStatus") }]} empty={t("conversionsViewUnavailable")} /></SectionCard></details> : null}
         {filteredBindingsRows.length > 0 ? <details className="rounded border"><summary className="cursor-pointer px-4 py-3 text-sm font-medium">{t("conversionsExtraBindings")}</summary><SectionCard title={t("conversionsExtraBindings")} noPadding><FriendlyTable rows={filteredBindingsRows} columns={[{ key: "project_name", label: "project_name" }, { key: "source_name", label: "source_name" }, { key: "mapping_status", label: "mapping_status" }, { key: "binding_status", label: "binding_status" }, { key: "updated_at", label: "updated_at" }]} empty={t("conversionsViewUnavailable")} /></SectionCard></details> : null}
@@ -204,7 +173,63 @@ export default function Conversions() {
   </DashboardLayout>;
 }
 
-function computeAggregates(stageEvents: Row[], paymentRecordsRows: Row[], paymentLines: Row[]) { /* omitted for brevity */
+function PaymentTypeTable({ rows, t }: { rows: Array<{ category: string; total_records: number; included_records: number; refund_records: number; needs_review_records: number }>; t: (key: string) => string }) {
+  const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
+  return <SectionCard title={t("conversionsPaymentTypeStructureTitle")} description={t("conversionsPaymentTypeStructureDesc")} noPadding>
+    <p className="px-4 pb-1 pt-2 text-xs text-muted-foreground">{t("conversionsPaymentTypeStructureHelper")}</p>
+    <Table className="w-full table-fixed">
+      <colgroup><col /><col style={{ width: 150 }} /><col style={{ width: 150 }} /><col style={{ width: 150 }} /><col style={{ width: 170 }} /></colgroup>
+      <TableHeader><TableRow>
+        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsPaymentTypeThType")}</TableHead>
+        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsPaymentTypeThTotal")}</TableHead>
+        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsPaymentTypeThIncluded")}</TableHead>
+        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsPaymentTypeThRefund")}</TableHead>
+        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsPaymentTypeThNeedsReview")}</TableHead>
+      </TableRow></TableHeader>
+      <TableBody>{rows.map((row, idx) => {
+        const labelKey = getPaymentCategoryLabelKey(row.category);
+        const rowKey = `${row.category}-${idx}`;
+        const selected = selectedRowKey === rowKey;
+        return <TableRow key={rowKey} onClick={() => setSelectedRowKey((current) => current === rowKey ? null : rowKey)} className={selected ? SELECTED_ROW_CLASS : HOVER_ROW_CLASS}>
+          <TableCell className={TABLE_CELL_CLASS}>{labelKey ? t(labelKey) : row.category}</TableCell>
+          <TableCell className={TABLE_NUM_CLASS}>{fmtNum(row.total_records)}</TableCell>
+          <TableCell className={TABLE_NUM_CLASS}>{fmtNum(row.included_records)}</TableCell>
+          <TableCell className={TABLE_NUM_CLASS}>{fmtNum(row.refund_records)}</TableCell>
+          <TableCell className={TABLE_NUM_CLASS}>{fmtNum(row.needs_review_records)}</TableCell>
+        </TableRow>;
+      })}</TableBody>
+    </Table>
+  </SectionCard>;
+}
+
+function StageTable({ rows, t, lang }: { rows: Row[]; t: (key: string) => string; lang: "uk" | "en" }) {
+  const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
+  return <SectionCard title={t("conversionsStageTableTitle")} description={t("conversionsStageTableDesc")} noPadding>
+    <Table className="w-full table-fixed">
+      <colgroup><col /><col style={{ width: 190 }} /><col style={{ width: 210 }} /><col style={{ width: 170 }} /><col style={{ width: 170 }} /></colgroup>
+      <TableHeader><TableRow>
+        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsThStage")}</TableHead>
+        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsThEvents")}</TableHead>
+        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsThUniqueContacts")}</TableHead>
+        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsThFirstDate")}</TableHead>
+        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsThLastDate")}</TableHead>
+      </TableRow></TableHeader>
+      <TableBody>{rows.map((row, idx) => {
+        const rowKey = `${String(row.stage ?? "stage")}-${idx}`;
+        const selected = selectedRowKey === rowKey;
+        return <TableRow key={rowKey} onClick={() => setSelectedRowKey((current) => current === rowKey ? null : rowKey)} className={selected ? SELECTED_ROW_CLASS : HOVER_ROW_CLASS}>
+          <TableCell className={TABLE_CELL_CLASS}>{getStageLabel(String(row.stage ?? "").toLowerCase(), row.stage_label, lang)}</TableCell>
+          <TableCell className={TABLE_NUM_CLASS}>{fmtNum(Number(row.events_count ?? 0))}</TableCell>
+          <TableCell className={TABLE_NUM_CLASS}>{fmtNum(Number(row.unique_contacts ?? 0))}</TableCell>
+          <TableCell className={TABLE_CELL_CLASS}>{formatShortDate(row.first_date)}</TableCell>
+          <TableCell className={TABLE_CELL_CLASS}>{formatShortDate(row.last_date)}</TableCell>
+        </TableRow>;
+      })}</TableBody>
+    </Table>
+  </SectionCard>;
+}
+
+function computeAggregates(stageEvents: Row[], paymentRecordsRows: Row[], paymentLines: Row[]) {
   const byStage = new Map<string, { count: number; contacts: Set<string>; first: string | null; last: string | null }>();
   const bookingPhones = new Set<string>();
   for (const row of stageEvents) {
@@ -300,22 +325,19 @@ function money(value: unknown, currency: "USD" | "UAH", lang: "uk" | "en") { con
 function getStageLabel(stage: string, fallback: unknown, lang: "uk" | "en") { const mapped: Record<string, { uk: string; en: string }> = { registration: { uk: "Реєстрації", en: "Registrations" }, questionnaire: { uk: "Анкети", en: "Questionnaires" }, application: { uk: "Заявки", en: "Applications" }, booking: { uk: "Бронювання", en: "Bookings" }, sale: { uk: "Платежі", en: "Payments" }, payment: { uk: "Платежі", en: "Payments" } }; const known = mapped[stage]; if (known) return known[lang]; return String(fallback ?? "—"); }
 function getPaymentCategoryLabelKey(category: string) {
   switch (category) {
-    case "full_payment":
-      return "conversionsPaymentCategoryFull";
-    case "installment":
-      return "conversionsPaymentCategoryInstallment";
-    case "deposit":
-      return "conversionsPaymentCategoryDeposit";
-    case "additional_payment":
-      return "conversionsPaymentCategoryAdditional";
-    case "unknown":
-      return "conversionsPaymentCategoryUnknown";
-    case "other":
-      return "conversionsPaymentCategoryOther";
-    default:
-      return null;
+    case "full_payment": return "conversionsPaymentCategoryFull";
+    case "installment": return "conversionsPaymentCategoryInstallment";
+    case "deposit": return "conversionsPaymentCategoryDeposit";
+    case "additional_payment": return "conversionsPaymentCategoryAdditional";
+    case "unknown": return "conversionsPaymentCategoryUnknown";
+    case "other": return "conversionsPaymentCategoryOther";
+    default: return null;
   }
 }
 function formatShortDate(value: unknown) { if (value == null || String(value).trim() === "") return "—"; const raw = String(value); const parsed = new Date(raw); if (Number.isNaN(parsed.getTime())) return raw; const day = String(parsed.getUTCDate()).padStart(2, "0"); const month = String(parsed.getUTCMonth() + 1).padStart(2, "0"); const year = parsed.getUTCFullYear(); const currentYear = new Date().getUTCFullYear(); return year === currentYear ? `${day}.${month}` : `${day}.${month}.${year}`; }
 function Empty({ text }: { text: string }) { return <p className="rounded border p-3 text-sm text-muted-foreground">{text}</p>; }
-function FriendlyTable({ rows, columns, empty }: { rows: Row[]; columns: { key: string; label: string }[]; empty: string }) { if (!rows.length) return <Empty text={empty} />; return <Table><TableHeader><TableRow>{columns.map((c) => <TableHead key={c.key}>{c.label}</TableHead>)}</TableRow></TableHeader><TableBody>{rows.slice(0, 50).map((row, idx) => <TableRow key={idx}>{columns.map((c) => <TableCell key={c.key}>{String(row[c.key] ?? "—")}</TableCell>)}</TableRow>)}</TableBody></Table>; }
+function FriendlyTable({ rows, columns, empty }: { rows: Row[]; columns: { key: string; label: string }[]; empty: string }) {
+  const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
+  if (!rows.length) return <Empty text={empty} />;
+  return <Table className="w-full table-fixed"><TableHeader><TableRow>{columns.map((c) => <TableHead className={TABLE_HEAD_CLASS} key={c.key}>{c.label}</TableHead>)}</TableRow></TableHeader><TableBody>{rows.slice(0, 50).map((row, idx) => { const rowKey = `${idx}`; const selected = selectedRowKey === rowKey; return <TableRow key={rowKey} onClick={() => setSelectedRowKey((current) => current === rowKey ? null : rowKey)} className={selected ? SELECTED_ROW_CLASS : HOVER_ROW_CLASS}>{columns.map((c) => <TableCell className={TABLE_CELL_CLASS} key={c.key}>{String(row[c.key] ?? "—")}</TableCell>)}</TableRow>; })}</TableBody></Table>;
+}
