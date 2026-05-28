@@ -1,8 +1,9 @@
-main [class*="overflow-x-auto"]:has(> table) {
+main .overflow-x-auto:has(> table) {
   max-height: 520px;
-  overflow: auto;
+  overflow: auto !important;
 }
 
-main [class*="overflow-x-auto"]:has(> table) th.sticky {
+main .overflow-x-auto:has(> table) th.sticky,
+main th.sticky.top-\[68px\] {
   top: 0 !important;
 }
