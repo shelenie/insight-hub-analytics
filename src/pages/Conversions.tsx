@@ -104,7 +104,7 @@ export default function Conversions() {
   const isRefreshing = boundsQuery.isRefetching || dataQuery.isRefetching || comparisonQuery.isRefetching;
   const hasData = aggregates.stageRows.length > 0 || aggregates.paymentRecords > 0 || aggregates.paymentLinesCount > 0;
   const hasError = dataQuery.isError || boundsQuery.isError;
-  const showDeltas = compareMode !== "none" && Boolean(comparisonRange) && !comparisonQuery.isLoading;
+  const showDeltas = compareMode !== "none" && Boolean(comparisonRange) && !comparisonQuery.isLoading && !comparisonQuery.isError;
   const handleRefresh = () => {
     void boundsQuery.refetch();
     void dataQuery.refetch();
@@ -130,11 +130,11 @@ export default function Conversions() {
 
         <SectionCard title={t("conversionsBetweenStages")} description={t("conversionsBetweenStagesDesc")}>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            <MetricCard label={t("conversionsRegToQuestionnaire")} value={safePct(aggregates.questionnaires, aggregates.registrations)} percent delta={buildDelta(safePct(aggregates.questionnaires, aggregates.registrations), safePct(comparisonAggregates.questionnaires, comparisonAggregates.registrations), compareDisplay, showDeltas, true)} helper={<RatioHelper counts={`${fmtNum(aggregates.questionnaires)} ${t("conversionsQuestionnairesLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.questionnaires, aggregates.registrations)} />} />
-            <MetricCard label={t("conversionsQuestionnaireToApplication")} value={safePct(aggregates.applications, aggregates.questionnaires)} percent delta={buildDelta(safePct(aggregates.applications, aggregates.questionnaires), safePct(comparisonAggregates.applications, comparisonAggregates.questionnaires), compareDisplay, showDeltas, true)} helper={<RatioHelper counts={`${fmtNum(aggregates.applications)} ${t("conversionsApplicationsLower")} / ${fmtNum(aggregates.questionnaires)} ${t("conversionsQuestionnairesLower")}`} ratio={safePct(aggregates.applications, aggregates.questionnaires)} />} />
-            <MetricCard label={t("conversionsApplicationToBooking")} value={safePct(aggregates.bookings, aggregates.applications)} percent delta={buildDelta(safePct(aggregates.bookings, aggregates.applications), safePct(comparisonAggregates.bookings, comparisonAggregates.applications), compareDisplay, showDeltas, true)} helper={<RatioHelper counts={`${fmtNum(aggregates.bookings)} ${t("conversionsBookingsLower")} / ${fmtNum(aggregates.applications)} ${t("conversionsApplicationsLower")}`} ratio={safePct(aggregates.bookings, aggregates.applications)} />} />
-            <MetricCard label={t("conversionsRegToBooking")} value={safePct(aggregates.bookings, aggregates.registrations)} percent delta={buildDelta(safePct(aggregates.bookings, aggregates.registrations), safePct(comparisonAggregates.bookings, comparisonAggregates.registrations), compareDisplay, showDeltas, true)} helper={<RatioHelper counts={`${fmtNum(aggregates.bookings)} ${t("conversionsBookingsLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.bookings, aggregates.registrations)} />} />
-            <MetricCard label={t("conversionsRegToPayment")} value={safePct(aggregates.paymentRecords, aggregates.registrations)} percent delta={buildDelta(safePct(aggregates.paymentRecords, aggregates.registrations), safePct(comparisonAggregates.paymentRecords, comparisonAggregates.registrations), compareDisplay, showDeltas, true)} helper={<RatioHelper counts={`${fmtNum(aggregates.paymentRecords)} ${t("conversionsPaymentsLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.paymentRecords, aggregates.registrations)} />} />
+            <MetricCard label={t("conversionsRegToQuestionnaire")} value={safePct(aggregates.questionnaires, aggregates.registrations)} percent delta={buildDelta(safePct(aggregates.questionnaires, aggregates.registrations), safePct(comparisonAggregates.questionnaires, comparisonAggregates.registrations), compareDisplay, showDeltas, true)} helper={<RatioHelper counts={`${fmtNum(aggregates.questionnaires)} ${t("conversionsQuestionnairesLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.questionnaires, aggregates.registrations)} />} align />
+            <MetricCard label={t("conversionsQuestionnaireToApplication")} value={safePct(aggregates.applications, aggregates.questionnaires)} percent delta={buildDelta(safePct(aggregates.applications, aggregates.questionnaires), safePct(comparisonAggregates.applications, comparisonAggregates.questionnaires), compareDisplay, showDeltas, true)} helper={<RatioHelper counts={`${fmtNum(aggregates.applications)} ${t("conversionsApplicationsLower")} / ${fmtNum(aggregates.questionnaires)} ${t("conversionsQuestionnairesLower")}`} ratio={safePct(aggregates.applications, aggregates.questionnaires)} />} align />
+            <MetricCard label={t("conversionsApplicationToBooking")} value={safePct(aggregates.bookings, aggregates.applications)} percent delta={buildDelta(safePct(aggregates.bookings, aggregates.applications), safePct(comparisonAggregates.bookings, comparisonAggregates.applications), compareDisplay, showDeltas, true)} helper={<RatioHelper counts={`${fmtNum(aggregates.bookings)} ${t("conversionsBookingsLower")} / ${fmtNum(aggregates.applications)} ${t("conversionsApplicationsLower")}`} ratio={safePct(aggregates.bookings, aggregates.applications)} />} align />
+            <MetricCard label={t("conversionsRegToBooking")} value={safePct(aggregates.bookings, aggregates.registrations)} percent delta={buildDelta(safePct(aggregates.bookings, aggregates.registrations), safePct(comparisonAggregates.bookings, comparisonAggregates.registrations), compareDisplay, showDeltas, true)} helper={<RatioHelper counts={`${fmtNum(aggregates.bookings)} ${t("conversionsBookingsLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.bookings, aggregates.registrations)} />} align />
+            <MetricCard label={t("conversionsRegToPayment")} value={safePct(aggregates.paymentRecords, aggregates.registrations)} percent delta={buildDelta(safePct(aggregates.paymentRecords, aggregates.registrations), safePct(comparisonAggregates.paymentRecords, comparisonAggregates.registrations), compareDisplay, showDeltas, true)} helper={<RatioHelper counts={`${fmtNum(aggregates.paymentRecords)} ${t("conversionsPaymentsLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.paymentRecords, aggregates.registrations)} />} align />
           </div>
           <details className="mt-3 rounded border"><summary className="cursor-pointer px-3 py-2 text-xs font-medium">{t("conversionsStageMeaningTitle")}</summary><div className="space-y-1 px-3 pb-3 text-xs text-muted-foreground"><p>{t("conversionsStageMeaningRegistrations")}</p><p>{t("conversionsStageMeaningQuestionnaires")}</p><p>{t("conversionsStageMeaningApplications")}</p><p>{t("conversionsStageMeaningBookings")}</p><p>{t("conversionsStageMeaningPayments")}</p></div></details>
         </SectionCard>
@@ -335,9 +335,11 @@ function filterMeaningfulContextRows(rows: Row[]) {
   });
 }
 
-function MetricCard({ label, value, helper, percent, raw, delta }: { label: string; value: unknown; helper?: ReactNode; percent?: boolean; raw?: boolean; delta?: Delta }) {
+function MetricCard({ label, value, helper, percent, raw, delta, align }: { label: string; value: unknown; helper?: ReactNode; percent?: boolean; raw?: boolean; delta?: Delta; align?: boolean }) {
   const formatted = raw ? String(value ?? "—") : formatMetric(value as Row[string], Boolean(percent));
-  return <div className="rounded border p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-xl font-semibold num">{formatted}</p>{delta ? <div className="mt-1 space-y-0.5"><p className={`text-xs font-medium ${delta.tone === "positive" ? "text-emerald-600" : delta.tone === "negative" ? "text-red-600" : "text-muted-foreground"}`}>{delta.text}</p><p className="text-[10px] text-muted-foreground">vs попередній період</p></div> : null}{helper ? <div className="mt-1 text-xs leading-snug text-muted-foreground">{helper}</div> : null}</div>;
+  const labelClass = align ? "min-h-[2.75rem] text-xs text-muted-foreground" : "text-xs text-muted-foreground";
+  const deltaClass = delta?.tone === "positive" ? "text-emerald-600" : delta?.tone === "negative" ? "text-red-600" : "text-muted-foreground";
+  return <div className="flex h-full flex-col rounded border p-3"><p className={labelClass}>{label}</p><p className="mt-1 text-xl font-semibold num">{formatted}</p>{delta ? <div className="mt-1 min-h-[2rem] space-y-0.5"><p className={`text-xs font-medium ${deltaClass}`}>{delta.text}</p><p className="text-[10px] text-muted-foreground">vs попередній період</p></div> : align ? <div className="mt-1 min-h-[2rem]" /> : null}{helper ? <div className="mt-1 text-xs leading-snug text-muted-foreground">{helper}</div> : null}</div>;
 }
 
 function RatioHelper({ counts, ratio }: { counts: string; ratio: number | null }) {
@@ -352,7 +354,7 @@ function money(value: unknown, currency: "USD" | "UAH", lang: "uk" | "en") { con
 
 function buildDelta(current: number | null, comparison: number | null, compareDisplay: "percent" | "absolute", showDelta: boolean, isPercentMetric = false): Delta | undefined {
   if (!showDelta) return undefined;
-  if (current == null || comparison == null) return { text: "—", tone: "neutral" };
+  if (current == null || comparison == null) return { text: "немає бази", tone: "neutral" };
   const absolute = current - comparison;
   const tone = absolute > 0 ? "positive" : absolute < 0 ? "negative" : "neutral";
   if (compareDisplay === "percent") {
@@ -368,7 +370,7 @@ function buildDelta(current: number | null, comparison: number | null, compareDi
 
 function buildMoneyDelta(current: number | null, comparison: number | null, currency: "USD" | "UAH", lang: "uk" | "en", compareDisplay: "percent" | "absolute", showDelta: boolean): Delta | undefined {
   if (!showDelta) return undefined;
-  if (current == null || comparison == null) return { text: "—", tone: "neutral" };
+  if (current == null || comparison == null) return { text: "немає бази", tone: "neutral" };
   const absolute = current - comparison;
   const tone = absolute > 0 ? "positive" : absolute < 0 ? "negative" : "neutral";
   if (compareDisplay === "percent") {
