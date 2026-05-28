@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { addDays, differenceInCalendarDays, format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -39,6 +39,7 @@ export default function Sales() {
   const { session } = useAuth();
   const date = useDateFilter();
   const { compareMode, compareDisplay } = usePreferences();
+  const [selectedSaleDate, setSelectedSaleDate] = useState("all");
   const fromIso = format(date.resolved.from, "yyyy-MM-dd");
   const toIso = format(date.resolved.to, "yyyy-MM-dd");
 
@@ -83,6 +84,8 @@ export default function Sales() {
   const showSummaryEmpty = Boolean(session) && !query.isLoading && !hasSalesDataError && summaryRows.length === 0;
   const filteredOnboardingRows = useMemo(() => filterPlaceholderRows(query.data?.onboarding.rows as Record<string, unknown>[] | undefined) as Row[], [query.data?.onboarding.rows]);
   const contextRows = useMemo(() => filteredOnboardingRows.filter((row) => hasMeaningfulContext(row.client_name, row.project_name, row.funnel_name)), [filteredOnboardingRows]);
+  const dailyDateOptions = useMemo(() => Array.from(new Set(dailyRows.map((row) => String(row.sale_date ?? "")).filter(Boolean))).sort(), [dailyRows]);
+  const filteredDailyRows = useMemo(() => selectedSaleDate === "all" ? dailyRows : dailyRows.filter((row) => String(row.sale_date ?? "") === selectedSaleDate), [dailyRows, selectedSaleDate]);
 
   const handleRefresh = () => {
     void query.refetch();
@@ -122,8 +125,8 @@ export default function Sales() {
       <CampaignRows rows={summaryRows} empty={t("salesEmpty")} locale={lang} />
     </SectionCard>
 
-    <SectionCard title={lang === "uk" ? "Продажі по днях" : "Sales by day"} description={lang === "uk" ? "Щоденні продажі" : "Daily sales trend"} noPadding>
-      <DailyRows rows={dailyRows} empty={t("salesEmpty")} locale={lang} />
+    <SectionCard title={lang === "uk" ? "Продажі по днях" : "Sales by day"} description={lang === "uk" ? "Щоденні продажі" : "Daily sales trend"} noPadding actions={dailyDateOptions.length > 1 ? <label className="flex items-center gap-2 text-xs text-muted-foreground"><span>{lang === "uk" ? "День" : "Day"}</span><select className="h-8 rounded-md border bg-background px-2 text-xs text-foreground" value={selectedSaleDate} onChange={(event) => setSelectedSaleDate(event.target.value)}><option value="all">{lang === "uk" ? "Усі дні" : "All days"}</option>{dailyDateOptions.map((day) => <option key={day} value={day}>{formatDay(day)}</option>)}</select></label> : null}>
+      <DailyRows rows={filteredDailyRows} empty={t("salesEmpty")} locale={lang} />
     </SectionCard>
 
     {contextRows.length > 0 ? <details className="rounded border" open={false}>
@@ -142,9 +145,9 @@ export default function Sales() {
 
 function BuyerRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale: "uk" | "en" }) {
   // Hide obvious demo/test buyer rows from production-facing Sales UI.
-  const visibleRows = rows.filter((row) => !isDemoBuyerRow(row));
+  const visibleRows = [...rows].filter((row) => !isDemoBuyerRow(row)).sort((a, b) => String(a.metric_date ?? "").localeCompare(String(b.metric_date ?? "")));
   if (!visibleRows.length) return <Msg t={empty} />;
-  return <div className="overflow-x-hidden"><Table className="w-full table-fixed"><TableHeader><TableRow>{[
+  return <div className="overflow-x-auto"><Table className="min-w-[1320px] w-full"><TableHeader><TableRow>{[
     locale === "uk" ? "Дата" : "Date",
     locale === "uk" ? "Імʼя" : "Name",
     locale === "uk" ? "Телефон" : "Phone",
@@ -154,25 +157,27 @@ function BuyerRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale
     "UAH",
     locale === "uk" ? "Залишок" : "Remaining",
     locale === "uk" ? "Статус" : "Status",
-  ].map((c) => <TableHead key={c} className="px-2 text-[10px] uppercase tracking-wide">{c === (locale === "uk" ? "Залишок" : "Remaining") ? <span title={locale === "uk" ? "Неоплачена частина тарифу / покупки в USD" : "Unpaid part of the tariff / purchase in USD"}>{c}</span> : c}</TableHead>)}</TableRow></TableHeader><TableBody>
+  ].map((c) => <TableHead key={c} className="whitespace-nowrap px-3 text-[11px] uppercase tracking-wide">{c === (locale === "uk" ? "Залишок" : "Remaining") ? <span title={locale === "uk" ? "Неоплачена частина тарифу / покупки в USD" : "Unpaid part of the tariff / purchase in USD"}>{c}</span> : c}</TableHead>)}</TableRow></TableHeader><TableBody>
     {visibleRows.map((r, i) => {
       const email = display(r.email);
       const paidUsd = getPaidUsd(r);
       const paidUah = getPaidUah(r);
       const hasPaidAmount = paidUsd != null || paidUah != null;
       return <TableRow key={`${String(r.phone_key ?? "")}-${String(r.metric_date ?? "")}-${i}`}>
-        <TableCell className="w-[8%] whitespace-nowrap px-2 text-xs">{formatDay(r.metric_date)}</TableCell>
-        <TableCell className="w-[14%] truncate px-2 text-sm" title={display(r.customer_name)}>{display(r.customer_name)}</TableCell>
-        <TableCell className="w-[13%] truncate px-2 text-sm" title={display(r.phone_key)}>{display(r.phone_key)}</TableCell>
-        <TableCell className="w-[18%] truncate px-2 text-sm" title={email}>{email}</TableCell>
-        <TableCell className="w-[13%] truncate px-2 text-sm" title={formatPaymentType(r, locale)}>
-          <span>{formatPaymentType(r, locale)}</span>
-          {!hasPaidAmount ? <span className="ml-1 rounded bg-amber-100 px-1 text-[10px] text-amber-700" title={locale === "uk" ? "У джерелі немає суми оплати для цього запису" : "The source data has no payment amount for this record"}>{locale === "uk" ? "без суми" : "no amount"}</span> : null}
+        <TableCell className="whitespace-nowrap px-3 text-sm">{formatDay(r.metric_date)}</TableCell>
+        <TableCell className="whitespace-nowrap px-3 text-sm" title={display(r.customer_name)}>{display(r.customer_name)}</TableCell>
+        <TableCell className="whitespace-nowrap px-3 text-sm" title={display(r.phone_key)}>{display(r.phone_key)}</TableCell>
+        <TableCell className="whitespace-nowrap px-3 text-sm" title={email}>{email}</TableCell>
+        <TableCell className="min-w-[170px] px-3 text-sm" title={formatPaymentType(r, locale)}>
+          <div className="flex flex-col items-start gap-1">
+            <span className="whitespace-nowrap">{formatPaymentType(r, locale)}</span>
+            {!hasPaidAmount ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700" title={locale === "uk" ? "У джерелі немає суми оплати для цього запису" : "The source data has no payment amount for this record"}>{locale === "uk" ? "без суми" : "no amount"}</span> : null}
+          </div>
         </TableCell>
-        <TableCell className="w-[8%] whitespace-nowrap px-2 text-right text-sm num">{fmtOptionalUsd(paidUsd)}</TableCell>
-        <TableCell className="w-[8%] whitespace-nowrap px-2 text-right text-sm num">{fmtOptionalUahExact(paidUah)}</TableCell>
-        <TableCell className="w-[8%] whitespace-nowrap px-2 text-right text-sm num">{fmtOptionalUsd(toOptionalNumber(r.debt_amount))}</TableCell>
-        <TableCell className="w-[10%] whitespace-nowrap px-2 text-sm">{formatSaleStatus(r.sale_status_norm, locale)}</TableCell>
+        <TableCell className="whitespace-nowrap px-3 text-right text-sm num">{fmtOptionalUsd(paidUsd)}</TableCell>
+        <TableCell className="whitespace-nowrap px-3 text-right text-sm num">{fmtOptionalUahExact(paidUah)}</TableCell>
+        <TableCell className="whitespace-nowrap px-3 text-right text-sm num">{fmtOptionalUsd(toOptionalNumber(r.debt_amount))}</TableCell>
+        <TableCell className="whitespace-nowrap px-3 text-sm">{formatSaleStatus(r.sale_status_norm, locale)}</TableCell>
       </TableRow>;
     })}
   </TableBody></Table></div>;
@@ -180,7 +185,7 @@ function BuyerRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale
 
 function CampaignRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale: "uk" | "en" }) {
   if (!rows.length) return <Msg t={empty} />;
-  return <div className="overflow-x-auto"><Table className="min-w-[860px]"><TableHeader><TableRow>{[
+  return <div className="overflow-x-auto"><Table className="min-w-[920px]"><TableHeader><TableRow>{[
     locale === "uk" ? "Кампанія" : "Campaign",
     locale === "uk" ? "Період" : "Period",
     locale === "uk" ? "Продажі" : "Sales",
@@ -188,40 +193,41 @@ function CampaignRows({ rows, empty, locale }: { rows: Row[]; empty: string; loc
     locale === "uk" ? "Додаткові USD" : "Additional USD",
     locale === "uk" ? "Загалом USD" : "Total USD",
     locale === "uk" ? "Загалом UAH" : "Total UAH",
-  ].map((c) => <TableHead key={c} className="text-xs uppercase tracking-wide whitespace-nowrap">{c}</TableHead>)}</TableRow></TableHeader><TableBody>
+  ].map((c) => <TableHead key={c} className="whitespace-nowrap px-3 text-xs uppercase tracking-wide">{c}</TableHead>)}</TableRow></TableHeader><TableBody>
     {rows.slice(0, 200).map((r, i) => <TableRow key={i}>
-      <TableCell className="max-w-[220px] truncate text-sm" title={String(r.campaign_name ?? "—")}>{String(r.campaign_name ?? "—")}</TableCell>
-      <TableCell className="whitespace-nowrap text-sm">{formatPeriod(r.first_date, r.last_date)}</TableCell>
-      <TableCell className="text-right num text-sm">{fmtNum(Number(r.sales_count ?? 0))}</TableCell>
-      <TableCell className="text-right num text-sm">{fmtUsd(Number(r.first_payment_usd ?? 0))}</TableCell>
-      <TableCell className="text-right num text-sm">{fmtUsd(Number(r.second_payment_usd ?? 0))}</TableCell>
-      <TableCell className="text-right num text-sm">{fmtUsd(Number(r.total_payment_usd ?? 0))}</TableCell>
-      <TableCell className="text-right num text-sm">{fmtUahExact(Number(r.total_payment_uah ?? 0))}</TableCell>
+      <TableCell className="max-w-[320px] truncate px-3 text-sm" title={String(r.campaign_name ?? "—")}>{String(r.campaign_name ?? "—")}</TableCell>
+      <TableCell className="whitespace-nowrap px-3 text-sm">{formatPeriod(r.first_date, r.last_date)}</TableCell>
+      <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtNum(Number(r.sales_count ?? 0))}</TableCell>
+      <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtUsd(Number(r.first_payment_usd ?? 0))}</TableCell>
+      <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtUsd(Number(r.second_payment_usd ?? 0))}</TableCell>
+      <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtUsd(Number(r.total_payment_usd ?? 0))}</TableCell>
+      <TableCell className="whitespace-nowrap px-3 text-right num text-sm">{fmtUahExact(Number(r.total_payment_uah ?? 0))}</TableCell>
     </TableRow>)}
   </TableBody></Table></div>;
 }
 
 function DailyRows({ rows, empty, locale }: { rows: Row[]; empty: string; locale: "uk" | "en" }) {
-  if (!rows.length) return <Msg t={empty} />;
-  return <div className="overflow-x-auto"><Table className="min-w-[720px]"><TableHeader><TableRow>{[
+  const visibleRows = [...rows].sort((a, b) => String(a.sale_date ?? "").localeCompare(String(b.sale_date ?? "")));
+  if (!visibleRows.length) return <Msg t={empty} />;
+  return <div className="overflow-x-auto"><Table className="min-w-[980px] w-full"><TableHeader><TableRow>{[
     locale === "uk" ? "Дата" : "Date",
     locale === "uk" ? "Кампанія" : "Campaign",
     locale === "uk" ? "Продажі" : "Sales",
     locale === "uk" ? "Загалом USD" : "Total USD",
     locale === "uk" ? "Загалом UAH" : "Total UAH",
-  ].map((c) => <TableHead key={c} className="text-xs uppercase tracking-wide whitespace-nowrap">{c}</TableHead>)}</TableRow></TableHeader><TableBody>
-    {rows.slice(0, 200).map((r, i) => <TableRow key={i}>
-      <TableCell className="whitespace-nowrap text-sm">{formatDay(r.sale_date)}</TableCell>
-      <TableCell className="max-w-[220px] truncate text-sm" title={String(r.campaign_name ?? "—")}>{String(r.campaign_name ?? "—")}</TableCell>
-      <TableCell className="text-right num text-sm">{fmtNum(Number(r.sales_count ?? 0))}</TableCell>
-      <TableCell className="text-right num text-sm">{fmtUsd(Number(r.total_payment_usd ?? 0))}</TableCell>
-      <TableCell className="text-right num text-sm">{fmtUahExact(Number(r.total_payment_uah ?? 0))}</TableCell>
+  ].map((c) => <TableHead key={c} className="whitespace-nowrap px-4 text-xs uppercase tracking-wide">{c}</TableHead>)}</TableRow></TableHeader><TableBody>
+    {visibleRows.slice(0, 200).map((r, i) => <TableRow key={i}>
+      <TableCell className="w-[140px] whitespace-nowrap px-4 text-sm">{formatDay(r.sale_date)}</TableCell>
+      <TableCell className="min-w-[320px] px-4 text-sm" title={String(r.campaign_name ?? "—")}>{String(r.campaign_name ?? "—")}</TableCell>
+      <TableCell className="w-[140px] whitespace-nowrap px-4 text-right num text-sm">{fmtNum(Number(r.sales_count ?? 0))}</TableCell>
+      <TableCell className="w-[180px] whitespace-nowrap px-4 text-right num text-sm">{fmtUsd(Number(r.total_payment_usd ?? 0))}</TableCell>
+      <TableCell className="w-[200px] whitespace-nowrap px-4 text-right num text-sm">{fmtUahExact(Number(r.total_payment_uah ?? 0))}</TableCell>
     </TableRow>)}
   </TableBody></Table></div>;
 }
 
 function Kpi({ rows }: { rows: KpiRow[] }) {
-  return <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7">{rows.map((r) => <div key={r.label} className="rounded border bg-card px-3 py-2" title={r.description}><p className="truncate text-xs text-muted-foreground">{r.label}</p><p className={`num mt-1 whitespace-nowrap ${r.compact ? "text-base" : "text-lg"} font-semibold`}>{r.value}</p>{r.description ? <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{r.description}</p> : null}{r.delta ? <p className={`mt-1 whitespace-nowrap text-[11px] ${r.delta.tone === "positive" ? "text-emerald-600" : r.delta.tone === "negative" ? "text-red-600" : "text-muted-foreground"}`}>{r.delta.text}</p> : null}</div>)}</div>;
+  return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">{rows.map((r) => <div key={r.label} className="rounded-lg border bg-card px-4 py-3" title={r.description}><p className="text-sm font-medium leading-snug text-muted-foreground">{r.label}</p><p className={`num mt-2 whitespace-nowrap ${r.compact ? "text-xl" : "text-2xl"} font-semibold`}>{r.value}</p>{r.description ? <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{r.description}</p> : null}{r.delta ? <p className={`mt-2 whitespace-nowrap text-xs font-medium ${r.delta.tone === "positive" ? "text-emerald-600" : r.delta.tone === "negative" ? "text-red-600" : "text-muted-foreground"}`}>{r.delta.text}</p> : null}</div>)}</div>;
 }
 
 const Msg = ({ t }: { t: string }) => <p className="rounded border p-3 text-sm text-muted-foreground">{t}</p>;
@@ -257,7 +263,7 @@ async function readSalesBuyers(fromIso: string, toIso: string) {
     .eq("workspace_id", WORKSPACE_ID)
     .gte("metric_date", fromIso)
     .lte("metric_date", toIso)
-    .order("metric_date", { ascending: false })
+    .order("metric_date", { ascending: true })
     .limit(500);
   return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null };
 }
