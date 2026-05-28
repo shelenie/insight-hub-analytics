@@ -43,15 +43,15 @@ type BuyerColumnKey = "date" | "name" | "phone" | "email" | "type" | "usd" | "ua
 type BuyerColumn = { key: BuyerColumnKey; label: string; width: number; minWidth: number; align?: "left" | "right"; tooltip?: string };
 
 const BUYER_COLUMN_DEFAULT_WIDTHS: Record<BuyerColumnKey, number> = {
-  date: 108,
-  name: 170,
-  phone: 150,
-  email: 220,
-  type: 160,
-  usd: 90,
-  uah: 96,
-  remaining: 104,
-  status: 106,
+  date: 96,
+  name: 136,
+  phone: 128,
+  email: 176,
+  type: 118,
+  usd: 78,
+  uah: 90,
+  remaining: 92,
+  status: 88,
 };
 
 export default function Sales() {
@@ -176,19 +176,20 @@ function BuyerRows({ rows, empty, locale, search }: { rows: Row[]; empty: string
   const [widths, setWidths] = useState<Record<BuyerColumnKey, number>>(BUYER_COLUMN_DEFAULT_WIDTHS);
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const columns = useMemo<BuyerColumn[]>(() => [
-    { key: "date", label: locale === "uk" ? "Дата" : "Date", width: 108, minWidth: 92 },
-    { key: "name", label: locale === "uk" ? "Імʼя" : "Name", width: 170, minWidth: 130 },
-    { key: "phone", label: locale === "uk" ? "Телефон" : "Phone", width: 150, minWidth: 120 },
-    { key: "email", label: "Email", width: 220, minWidth: 150 },
-    { key: "type", label: locale === "uk" ? "Тип оплати" : "Payment type", width: 160, minWidth: 130 },
-    { key: "usd", label: "USD", width: 90, minWidth: 80, align: "right" },
-    { key: "uah", label: "UAH", width: 96, minWidth: 84, align: "right" },
-    { key: "remaining", label: locale === "uk" ? "Залишок" : "Remaining", width: 104, minWidth: 92, align: "right", tooltip: locale === "uk" ? "Неоплачена частина тарифу / покупки в USD" : "Unpaid part of the tariff / purchase in USD" },
-    { key: "status", label: locale === "uk" ? "Статус" : "Status", width: 106, minWidth: 90 },
+    { key: "date", label: locale === "uk" ? "Дата" : "Date", width: 96, minWidth: 82 },
+    { key: "name", label: locale === "uk" ? "Імʼя" : "Name", width: 136, minWidth: 104 },
+    { key: "phone", label: locale === "uk" ? "Телефон" : "Phone", width: 128, minWidth: 108 },
+    { key: "email", label: "Email", width: 176, minWidth: 128 },
+    { key: "type", label: locale === "uk" ? "Тип" : "Type", width: 118, minWidth: 96 },
+    { key: "usd", label: "USD", width: 78, minWidth: 68, align: "right" },
+    { key: "uah", label: "UAH", width: 90, minWidth: 74, align: "right" },
+    { key: "remaining", label: locale === "uk" ? "Зал." : "Rem.", width: 92, minWidth: 76, align: "right", tooltip: locale === "uk" ? "Неоплачена частина тарифу / покупки в USD" : "Unpaid part of the tariff / purchase in USD" },
+    { key: "status", label: locale === "uk" ? "Стат." : "Status", width: 88, minWidth: 74 },
   ], [locale]);
   const visibleRows = [...rows].filter((row) => !isDemoBuyerRow(row)).filter((row) => searchBuyerRow(row, search, locale)).sort((a, b) => String(a.metric_date ?? "").localeCompare(String(b.metric_date ?? "")));
   if (!visibleRows.length) return <Msg t={empty} />;
-  return <div className="max-h-[520px] overflow-auto"><Table className="w-full table-fixed" style={{ minWidth: totalBuyerTableWidth(columns, widths) }}><colgroup>{columns.map((column) => <col key={column.key} style={{ width: widths[column.key] ?? column.width }} />)}</colgroup><TableHeader className="sticky top-0 z-30 bg-card"><TableRow>{columns.map((column) => <TableHead key={column.key} className={`relative select-none whitespace-nowrap bg-card px-3 text-[11px] uppercase tracking-wide shadow-[inset_0_-1px_0_hsl(var(--border))] ${column.align === "right" ? "text-right" : "text-left"}`}><span title={column.tooltip}>{column.label}</span><span role="separator" aria-orientation="vertical" aria-label={locale === "uk" ? `Змінити ширину: ${column.label}` : `Resize column: ${column.label}`} title={locale === "uk" ? "Потягніть, щоб змінити ширину колонки" : "Drag to resize column"} onMouseDown={(event) => startBuyerColumnResize(event, column, widths, setWidths)} className="absolute right-0 top-1/2 h-6 w-[4px] -translate-y-1/2 cursor-col-resize touch-none rounded-full bg-border transition hover:bg-primary" /></TableHead>)}</TableRow></TableHeader><TableBody>
+  const tableWidth = totalBuyerTableWidth(columns, widths);
+  return <div className="max-h-[520px] overflow-auto"><Table className="table-fixed" style={{ width: tableWidth > 980 ? tableWidth : "100%" }}><colgroup>{columns.map((column) => <col key={column.key} style={{ width: widths[column.key] ?? column.width }} />)}</colgroup><TableHeader><TableRow>{columns.map((column) => <TableHead key={column.key} className={`sticky top-0 z-30 border-b bg-card px-2 text-[11px] uppercase tracking-wide shadow-[0_1px_0_hsl(var(--border))] ${column.align === "right" ? "text-right" : "text-left"}`}><span className="block truncate" title={column.tooltip ?? column.label}>{column.label}</span><span role="separator" aria-orientation="vertical" aria-label={locale === "uk" ? `Змінити ширину: ${column.label}` : `Resize column: ${column.label}`} title={locale === "uk" ? "Потягніть, щоб змінити ширину колонки" : "Drag to resize column"} onMouseDown={(event) => startBuyerColumnResize(event, column, widths, setWidths)} className="absolute right-0 top-1/2 h-6 w-[4px] -translate-y-1/2 cursor-col-resize touch-none rounded-full bg-border transition hover:bg-primary" /></TableHead>)}</TableRow></TableHeader><TableBody>
     {visibleRows.map((r, i) => {
       const email = display(r.email);
       const paidUsd = getPaidUsd(r);
@@ -197,20 +198,20 @@ function BuyerRows({ rows, empty, locale, search }: { rows: Row[]; empty: string
       const rowKey = buyerRowKey(r, i);
       const isSelected = selectedRowKey === rowKey;
       return <TableRow key={rowKey} onClick={() => setSelectedRowKey((current) => current === rowKey ? null : rowKey)} className={`cursor-pointer ${isSelected ? "bg-primary/10 hover:bg-primary/15" : "hover:bg-muted/50"}`}>
-        <TableCell className="whitespace-nowrap px-3 text-sm">{formatDay(r.metric_date)}</TableCell>
-        <TableCell className="truncate whitespace-nowrap px-3 text-sm" title={display(r.customer_name)}>{display(r.customer_name)}</TableCell>
-        <TableCell className="truncate whitespace-nowrap px-3 text-sm" title={display(r.phone_key)}>{display(r.phone_key)}</TableCell>
-        <TableCell className="truncate whitespace-nowrap px-3 text-sm" title={email}>{email}</TableCell>
-        <TableCell className="px-3 text-sm" title={formatPaymentType(r, locale)}>
+        <TableCell className="whitespace-nowrap px-2 text-sm">{formatDay(r.metric_date)}</TableCell>
+        <TableCell className="truncate whitespace-nowrap px-2 text-sm" title={display(r.customer_name)}>{display(r.customer_name)}</TableCell>
+        <TableCell className="truncate whitespace-nowrap px-2 text-sm" title={display(r.phone_key)}>{display(r.phone_key)}</TableCell>
+        <TableCell className="truncate whitespace-nowrap px-2 text-sm" title={email}>{email}</TableCell>
+        <TableCell className="px-2 text-sm" title={formatPaymentType(r, locale)}>
           <div className="flex flex-col items-start gap-1">
             <span className="max-w-full truncate whitespace-nowrap">{formatPaymentType(r, locale)}</span>
             {!hasPaidAmount ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-700" title={locale === "uk" ? "У джерелі немає суми оплати для цього запису" : "The source data has no payment amount for this record"}>{locale === "uk" ? "без суми" : "no amount"}</span> : null}
           </div>
         </TableCell>
-        <TableCell className="whitespace-nowrap px-3 text-right text-sm num">{fmtOptionalUsd(paidUsd)}</TableCell>
-        <TableCell className="whitespace-nowrap px-3 text-right text-sm num">{fmtOptionalUahExact(paidUah)}</TableCell>
-        <TableCell className="whitespace-nowrap px-3 text-right text-sm num">{fmtOptionalUsd(toOptionalNumber(r.debt_amount))}</TableCell>
-        <TableCell className="truncate whitespace-nowrap px-3 text-sm" title={formatSaleStatus(r.sale_status_norm, locale)}>{formatSaleStatus(r.sale_status_norm, locale)}</TableCell>
+        <TableCell className="whitespace-nowrap px-2 text-right text-sm num">{fmtOptionalUsd(paidUsd)}</TableCell>
+        <TableCell className="whitespace-nowrap px-2 text-right text-sm num">{fmtOptionalUahExact(paidUah)}</TableCell>
+        <TableCell className="whitespace-nowrap px-2 text-right text-sm num">{fmtOptionalUsd(toOptionalNumber(r.debt_amount))}</TableCell>
+        <TableCell className="truncate whitespace-nowrap px-2 text-sm" title={formatSaleStatus(r.sale_status_norm, locale)}>{formatSaleStatus(r.sale_status_norm, locale)}</TableCell>
       </TableRow>;
     })}
   </TableBody></Table></div>;
@@ -220,7 +221,7 @@ function CampaignRows({ rows, empty, locale, search }: { rows: Row[]; empty: str
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const visibleRows = rows.filter((row) => searchCampaignRow(row, search));
   if (!visibleRows.length) return <Msg t={empty} />;
-  return <div className="overflow-hidden"><Table className="w-full table-fixed"><colgroup><col /><col style={{ width: 150 }} /><col style={{ width: 78 }} /><col style={{ width: 100 }} /><col style={{ width: 116 }} /><col style={{ width: 106 }} /><col style={{ width: 116 }} /></colgroup><TableHeader><TableRow>{[
+  return <div className="max-h-[520px] overflow-auto"><Table className="w-full table-fixed"><colgroup><col /><col style={{ width: 146 }} /><col style={{ width: 74 }} /><col style={{ width: 94 }} /><col style={{ width: 106 }} /><col style={{ width: 100 }} /><col style={{ width: 112 }} /></colgroup><TableHeader><TableRow>{[
     locale === "uk" ? "Кампанія" : "Campaign",
     locale === "uk" ? "Період" : "Period",
     locale === "uk" ? "Продажі" : "Sales",
@@ -228,7 +229,7 @@ function CampaignRows({ rows, empty, locale, search }: { rows: Row[]; empty: str
     locale === "uk" ? "Дод. USD" : "Add. USD",
     locale === "uk" ? "Всього USD" : "Total USD",
     locale === "uk" ? "Всього UAH" : "Total UAH",
-  ].map((c, index) => <TableHead key={c} className={`whitespace-nowrap px-3 text-xs uppercase tracking-wide ${index >= 2 ? "text-right" : "text-left"}`}>{c}</TableHead>)}</TableRow></TableHeader><TableBody>
+  ].map((c, index) => <TableHead key={c} className={`sticky top-0 z-30 whitespace-nowrap border-b bg-card px-3 text-xs uppercase tracking-wide shadow-[0_1px_0_hsl(var(--border))] ${index >= 2 ? "text-right" : "text-left"}`}>{c}</TableHead>)}</TableRow></TableHeader><TableBody>
     {visibleRows.slice(0, 200).map((r, i) => {
       const rowKey = campaignRowKey(r, i);
       const isSelected = selectedRowKey === rowKey;
@@ -249,13 +250,13 @@ function DailyRows({ rows, empty, locale, search }: { rows: Row[]; empty: string
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const visibleRows = [...rows].filter((row) => searchDailyRow(row, search)).sort((a, b) => String(a.sale_date ?? "").localeCompare(String(b.sale_date ?? "")));
   if (!visibleRows.length) return <Msg t={empty} />;
-  return <div className="overflow-hidden"><Table className="w-full table-fixed"><colgroup><col style={{ width: 116 }} /><col /><col style={{ width: 84 }} /><col style={{ width: 126 }} /><col style={{ width: 136 }} /></colgroup><TableHeader><TableRow>{[
+  return <div className="max-h-[520px] overflow-auto"><Table className="w-full table-fixed"><colgroup><col style={{ width: 108 }} /><col /><col style={{ width: 80 }} /><col style={{ width: 120 }} /><col style={{ width: 130 }} /></colgroup><TableHeader><TableRow>{[
     locale === "uk" ? "Дата" : "Date",
     locale === "uk" ? "Кампанія" : "Campaign",
     locale === "uk" ? "Продажі" : "Sales",
     locale === "uk" ? "Загалом USD" : "Total USD",
     locale === "uk" ? "Загалом UAH" : "Total UAH",
-  ].map((c, index) => <TableHead key={c} className={`whitespace-nowrap px-3 text-xs uppercase tracking-wide ${index >= 2 ? "text-right" : "text-left"}`}>{c}</TableHead>)}</TableRow></TableHeader><TableBody>
+  ].map((c, index) => <TableHead key={c} className={`sticky top-0 z-30 whitespace-nowrap border-b bg-card px-3 text-xs uppercase tracking-wide shadow-[0_1px_0_hsl(var(--border))] ${index >= 2 ? "text-right" : "text-left"}`}>{c}</TableHead>)}</TableRow></TableHeader><TableBody>
     {visibleRows.slice(0, 200).map((r, i) => {
       const rowKey = dailyRowKey(r, i);
       const isSelected = selectedRowKey === rowKey;
