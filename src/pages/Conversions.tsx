@@ -45,9 +45,7 @@ export default function Conversions() {
     return { from, to };
   }, [boundsQuery.data]);
 
-  useEffect(() => {
-    if (bounds) date.setDataBounds(bounds);
-  }, [bounds, date]);
+  useEffect(() => { if (bounds) date.setDataBounds(bounds); }, [bounds, date]);
 
   const effectiveFrom = date.preset === "all" && bounds ? bounds.from : date.resolved.from;
   const effectiveTo = date.preset === "all" && bounds ? bounds.to : date.resolved.to;
@@ -60,10 +58,7 @@ export default function Conversions() {
     const days = differenceInCalendarDays(effectiveTo, effectiveFrom) + 1;
     const comparisonToDate = addDays(effectiveFrom, -1);
     const comparisonFromDate = addDays(comparisonToDate, -(days - 1));
-    return {
-      from: format(comparisonFromDate, "yyyy-MM-dd"),
-      to: format(comparisonToDate, "yyyy-MM-dd"),
-    };
+    return { from: format(comparisonFromDate, "yyyy-MM-dd"), to: format(comparisonToDate, "yyyy-MM-dd") };
   }, [compareMode, date.mode, effectiveFrom, effectiveTo]);
 
   const dataQuery = useQuery({
@@ -104,22 +99,11 @@ export default function Conversions() {
   const hasData = aggregates.stageRows.length > 0 || aggregates.paymentRecords > 0 || aggregates.paymentLinesCount > 0;
   const hasError = dataQuery.isError || boundsQuery.isError;
   const showDeltas = compareMode !== "none" && Boolean(comparisonRange) && !comparisonQuery.isLoading;
-  const handleRefresh = () => {
-    void boundsQuery.refetch();
-    void dataQuery.refetch();
-    if (compareMode !== "none" && comparisonRange) void comparisonQuery.refetch();
-  };
+  const handleRefresh = () => { void boundsQuery.refetch(); void dataQuery.refetch(); if (compareMode !== "none" && comparisonRange) void comparisonQuery.refetch(); };
 
   return <DashboardLayout title={t("funnelTitle")} subtitle={t("funnelSubtitle")}>
     <div className="space-y-4 overflow-x-hidden">
-      <FilterBar
-        showProject={false}
-        showGroup={false}
-        freshness={{ source: t("conversionsDataLabel").replace(":", ""), status: "fresh", lastSync: "live" }}
-        onRefresh={handleRefresh}
-        isRefreshing={isRefreshing}
-      />
-
+      <FilterBar showProject={false} showGroup={false} freshness={{ source: t("conversionsDataLabel").replace(":", ""), status: "fresh", lastSync: "live" }} onRefresh={handleRefresh} isRefreshing={isRefreshing} />
       {!session ? <Empty text={t("conversionsSignIn")} /> : (dataQuery.isLoading || boundsQuery.isLoading) ? <Empty text={t("conversionsLoading")} /> : null}
       {session && hasError ? <Empty text={t("conversionsLoadError")} /> : null}
       {!dataQuery.isLoading && !boundsQuery.isLoading && session && !hasError && !hasData ? <Empty text={t("conversionsNoDataSelectedPeriod")} /> : null}
@@ -142,19 +126,10 @@ export default function Conversions() {
             <MetricCard label={t("conversionsRegToBooking")} value={safePct(aggregates.bookings, aggregates.registrations)} percent delta={buildDelta(safePct(aggregates.bookings, aggregates.registrations), safePct(comparisonAggregates.bookings, comparisonAggregates.registrations), compareDisplay, showDeltas, true)} helper={<RatioHelper counts={`${fmtNum(aggregates.bookings)} ${t("conversionsBookingsLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.bookings, aggregates.registrations)} hint={t("conversionsAbove100Hint")} />} />
             <MetricCard label={t("conversionsRegToPayment")} value={safePct(aggregates.paymentRecords, aggregates.registrations)} percent delta={buildDelta(safePct(aggregates.paymentRecords, aggregates.registrations), safePct(comparisonAggregates.paymentRecords, comparisonAggregates.registrations), compareDisplay, showDeltas, true)} helper={<RatioHelper counts={`${fmtNum(aggregates.paymentRecords)} ${t("conversionsPaymentsLower")} / ${fmtNum(aggregates.registrations)} ${t("conversionsRegistrationsLower")}`} ratio={safePct(aggregates.paymentRecords, aggregates.registrations)} hint={t("conversionsAbove100Hint")} />} />
           </div>
-          <details className="mt-3 rounded border">
-            <summary className="cursor-pointer px-3 py-2 text-xs font-medium">{t("conversionsStageMeaningTitle")}</summary>
-            <div className="space-y-1 px-3 pb-3 text-xs text-muted-foreground">
-              <p>{t("conversionsStageMeaningRegistrations")}</p>
-              <p>{t("conversionsStageMeaningQuestionnaires")}</p>
-              <p>{t("conversionsStageMeaningApplications")}</p>
-              <p>{t("conversionsStageMeaningBookings")}</p>
-              <p>{t("conversionsStageMeaningPayments")}</p>
-            </div>
-          </details>
+          <details className="mt-3 rounded border"><summary className="cursor-pointer px-3 py-2 text-xs font-medium">{t("conversionsStageMeaningTitle")}</summary><div className="space-y-1 px-3 pb-3 text-xs text-muted-foreground"><p>{t("conversionsStageMeaningRegistrations")}</p><p>{t("conversionsStageMeaningQuestionnaires")}</p><p>{t("conversionsStageMeaningApplications")}</p><p>{t("conversionsStageMeaningBookings")}</p><p>{t("conversionsStageMeaningPayments")}</p></div></details>
         </SectionCard>
 
-        <SectionCard title={t("conversionsPaymentsSection")} description={t("conversionsPaymentsSectionDesc")}>
+        <SectionCard title={lang === "uk" ? "Платежі та суми" : "Payments and totals"} description={t("conversionsPaymentsSectionDesc")}>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
             <MetricCard label={t("conversionsPaymentRecords")} value={aggregates.paymentRecords} delta={buildDelta(aggregates.paymentRecords, comparisonAggregates.paymentRecords, compareDisplay, showDeltas)} />
             <MetricCard label={t("conversionsUniquePayers")} value={aggregates.uniquePayers} delta={buildDelta(aggregates.uniquePayers, comparisonAggregates.uniquePayers, compareDisplay, showDeltas)} />
@@ -167,10 +142,10 @@ export default function Conversions() {
             <MetricCard label={t("conversionsNeedsReview")} value={aggregates.needsReviewPaymentRows} delta={buildDelta(aggregates.needsReviewPaymentRows, comparisonAggregates.needsReviewPaymentRows, compareDisplay, showDeltas)} />
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <MetricCard label={t("conversionsCollectedUsd")} value={money(aggregates.collectedUsdTotal, "USD", lang)} raw />
-            <MetricCard label={t("conversionsCollectedUah")} value={money(aggregates.collectedUahTotal, "UAH", lang)} raw />
-            <MetricCard label={t("conversionsDebt")} value={money(aggregates.debtTotal, "USD", lang)} raw />
-            <MetricCard label={t("conversionsTariffTotal")} value={money(aggregates.tariffTotal, "USD", lang)} raw />
+            <MetricCard label={t("conversionsCollectedUsd")} value={money(aggregates.collectedUsdTotal, "USD", lang)} raw delta={buildDelta(aggregates.collectedUsdTotal, comparisonAggregates.collectedUsdTotal, compareDisplay, showDeltas)} />
+            <MetricCard label={t("conversionsCollectedUah")} value={money(aggregates.collectedUahTotal, "UAH", lang)} raw delta={buildDelta(aggregates.collectedUahTotal, comparisonAggregates.collectedUahTotal, compareDisplay, showDeltas)} />
+            <MetricCard label={lang === "uk" ? "Несплачений залишок" : "Unpaid balance"} value={money(aggregates.debtTotal, "USD", lang)} raw delta={buildDelta(aggregates.debtTotal, comparisonAggregates.debtTotal, compareDisplay, showDeltas)} helper={lang === "uk" ? "Сума debt_amount у платіжних записах за вибраний період." : "Sum of debt_amount in payment records for the selected period."} />
+            <MetricCard label={t("conversionsTariffTotal")} value={money(aggregates.tariffTotal, "USD", lang)} raw delta={buildDelta(aggregates.tariffTotal, comparisonAggregates.tariffTotal, compareDisplay, showDeltas)} />
           </div>
         </SectionCard>
 
@@ -186,18 +161,10 @@ export default function Conversions() {
             <MetricCard label={t("conversionsPaymentsWithoutBooking")} value={aggregates.paymentsWithoutBooking} delta={buildDelta(aggregates.paymentsWithoutBooking, comparisonAggregates.paymentsWithoutBooking, compareDisplay, showDeltas)} />
             <MetricCard label={t("conversionsBookingsWithoutPayment")} value={aggregates.bookingsWithoutPayment} delta={buildDelta(aggregates.bookingsWithoutPayment, comparisonAggregates.bookingsWithoutPayment, compareDisplay, showDeltas)} />
           </div>
-          <div className="mt-3 max-w-sm rounded border p-3">
-            <p className="text-xs font-medium">{t("conversionsRawPaymentsBookingsRatio")}</p>
-            <p className="mt-1 text-2xl font-semibold leading-none num">{aggregates.bookings > 0 ? `${(aggregates.paymentRecords / aggregates.bookings).toFixed(1)}×` : "—"}</p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {aggregates.bookings > 0 ? `${fmtNum(aggregates.paymentRecords)} ${t("conversionsPaymentsLower")} / ${fmtNum(aggregates.bookings)} ${t("conversionsBookingsLower")}` : t("conversionsNoBookingsInPeriod")}
-            </p>
-            <p className="mt-2 text-xs text-muted-foreground">{t("conversionsRatioWarning")}</p>
-          </div>
+          <div className="mt-3 max-w-sm rounded border p-3"><p className="text-xs font-medium">{t("conversionsRawPaymentsBookingsRatio")}</p><p className="mt-1 text-2xl font-semibold leading-none num">{aggregates.bookings > 0 ? `${(aggregates.paymentRecords / aggregates.bookings).toFixed(1)}×` : "—"}</p><p className="mt-1 text-xs text-muted-foreground">{aggregates.bookings > 0 ? `${fmtNum(aggregates.paymentRecords)} ${t("conversionsPaymentsLower")} / ${fmtNum(aggregates.bookings)} ${t("conversionsBookingsLower")}` : t("conversionsNoBookingsInPeriod")}</p><p className="mt-2 text-xs text-muted-foreground">{t("conversionsRatioWarning")}</p></div>
         </SectionCard>
 
         <StageTable rows={aggregates.stageRows} t={t} lang={lang} />
-
         {meaningfulOnboardingRows.length > 0 ? <details className="rounded border"><summary className="cursor-pointer px-4 py-3 text-sm font-medium">{t("conversionsExtraContext")}</summary><SectionCard title={t("conversionsExtraContext")} noPadding><FriendlyTable rows={meaningfulOnboardingRows} columns={[{ key: "client_name", label: t("conversionsContextClient") }, { key: "project_name", label: t("conversionsContextProject") }, { key: "funnel_name", label: t("conversionsContextFunnel") }, { key: "status", label: t("conversionsContextStatus") }]} empty={t("conversionsViewUnavailable")} /></SectionCard></details> : null}
         {filteredBindingsRows.length > 0 ? <details className="rounded border"><summary className="cursor-pointer px-4 py-3 text-sm font-medium">{t("conversionsExtraBindings")}</summary><SectionCard title={t("conversionsExtraBindings")} noPadding><FriendlyTable rows={filteredBindingsRows} columns={[{ key: "project_name", label: "project_name" }, { key: "source_name", label: "source_name" }, { key: "mapping_status", label: "mapping_status" }, { key: "binding_status", label: "binding_status" }, { key: "updated_at", label: "updated_at" }]} empty={t("conversionsViewUnavailable")} /></SectionCard></details> : null}
       </> : null}
@@ -209,137 +176,39 @@ function PaymentTypeTable({ rows, t }: { rows: Array<{ category: string; total_r
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   return <SectionCard title={t("conversionsPaymentTypeStructureTitle")} description={t("conversionsPaymentTypeStructureDesc")} noPadding>
     <p className="px-4 pb-1 pt-2 text-xs text-muted-foreground">{t("conversionsPaymentTypeStructureHelper")}</p>
-    <Table className="w-full table-fixed">
-      <colgroup><col /><col style={{ width: 96 }} /><col style={{ width: 118 }} /><col style={{ width: 96 }} /><col style={{ width: 124 }} /></colgroup>
-      <TableHeader><TableRow>
-        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsPaymentTypeThType")}</TableHead>
-        <TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsPaymentTypeThTotal")}</TableHead>
-        <TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsPaymentTypeThIncluded")}</TableHead>
-        <TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsPaymentTypeThRefund")}</TableHead>
-        <TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsPaymentTypeThNeedsReview")}</TableHead>
-      </TableRow></TableHeader>
-      <TableBody>{rows.map((row, idx) => {
-        const labelKey = getPaymentCategoryLabelKey(row.category);
-        const rowKey = `${row.category}-${idx}`;
-        const selected = selectedRowKey === rowKey;
-        return <TableRow key={rowKey} onClick={() => setSelectedRowKey((current) => current === rowKey ? null : rowKey)} className={selected ? SELECTED_ROW_CLASS : HOVER_ROW_CLASS}>
-          <TableCell className={TABLE_CELL_CLASS}>{labelKey ? t(labelKey) : row.category}</TableCell>
-          <TableCell className={TABLE_NUM_CLASS}>{fmtNum(row.total_records)}</TableCell>
-          <TableCell className={TABLE_NUM_CLASS}>{fmtNum(row.included_records)}</TableCell>
-          <TableCell className={TABLE_NUM_CLASS}>{fmtNum(row.refund_records)}</TableCell>
-          <TableCell className={TABLE_NUM_CLASS}>{fmtNum(row.needs_review_records)}</TableCell>
-        </TableRow>;
-      })}</TableBody>
-    </Table>
+    <Table className="w-full table-fixed"><colgroup><col /><col style={{ width: 86 }} /><col style={{ width: 104 }} /><col style={{ width: 86 }} /><col style={{ width: 110 }} /></colgroup><TableHeader><TableRow><TableHead className={TABLE_HEAD_CLASS}>{t("conversionsPaymentTypeThType")}</TableHead><TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsPaymentTypeThTotal")}</TableHead><TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsPaymentTypeThIncluded")}</TableHead><TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsPaymentTypeThRefund")}</TableHead><TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsPaymentTypeThNeedsReview")}</TableHead></TableRow></TableHeader><TableBody>{rows.map((row, idx) => { const labelKey = getPaymentCategoryLabelKey(row.category); const rowKey = `${row.category}-${idx}`; const selected = selectedRowKey === rowKey; return <TableRow key={rowKey} onClick={() => setSelectedRowKey((current) => current === rowKey ? null : rowKey)} className={selected ? SELECTED_ROW_CLASS : HOVER_ROW_CLASS}><TableCell className={TABLE_CELL_CLASS}>{labelKey ? t(labelKey) : row.category}</TableCell><TableCell className={TABLE_NUM_CLASS}>{fmtNum(row.total_records)}</TableCell><TableCell className={TABLE_NUM_CLASS}>{fmtNum(row.included_records)}</TableCell><TableCell className={TABLE_NUM_CLASS}>{fmtNum(row.refund_records)}</TableCell><TableCell className={TABLE_NUM_CLASS}>{fmtNum(row.needs_review_records)}</TableCell></TableRow>; })}</TableBody></Table>
   </SectionCard>;
 }
 
 function StageTable({ rows, t, lang }: { rows: Row[]; t: (key: string) => string; lang: "uk" | "en" }) {
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   return <SectionCard title={t("conversionsStageTableTitle")} description={t("conversionsStageTableDesc")} noPadding>
-    <Table className="w-full table-fixed">
-      <colgroup><col /><col style={{ width: 92 }} /><col style={{ width: 150 }} /><col style={{ width: 112 }} /><col style={{ width: 122 }} /></colgroup>
-      <TableHeader><TableRow>
-        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsThStage")}</TableHead>
-        <TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsThEvents")}</TableHead>
-        <TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsThUniqueContacts")}</TableHead>
-        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsThFirstDate")}</TableHead>
-        <TableHead className={TABLE_HEAD_CLASS}>{t("conversionsThLastDate")}</TableHead>
-      </TableRow></TableHeader>
-      <TableBody>{rows.map((row, idx) => {
-        const rowKey = `${String(row.stage ?? "stage")}-${idx}`;
-        const selected = selectedRowKey === rowKey;
-        return <TableRow key={rowKey} onClick={() => setSelectedRowKey((current) => current === rowKey ? null : rowKey)} className={selected ? SELECTED_ROW_CLASS : HOVER_ROW_CLASS}>
-          <TableCell className={TABLE_CELL_CLASS}>{getStageLabel(String(row.stage ?? "").toLowerCase(), row.stage_label, lang)}</TableCell>
-          <TableCell className={TABLE_NUM_CLASS}>{fmtNum(Number(row.events_count ?? 0))}</TableCell>
-          <TableCell className={TABLE_NUM_CLASS}>{fmtNum(Number(row.unique_contacts ?? 0))}</TableCell>
-          <TableCell className={TABLE_CELL_CLASS}>{formatShortDate(row.first_date)}</TableCell>
-          <TableCell className={TABLE_CELL_CLASS}>{formatShortDate(row.last_date)}</TableCell>
-        </TableRow>;
-      })}</TableBody>
-    </Table>
+    <Table className="w-full table-fixed"><colgroup><col /><col style={{ width: 96 }} /><col style={{ width: 178 }} /><col style={{ width: 148 }} /><col style={{ width: 148 }} /></colgroup><TableHeader><TableRow><TableHead className={TABLE_HEAD_CLASS}>{t("conversionsThStage")}</TableHead><TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsThEvents")}</TableHead><TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsThUniqueContacts")}</TableHead><TableHead className={`${TABLE_HEAD_CLASS} pl-8`}>{t("conversionsThFirstDate")}</TableHead><TableHead className={TABLE_HEAD_CLASS}>{t("conversionsThLastDate")}</TableHead></TableRow></TableHeader><TableBody>{rows.map((row, idx) => { const rowKey = `${String(row.stage ?? "stage")}-${idx}`; const selected = selectedRowKey === rowKey; return <TableRow key={rowKey} onClick={() => setSelectedRowKey((current) => current === rowKey ? null : rowKey)} className={selected ? SELECTED_ROW_CLASS : HOVER_ROW_CLASS}><TableCell className={TABLE_CELL_CLASS}>{getStageLabel(String(row.stage ?? "").toLowerCase(), row.stage_label, lang)}</TableCell><TableCell className={TABLE_NUM_CLASS}>{fmtNum(Number(row.events_count ?? 0))}</TableCell><TableCell className={TABLE_NUM_CLASS}>{fmtNum(Number(row.unique_contacts ?? 0))}</TableCell><TableCell className={`${TABLE_CELL_CLASS} pl-8`}>{formatShortDate(row.first_date)}</TableCell><TableCell className={TABLE_CELL_CLASS}>{formatShortDate(row.last_date)}</TableCell></TableRow>; })}</TableBody></Table>
   </SectionCard>;
 }
 
 function computeAggregates(stageEvents: Row[], paymentRecordsRows: Row[], paymentLines: Row[]) {
   const byStage = new Map<string, { count: number; contacts: Set<string>; first: string | null; last: string | null }>();
   const bookingPhones = new Set<string>();
-  for (const row of stageEvents) {
-    const stage = String(row.stage ?? "").toLowerCase();
-    if (!stage) continue;
-    const item = byStage.get(stage) ?? { count: 0, contacts: new Set<string>(), first: null, last: null };
-    item.count += 1;
-    const c = String(row.contact_key ?? ""); if (c) item.contacts.add(c);
-    const d = String(row.metric_date ?? ""); if (d) { if (!item.first || d < item.first) item.first = d; if (!item.last || d > item.last) item.last = d; }
-    if (stage === "booking") { const p = String(row.phone_key ?? ""); if (p) bookingPhones.add(p); }
-    byStage.set(stage, item);
-  }
+  for (const row of stageEvents) { const stage = String(row.stage ?? "").toLowerCase(); if (!stage) continue; const item = byStage.get(stage) ?? { count: 0, contacts: new Set<string>(), first: null, last: null }; item.count += 1; const c = String(row.contact_key ?? ""); if (c) item.contacts.add(c); const d = String(row.metric_date ?? ""); if (d) { if (!item.first || d < item.first) item.first = d; if (!item.last || d > item.last) item.last = d; } if (stage === "booking") { const p = String(row.phone_key ?? ""); if (p) bookingPhones.add(p); } byStage.set(stage, item); }
   const goodPayments = (r: Row) => !["refund", "needs_review"].includes(String(r.sale_status_norm ?? "").toLowerCase());
   const paymentPhones = new Set<string>(); const payerSet = new Set<string>();
   let activePaymentRows = 0, refundPaymentRows = 0, needsReviewPaymentRows = 0, fullPaymentRows = 0, installmentRows = 0, depositRows = 0, additionalPaymentRows = 0, debtTotal = 0, tariffTotal = 0;
   const paymentCategoryCounts = new Map<string, { total_records: number; included_records: number; refund_records: number; needs_review_records: number }>();
-  for (const row of paymentRecordsRows) {
-    const status = String(row.sale_status_norm ?? "").toLowerCase();
-    if (status === "active") activePaymentRows++; if (status === "refund") refundPaymentRows++; if (status === "needs_review") needsReviewPaymentRows++;
-    const paymentCategoryRaw = String(row.payment_category ?? "").toLowerCase();
-    const paymentCategory = paymentCategoryRaw || "unknown";
-    const categoryStats = paymentCategoryCounts.get(paymentCategory) ?? { total_records: 0, included_records: 0, refund_records: 0, needs_review_records: 0 };
-    categoryStats.total_records += 1;
-    if (status === "refund") categoryStats.refund_records += 1;
-    else if (status === "needs_review") categoryStats.needs_review_records += 1;
-    else categoryStats.included_records += 1;
-    paymentCategoryCounts.set(paymentCategory, categoryStats);
-    const cust = String(row.customer_key ?? ""); if (cust) payerSet.add(cust);
-    if (goodPayments(row)) {
-      const cat = String(row.payment_category ?? "").toLowerCase();
-      if (cat === "full_payment") fullPaymentRows++; if (cat === "installment") installmentRows++; if (cat === "deposit") depositRows++; if (cat === "additional_payment") additionalPaymentRows++;
-      debtTotal += toNumber(row.debt_amount) ?? 0; tariffTotal += toNumber(row.tariff_price) ?? 0;
-      const p = String(row.phone_key ?? ""); if (p) paymentPhones.add(p);
-    }
-  }
+  for (const row of paymentRecordsRows) { const status = String(row.sale_status_norm ?? "").toLowerCase(); if (status === "active") activePaymentRows++; if (status === "refund") refundPaymentRows++; if (status === "needs_review") needsReviewPaymentRows++; const paymentCategoryRaw = String(row.payment_category ?? "").toLowerCase(); const paymentCategory = paymentCategoryRaw || "unknown"; const categoryStats = paymentCategoryCounts.get(paymentCategory) ?? { total_records: 0, included_records: 0, refund_records: 0, needs_review_records: 0 }; categoryStats.total_records += 1; if (status === "refund") categoryStats.refund_records += 1; else if (status === "needs_review") categoryStats.needs_review_records += 1; else categoryStats.included_records += 1; paymentCategoryCounts.set(paymentCategory, categoryStats); const cust = String(row.customer_key ?? ""); if (cust) payerSet.add(cust); if (goodPayments(row)) { const cat = String(row.payment_category ?? "").toLowerCase(); if (cat === "full_payment") fullPaymentRows++; if (cat === "installment") installmentRows++; if (cat === "deposit") depositRows++; if (cat === "additional_payment") additionalPaymentRows++; debtTotal += toNumber(row.debt_amount) ?? 0; tariffTotal += toNumber(row.tariff_price) ?? 0; const p = String(row.phone_key ?? ""); if (p) paymentPhones.add(p); } }
   let collectedUsdTotal = 0, collectedUahTotal = 0;
   for (const row of paymentLines) if (goodPayments(row)) { collectedUsdTotal += toNumber(row.amount_usd) ?? 0; collectedUahTotal += toNumber(row.amount_uah) ?? 0; }
   const matchedPhones = [...bookingPhones].filter((p) => paymentPhones.has(p)).length;
   const stageRows = [...byStage.entries()].map(([stage, v]) => ({ stage, stage_label: stage, events_count: v.count, unique_contacts: v.contacts.size, first_date: v.first, last_date: v.last })).sort((a,b)=>STAGE_ORDER.indexOf(a.stage)-STAGE_ORDER.indexOf(b.stage));
   const paymentCategoryRank: Record<string, number> = { full_payment: 1, installment: 2, deposit: 3, additional_payment: 4, unknown: 5, other: 6 };
-  const paymentCategoryRows = [...paymentCategoryCounts.entries()].map(([category, counts]) => ({ category, ...counts })).sort((a, b) => {
-    const rankA = paymentCategoryRank[a.category] ?? 100;
-    const rankB = paymentCategoryRank[b.category] ?? 100;
-    if (rankA !== rankB) return rankA - rankB;
-    return a.category.localeCompare(b.category);
-  });
-  return {
-    stageRows, paymentLinesCount: paymentLines.length,
-    registrations: byStage.get("registration")?.count ?? 0, questionnaires: byStage.get("questionnaire")?.count ?? 0, applications: byStage.get("application")?.count ?? 0, bookings: byStage.get("booking")?.count ?? 0,
-    stageUnique: { registration: byStage.get("registration")?.contacts.size ?? 0, questionnaire: byStage.get("questionnaire")?.contacts.size ?? 0, application: byStage.get("application")?.contacts.size ?? 0, booking: byStage.get("booking")?.contacts.size ?? 0 },
-    paymentRecords: paymentRecordsRows.length, uniquePayers: payerSet.size, activePaymentRows, refundPaymentRows, needsReviewPaymentRows, fullPaymentRows, installmentRows, depositRows, additionalPaymentRows, debtTotal, tariffTotal,
-    paymentCategoryRows,
-    collectedUsdTotal, collectedUahTotal, bookingPhones: bookingPhones.size, paymentPhones: paymentPhones.size, matchedPhones, paymentsWithoutBooking: paymentPhones.size - matchedPhones, bookingsWithoutPayment: bookingPhones.size - matchedPhones,
-  };
+  const paymentCategoryRows = [...paymentCategoryCounts.entries()].map(([category, counts]) => ({ category, ...counts })).sort((a, b) => { const rankA = paymentCategoryRank[a.category] ?? 100; const rankB = paymentCategoryRank[b.category] ?? 100; if (rankA !== rankB) return rankA - rankB; return a.category.localeCompare(b.category); });
+  return { stageRows, paymentLinesCount: paymentLines.length, registrations: byStage.get("registration")?.count ?? 0, questionnaires: byStage.get("questionnaire")?.count ?? 0, applications: byStage.get("application")?.count ?? 0, bookings: byStage.get("booking")?.count ?? 0, stageUnique: { registration: byStage.get("registration")?.contacts.size ?? 0, questionnaire: byStage.get("questionnaire")?.contacts.size ?? 0, application: byStage.get("application")?.contacts.size ?? 0, booking: byStage.get("booking")?.contacts.size ?? 0 }, paymentRecords: paymentRecordsRows.length, uniquePayers: payerSet.size, activePaymentRows, refundPaymentRows, needsReviewPaymentRows, fullPaymentRows, installmentRows, depositRows, additionalPaymentRows, debtTotal, tariffTotal, paymentCategoryRows, collectedUsdTotal, collectedUahTotal, bookingPhones: bookingPhones.size, paymentPhones: paymentPhones.size, matchedPhones, paymentsWithoutBooking: paymentPhones.size - matchedPhones, bookingsWithoutPayment: bookingPhones.size - matchedPhones };
 }
 
 async function readView(viewName: string, scopedByWorkspace: boolean, from?: string, to?: string): Promise<Row[]> { let query = supabase.from(viewName).select("*"); if (scopedByWorkspace) query = query.eq("workspace_id", WORKSPACE_ID); if (from && to) query = query.gte("metric_date", from).lte("metric_date", to); const res = await query; if (res.error) throw new Error(`[Conversions][readView] Failed to read ${viewName}: ${res.error.message}`); return (res.data ?? []) as Row[]; }
-async function readViewPaged(viewName: string, scopedByWorkspace: boolean, from?: string, to?: string, orderBy: string[] = []): Promise<Row[]> {
-  const pageSize = 1000;
-  const maxRows = 50000;
-  const rows: Row[] = [];
-  for (let fromIndex = 0; fromIndex < maxRows; fromIndex += pageSize) {
-    const toIndex = fromIndex + pageSize - 1;
-    let query = supabase.from(viewName).select("*");
-    if (scopedByWorkspace) query = query.eq("workspace_id", WORKSPACE_ID);
-    if (from && to) query = query.gte("metric_date", from).lte("metric_date", to);
-    for (const orderColumn of orderBy) query = query.order(orderColumn, { ascending: true });
-    const res = await query.range(fromIndex, toIndex);
-    if (res.error) throw new Error(`[Conversions][readViewPaged] Failed to read ${viewName} rows ${fromIndex}-${toIndex}: ${res.error.message}`);
-    const page = (res.data ?? []) as Row[];
-    rows.push(...page);
-    if (page.length < pageSize) return rows;
-  }
-  console.warn(`[Conversions] Reached max rows cap (${maxRows}) for ${viewName}. Results may be truncated.`);
-  return rows;
-}
+async function readViewPaged(viewName: string, scopedByWorkspace: boolean, from?: string, to?: string, orderBy: string[] = []): Promise<Row[]> { const pageSize = 1000; const maxRows = 50000; const rows: Row[] = []; for (let fromIndex = 0; fromIndex < maxRows; fromIndex += pageSize) { const toIndex = fromIndex + pageSize - 1; let query = supabase.from(viewName).select("*"); if (scopedByWorkspace) query = query.eq("workspace_id", WORKSPACE_ID); if (from && to) query = query.gte("metric_date", from).lte("metric_date", to); for (const orderColumn of orderBy) query = query.order(orderColumn, { ascending: true }); const res = await query.range(fromIndex, toIndex); if (res.error) throw new Error(`[Conversions][readViewPaged] Failed to read ${viewName} rows ${fromIndex}-${toIndex}: ${res.error.message}`); const page = (res.data ?? []) as Row[]; rows.push(...page); if (page.length < pageSize) return rows; } console.warn(`[Conversions] Reached max rows cap (${maxRows}) for ${viewName}. Results may be truncated.`); return rows; }
 function filterMeaningfulContextRows(rows: Row[]) { return rows.filter((row) => { const client = String(row.client_name ?? "").trim(); const project = String(row.project_name ?? "").trim(); const funnel = String(row.funnel_name ?? "").trim(); const isEmpty = (value: string) => value === "" || value === "—"; return !(isEmpty(client) && isEmpty(project) && isEmpty(funnel)); }); }
-function MetricCard({ label, value, helper, percent, raw, delta }: { label: string; value: unknown; helper?: ReactNode; percent?: boolean; raw?: boolean; delta?: Delta }) { const formatted = raw ? String(value ?? "—") : formatMetric(value as Row[string], Boolean(percent)); return <div className="rounded border p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-xl font-semibold num">{formatted}</p>{delta ? <p className={`mt-1 text-xs font-medium ${delta.tone === "positive" ? "text-emerald-600" : delta.tone === "negative" ? "text-red-600" : "text-muted-foreground"}`}>{delta.text}</p> : null}{helper ? <div className="mt-1 text-xs text-muted-foreground">{helper}</div> : null}</div>; }
+function MetricCard({ label, value, helper, percent, raw, delta }: { label: string; value: unknown; helper?: ReactNode; percent?: boolean; raw?: boolean; delta?: Delta }) { const formatted = raw ? String(value ?? "—") : formatMetric(value as Row[string], Boolean(percent)); return <div className="rounded border p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="mt-1 text-xl font-semibold num">{formatted}</p>{delta ? <div className="mt-1 space-y-0.5"><p className={`text-xs font-medium ${delta.tone === "positive" ? "text-emerald-600" : delta.tone === "negative" ? "text-red-600" : "text-muted-foreground"}`}>{delta.text}</p><p className="text-[10px] text-muted-foreground">vs попередній період</p></div> : null}{helper ? <div className="mt-1 text-xs text-muted-foreground">{helper}</div> : null}</div>; }
 function RatioHelper({ counts, ratio, hint }: { counts: string; ratio: number | null; hint: string }) { return <><p>{counts}</p>{ratio !== null && ratio > 100 ? <p className="text-amber-700/90 dark:text-amber-300/90">{hint}</p> : null}</>; }
 function safePct(num: number, den: number) { if (!den) return null; return (num / den) * 100; }
 function parseDate(value: unknown): Date | null { if (!value) return null; const d = new Date(String(value)); return Number.isNaN(d.getTime()) ? null : d; }
