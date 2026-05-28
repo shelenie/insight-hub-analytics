@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import * as XLSX from "xlsx";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 type Row = Record<string, string | number | boolean | null>;
@@ -124,15 +125,15 @@ export default function Sales() {
       </>}
     </SectionCard>
 
-    <SectionCard title={lang === "uk" ? "Покупці" : "Buyer contacts"} description={lang === "uk" ? "Контакти людей із платіжними записами за вибраний період" : "Contacts with payment records for the selected period"} noPadding actions={<TableActions locale={lang} search={buyersSearch} onSearch={setBuyersSearch} onCsv={() => exportBuyerCsv(buyerRows, lang, buyersSearch)} onXlsx={() => alertXlsxBlocked(lang)} />}>
+    <SectionCard title={lang === "uk" ? "Покупці" : "Buyer contacts"} description={lang === "uk" ? "Контакти людей із платіжними записами за вибраний період" : "Contacts with payment records for the selected period"} noPadding actions={<TableActions locale={lang} search={buyersSearch} onSearch={setBuyersSearch} onCsv={() => exportBuyerCsv(buyerRows, lang, buyersSearch)} onXlsx={() => exportBuyerXlsx(buyerRows, lang, buyersSearch)} />}>
       {hasBuyerError ? <Msg t={lang === "uk" ? "Не вдалося завантажити контакти покупців." : "Could not load buyer contacts."} /> : <BuyerRows rows={buyerRows} empty={lang === "uk" ? "Покупців за вибраний період не знайдено." : "No buyer contacts found for the selected period."} locale={lang} search={buyersSearch} />}
     </SectionCard>
 
-    <SectionCard title={lang === "uk" ? "Продажі за кампаніями" : "Sales by campaign"} description={lang === "uk" ? "Зведення по кампаніях" : "Compact campaign summary"} noPadding actions={<TableActions locale={lang} search={campaignSearch} onSearch={setCampaignSearch} onCsv={() => exportCampaignCsv(summaryRows, lang, campaignSearch)} onXlsx={() => alertXlsxBlocked(lang)} />}>
+    <SectionCard title={lang === "uk" ? "Продажі за кампаніями" : "Sales by campaign"} description={lang === "uk" ? "Зведення по кампаніях" : "Compact campaign summary"} noPadding actions={<TableActions locale={lang} search={campaignSearch} onSearch={setCampaignSearch} onCsv={() => exportCampaignCsv(summaryRows, lang, campaignSearch)} onXlsx={() => exportCampaignXlsx(summaryRows, lang, campaignSearch)} />}>
       <CampaignRows rows={summaryRows} empty={t("salesEmpty")} locale={lang} search={campaignSearch} />
     </SectionCard>
 
-    <SectionCard title={lang === "uk" ? "Продажі по днях" : "Sales by day"} description={lang === "uk" ? "Щоденні продажі" : "Daily sales trend"} noPadding actions={<div className="flex flex-wrap items-center gap-2">{dailyDateOptions.length > 1 ? <div className="flex items-center gap-2 text-xs text-muted-foreground"><span>{lang === "uk" ? "День" : "Day"}</span><Select value={selectedSaleDate} onValueChange={setSelectedSaleDate}><SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{lang === "uk" ? "Усі дні" : "All days"}</SelectItem>{dailyDateOptions.map((day) => <SelectItem key={day} value={day}>{formatDay(day)}</SelectItem>)}</SelectContent></Select></div> : null}<TableActions locale={lang} search={dailySearch} onSearch={setDailySearch} onCsv={() => exportDailyCsv(filteredDailyRows, lang, dailySearch)} onXlsx={() => alertXlsxBlocked(lang)} /></div>}>
+    <SectionCard title={lang === "uk" ? "Продажі по днях" : "Sales by day"} description={lang === "uk" ? "Щоденні продажі" : "Daily sales trend"} noPadding actions={<div className="flex flex-wrap items-center gap-2">{dailyDateOptions.length > 1 ? <div className="flex items-center gap-2 text-xs text-muted-foreground"><span>{lang === "uk" ? "День" : "Day"}</span><Select value={selectedSaleDate} onValueChange={setSelectedSaleDate}><SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">{lang === "uk" ? "Усі дні" : "All days"}</SelectItem>{dailyDateOptions.map((day) => <SelectItem key={day} value={day}>{formatDay(day)}</SelectItem>)}</SelectContent></Select></div> : null}<TableActions locale={lang} search={dailySearch} onSearch={setDailySearch} onCsv={() => exportDailyCsv(filteredDailyRows, lang, dailySearch)} onXlsx={() => exportDailyXlsx(filteredDailyRows, lang, dailySearch)} /></div>}>
       <DailyRows rows={filteredDailyRows} empty={t("salesEmpty")} locale={lang} search={dailySearch} />
     </SectionCard>
 
@@ -465,11 +466,31 @@ function downloadText(filename: string, contents: string, mime: string) {
   link.click();
   URL.revokeObjectURL(url);
 }
+function downloadXlsx(filename: string, rows: string[][], sheetName: string) {
+  const workbook = XLSX.utils.book_new();
+  const worksheet = XLSX.utils.aoa_to_sheet(rows);
+  XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+  const workbookBytes = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
+  const blob = new Blob([workbookBytes], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 function exportBuyerCsv(rows: Row[], locale: "uk" | "en", search: string) {
   const visible = rows.filter((row) => !isDemoBuyerRow(row)).filter((row) => searchBuyerRow(row, search, locale)).sort((a, b) => String(a.metric_date ?? "").localeCompare(String(b.metric_date ?? "")));
   const header = locale === "uk" ? ["Дата", "Імʼя", "Телефон", "Email", "Тип оплати", "USD", "UAH", "Залишок", "Статус"] : ["Date", "Name", "Phone", "Email", "Payment type", "USD", "UAH", "Remaining", "Status"];
   const data = visible.map((r) => [formatDay(r.metric_date), display(r.customer_name), display(r.phone_key), display(r.email), formatPaymentType(r, locale), fmtOptionalUsd(getPaidUsd(r)), fmtOptionalUahExact(getPaidUah(r)), fmtOptionalUsd(toOptionalNumber(r.debt_amount)), formatSaleStatus(r.sale_status_norm, locale)]);
   downloadText("sales-buyers.csv", toCsv([header, ...data]), "text/csv;charset=utf-8");
+}
+
+function exportBuyerXlsx(rows: Row[], locale: "uk" | "en", search: string) {
+  const visible = rows.filter((row) => !isDemoBuyerRow(row)).filter((row) => searchBuyerRow(row, search, locale)).sort((a, b) => String(a.metric_date ?? "").localeCompare(String(b.metric_date ?? "")));
+  const header = locale === "uk" ? ["Дата", "Імʼя", "Телефон", "Email", "Тип оплати", "USD", "UAH", "Залишок", "Статус"] : ["Date", "Name", "Phone", "Email", "Payment type", "USD", "UAH", "Remaining", "Status"];
+  const data = visible.map((r) => [formatDay(r.metric_date), display(r.customer_name), display(r.phone_key), display(r.email), formatPaymentType(r, locale), fmtOptionalUsd(getPaidUsd(r)), fmtOptionalUahExact(getPaidUah(r)), fmtOptionalUsd(toOptionalNumber(r.debt_amount)), formatSaleStatus(r.sale_status_norm, locale)]);
+  downloadXlsx("sales-buyers.xlsx", [header, ...data], "Buyers");
 }
 function exportCampaignCsv(rows: Row[], locale: "uk" | "en", search: string) {
   const visible = rows.filter((row) => searchCampaignRow(row, search)).slice(0, 200);
@@ -477,12 +498,23 @@ function exportCampaignCsv(rows: Row[], locale: "uk" | "en", search: string) {
   const data = visible.map((r) => [display(r.campaign_name), formatPeriod(r.first_date, r.last_date), fmtNum(Number(r.sales_count ?? 0)), fmtUsd(Number(r.first_payment_usd ?? 0)), fmtUsd(Number(r.second_payment_usd ?? 0)), fmtUsd(Number(r.total_payment_usd ?? 0)), fmtUahExact(Number(r.total_payment_uah ?? 0))]);
   downloadText("sales-campaigns.csv", toCsv([header, ...data]), "text/csv;charset=utf-8");
 }
+
+function exportCampaignXlsx(rows: Row[], locale: "uk" | "en", search: string) {
+  const visible = rows.filter((row) => searchCampaignRow(row, search)).slice(0, 200);
+  const header = locale === "uk" ? ["Кампанія", "Період", "Продажі", "Перші USD", "Додаткові USD", "Загалом USD", "Загалом UAH"] : ["Campaign", "Period", "Sales", "First USD", "Additional USD", "Total USD", "Total UAH"];
+  const data = visible.map((r) => [display(r.campaign_name), formatPeriod(r.first_date, r.last_date), fmtNum(Number(r.sales_count ?? 0)), fmtUsd(Number(r.first_payment_usd ?? 0)), fmtUsd(Number(r.second_payment_usd ?? 0)), fmtUsd(Number(r.total_payment_usd ?? 0)), fmtUahExact(Number(r.total_payment_uah ?? 0))]);
+  downloadXlsx("sales-campaigns.xlsx", [header, ...data], "Campaigns");
+}
+
+function exportDailyXlsx(rows: Row[], locale: "uk" | "en", search: string) {
+  const visible = [...rows].filter((row) => searchDailyRow(row, search)).sort((a, b) => String(a.sale_date ?? "").localeCompare(String(b.sale_date ?? ""))).slice(0, 200);
+  const header = locale === "uk" ? ["Дата", "Кампанія", "Продажі", "Загалом USD", "Загалом UAH"] : ["Date", "Campaign", "Sales", "Total USD", "Total UAH"];
+  const data = visible.map((r) => [formatDay(r.sale_date), display(r.campaign_name), fmtNum(Number(r.sales_count ?? 0)), fmtUsd(Number(r.total_payment_usd ?? 0)), fmtUahExact(Number(r.total_payment_uah ?? 0))]);
+  downloadXlsx("sales-by-day.xlsx", [header, ...data], "Daily sales");
+}
 function exportDailyCsv(rows: Row[], locale: "uk" | "en", search: string) {
   const visible = [...rows].filter((row) => searchDailyRow(row, search)).sort((a, b) => String(a.sale_date ?? "").localeCompare(String(b.sale_date ?? ""))).slice(0, 200);
   const header = locale === "uk" ? ["Дата", "Кампанія", "Продажі", "Загалом USD", "Загалом UAH"] : ["Date", "Campaign", "Sales", "Total USD", "Total UAH"];
   const data = visible.map((r) => [formatDay(r.sale_date), display(r.campaign_name), fmtNum(Number(r.sales_count ?? 0)), fmtUsd(Number(r.total_payment_usd ?? 0)), fmtUahExact(Number(r.total_payment_uah ?? 0))]);
   downloadText("sales-by-day.csv", toCsv([header, ...data]), "text/csv;charset=utf-8");
-}
-function alertXlsxBlocked(locale: "uk" | "en") {
-  window.alert(locale === "uk" ? "XLSX експорт заблоковано політикою реєстру npm у цьому середовищі." : "XLSX export is blocked by npm registry policy in this environment.");
 }
