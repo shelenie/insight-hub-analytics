@@ -1,10 +1,20 @@
-.overflow-x-auto > .relative.w-full.overflow-auto {
-  max-height: 420px;
+.sales-page .sales-table-scroll > .relative.w-full.overflow-auto {
   overflow: auto !important;
 }
 
-.overflow-x-auto > .relative.w-full.overflow-auto thead,
-.overflow-x-auto > .relative.w-full.overflow-auto th.sticky,
-th.sticky.top-\[68px\] {
+.sales-page .sales-buyers-table > .relative.w-full.overflow-auto {
+  max-height: 520px;
+}
+
+.sales-page .sales-campaign-table > .relative.w-full.overflow-auto {
+  max-height: 360px;
+}
+
+.sales-page .sales-daily-table > .relative.w-full.overflow-auto {
+  max-height: 420px;
+}
+
+.sales-page .sales-table-scroll > .relative.w-full.overflow-auto thead,
+.sales-page .sales-table-scroll > .relative.w-full.overflow-auto th.sticky {
   top: 0 !important;
 }
