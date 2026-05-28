@@ -37,16 +37,19 @@ type KpiGroup = { title: string; rows: KpiRow[] };
 type BuyerColumnKey = "date" | "name" | "phone" | "email" | "type" | "usd" | "uah" | "remaining" | "status";
 type BuyerColumn = { key: BuyerColumnKey; label: string; width: number; minWidth: number; align?: "left" | "right"; tooltip?: string };
 
+const COMPACT_BUYER_WIDTH = 88;
+const MAIN_BUYER_WIDTH = 132;
+
 const BUYER_COLUMN_DEFAULT_WIDTHS: Record<BuyerColumnKey, number> = {
-  date: 96,
-  name: 165,
-  phone: 165,
-  email: 165,
-  type: 150,
-  usd: 96,
-  uah: 96,
-  remaining: 96,
-  status: 96,
+  date: COMPACT_BUYER_WIDTH,
+  name: MAIN_BUYER_WIDTH,
+  phone: MAIN_BUYER_WIDTH,
+  email: MAIN_BUYER_WIDTH,
+  type: COMPACT_BUYER_WIDTH,
+  usd: COMPACT_BUYER_WIDTH,
+  uah: COMPACT_BUYER_WIDTH,
+  remaining: COMPACT_BUYER_WIDTH,
+  status: COMPACT_BUYER_WIDTH,
 };
 
 const STICKY_TABLE_HEAD_CLASS = "sticky top-0 z-30 border-b bg-card shadow-[0_1px_0_hsl(var(--border))]";
@@ -176,10 +179,14 @@ export default function Sales() {
 
 function TableActions({ locale, search, visibleCount, onSearch, onClear, onCsv, onXlsx }: { locale: "uk" | "en"; search: string; visibleCount: number; onSearch: (value: string) => void; onClear: () => void; onCsv: () => void; onXlsx: () => void }) {
   return <div className="flex flex-wrap items-center justify-end gap-2">
-    <div className="flex items-center gap-2"><Input value={search} onChange={(event) => onSearch(event.target.value)} placeholder={locale === "uk" ? "Пошук..." : "Search..."} className="h-8 w-[220px]" />{search ? <Button variant="ghost" size="sm" onClick={onClear}>{locale === "uk" ? "Очистити" : "Clear"}</Button> : null}</div>
+    <div className="relative"><Input value={search} onChange={(event) => onSearch(event.target.value)} placeholder={locale === "uk" ? "Пошук..." : "Search..."} className="h-8 w-[220px] pr-8" />{search ? <button type="button" aria-label={locale === "uk" ? "Очистити пошук" : "Clear search"} title={locale === "uk" ? "Очистити пошук" : "Clear search"} onClick={onClear} className="absolute right-2 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold leading-none text-primary hover:bg-primary/20">×</button> : null}</div>
     <span className="whitespace-nowrap text-xs text-muted-foreground">{locale === "uk" ? "Знайдено" : "Found"}: {visibleCount}</span>
     <DropdownMenu><DropdownMenuTrigger asChild><Button variant="outline" size="sm">{locale === "uk" ? "Завантажити" : "Download"}</Button></DropdownMenuTrigger><DropdownMenuContent align="end"><DropdownMenuItem onClick={onCsv}>CSV</DropdownMenuItem><DropdownMenuItem onClick={onXlsx}>XLSX</DropdownMenuItem></DropdownMenuContent></DropdownMenu>
   </div>;
+}
+
+function CopyButton({ copied, label, onClick }: { copied: boolean; label: string; onClick: () => void }) {
+  return <button type="button" aria-label={label} title={label} onClick={(event) => { event.stopPropagation(); onClick(); }} className="absolute right-1 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded bg-background/85 text-[11px] text-muted-foreground opacity-0 shadow-sm ring-1 ring-border transition hover:text-primary group-hover:opacity-100 focus:opacity-100">{copied ? "✓" : "⧉"}</button>;
 }
 
 function BuyerRows({ rows, empty, locale, search }: { rows: Row[]; empty: string; locale: "uk" | "en"; search: string }) {
@@ -187,22 +194,23 @@ function BuyerRows({ rows, empty, locale, search }: { rows: Row[]; empty: string
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
   const columns = useMemo<BuyerColumn[]>(() => [
-    { key: "date", label: locale === "uk" ? "Дата" : "Date", width: 96, minWidth: 82 },
-    { key: "name", label: locale === "uk" ? "Імʼя" : "Name", width: 165, minWidth: 120 },
-    { key: "phone", label: locale === "uk" ? "Телефон" : "Phone", width: 165, minWidth: 120 },
-    { key: "email", label: "Email", width: 165, minWidth: 120 },
-    { key: "type", label: locale === "uk" ? "Тип оплати" : "Payment type", width: 150, minWidth: 110 },
-    { key: "usd", label: "USD", width: 96, minWidth: 70, align: "right" },
-    { key: "uah", label: "UAH", width: 96, minWidth: 70, align: "right" },
-    { key: "remaining", label: locale === "uk" ? "Залишок" : "Remaining", width: 96, minWidth: 74, align: "right", tooltip: locale === "uk" ? "Неоплачена частина тарифу / покупки в USD" : "Unpaid part of the tariff / purchase in USD" },
-    { key: "status", label: locale === "uk" ? "Статус" : "Status", width: 96, minWidth: 74 },
+    { key: "date", label: locale === "uk" ? "Дата" : "Date", width: COMPACT_BUYER_WIDTH, minWidth: 74 },
+    { key: "name", label: locale === "uk" ? "Імʼя" : "Name", width: MAIN_BUYER_WIDTH, minWidth: 104 },
+    { key: "phone", label: locale === "uk" ? "Телефон" : "Phone", width: MAIN_BUYER_WIDTH, minWidth: 104 },
+    { key: "email", label: "Email", width: MAIN_BUYER_WIDTH, minWidth: 104 },
+    { key: "type", label: locale === "uk" ? "Тип оплати" : "Payment type", width: COMPACT_BUYER_WIDTH, minWidth: 74 },
+    { key: "usd", label: "USD", width: COMPACT_BUYER_WIDTH, minWidth: 64, align: "right" },
+    { key: "uah", label: "UAH", width: COMPACT_BUYER_WIDTH, minWidth: 64, align: "right" },
+    { key: "remaining", label: locale === "uk" ? "Залишок" : "Remaining", width: COMPACT_BUYER_WIDTH, minWidth: 68, align: "right", tooltip: locale === "uk" ? "Неоплачена частина тарифу / покупки в USD" : "Unpaid part of the tariff / purchase in USD" },
+    { key: "status", label: locale === "uk" ? "Статус" : "Status", width: COMPACT_BUYER_WIDTH, minWidth: 68 },
   ], [locale]);
   const visibleRows = [...rows].filter((row) => !isDemoBuyerRow(row)).filter((row) => searchBuyerRow(row, search, locale)).sort((a, b) => String(a.metric_date ?? "").localeCompare(String(b.metric_date ?? "")));
   if (!visibleRows.length) return <Msg t={empty} />;
   const tableWidth = totalBuyerTableWidth(columns, widths);
   const copyValue = async (key: string, value: string) => { if (!value || value === "—") return; await navigator.clipboard?.writeText(value); setCopied(key); window.setTimeout(() => setCopied(null), 1200); };
-  return <div className="sales-table-scroll sales-buyers-table overflow-x-auto"><Table className="table-fixed" style={{ width: tableWidth > 900 ? tableWidth : "100%" }}><colgroup>{columns.map((column) => <col key={column.key} style={{ width: widths[column.key] ?? column.width }} />)}</colgroup><TableHeader><TableRow>{columns.map((column) => <TableHead key={column.key} className={`${STICKY_TABLE_HEAD_CLASS} px-1.5 text-left text-[10.5px] uppercase tracking-wide`}><span className="block truncate" title={column.tooltip ?? column.label}>{column.label}</span><span role="separator" aria-orientation="vertical" aria-label={locale === "uk" ? `Змінити ширину: ${column.label}` : `Resize column: ${column.label}`} title={locale === "uk" ? "Потягніть, щоб змінити ширину колонки" : "Drag to resize column"} onMouseDown={(event) => startBuyerColumnResize(event, column, widths, setWidths)} className="absolute right-0 top-1/2 h-6 w-[4px] -translate-y-1/2 cursor-col-resize touch-none rounded-full bg-border transition hover:bg-primary" /></TableHead>)}</TableRow></TableHeader><TableBody>
+  return <div className="sales-table-scroll sales-buyers-table overflow-x-auto"><Table className="table-fixed" style={{ width: tableWidth > 940 ? tableWidth : "100%" }}><colgroup>{columns.map((column) => <col key={column.key} style={{ width: widths[column.key] ?? column.width }} />)}</colgroup><TableHeader><TableRow>{columns.map((column) => <TableHead key={column.key} className={`${STICKY_TABLE_HEAD_CLASS} px-1.5 text-left text-[10.5px] uppercase tracking-wide`}><span className="block truncate" title={column.tooltip ?? column.label}>{column.label}</span><span role="separator" aria-orientation="vertical" aria-label={locale === "uk" ? `Змінити ширину: ${column.label}` : `Resize column: ${column.label}`} title={locale === "uk" ? "Потягніть, щоб змінити ширину колонки" : "Drag to resize column"} onMouseDown={(event) => startBuyerColumnResize(event, column, widths, setWidths)} className="absolute right-0 top-1/2 h-6 w-[4px] -translate-y-1/2 cursor-col-resize touch-none rounded-full bg-border transition hover:bg-primary" /></TableHead>)}</TableRow></TableHeader><TableBody>
     {visibleRows.map((r, i) => {
+      const name = display(r.customer_name);
       const email = display(r.email);
       const phone = display(r.phone_key);
       const paidUsd = getPaidUsd(r);
@@ -213,9 +221,9 @@ function BuyerRows({ rows, empty, locale, search }: { rows: Row[]; empty: string
       const selectedClass = isSelected ? "bg-primary/10 hover:bg-primary/15 [&>td:first-child]:border-l-4 [&>td:first-child]:border-primary" : "hover:bg-muted/50";
       return <TableRow key={rowKey} onClick={() => setSelectedRowKey((current) => current === rowKey ? null : rowKey)} className={`cursor-pointer ${selectedClass}`}>
         <TableCell className="whitespace-nowrap px-1.5 text-sm">{formatDay(r.metric_date)}</TableCell>
-        <TableCell className="truncate whitespace-nowrap px-1.5 text-sm" title={display(r.customer_name)}>{display(r.customer_name)}</TableCell>
-        <TableCell className="truncate whitespace-nowrap px-1.5 text-sm" title={phone}><button type="button" className="max-w-full truncate underline-offset-2 hover:underline" onClick={(event) => { event.stopPropagation(); void copyValue(`phone-${rowKey}`, phone); }}>{phone}</button>{copied === `phone-${rowKey}` ? <span className="ml-1 text-[10px] text-emerald-600">✓</span> : null}</TableCell>
-        <TableCell className="truncate whitespace-nowrap px-1.5 text-sm" title={email}><button type="button" className="max-w-full truncate underline-offset-2 hover:underline" onClick={(event) => { event.stopPropagation(); void copyValue(`email-${rowKey}`, email); }}>{email}</button>{copied === `email-${rowKey}` ? <span className="ml-1 text-[10px] text-emerald-600">✓</span> : null}</TableCell>
+        <TableCell className="group relative whitespace-nowrap px-1.5 pr-7 text-sm" title={name}><span className="block truncate">{name}</span><CopyButton copied={copied === `name-${rowKey}`} label={locale === "uk" ? "Скопіювати імʼя" : "Copy name"} onClick={() => void copyValue(`name-${rowKey}`, name)} /></TableCell>
+        <TableCell className="group relative whitespace-nowrap px-1.5 pr-7 text-sm" title={phone}><span className="block truncate">{phone}</span><CopyButton copied={copied === `phone-${rowKey}`} label={locale === "uk" ? "Скопіювати телефон" : "Copy phone"} onClick={() => void copyValue(`phone-${rowKey}`, phone)} /></TableCell>
+        <TableCell className="group relative whitespace-nowrap px-1.5 pr-7 text-sm" title={email}><span className="block truncate">{email}</span><CopyButton copied={copied === `email-${rowKey}`} label={locale === "uk" ? "Скопіювати email" : "Copy email"} onClick={() => void copyValue(`email-${rowKey}`, email)} /></TableCell>
         <TableCell className="px-1.5 text-sm" title={hasPaidAmount ? formatPaymentType(r, locale) : locale === "uk" ? "У raw-джерелі цей запис є, але сума оплати не заповнена" : "The raw source has this record, but the payment amount is empty"}><div className="flex flex-col items-start gap-1"><span className="max-w-full truncate whitespace-nowrap">{formatPaymentType(r, locale)}</span>{!hasPaidAmount ? <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700">{locale === "uk" ? "немає суми" : "no amount"}</span> : null}</div></TableCell>
         <TableCell className="whitespace-nowrap px-1.5 text-right text-sm num">{fmtOptionalUsd(paidUsd)}</TableCell>
         <TableCell className="whitespace-nowrap px-1.5 text-right text-sm num">{fmtOptionalUahExact(paidUah)}</TableCell>
