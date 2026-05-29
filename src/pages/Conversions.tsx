@@ -17,7 +17,10 @@ const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
 type Row = Record<string, string | number | boolean | null>;
 type Delta = { text: string; tone: "positive" | "negative" | "neutral" };
+type FunnelStage = "registration" | "questionnaire" | "application" | "booking" | "payment";
 type ContactLevelFunnelRow = { key: string; label: string; fromCount: number; reachedCount: number; droppedCount: number; conversionRate: number | null };
+
+type ContactStageDates = Record<FunnelStage, Map<string, string>>;
 
 const STAGE_ORDER = ["registration", "questionnaire", "application", "booking", "sale", "payment"];
 const SELECTED_ROW_CLASS = "cursor-pointer bg-primary/10 hover:bg-primary/15 [&>td:first-child]:border-l-4 [&>td:first-child]:border-primary";
@@ -141,7 +144,7 @@ export default function Conversions() {
           <details className="mt-3 rounded border"><summary className="cursor-pointer px-3 py-2 text-xs font-medium">{t("conversionsStageMeaningTitle")}</summary><div className="space-y-1 px-3 pb-3 text-xs text-muted-foreground"><p>{t("conversionsStageMeaningRegistrations")}</p><p>{t("conversionsStageMeaningQuestionnaires")}</p><p>{t("conversionsStageMeaningApplications")}</p><p>{t("conversionsStageMeaningBookings")}</p><p>{t("conversionsStageMeaningPayments")}</p></div></details>
         </SectionCard>
 
-        <ContactLevelFunnelTable rows={contactLevelFunnel} t={t} />
+        <ContactLevelFunnelTable rows={contactLevelFunnel} t={t} lang={lang} />
 
         <SectionCard title={lang === "uk" ? "Платежі та суми" : "Payments and totals"} description={t("conversionsPaymentsSectionDesc")}>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
@@ -186,9 +189,12 @@ export default function Conversions() {
   </DashboardLayout>;
 }
 
-function ContactLevelFunnelTable({ rows, t }: { rows: ContactLevelFunnelRow[]; t: (key: string) => string }) {
+function ContactLevelFunnelTable({ rows, t, lang }: { rows: ContactLevelFunnelRow[]; t: (key: string) => string; lang: "uk" | "en" }) {
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
-  return <SectionCard title={t("conversionsContactFunnelTitle")} description={t("conversionsContactFunnelDesc")} noPadding><p className="px-4 pb-1 pt-2 text-xs text-muted-foreground">{t("conversionsContactFunnelHelper")}</p><Table className="w-full table-fixed"><colgroup><col /><col style={{ width: 120 }} /><col style={{ width: 120 }} /><col style={{ width: 110 }} /><col style={{ width: 110 }} /></colgroup><TableHeader><TableRow><TableHead className={TABLE_HEAD_CLASS}>{t("conversionsContactFunnelThTransition")}</TableHead><TableHead className={TABLE_CENTER_HEAD_CLASS}>{t("conversionsContactFunnelThAtStage")}</TableHead><TableHead className={TABLE_CENTER_HEAD_CLASS}>{t("conversionsContactFunnelThReached")}</TableHead><TableHead className={TABLE_CENTER_HEAD_CLASS}>{t("conversionsContactFunnelThDropped")}</TableHead><TableHead className={TABLE_CENTER_HEAD_CLASS}>{t("conversionsContactFunnelThConversion")}</TableHead></TableRow></TableHeader><TableBody>{rows.map((row) => { const selected = selectedRowKey === row.key; return <TableRow key={row.key} onClick={() => setSelectedRowKey((current) => current === row.key ? null : row.key)} className={selected ? SELECTED_ROW_CLASS : HOVER_ROW_CLASS}><TableCell className={TABLE_CELL_CLASS}>{row.label}</TableCell><TableCell className={TABLE_CENTER_CLASS}>{fmtNum(row.fromCount)}</TableCell><TableCell className={TABLE_CENTER_CLASS}>{fmtNum(row.reachedCount)}</TableCell><TableCell className={TABLE_CENTER_CLASS}>{fmtNum(row.droppedCount)}</TableCell><TableCell className={TABLE_CENTER_CLASS}>{row.conversionRate === null ? "—" : `${fmtNum(row.conversionRate)}%`}</TableCell></TableRow>; })}</TableBody></Table></SectionCard>;
+  const helper = lang === "uk"
+    ? "Рахується по конкретних contact_key / phone_key у вибраному періоді. Наступний етап зараховується тільки якщо він стався в той самий день або після попереднього."
+    : "Calculated by specific contact_key / phone_key within the selected period. The next stage is counted only if it happened on the same day or after the previous stage.";
+  return <SectionCard title={t("conversionsContactFunnelTitle")} description={t("conversionsContactFunnelDesc")} noPadding><p className="px-4 pb-1 pt-2 text-xs text-muted-foreground">{helper}</p><Table className="w-full table-fixed"><colgroup><col /><col style={{ width: 120 }} /><col style={{ width: 120 }} /><col style={{ width: 110 }} /><col style={{ width: 110 }} /></colgroup><TableHeader><TableRow><TableHead className={TABLE_HEAD_CLASS}>{t("conversionsContactFunnelThTransition")}</TableHead><TableHead className={TABLE_CENTER_HEAD_CLASS}>{t("conversionsContactFunnelThAtStage")}</TableHead><TableHead className={TABLE_CENTER_HEAD_CLASS}>{t("conversionsContactFunnelThReached")}</TableHead><TableHead className={TABLE_CENTER_HEAD_CLASS}>{t("conversionsContactFunnelThDropped")}</TableHead><TableHead className={TABLE_CENTER_HEAD_CLASS}>{t("conversionsContactFunnelThConversion")}</TableHead></TableRow></TableHeader><TableBody>{rows.map((row) => { const selected = selectedRowKey === row.key; return <TableRow key={row.key} onClick={() => setSelectedRowKey((current) => current === row.key ? null : row.key)} className={selected ? SELECTED_ROW_CLASS : HOVER_ROW_CLASS}><TableCell className={TABLE_CELL_CLASS}>{row.label}</TableCell><TableCell className={TABLE_CENTER_CLASS}>{fmtNum(row.fromCount)}</TableCell><TableCell className={TABLE_CENTER_CLASS}>{fmtNum(row.reachedCount)}</TableCell><TableCell className={TABLE_CENTER_CLASS}>{fmtNum(row.droppedCount)}</TableCell><TableCell className={TABLE_CENTER_CLASS}>{row.conversionRate === null ? "—" : `${fmtNum(row.conversionRate)}%`}</TableCell></TableRow>; })}</TableBody></Table></SectionCard>;
 }
 
 function PaymentTypeTable({ rows, t }: { rows: Array<{ category: string; total_records: number; included_records: number; refund_records: number; needs_review_records: number }>; t: (key: string) => string }) {
@@ -211,10 +217,10 @@ function computeAggregates(stageEvents: Row[], paymentRecordsRows: Row[], paymen
     item.count += 1;
     const contact = String(row.contact_key ?? "");
     if (contact) item.contacts.add(contact);
-    const date = String(row.metric_date ?? "");
-    if (date) {
-      if (!item.first || date < item.first) item.first = date;
-      if (!item.last || date > item.last) item.last = date;
+    const metricDate = String(row.metric_date ?? "");
+    if (metricDate) {
+      if (!item.first || metricDate < item.first) item.first = metricDate;
+      if (!item.last || metricDate > item.last) item.last = metricDate;
     }
     if (stage === "booking") {
       const phone = String(row.phone_key ?? "");
@@ -270,61 +276,25 @@ function computeAggregates(stageEvents: Row[], paymentRecordsRows: Row[], paymen
   const paymentCategoryRank: Record<string, number> = { full_payment: 1, installment: 2, deposit: 3, additional_payment: 4, unknown: 5, other: 6 };
   const paymentCategoryRows = [...paymentCategoryCounts.entries()].map(([category, counts]) => ({ category, ...counts })).sort((a, b) => (paymentCategoryRank[a.category] ?? 100) - (paymentCategoryRank[b.category] ?? 100) || a.category.localeCompare(b.category));
 
-  return {
-    stageRows,
-    paymentLinesCount: paymentLines.length,
-    registrations: byStage.get("registration")?.count ?? 0,
-    questionnaires: byStage.get("questionnaire")?.count ?? 0,
-    applications: byStage.get("application")?.count ?? 0,
-    bookings: byStage.get("booking")?.count ?? 0,
-    stageUnique: {
-      registration: byStage.get("registration")?.contacts.size ?? 0,
-      questionnaire: byStage.get("questionnaire")?.contacts.size ?? 0,
-      application: byStage.get("application")?.contacts.size ?? 0,
-      booking: byStage.get("booking")?.contacts.size ?? 0,
-    },
-    paymentRecords: paymentRecordsRows.length,
-    uniquePayers: payerSet.size,
-    activePaymentRows,
-    refundPaymentRows,
-    needsReviewPaymentRows,
-    fullPaymentRows,
-    installmentRows,
-    depositRows,
-    additionalPaymentRows,
-    debtTotal,
-    tariffTotal,
-    paymentCategoryRows,
-    collectedUsdTotal,
-    collectedUahTotal,
-    bookingPhones: bookingPhones.size,
-    paymentPhones: paymentPhones.size,
-    matchedPhones,
-    paymentsWithoutBooking: paymentPhones.size - matchedPhones,
-    bookingsWithoutPayment: bookingPhones.size - matchedPhones,
-  };
+  return { stageRows, paymentLinesCount: paymentLines.length, registrations: byStage.get("registration")?.count ?? 0, questionnaires: byStage.get("questionnaire")?.count ?? 0, applications: byStage.get("application")?.count ?? 0, bookings: byStage.get("booking")?.count ?? 0, stageUnique: { registration: byStage.get("registration")?.contacts.size ?? 0, questionnaire: byStage.get("questionnaire")?.contacts.size ?? 0, application: byStage.get("application")?.contacts.size ?? 0, booking: byStage.get("booking")?.contacts.size ?? 0 }, paymentRecords: paymentRecordsRows.length, uniquePayers: payerSet.size, activePaymentRows, refundPaymentRows, needsReviewPaymentRows, fullPaymentRows, installmentRows, depositRows, additionalPaymentRows, debtTotal, tariffTotal, paymentCategoryRows, collectedUsdTotal, collectedUahTotal, bookingPhones: bookingPhones.size, paymentPhones: paymentPhones.size, matchedPhones, paymentsWithoutBooking: paymentPhones.size - matchedPhones, bookingsWithoutPayment: bookingPhones.size - matchedPhones };
 }
 
 function computeContactLevelFunnel(stageEvents: Row[], paymentRecordsRows: Row[], lang: "uk" | "en"): ContactLevelFunnelRow[] {
-  const stages = {
-    registration: new Set<string>(),
-    questionnaire: new Set<string>(),
-    application: new Set<string>(),
-    booking: new Set<string>(),
-    payment: new Set<string>(),
-  };
+  const stageDates: ContactStageDates = { registration: new Map(), questionnaire: new Map(), application: new Map(), booking: new Map(), payment: new Map() };
 
   for (const row of stageEvents) {
-    const stage = String(row.stage ?? "").toLowerCase();
+    const stage = String(row.stage ?? "").toLowerCase() as FunnelStage;
     if (stage !== "registration" && stage !== "questionnaire" && stage !== "application" && stage !== "booking") continue;
     const contactId = getStableContactId(row);
-    if (contactId) stages[stage].add(contactId);
+    const metricDate = normalizeMetricDate(row.metric_date);
+    if (contactId && metricDate) setEarliestStageDate(stageDates[stage], contactId, metricDate);
   }
 
   for (const row of paymentRecordsRows) {
     if (!isGoodPaymentRecord(row)) continue;
     const contactId = getPaymentContactId(row);
-    if (contactId) stages.payment.add(contactId);
+    const metricDate = normalizeMetricDate(row.metric_date);
+    if (contactId && metricDate) setEarliestStageDate(stageDates.payment, contactId, metricDate);
   }
 
   const labels = {
@@ -335,135 +305,54 @@ function computeContactLevelFunnel(stageEvents: Row[], paymentRecordsRows: Row[]
     registration_to_payment: { uk: "Реєстрація → Платіж", en: "Registration → Payment" },
   };
   const transitions = [
-    { key: "registration_to_questionnaire", from: stages.registration, to: stages.questionnaire },
-    { key: "questionnaire_to_application", from: stages.questionnaire, to: stages.application },
-    { key: "application_to_booking", from: stages.application, to: stages.booking },
-    { key: "booking_to_payment", from: stages.booking, to: stages.payment },
-    { key: "registration_to_payment", from: stages.registration, to: stages.payment },
+    { key: "registration_to_questionnaire", from: stageDates.registration, to: stageDates.questionnaire },
+    { key: "questionnaire_to_application", from: stageDates.questionnaire, to: stageDates.application },
+    { key: "application_to_booking", from: stageDates.application, to: stageDates.booking },
+    { key: "booking_to_payment", from: stageDates.booking, to: stageDates.payment },
+    { key: "registration_to_payment", from: stageDates.registration, to: stageDates.payment },
   ] as const;
 
   return transitions.map(({ key, from, to }) => {
     const fromCount = from.size;
-    const reachedCount = [...from].filter((contactId) => to.has(contactId)).length;
-    return {
-      key,
-      label: labels[key][lang],
-      fromCount,
-      reachedCount,
-      droppedCount: fromCount - reachedCount,
-      conversionRate: fromCount === 0 ? null : (reachedCount / fromCount) * 100,
-    };
+    const reachedCount = [...from.entries()].filter(([contactId, fromDate]) => {
+      const toDate = to.get(contactId);
+      return Boolean(toDate && toDate >= fromDate);
+    }).length;
+    return { key, label: labels[key][lang], fromCount, reachedCount, droppedCount: fromCount - reachedCount, conversionRate: fromCount === 0 ? null : (reachedCount / fromCount) * 100 };
   });
 }
 
-function getStableContactId(row: Row) {
-  return firstNonEmpty(row.contact_key, row.customer_key, row.phone_key);
+function setEarliestStageDate(stage: Map<string, string>, contactId: string, metricDate: string) {
+  const current = stage.get(contactId);
+  if (!current || metricDate < current) stage.set(contactId, metricDate);
 }
 
-function getPaymentContactId(row: Row) {
-  return firstNonEmpty(row.customer_key, row.phone_key);
+function normalizeMetricDate(value: Row[string]) {
+  if (!value) return null;
+  const raw = String(value).trim();
+  if (!raw) return null;
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) return format(parsed, "yyyy-MM-dd");
+  return raw.slice(0, 10);
 }
 
-function firstNonEmpty(...values: Array<Row[string]>) {
-  for (const value of values) {
-    const normalized = String(value ?? "").trim();
-    if (normalized) return normalized;
-  }
-  return null;
-}
+function getStableContactId(row: Row) { return firstNonEmpty(row.contact_key, row.customer_key, row.phone_key); }
+function getPaymentContactId(row: Row) { return firstNonEmpty(row.customer_key, row.phone_key); }
+function firstNonEmpty(...values: Array<Row[string]>) { for (const value of values) { const normalized = String(value ?? "").trim(); if (normalized) return normalized; } return null; }
+function isGoodPaymentRecord(row: Row) { return !["refund", "needs_review"].includes(String(row.sale_status_norm ?? "").toLowerCase()); }
 
-function isGoodPaymentRecord(row: Row) {
-  return !["refund", "needs_review"].includes(String(row.sale_status_norm ?? "").toLowerCase());
-}
-
-async function readView(viewName: string, scopedByWorkspace: boolean, from?: string, to?: string): Promise<Row[]> {
-  let query = supabase.from(viewName).select("*");
-  if (scopedByWorkspace) query = query.eq("workspace_id", WORKSPACE_ID);
-  if (from && to) query = query.gte("metric_date", from).lte("metric_date", to);
-  const res = await query;
-  if (res.error) throw new Error(`[Conversions][readView] Failed to read ${viewName}: ${res.error.message}`);
-  return (res.data ?? []) as Row[];
-}
-
-async function readViewPaged(viewName: string, scopedByWorkspace: boolean, from?: string, to?: string, orderBy: string[] = []): Promise<Row[]> {
-  const pageSize = 1000;
-  const maxRows = 50000;
-  const rows: Row[] = [];
-  for (let fromIndex = 0; fromIndex < maxRows; fromIndex += pageSize) {
-    const toIndex = fromIndex + pageSize - 1;
-    let query = supabase.from(viewName).select("*");
-    if (scopedByWorkspace) query = query.eq("workspace_id", WORKSPACE_ID);
-    if (from && to) query = query.gte("metric_date", from).lte("metric_date", to);
-    for (const orderColumn of orderBy) query = query.order(orderColumn, { ascending: true });
-    const res = await query.range(fromIndex, toIndex);
-    if (res.error) throw new Error(`[Conversions][readViewPaged] Failed to read ${viewName} rows ${fromIndex}-${toIndex}: ${res.error.message}`);
-    const page = (res.data ?? []) as Row[];
-    rows.push(...page);
-    if (page.length < pageSize) return rows;
-  }
-  console.warn(`[Conversions] Reached max rows cap (${maxRows}) for ${viewName}. Results may be truncated.`);
-  return rows;
-}
-
-function filterMeaningfulContextRows(rows: Row[]) {
-  return rows.filter((row) => {
-    const client = String(row.client_name ?? "").trim();
-    const project = String(row.project_name ?? "").trim();
-    const funnel = String(row.funnel_name ?? "").trim();
-    const isEmpty = (value: string) => value === "" || value === "—";
-    return !(isEmpty(client) && isEmpty(project) && isEmpty(funnel));
-  });
-}
-
-function MetricCard({ label, value, helper, percent, raw, delta, align }: { label: string; value: unknown; helper?: ReactNode; percent?: boolean; raw?: boolean; delta?: Delta; align?: boolean }) {
-  const formatted = raw ? String(value ?? "—") : formatMetric(value as Row[string], Boolean(percent));
-  const labelClass = align ? "min-h-[2.75rem] text-xs text-muted-foreground" : "text-xs text-muted-foreground";
-  const deltaClass = delta?.tone === "positive" ? "text-emerald-600" : delta?.tone === "negative" ? "text-red-600" : "text-muted-foreground";
-  return <div className="flex h-full flex-col rounded border p-3"><p className={labelClass}>{label}</p><p className="mt-1 text-xl font-semibold num">{formatted}</p>{delta ? <div className="mt-1 min-h-[2rem] space-y-0.5"><p className={`text-xs font-medium ${deltaClass}`}>{delta.text}</p><p className="text-[10px] text-muted-foreground">vs попередній період</p></div> : align ? <div className="mt-1 min-h-[2rem]" /> : null}{helper ? <div className="mt-1 text-xs leading-snug text-muted-foreground">{helper}</div> : null}</div>;
-}
-
-function RatioHelper({ counts, ratio }: { counts: string; ratio: number | null }) {
-  return <><p>{counts}</p>{ratio !== null && ratio > 100 ? <p className="mt-1 text-xs text-muted-foreground">Більше 100%: у цьому періоді наступного етапу більше, ніж попереднього. Це не помилка.</p> : null}</>;
-}
-
+async function readView(viewName: string, scopedByWorkspace: boolean, from?: string, to?: string): Promise<Row[]> { let query = supabase.from(viewName).select("*"); if (scopedByWorkspace) query = query.eq("workspace_id", WORKSPACE_ID); if (from && to) query = query.gte("metric_date", from).lte("metric_date", to); const res = await query; if (res.error) throw new Error(`[Conversions][readView] Failed to read ${viewName}: ${res.error.message}`); return (res.data ?? []) as Row[]; }
+async function readViewPaged(viewName: string, scopedByWorkspace: boolean, from?: string, to?: string, orderBy: string[] = []): Promise<Row[]> { const pageSize = 1000; const maxRows = 50000; const rows: Row[] = []; for (let fromIndex = 0; fromIndex < maxRows; fromIndex += pageSize) { const toIndex = fromIndex + pageSize - 1; let query = supabase.from(viewName).select("*"); if (scopedByWorkspace) query = query.eq("workspace_id", WORKSPACE_ID); if (from && to) query = query.gte("metric_date", from).lte("metric_date", to); for (const orderColumn of orderBy) query = query.order(orderColumn, { ascending: true }); const res = await query.range(fromIndex, toIndex); if (res.error) throw new Error(`[Conversions][readViewPaged] Failed to read ${viewName} rows ${fromIndex}-${toIndex}: ${res.error.message}`); const page = (res.data ?? []) as Row[]; rows.push(...page); if (page.length < pageSize) return rows; } console.warn(`[Conversions] Reached max rows cap (${maxRows}) for ${viewName}. Results may be truncated.`); return rows; }
+function filterMeaningfulContextRows(rows: Row[]) { return rows.filter((row) => { const client = String(row.client_name ?? "").trim(); const project = String(row.project_name ?? "").trim(); const funnel = String(row.funnel_name ?? "").trim(); const isEmpty = (value: string) => value === "" || value === "—"; return !(isEmpty(client) && isEmpty(project) && isEmpty(funnel)); }); }
+function MetricCard({ label, value, helper, percent, raw, delta, align }: { label: string; value: unknown; helper?: ReactNode; percent?: boolean; raw?: boolean; delta?: Delta; align?: boolean }) { const formatted = raw ? String(value ?? "—") : formatMetric(value as Row[string], Boolean(percent)); const labelClass = align ? "min-h-[2.75rem] text-xs text-muted-foreground" : "text-xs text-muted-foreground"; const deltaClass = delta?.tone === "positive" ? "text-emerald-600" : delta?.tone === "negative" ? "text-red-600" : "text-muted-foreground"; return <div className="flex h-full flex-col rounded border p-3"><p className={labelClass}>{label}</p><p className="mt-1 text-xl font-semibold num">{formatted}</p>{delta ? <div className="mt-1 min-h-[2rem] space-y-0.5"><p className={`text-xs font-medium ${deltaClass}`}>{delta.text}</p><p className="text-[10px] text-muted-foreground">vs попередній період</p></div> : align ? <div className="mt-1 min-h-[2rem]" /> : null}{helper ? <div className="mt-1 text-xs leading-snug text-muted-foreground">{helper}</div> : null}</div>; }
+function RatioHelper({ counts, ratio }: { counts: string; ratio: number | null }) { return <><p>{counts}</p>{ratio !== null && ratio > 100 ? <p className="mt-1 text-xs text-muted-foreground">Більше 100%: у цьому періоді наступного етапу більше, ніж попереднього. Це не помилка.</p> : null}</>; }
 function safePct(num: number, den: number) { if (!den) return null; return (num / den) * 100; }
 function parseDate(value: unknown): Date | null { if (!value) return null; const d = new Date(String(value)); return Number.isNaN(d.getTime()) ? null : d; }
 function toNumber(value: unknown): number | null { if (typeof value === "number" && Number.isFinite(value)) return value; if (typeof value === "string" && value.trim() !== "") { const parsed = Number(value); return Number.isFinite(parsed) ? parsed : null; } return null; }
 function formatMetric(value: Row[string], isPercent: boolean) { const n = toNumber(value); if (n == null) return "—"; return isPercent ? `${fmtNum(n)}%` : fmtNum(n); }
 function money(value: unknown, currency: "USD" | "UAH", lang: "uk" | "en") { const n = toNumber(value); if (n == null) return "—"; return new Intl.NumberFormat(lang === "uk" ? "uk-UA" : "en-US", { style: "currency", currency, maximumFractionDigits: 2 }).format(n); }
-
-function buildDelta(current: number | null, comparison: number | null, compareDisplay: "percent" | "absolute", showDelta: boolean, isPercentMetric = false): Delta | undefined {
-  if (!showDelta) return undefined;
-  if (current == null || comparison == null) return { text: "немає бази", tone: "neutral" };
-  const absolute = current - comparison;
-  const tone = absolute > 0 ? "positive" : absolute < 0 ? "negative" : "neutral";
-  if (compareDisplay === "percent") {
-    if (comparison === 0) return { text: current === 0 ? "0.0%" : "немає бази", tone: "neutral" };
-    const percent = (absolute / Math.abs(comparison)) * 100;
-    return { text: `${percent > 0 ? "+" : ""}${percent.toFixed(1)}%`, tone };
-  }
-  const valueText = isPercentMetric ? `${Math.abs(absolute).toFixed(1)} п.п.` : fmtNum(Math.abs(absolute));
-  if (absolute > 0) return { text: `+${valueText}`, tone };
-  if (absolute < 0) return { text: `-${valueText}`, tone };
-  return { text: isPercentMetric ? "0.0 п.п." : "0", tone };
-}
-
-function buildMoneyDelta(current: number | null, comparison: number | null, currency: "USD" | "UAH", lang: "uk" | "en", compareDisplay: "percent" | "absolute", showDelta: boolean): Delta | undefined {
-  if (!showDelta) return undefined;
-  if (current == null || comparison == null) return { text: "немає бази", tone: "neutral" };
-  const absolute = current - comparison;
-  const tone = absolute > 0 ? "positive" : absolute < 0 ? "negative" : "neutral";
-  if (compareDisplay === "percent") {
-    if (comparison === 0) return { text: current === 0 ? "0.0%" : "немає бази", tone: "neutral" };
-    const percent = (absolute / Math.abs(comparison)) * 100;
-    return { text: `${percent > 0 ? "+" : ""}${percent.toFixed(1)}%`, tone };
-  }
-  const valueText = money(Math.abs(absolute), currency, lang);
-  if (absolute > 0) return { text: `+${valueText}`, tone };
-  if (absolute < 0) return { text: `-${valueText}`, tone };
-  return { text: money(0, currency, lang), tone };
-}
-
+function buildDelta(current: number | null, comparison: number | null, compareDisplay: "percent" | "absolute", showDelta: boolean, isPercentMetric = false): Delta | undefined { if (!showDelta) return undefined; if (current == null || comparison == null) return { text: "немає бази", tone: "neutral" }; const absolute = current - comparison; const tone = absolute > 0 ? "positive" : absolute < 0 ? "negative" : "neutral"; if (compareDisplay === "percent") { if (comparison === 0) return { text: current === 0 ? "0.0%" : "немає бази", tone: "neutral" }; const percent = (absolute / Math.abs(comparison)) * 100; return { text: `${percent > 0 ? "+" : ""}${percent.toFixed(1)}%`, tone }; } const valueText = isPercentMetric ? `${Math.abs(absolute).toFixed(1)} п.п.` : fmtNum(Math.abs(absolute)); if (absolute > 0) return { text: `+${valueText}`, tone }; if (absolute < 0) return { text: `-${valueText}`, tone }; return { text: isPercentMetric ? "0.0 п.п." : "0", tone }; }
+function buildMoneyDelta(current: number | null, comparison: number | null, currency: "USD" | "UAH", lang: "uk" | "en", compareDisplay: "percent" | "absolute", showDelta: boolean): Delta | undefined { if (!showDelta) return undefined; if (current == null || comparison == null) return { text: "немає бази", tone: "neutral" }; const absolute = current - comparison; const tone = absolute > 0 ? "positive" : absolute < 0 ? "negative" : "neutral"; if (compareDisplay === "percent") { if (comparison === 0) return { text: current === 0 ? "0.0%" : "немає бази", tone: "neutral" }; const percent = (absolute / Math.abs(comparison)) * 100; return { text: `${percent > 0 ? "+" : ""}${percent.toFixed(1)}%`, tone }; } const valueText = money(Math.abs(absolute), currency, lang); if (absolute > 0) return { text: `+${valueText}`, tone }; if (absolute < 0) return { text: `-${valueText}`, tone }; return { text: money(0, currency, lang), tone }; }
 function getStageLabel(stage: string, fallback: unknown, lang: "uk" | "en") { const mapped: Record<string, { uk: string; en: string }> = { registration: { uk: "Реєстрації", en: "Registrations" }, questionnaire: { uk: "Анкети", en: "Questionnaires" }, application: { uk: "Заявки", en: "Applications" }, booking: { uk: "Бронювання", en: "Bookings" }, sale: { uk: "Платежі", en: "Payments" }, payment: { uk: "Платежі", en: "Payments" } }; const known = mapped[stage]; if (known) return known[lang]; return String(fallback ?? "—"); }
 function getPaymentCategoryLabelKey(category: string) { switch (category) { case "full_payment": return "conversionsPaymentCategoryFull"; case "installment": return "conversionsPaymentCategoryInstallment"; case "deposit": return "conversionsPaymentCategoryDeposit"; case "additional_payment": return "conversionsPaymentCategoryAdditional"; case "unknown": return "conversionsPaymentCategoryUnknown"; case "other": return "conversionsPaymentCategoryOther"; default: return null; } }
 function formatShortDate(value: unknown) { if (value == null || String(value).trim() === "") return "—"; const raw = String(value); const parsed = new Date(raw); if (Number.isNaN(parsed.getTime())) return raw; const day = String(parsed.getUTCDate()).padStart(2, "0"); const month = String(parsed.getUTCMonth() + 1).padStart(2, "0"); const year = parsed.getUTCFullYear(); const currentYear = new Date().getUTCFullYear(); return year === currentYear ? `${day}.${month}` : `${day}.${month}.${year}`; }
