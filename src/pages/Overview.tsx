@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { format } from "date-fns";
-import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -41,9 +41,10 @@ const countView = async (view: string) => {
 
 type BusinessDailyRow = {
   date: string;
-  revenueUsd: number;
-  sales: number;
-  adSpend: number;
+  revenueUsd: number | null;
+  sales: number | null;
+  adSpend: number | null;
+  costPerSale: number | null;
 };
 type BusinessDashboardData = {
   salesRows: Row[];
@@ -62,6 +63,16 @@ const sumField = (rows: Row[], field: string) => rows.reduce((total, row) => tot
 const formatDateLabel = (value: string) => {
   const [year, month, day] = value.split("-");
   return year && month && day ? `${day}.${month}` : value;
+};
+const formatCurrencyValue = (value: unknown, compact = false) => {
+  if (value === null || value === undefined || value === "") return "—";
+  const n = Number(value);
+  return Number.isFinite(n) ? fmtCurrency(n, { compact }) : "—";
+};
+const formatNumberValue = (value: unknown) => {
+  if (value === null || value === undefined || value === "") return "—";
+  const n = Number(value);
+  return Number.isFinite(n) ? fmtNum(n) : "—";
 };
 
 const readBusinessDashboard = async (fromIso: string, toIso: string): Promise<BusinessDashboardData> => {
@@ -92,28 +103,46 @@ const readBusinessDashboard = async (fromIso: string, toIso: string): Promise<Bu
   };
 };
 
+const createDailyRow = (date: string): BusinessDailyRow => ({ date, revenueUsd: null, sales: null, adSpend: null, costPerSale: null });
+
 const buildDailySeries = (salesRows: Row[], adsRows: Row[]) => {
   const byDate = new Map<string, BusinessDailyRow>();
   for (const row of salesRows) {
     const date = String(row.sale_date ?? "");
     if (!date) continue;
-    const existing = byDate.get(date) ?? { date, revenueUsd: 0, sales: 0, adSpend: 0 };
-    existing.revenueUsd += toNumber(row.total_payment_usd);
-    existing.sales += toNumber(row.sales_count);
+    const existing = byDate.get(date) ?? createDailyRow(date);
+    existing.revenueUsd = (existing.revenueUsd ?? 0) + toNumber(row.total_payment_usd);
+    existing.sales = (existing.sales ?? 0) + toNumber(row.sales_count);
     byDate.set(date, existing);
   }
   for (const row of adsRows) {
     const date = String(row.metric_date ?? "");
     if (!date) continue;
-    const existing = byDate.get(date) ?? { date, revenueUsd: 0, sales: 0, adSpend: 0 };
-    existing.adSpend += toNumber(row.spend);
+    const existing = byDate.get(date) ?? createDailyRow(date);
+    existing.adSpend = (existing.adSpend ?? 0) + toNumber(row.spend);
     byDate.set(date, existing);
   }
-  return Array.from(byDate.values()).sort((a, b) => a.date.localeCompare(b.date));
+  return Array.from(byDate.values())
+    .map((row) => ({ ...row, costPerSale: row.adSpend !== null && row.sales !== null && row.sales > 0 ? row.adSpend / row.sales : null }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 };
 
 function KpiValue({ value, unavailable }: { value: string; unavailable?: boolean }) {
   return <p className={unavailable ? "mt-1 text-sm font-medium text-muted-foreground" : "num mt-1 text-2xl font-semibold tracking-tight"}>{value}</p>;
+}
+
+function ChartEmpty({ text }: { text: string }) {
+  return <div className="flex min-h-[180px] items-center rounded-md border border-dashed p-3 text-sm text-muted-foreground">{text}</div>;
+}
+
+function ChartCard({ title, description, badge, children }: { title: string; description: string; badge?: string | null; children: ReactNode }) {
+  return <div className="rounded-xl border bg-background/40 p-4">
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+      <div><h3 className="text-sm font-semibold">{title}</h3><p className="text-xs text-muted-foreground">{description}</p></div>
+      {badge ? <span className="rounded-full border px-2 py-1 text-xs text-muted-foreground">{badge}</span> : null}
+    </div>
+    {children}
+  </div>;
 }
 
 const OPEN_STATUSES = ["open","active","pending","unresolved"];
@@ -182,24 +211,35 @@ export default function Overview() {
   const openIssues = issuesUnavailable || !counts.data || !activity.data ? null : counts.data.mapping.count + counts.data.alerts.count + (activity.data.hasImportErrors ? 1 : 0);
   const chartRows = buildDailySeries(salesRows, adsRows);
   const hasRevenueSeries = !salesUnavailable && salesRows.length > 0;
+  const hasSalesSeries = !salesUnavailable && salesRows.length > 0;
   const hasSpendSeries = !adsUnavailable && adsRows.length > 0;
+  const costPerSaleRows = chartRows.filter((row) => row.costPerSale !== null);
+  const hasCostPerSaleSeries = !salesUnavailable && !adsUnavailable && costPerSaleRows.length > 0;
   const hasChartData = chartRows.length > 0 && (hasRevenueSeries || hasSpendSeries);
   const dashboardLoading = businessDashboard.isLoading || counts.isLoading || activity.isLoading;
-  const businessSummary = [
-    lang === "uk" ? `Дані показані за період ${date.contextLabel(lang)}.` : `Data is shown for ${date.contextLabel(lang)}.`,
-    salesUnavailable
-      ? lang === "uk" ? "Дані продажів тимчасово недоступні." : "Sales data is temporarily unavailable."
+  const attentionItems = [
+    { key: "mapping", label: lang === "uk" ? "Мапінг" : "Mapping", value: counts.data?.mapping.count ?? null, unavailable: Boolean(counts.data?.mapping.error) || !counts.data },
+    { key: "alerts", label: lang === "uk" ? "Сповіщення" : "Alerts", value: counts.data?.alerts.count ?? null, unavailable: Boolean(counts.data?.alerts.error) || !counts.data },
+    { key: "imports", label: lang === "uk" ? "Імпорт" : "Imports", value: activity.data ? (activity.data.hasImportErrors ? 1 : 0) : null, unavailable: Boolean(activity.data?.errors.importErrors) || !activity.data },
+  ];
+  const attentionMax = Math.max(...attentionItems.map((item) => item.value ?? 0), 1);
+  const relationshipSummary = salesUnavailable || adsUnavailable
+    ? lang === "uk" ? "Одне з бізнес-джерел тимчасово недоступне, тому частина висновків не показана як нуль." : "One business source is temporarily unavailable, so missing insights are not shown as zero."
+    : salesRows.length > 0 && adsRows.length > 0
+      ? lang === "uk" ? "За вибраний період є дохід і рекламні витрати. Перевірте співвідношення доходу до витрат." : "Revenue and ad spend are available for the selected period. Check the revenue-to-spend relationship."
       : salesRows.length > 0
-        ? lang === "uk" ? "Дані продажів доступні." : "Sales data is available."
-        : lang === "uk" ? "Даних продажів за вибраний період поки немає." : "No sales data is available for the selected period yet.",
-    adsUnavailable
-      ? lang === "uk" ? "Рекламні витрати тимчасово недоступні." : "Ad spend is temporarily unavailable."
-      : adsRows.length > 0
-        ? lang === "uk" ? "Рекламні витрати доступні." : "Ad spend is available."
-        : lang === "uk" ? "Рекламні витрати поки недоступні, підключіть Ads конектори." : "Ad spend is not available yet; connect Ads connectors.",
+        ? lang === "uk" ? "Продажі доступні, але рекламні витрати за період не знайдені." : "Sales are available, but ad spend was not found for the selected period."
+        : adsRows.length > 0
+          ? lang === "uk" ? "Рекламні витрати є, але продажів за період не знайдено." : "Ad spend is available, but no sales were found for the selected period."
+          : lang === "uk" ? "За вибраний період бізнес-дані для графіків поки не знайдені." : "No business data was found for the selected period yet.";
+  const businessSummary = [
+    lang === "uk" ? `Період: ${date.contextLabel(lang)}.` : `Period: ${date.contextLabel(lang)}.`,
+    relationshipSummary,
     openIssues && openIssues > 0
-      ? lang === "uk" ? "Є відкриті сповіщення або мапінг на перевірку." : "There are open alerts or mappings to review."
-      : lang === "uk" ? "Критичних відкритих сигналів у налаштуванні не видно." : "No critical open setup signals are visible.",
+      ? lang === "uk" ? "Є сигнали, які потребують перевірки." : "There are signals that need review."
+      : openIssues === null
+        ? lang === "uk" ? "Стан сигналів уваги поки завантажується або недоступний." : "Attention signals are still loading or unavailable."
+        : lang === "uk" ? "Критичних відкритих сигналів у налаштуванні не видно." : "No critical open setup signals are visible.",
   ];
 
   const r = readiness.data ?? {};
@@ -238,24 +278,76 @@ export default function Overview() {
           <div className="rounded-xl border bg-background/40 p-4"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{lang === "uk" ? "Потребують уваги" : "Open issues"}</p><KpiValue unavailable={issuesUnavailable} value={issuesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : openIssues === null ? "—" : fmtNum(openIssues)} /><p className="mt-2 text-xs text-muted-foreground">{lang === "uk" ? "мапінг, сповіщення, імпорт" : "mapping, alerts, imports"}</p></div>
         </div>
 
-        <div className="mt-4 rounded-xl border bg-background/40 p-4">
-          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <div><h3 className="text-sm font-semibold">{lang === "uk" ? "Дохід vs витрати на рекламу" : "Revenue vs ad spend"}</h3><p className="text-xs text-muted-foreground">{lang === "uk" ? "Щоденний тренд за вибраний період" : "Daily trend for the selected period"}</p></div>
-            {(salesUnavailable || adsUnavailable) ? <span className="rounded-full border px-2 py-1 text-xs text-muted-foreground">{lang === "uk" ? "Частина джерел недоступна" : "Some sources unavailable"}</span> : null}
+        <div className="mt-4 grid gap-4 lg:grid-cols-2">
+          <div className="lg:col-span-2">
+            <ChartCard title={lang === "uk" ? "Дохід vs витрати на рекламу" : "Revenue vs ad spend"} description={lang === "uk" ? "Щоденний тренд за вибраний період" : "Daily trend for the selected period"} badge={(salesUnavailable || adsUnavailable) ? (lang === "uk" ? "Частина джерел недоступна" : "Some sources unavailable") : null}>
+              {businessDashboard.isLoading ? <ChartEmpty text={lang === "uk" ? "Завантажуємо тренд…" : "Loading trend…"} /> : hasChartData ? <div className="h-[280px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartRows} margin={{ left: 8, right: 8, top: 8, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
+                    <XAxis dataKey="date" tickFormatter={formatDateLabel} tickLine={false} axisLine={false} className="text-xs" />
+                    <YAxis tickFormatter={(value) => formatCurrencyValue(value, true)} tickLine={false} axisLine={false} width={72} className="text-xs" />
+                    <Tooltip formatter={(value, name) => [formatCurrencyValue(value), name === "revenueUsd" ? (lang === "uk" ? "Дохід" : "Revenue") : (lang === "uk" ? "Витрати" : "Ad spend")]} labelFormatter={(value) => formatDateLabel(String(value))} />
+                    <Legend />
+                    {hasRevenueSeries ? <Line connectNulls={false} type="monotone" dataKey="revenueUsd" name={lang === "uk" ? "Дохід" : "Revenue"} stroke="hsl(var(--primary))" strokeWidth={2} dot={false} /> : null}
+                    {hasSpendSeries ? <Line connectNulls={false} type="monotone" dataKey="adSpend" name={lang === "uk" ? "Витрати" : "Ad spend"} stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={false} /> : null}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div> : <ChartEmpty text={salesUnavailable && adsUnavailable ? (lang === "uk" ? "Тренд тимчасово недоступний через помилки джерел даних." : "Trend is temporarily unavailable due to data source errors.") : (lang === "uk" ? "Даних для графіка за вибраний період поки немає." : "No chart data is available for the selected period yet.")} />}
+            </ChartCard>
           </div>
-          {hasChartData ? <div className="h-[260px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartRows} margin={{ left: 8, right: 8, top: 8, bottom: 8 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
-                <XAxis dataKey="date" tickFormatter={formatDateLabel} tickLine={false} axisLine={false} className="text-xs" />
-                <YAxis tickFormatter={(value) => fmtCurrency(Number(value), { compact: true })} tickLine={false} axisLine={false} width={72} className="text-xs" />
-                <Tooltip formatter={(value, name) => [fmtCurrency(Number(value), { compact: false }), name === "revenueUsd" ? (lang === "uk" ? "Дохід" : "Revenue") : (lang === "uk" ? "Витрати" : "Ad spend")]} labelFormatter={(value) => formatDateLabel(String(value))} />
-                <Legend />
-                {hasRevenueSeries ? <Line type="monotone" dataKey="revenueUsd" name={lang === "uk" ? "Дохід" : "Revenue"} stroke="hsl(var(--primary))" strokeWidth={2} dot={false} /> : null}
-                {hasSpendSeries ? <Line type="monotone" dataKey="adSpend" name={lang === "uk" ? "Витрати" : "Ad spend"} stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={false} /> : null}
-              </LineChart>
-            </ResponsiveContainer>
-          </div> : <p className="rounded-md border p-3 text-sm text-muted-foreground">{salesUnavailable && adsUnavailable ? (lang === "uk" ? "Тренд тимчасово недоступний через помилки джерел даних." : "Trend is temporarily unavailable due to data source errors.") : (lang === "uk" ? "Даних для графіка за вибраний період поки немає." : "No chart data is available for the selected period yet.")}</p>}
+
+          <ChartCard title={lang === "uk" ? "Продажі" : "Sales trend"} description={lang === "uk" ? "Кількість продажів за днями" : "Daily sales count"} badge={salesUnavailable ? (lang === "uk" ? "Джерело недоступне" : "Source unavailable") : null}>
+            {businessDashboard.isLoading ? <ChartEmpty text={lang === "uk" ? "Завантажуємо продажі…" : "Loading sales…"} /> : hasSalesSeries ? <div className="h-[220px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartRows} margin={{ left: 8, right: 8, top: 8, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
+                  <XAxis dataKey="date" tickFormatter={formatDateLabel} tickLine={false} axisLine={false} className="text-xs" />
+                  <YAxis tickFormatter={formatNumberValue} tickLine={false} axisLine={false} width={48} className="text-xs" />
+                  <Tooltip formatter={(value) => [formatNumberValue(value), lang === "uk" ? "Продажі" : "Sales"]} labelFormatter={(value) => formatDateLabel(String(value))} />
+                  <Bar dataKey="sales" name={lang === "uk" ? "Продажі" : "Sales"} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div> : <ChartEmpty text={salesUnavailable ? (lang === "uk" ? "Дані продажів тимчасово недоступні." : "Sales data is temporarily unavailable.") : (lang === "uk" ? "Продажів за вибраний період поки немає." : "No sales were found for the selected period yet.")} />}
+          </ChartCard>
+
+          <ChartCard title={lang === "uk" ? "Витрати на рекламу" : "Ad spend trend"} description={lang === "uk" ? "Щоденні витрати на рекламу" : "Daily advertising spend"} badge={adsUnavailable ? (lang === "uk" ? "Джерело недоступне" : "Source unavailable") : null}>
+            {businessDashboard.isLoading ? <ChartEmpty text={lang === "uk" ? "Завантажуємо витрати…" : "Loading spend…"} /> : hasSpendSeries ? <div className="h-[220px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartRows} margin={{ left: 8, right: 8, top: 8, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
+                  <XAxis dataKey="date" tickFormatter={formatDateLabel} tickLine={false} axisLine={false} className="text-xs" />
+                  <YAxis tickFormatter={(value) => formatCurrencyValue(value, true)} tickLine={false} axisLine={false} width={64} className="text-xs" />
+                  <Tooltip formatter={(value) => [formatCurrencyValue(value), lang === "uk" ? "Витрати" : "Ad spend"]} labelFormatter={(value) => formatDateLabel(String(value))} />
+                  <Bar dataKey="adSpend" name={lang === "uk" ? "Витрати" : "Ad spend"} fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div> : <ChartEmpty text={adsUnavailable ? (lang === "uk" ? "Рекламні витрати тимчасово недоступні." : "Ad spend is temporarily unavailable.") : (lang === "uk" ? "Рекламних витрат за вибраний період поки немає." : "No ad spend was found for the selected period yet.")} />}
+          </ChartCard>
+
+          <ChartCard title={lang === "uk" ? "Вартість продажу" : "Cost / sale"} description={lang === "uk" ? "Витрати на рекламу / продажі за день" : "Daily ad spend divided by sales"} badge={!hasCostPerSaleSeries && !businessDashboard.isLoading ? "—" : null}>
+            {businessDashboard.isLoading ? <ChartEmpty text={lang === "uk" ? "Завантажуємо ефективність…" : "Loading efficiency…"} /> : hasCostPerSaleSeries ? <div className="h-[220px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartRows} margin={{ left: 8, right: 8, top: 8, bottom: 8 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
+                  <XAxis dataKey="date" tickFormatter={formatDateLabel} tickLine={false} axisLine={false} className="text-xs" />
+                  <YAxis tickFormatter={(value) => formatCurrencyValue(value, true)} tickLine={false} axisLine={false} width={64} className="text-xs" />
+                  <Tooltip formatter={(value) => [formatCurrencyValue(value), lang === "uk" ? "Вартість продажу" : "Cost / sale"]} labelFormatter={(value) => formatDateLabel(String(value))} />
+                  <Line connectNulls={false} type="monotone" dataKey="costPerSale" name={lang === "uk" ? "Вартість продажу" : "Cost / sale"} stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div> : <ChartEmpty text={salesUnavailable || adsUnavailable ? (lang === "uk" ? "Ефективність недоступна через помилку джерела." : "Efficiency is unavailable because a source errored.") : (lang === "uk" ? "Недостатньо даних для розрахунку вартості продажу." : "Not enough data to calculate cost per sale.")} />}
+          </ChartCard>
+
+          <ChartCard title={lang === "uk" ? "Потребують уваги" : "Needs attention"} description={lang === "uk" ? "Мапінг, сповіщення та імпорти" : "Mapping, alerts, and imports"} badge={openIssues && openIssues > 0 ? (lang === "uk" ? "Перевірити" : "Review") : null}>
+            {counts.isLoading || activity.isLoading ? <ChartEmpty text={lang === "uk" ? "Завантажуємо сигнали…" : "Loading signals…"} /> : <div className="space-y-3">
+              {attentionItems.map((item) => <div key={item.key} className="rounded-md border bg-card/60 p-3">
+                <div className="flex items-center justify-between gap-3 text-sm"><span className="font-medium">{item.label}</span><span className="num font-semibold">{item.unavailable ? (lang === "uk" ? "Недоступно" : "Unavailable") : item.value === null ? "—" : fmtNum(item.value)}</span></div>
+                {!item.unavailable && item.value !== null ? <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (item.value / attentionMax) * 100)}%` }} /></div> : null}
+              </div>)}
+              <p className="text-xs text-muted-foreground">{openIssues && openIssues > 0 ? (lang === "uk" ? "Є пункти, які потребують перевірки зараз." : "There are items that need review now.") : openIssues === null ? (lang === "uk" ? "Частина сигналів недоступна." : "Some signals are unavailable.") : (lang === "uk" ? "Активних сигналів для перевірки не видно." : "No active review signals are visible.")}</p>
+            </div>}
+          </ChartCard>
         </div>
 
         <div className="mt-4 rounded-xl border bg-muted/30 p-3">
