@@ -1,5 +1,5 @@
 import { createContext, useContext, useMemo, useState, ReactNode } from "react";
-import { addDays, format, startOfMonth, startOfQuarter, startOfYear, subDays } from "date-fns";
+import { format, startOfMonth, startOfQuarter, startOfYear, subDays } from "date-fns";
 import { uk } from "date-fns/locale";
 
 export type DatePresetId =
@@ -28,6 +28,9 @@ export interface DateContextValue {
 }
 
 const DateContext = createContext<DateContextValue | undefined>(undefined);
+
+const formatLocalizedDate = (date: Date, lang: "uk" | "en") =>
+  lang === "uk" ? format(date, "d MMMM yyyy", { locale: uk }) : format(date, "d MMMM yyyy");
 
 function resolvePreset(id: DatePresetId, today = new Date(), dataBounds: { from: Date; to: Date } | null = null): { from: Date; to: Date } {
   switch (id) {
@@ -62,8 +65,8 @@ export function DateFilterProvider({ children }: { children: ReactNode }) {
   }, [mode, preset, exactDate, rangeFrom, rangeTo, today, dataBounds]);
 
   const activeLabel = useMemo(() => {
-    if (mode === "exact") return format(exactDate, "d MMMM yyyy", { locale: uk });
-    if (mode === "range") return `${format(rangeFrom, "d MMMM yyyy", { locale: uk })} — ${format(rangeTo, "d MMMM yyyy", { locale: uk })}`;
+    if (mode === "exact") return formatLocalizedDate(exactDate, "en");
+    if (mode === "range") return formatRange(rangeFrom, rangeTo, "en");
     return preset;
   }, [mode, exactDate, rangeFrom, rangeTo, preset]);
 
@@ -80,17 +83,17 @@ export function DateFilterProvider({ children }: { children: ReactNode }) {
     };
     if (mode === "exact") {
       return lang === "uk"
-        ? `Дані за ${format(exactDate, "d MMMM yyyy", { locale: uk })}`
-        : `Data for ${format(exactDate, "d MMMM yyyy", { locale: uk })}`;
+        ? `Дані за ${formatLocalizedDate(exactDate, lang)}`
+        : `Data for ${formatLocalizedDate(exactDate, lang)}`;
     }
     if (mode === "range") {
       return lang === "uk"
-        ? `Період: ${format(rangeFrom, "d MMMM yyyy", { locale: uk })} — ${format(rangeTo, "d MMMM yyyy", { locale: uk })}`
-        : `Range: ${format(rangeFrom, "d MMMM yyyy", { locale: uk })} — ${format(rangeTo, "d MMMM yyyy", { locale: uk })}`;
+        ? `Період: ${formatRange(rangeFrom, rangeTo, lang)}`
+        : `Range: ${formatRange(rangeFrom, rangeTo, lang)}`;
     }
     if (preset === "all") {
       if (!dataBounds) return presetLabels.all[lang];
-      const rangeLabel = `${format(dataBounds.from, "d MMMM yyyy", { locale: uk })} — ${format(dataBounds.to, "d MMMM yyyy", { locale: uk })}`;
+      const rangeLabel = formatRange(dataBounds.from, dataBounds.to, lang);
       return lang === "uk" ? `${presetLabels.all.uk}: ${rangeLabel}` : `${presetLabels.all.en}: ${rangeLabel}`;
     }
     return presetLabels[preset][lang];
@@ -138,6 +141,6 @@ export function useDateFilter() {
 }
 
 /** Pretty label for a range (helper for badges) */
-export function formatRange(from: Date, to: Date) {
-  return `${format(from, "d MMMM yyyy", { locale: uk })} — ${format(to, "d MMMM yyyy", { locale: uk })}`;
+export function formatRange(from: Date, to: Date, lang: "uk" | "en" = "en") {
+  return `${formatLocalizedDate(from, lang)} — ${formatLocalizedDate(to, lang)}`;
 }

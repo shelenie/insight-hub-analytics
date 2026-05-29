@@ -15,7 +15,7 @@ import { useDateFilter } from "@/filters/DateContext";
 import { Check } from "lucide-react";
 
 export function CompareControl() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const date = useDateFilter();
   const { compareMode, compareDisplay, setPref } = usePreferences();
   const isExactDateMode = date.mode === "exact";
@@ -60,7 +60,7 @@ export function CompareControl() {
         >
           {compareMode === "yesterday" && <Check className="h-3.5 w-3.5" />}
           <span>{t("compareYesterday")}</span>
-          {!isExactDateMode && <span className="ml-auto text-[10px] text-muted-foreground">Тільки для конкретної дати</span>}
+          {!isExactDateMode && <span className="ml-auto text-[10px] text-muted-foreground">{lang === "uk" ? "Тільки для конкретної дати" : "Exact date only"}</span>}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => setPref("compareMode", "previous_period")} className="gap-2 text-xs">
           {compareMode === "previous_period" && <Check className="h-3.5 w-3.5" />}

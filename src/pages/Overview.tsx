@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from "react";
-import { format } from "date-fns";
+import { addDays, differenceInCalendarDays, format } from "date-fns";
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -13,6 +13,7 @@ import { DeveloperDetails, FriendlyError } from "@/components/common/DeveloperDe
 import { fmtCurrency, fmtNum } from "@/lib/format";
 import { useDateFilter } from "@/filters/DateContext";
 import { useI18n } from "@/i18n/I18nProvider";
+import { usePreferences } from "@/preferences/PreferencesProvider";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 type Row = Record<string, unknown>;
@@ -75,6 +76,46 @@ const formatNumberValue = (value: unknown) => {
   return Number.isFinite(n) ? fmtNum(n) : "—";
 };
 
+type ComparisonMetric = "currency" | "number";
+type KpiDelta = { text: string; direction: "up" | "down" | "flat" } | { text: string; direction: "muted" };
+
+const metricTotals = (salesRows: Row[], adsRows: Row[]) => {
+  const revenueUsd = sumField(salesRows, "total_payment_usd");
+  const salesCount = sumField(salesRows, "sales_count");
+  const adSpend = sumField(adsRows, "spend");
+  const costPerSale = salesCount > 0 && adsRows.length > 0 ? adSpend / salesCount : null;
+  return { revenueUsd, salesCount, adSpend, costPerSale };
+};
+
+const formatDeltaValue = (value: number, metric: ComparisonMetric) =>
+  metric === "currency" ? fmtCurrency(Math.abs(value), { compact: true }) : fmtNum(Math.abs(value));
+
+const buildKpiDelta = ({
+  current,
+  previous,
+  metric,
+  compareDisplay,
+  unavailableText,
+}: {
+  current: number | null;
+  previous: number | null;
+  metric: ComparisonMetric;
+  compareDisplay: "percent" | "absolute";
+  unavailableText: string;
+}): KpiDelta => {
+  if (current === null || previous === null || !Number.isFinite(current) || !Number.isFinite(previous)) return { text: "—", direction: "muted" };
+  if (compareDisplay === "percent" && previous === 0) return { text: "—", direction: "muted" };
+  const diff = current - previous;
+  const direction = diff > 0 ? "up" : diff < 0 ? "down" : "flat";
+  if (compareDisplay === "percent") {
+    const pct = (diff / Math.abs(previous)) * 100;
+    if (!Number.isFinite(pct)) return { text: unavailableText, direction: "muted" };
+    return { text: `${diff > 0 ? "+" : ""}${pct.toFixed(1)}%`, direction };
+  }
+  if (!Number.isFinite(diff)) return { text: unavailableText, direction: "muted" };
+  return { text: `${diff > 0 ? "+" : diff < 0 ? "−" : ""}${formatDeltaValue(diff, metric)}`, direction };
+};
+
 const readBusinessDashboard = async (fromIso: string, toIso: string): Promise<BusinessDashboardData> => {
   const [sales, ads] = await Promise.all([
     supabase
@@ -131,6 +172,35 @@ function KpiValue({ value, unavailable }: { value: string; unavailable?: boolean
   return <p className={unavailable ? "mt-1 text-sm font-medium text-muted-foreground" : "num mt-1 text-2xl font-semibold tracking-tight"}>{value}</p>;
 }
 
+function KpiCard({
+  title,
+  value,
+  subtitle,
+  unavailable,
+  delta,
+  compareLabel,
+}: {
+  title: string;
+  value: string;
+  subtitle: string;
+  unavailable?: boolean;
+  delta?: KpiDelta | null;
+  compareLabel?: string;
+}) {
+  const deltaClass =
+    delta?.direction === "up"
+      ? "text-emerald-600"
+      : delta?.direction === "down"
+        ? "text-destructive"
+        : "text-muted-foreground";
+  return <div className="rounded-xl border bg-background/40 p-4">
+    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
+    <KpiValue unavailable={unavailable} value={value} />
+    {delta ? <p className={`mt-1 text-xs ${deltaClass}`}><span className="font-medium">{delta.text}</span>{compareLabel ? <span className="text-muted-foreground"> {compareLabel}</span> : null}</p> : null}
+    <p className="mt-2 text-xs text-muted-foreground">{subtitle}</p>
+  </div>;
+}
+
 function ChartEmpty({ text }: { text: string }) {
   return <div className="flex min-h-[180px] items-center rounded-md border border-dashed p-3 text-sm text-muted-foreground">{text}</div>;
 }
@@ -164,9 +234,23 @@ const countOpenAlerts = async () => {
 export default function Overview() {
   const { session } = useAuth();
   const { lang } = useI18n();
+  const { compareMode, compareDisplay } = usePreferences();
   const date = useDateFilter();
   const fromIso = format(date.resolved.from, "yyyy-MM-dd");
   const toIso = format(date.resolved.to, "yyyy-MM-dd");
+  const comparisonRange = useMemo(() => {
+    if (compareMode === "none") return null;
+    if (compareMode === "yesterday") {
+      if (date.mode !== "exact") return null;
+      const previousDay = addDays(date.resolved.from, -1);
+      return { from: previousDay, to: previousDay };
+    }
+    const days = differenceInCalendarDays(date.resolved.to, date.resolved.from) + 1;
+    if (days <= 0) return null;
+    return { from: addDays(date.resolved.from, -days), to: addDays(date.resolved.from, -1) };
+  }, [compareMode, date.mode, date.resolved.from, date.resolved.to]);
+  const compareFromIso = comparisonRange ? format(comparisonRange.from, "yyyy-MM-dd") : null;
+  const compareToIso = comparisonRange ? format(comparisonRange.to, "yyyy-MM-dd") : null;
   const readiness = useQuery({ queryKey: ["backend-readiness", WORKSPACE_ID], enabled: Boolean(session), queryFn: async () => {
     const { data, error } = await supabase.from("v_production_backend_snapshot").select("*").eq("workspace_id", WORKSPACE_ID).maybeSingle();
     if (error) throw error;
@@ -198,15 +282,49 @@ export default function Overview() {
     queryFn: () => readBusinessDashboard(fromIso, toIso),
   });
 
+  const comparisonDashboard = useQuery({
+    queryKey: ["overview-business-dashboard-compare", WORKSPACE_ID, compareMode, compareFromIso, compareToIso],
+    enabled: Boolean(session && compareMode !== "none" && compareFromIso && compareToIso),
+    queryFn: () => readBusinessDashboard(compareFromIso!, compareToIso!),
+  });
+
   const businessData = businessDashboard.data;
   const salesUnavailable = businessData?.salesUnavailableReason ?? null;
   const adsUnavailable = businessData?.adsUnavailableReason ?? null;
   const salesRows = businessData?.salesRows ?? [];
   const adsRows = businessData?.adsRows ?? [];
-  const revenueUsd = sumField(salesRows, "total_payment_usd");
-  const salesCount = sumField(salesRows, "sales_count");
-  const adSpend = sumField(adsRows, "spend");
-  const costPerSale = salesCount > 0 && adsRows.length > 0 && !adsUnavailable ? adSpend / salesCount : null;
+  const currentTotals = metricTotals(salesRows, adsRows);
+  const { revenueUsd, salesCount, adSpend } = currentTotals;
+  const costPerSale = salesCount > 0 && adsRows.length > 0 && !adsUnavailable ? currentTotals.costPerSale : null;
+  const comparisonData = comparisonDashboard.data;
+  const comparisonSalesUnavailable = comparisonData?.salesUnavailableReason ?? null;
+  const comparisonAdsUnavailable = comparisonData?.adsUnavailableReason ?? null;
+  const comparisonTotals = comparisonData ? metricTotals(comparisonData.salesRows, comparisonData.adsRows) : null;
+  const compareLabel = compareMode === "previous_period"
+    ? lang === "uk" ? "до попереднього періоду" : "vs previous period"
+    : lang === "uk" ? "до вчора" : "vs yesterday";
+  const comparisonUnavailableText = lang === "uk" ? "порівняння недоступне" : "comparison unavailable";
+  const shouldShowComparison = compareMode !== "none";
+  const revenueDelta = shouldShowComparison
+    ? comparisonSalesUnavailable || comparisonDashboard.isError
+      ? { text: comparisonUnavailableText, direction: "muted" as const }
+      : buildKpiDelta({ current: salesUnavailable || !salesRows.length ? null : revenueUsd, previous: comparisonTotals && comparisonData.salesRows.length ? comparisonTotals.revenueUsd : null, metric: "currency", compareDisplay, unavailableText: comparisonUnavailableText })
+    : null;
+  const salesDelta = shouldShowComparison
+    ? comparisonSalesUnavailable || comparisonDashboard.isError
+      ? { text: comparisonUnavailableText, direction: "muted" as const }
+      : buildKpiDelta({ current: salesUnavailable || !salesRows.length ? null : salesCount, previous: comparisonTotals && comparisonData.salesRows.length ? comparisonTotals.salesCount : null, metric: "number", compareDisplay, unavailableText: comparisonUnavailableText })
+    : null;
+  const adSpendDelta = shouldShowComparison
+    ? comparisonAdsUnavailable || comparisonDashboard.isError
+      ? { text: comparisonUnavailableText, direction: "muted" as const }
+      : buildKpiDelta({ current: adsUnavailable || !adsRows.length ? null : adSpend, previous: comparisonTotals && comparisonData.adsRows.length ? comparisonTotals.adSpend : null, metric: "currency", compareDisplay, unavailableText: comparisonUnavailableText })
+    : null;
+  const costPerSaleDelta = shouldShowComparison
+    ? comparisonSalesUnavailable || comparisonAdsUnavailable || comparisonDashboard.isError
+      ? { text: comparisonUnavailableText, direction: "muted" as const }
+      : buildKpiDelta({ current: adsUnavailable || salesUnavailable ? null : costPerSale, previous: comparisonTotals?.costPerSale ?? null, metric: "currency", compareDisplay, unavailableText: comparisonUnavailableText })
+    : null;
   const issuesUnavailable = Boolean(counts.data?.mapping.error || counts.data?.alerts.error || activity.data?.errors.importErrors);
   const openIssues = issuesUnavailable || !counts.data || !activity.data ? null : counts.data.mapping.count + counts.data.alerts.count + (activity.data.hasImportErrors ? 1 : 0);
   const chartRows = buildDailySeries(salesRows, adsRows);
@@ -244,38 +362,61 @@ export default function Overview() {
 
   const r = readiness.data ?? {};
   const cards = [
-    ["Стан системи", r.technical_status === "PASS" ? "Система працює" : "Триває перевірка"],
-    ["Підключення даних", Number(r.failed_checks ?? 1) === 0 ? "Критичних помилок немає" : "Є пункти, що потребують уваги"],
-    ["Клієнти / проєкти / воронки", String(r.onboarding_status ?? "") === "ready" ? "Дані доступні" : "Налаштування триває"],
-    ["Рекламні дані", ["ads_setup_required"].includes(String(r.production_backend_status ?? r.snapshot_status)) ? "Потрібно підключити рекламні акаунти" : "Рекламні дані доступні"],
-    ["AI-асистент", String(r.ai_helper_status ?? "ready") === "ready" ? "AI-асистент доступний" : "Перевіряємо доступність"],
-    ["Сповіщення", String(r.operational_alerts_status ?? "ready") === "ready" ? "Сповіщення працюють" : "Потрібна увага"],
+    [lang === "uk" ? "Стан системи" : "System status", r.technical_status === "PASS" ? (lang === "uk" ? "Система працює" : "System is running") : (lang === "uk" ? "Триває перевірка" : "Check in progress")],
+    [lang === "uk" ? "Підключення даних" : "Data connection", Number(r.failed_checks ?? 1) === 0 ? (lang === "uk" ? "Критичних помилок немає" : "No critical errors") : (lang === "uk" ? "Є пункти, що потребують уваги" : "Some items need attention")],
+    [lang === "uk" ? "Клієнти / проєкти / воронки" : "Clients / projects / funnels", String(r.onboarding_status ?? "") === "ready" ? (lang === "uk" ? "Дані доступні" : "Data is available") : (lang === "uk" ? "Налаштування триває" : "Setup in progress")],
+    [lang === "uk" ? "Рекламні дані" : "Ads data", ["ads_setup_required"].includes(String(r.production_backend_status ?? r.snapshot_status)) ? (lang === "uk" ? "Потрібно підключити рекламні акаунти" : "Ad accounts need to be connected") : (lang === "uk" ? "Рекламні дані доступні" : "Ads data is available")],
+    [lang === "uk" ? "AI-асистент" : "AI assistant", String(r.ai_helper_status ?? "ready") === "ready" ? (lang === "uk" ? "AI-асистент доступний" : "AI assistant is available") : (lang === "uk" ? "Перевіряємо доступність" : "Checking availability")],
+    [lang === "uk" ? "Сповіщення" : "Alerts", String(r.operational_alerts_status ?? "ready") === "ready" ? (lang === "uk" ? "Сповіщення працюють" : "Alerts are working") : (lang === "uk" ? "Потрібна увага" : "Needs attention")],
   ];
 
   const steps = useMemo(() => {
     const arr: { text: string; href: string; label: string }[] = [];
-    if (["ads_setup_required"].includes(String(r.production_backend_status ?? r.snapshot_status))) arr.push({ text: "Підключіть рекламні акаунти, щоб побачити витрати та ефективність реклами.", href: "/ads-connectors", label: "Перейти до Ads конекторів" });
-    if ((counts.data?.clients.count ?? 0) === 0 || (counts.data?.projects.count ?? 0) === 0 || (counts.data?.funnels.count ?? 0) === 0) arr.push({ text: "Додайте клієнта, проєкт і воронку.", href: "/onboarding", label: "Перейти до онбордингу" });
-    if ((counts.data?.mapping.count ?? 0) > 0) arr.push({ text: "Перевірте мапінг джерел даних.", href: "/bindings", label: "Перейти до звʼязків даних" });
-    if ((counts.data?.alerts.count ?? 0) > 0) arr.push({ text: "Перевірте відкриті сповіщення.", href: "/alerts", label: "Перейти до сповіщень" });
-    if (!arr.length) arr.push({ text: "Основні налаштування виглядають готовими.", href: "/", label: "Готово" });
+    if (["ads_setup_required"].includes(String(r.production_backend_status ?? r.snapshot_status))) arr.push({ text: lang === "uk" ? "Підключіть рекламні акаунти, щоб побачити витрати та ефективність реклами." : "Connect ad accounts to see ad spend and efficiency.", href: "/ads-connectors", label: lang === "uk" ? "Перейти до Ads конекторів" : "Go to Ads connectors" });
+    if ((counts.data?.clients.count ?? 0) === 0 || (counts.data?.projects.count ?? 0) === 0 || (counts.data?.funnels.count ?? 0) === 0) arr.push({ text: lang === "uk" ? "Додайте клієнта, проєкт і воронку." : "Add a client, project, and funnel.", href: "/onboarding", label: lang === "uk" ? "Перейти до онбордингу" : "Go to onboarding" });
+    if ((counts.data?.mapping.count ?? 0) > 0) arr.push({ text: lang === "uk" ? "Перевірте мапінг джерел даних." : "Review data source mapping.", href: "/bindings", label: lang === "uk" ? "Перейти до звʼязків даних" : "Go to data bindings" });
+    if ((counts.data?.alerts.count ?? 0) > 0) arr.push({ text: lang === "uk" ? "Перевірте відкриті сповіщення." : "Review open alerts.", href: "/alerts", label: lang === "uk" ? "Перейти до сповіщень" : "Go to alerts" });
+    if (!arr.length) arr.push({ text: lang === "uk" ? "Основні налаштування виглядають готовими." : "Core setup looks ready.", href: "/", label: lang === "uk" ? "Готово" : "Done" });
     return arr;
-  }, [r.production_backend_status, r.snapshot_status, counts.data]);
+  }, [lang, r.production_backend_status, r.snapshot_status, counts.data]);
 
-  return <DashboardLayout title="Огляд" subtitle="Головний дашборд робочого простору">
+  const setupCounts = [
+    [lang === "uk" ? "Клієнти" : "Clients", counts.data?.clients],
+    [lang === "uk" ? "Проєкти" : "Projects", counts.data?.projects],
+    [lang === "uk" ? "Воронки" : "Funnels", counts.data?.funnels],
+    [lang === "uk" ? "Джерела даних" : "Data sources", counts.data?.sources],
+    [lang === "uk" ? "Рекламні акаунти" : "Ad accounts", counts.data?.ads],
+    [lang === "uk" ? "Мапінг на перевірку" : "Mapping to review", counts.data?.mapping],
+    [lang === "uk" ? String((counts.data?.alerts as {label?:string}|undefined)?.label ?? "Відкриті сповіщення") : "Open alerts", counts.data?.alerts],
+  ];
+  const recentActivity = [
+    activity.data?.hasImports ? (lang === "uk" ? "Імпорти оновлюються" : "Imports are updating") : (lang === "uk" ? "Імпортів поки немає" : "No imports yet"),
+    activity.data?.hasImportErrors ? (lang === "uk" ? "Є помилки імпорту" : "Import errors detected") : (lang === "uk" ? "Помилок імпорту немає" : "No import errors"),
+    (counts.data?.alerts.count ?? 0) > 0 ? (lang === "uk" ? "Є відкриті сповіщення" : "Open alerts exist") : (lang === "uk" ? "Критичних сповіщень немає" : "No critical alerts"),
+    activity.data?.aiOk === false ? (lang === "uk" ? "AI тимчасово недоступний" : "AI is temporarily unavailable") : (lang === "uk" ? "AI працює" : "AI is working"),
+  ];
+  const refreshOverview = () => {
+    void readiness.refetch();
+    void counts.refetch();
+    void activity.refetch();
+    void businessDashboard.refetch();
+  };
+  const isOverviewRefreshing = readiness.isFetching || counts.isFetching || activity.isFetching || businessDashboard.isFetching;
+
+  return <DashboardLayout title={lang === "uk" ? "Огляд" : "Overview"} subtitle={lang === "uk" ? "Головний дашборд робочого простору" : "Workspace executive dashboard"}>
     <div className="space-y-4">
-      {!session ? <SectionCard title="Огляд"><p className="text-sm text-muted-foreground">Увійдіть, щоб побачити огляд робочого простору.</p></SectionCard> : null}
-      {readiness.error ? <FriendlyError message="Потрібне оновлення backend для цього розділу." technical={readiness.error.message} /> : null}
-      {session ? <FilterBar showProject={false} showGroup={false} freshness={{ source: lang === "uk" ? "Бізнес-дані" : "Business data", status: businessDashboard.isError || salesUnavailable || adsUnavailable ? "failed" : "fresh", lastSync: "live" }} /> : null}
+      {!session ? <SectionCard title={lang === "uk" ? "Огляд" : "Overview"}><p className="text-sm text-muted-foreground">{lang === "uk" ? "Увійдіть, щоб побачити огляд робочого простору." : "Sign in to view the workspace overview."}</p></SectionCard> : null}
+      {readiness.error ? <FriendlyError message={lang === "uk" ? "Потрібне оновлення backend для цього розділу." : "A backend update is required for this section."} technical={readiness.error.message} /> : null}
+      {session ? <FilterBar showProject={false} showGroup={false} onRefresh={refreshOverview} isRefreshing={isOverviewRefreshing} freshness={{ source: lang === "uk" ? "Бізнес-дані" : "Business data", status: businessDashboard.isError || salesUnavailable || adsUnavailable ? "failed" : "fresh", lastSync: "live" }} /> : null}
 
       {session ? <SectionCard title={lang === "uk" ? "Бізнес-дашборд" : "Executive dashboard"} description={lang === "uk" ? "Ключові бізнес-показники за вибраний період" : "Key business metrics for the selected period"}>
         {dashboardLoading ? <p className="rounded-md border p-3 text-sm text-muted-foreground">{lang === "uk" ? "Завантажуємо бізнес-показники…" : "Loading business metrics…"}</p> : null}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <div className="rounded-xl border bg-background/40 p-4"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{lang === "uk" ? "Дохід" : "Revenue"}</p><KpiValue unavailable={Boolean(salesUnavailable)} value={salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : salesRows.length ? fmtCurrency(revenueUsd) : "—"} /><p className="mt-2 text-xs text-muted-foreground">USD</p></div>
-          <div className="rounded-xl border bg-background/40 p-4"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{lang === "uk" ? "Продажі" : "Sales"}</p><KpiValue unavailable={Boolean(salesUnavailable)} value={salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : salesRows.length ? fmtNum(salesCount) : "—"} /><p className="mt-2 text-xs text-muted-foreground">{lang === "uk" ? "записів продажів" : "sales records"}</p></div>
-          <div className="rounded-xl border bg-background/40 p-4"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{lang === "uk" ? "Витрати на рекламу" : "Ad Spend"}</p><KpiValue unavailable={Boolean(adsUnavailable)} value={adsUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : adsRows.length ? fmtCurrency(adSpend) : "—"} /><p className="mt-2 text-xs text-muted-foreground">USD</p></div>
-          <div className="rounded-xl border bg-background/40 p-4"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{lang === "uk" ? "Вартість продажу" : "Cost / sale"}</p><KpiValue unavailable={Boolean(adsUnavailable || salesUnavailable)} value={adsUnavailable || salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : costPerSale === null ? "—" : fmtCurrency(costPerSale, { compact: false })} /><p className="mt-2 text-xs text-muted-foreground">{lang === "uk" ? "витрати / продажі" : "spend / sales"}</p></div>
-          <div className="rounded-xl border bg-background/40 p-4"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{lang === "uk" ? "Потребують уваги" : "Open issues"}</p><KpiValue unavailable={issuesUnavailable} value={issuesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : openIssues === null ? "—" : fmtNum(openIssues)} /><p className="mt-2 text-xs text-muted-foreground">{lang === "uk" ? "мапінг, сповіщення, імпорт" : "mapping, alerts, imports"}</p></div>
+          <KpiCard title={lang === "uk" ? "Дохід" : "Revenue"} unavailable={Boolean(salesUnavailable)} value={salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : salesRows.length ? fmtCurrency(revenueUsd) : "—"} delta={revenueDelta} compareLabel={compareLabel} subtitle="USD" />
+          <KpiCard title={lang === "uk" ? "Продажі" : "Sales"} unavailable={Boolean(salesUnavailable)} value={salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : salesRows.length ? fmtNum(salesCount) : "—"} delta={salesDelta} compareLabel={compareLabel} subtitle={lang === "uk" ? "записів продажів" : "sales records"} />
+          <KpiCard title={lang === "uk" ? "Витрати на рекламу" : "Ad Spend"} unavailable={Boolean(adsUnavailable)} value={adsUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : adsRows.length ? fmtCurrency(adSpend) : "—"} delta={adSpendDelta} compareLabel={compareLabel} subtitle="USD" />
+          <KpiCard title={lang === "uk" ? "Рекламна вартість продажу" : "Ad cost / sale"} unavailable={Boolean(adsUnavailable || salesUnavailable)} value={adsUnavailable || salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : costPerSale === null ? "—" : fmtCurrency(costPerSale, { compact: false })} delta={costPerSaleDelta} compareLabel={compareLabel} subtitle={lang === "uk" ? "витрати на рекламу / продажі" : "ad spend / sales"} />
+          <KpiCard title={lang === "uk" ? "Потребують уваги" : "Open issues"} unavailable={issuesUnavailable} value={issuesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : openIssues === null ? "—" : fmtNum(openIssues)} subtitle={lang === "uk" ? "мапінг, сповіщення, імпорт" : "mapping, alerts, imports"} />
         </div>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -325,18 +466,18 @@ export default function Overview() {
             </div> : <ChartEmpty text={adsUnavailable ? (lang === "uk" ? "Рекламні витрати тимчасово недоступні." : "Ad spend is temporarily unavailable.") : (lang === "uk" ? "Рекламних витрат за вибраний період поки немає." : "No ad spend was found for the selected period yet.")} />}
           </ChartCard>
 
-          <ChartCard title={lang === "uk" ? "Вартість продажу" : "Cost / sale"} description={lang === "uk" ? "Витрати на рекламу / продажі за день" : "Daily ad spend divided by sales"} badge={!hasCostPerSaleSeries && !businessDashboard.isLoading ? "—" : null}>
+          <ChartCard title={lang === "uk" ? "Рекламна вартість продажу" : "Ad cost / sale"} description={lang === "uk" ? "Витрати на рекламу / продажі за день" : "Daily ad spend divided by sales"} badge={!hasCostPerSaleSeries && !businessDashboard.isLoading ? "—" : null}>
             {businessDashboard.isLoading ? <ChartEmpty text={lang === "uk" ? "Завантажуємо ефективність…" : "Loading efficiency…"} /> : hasCostPerSaleSeries ? <div className="h-[220px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartRows} margin={{ left: 8, right: 8, top: 8, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
                   <XAxis dataKey="date" tickFormatter={formatDateLabel} tickLine={false} axisLine={false} className="text-xs" />
                   <YAxis tickFormatter={(value) => formatCurrencyValue(value, true)} tickLine={false} axisLine={false} width={64} className="text-xs" />
-                  <Tooltip formatter={(value) => [formatCurrencyValue(value), lang === "uk" ? "Вартість продажу" : "Cost / sale"]} labelFormatter={(value) => formatDateLabel(String(value))} />
-                  <Line connectNulls={false} type="monotone" dataKey="costPerSale" name={lang === "uk" ? "Вартість продажу" : "Cost / sale"} stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                  <Tooltip formatter={(value) => [formatCurrencyValue(value), lang === "uk" ? "Рекламна вартість продажу" : "Ad cost / sale"]} labelFormatter={(value) => formatDateLabel(String(value))} />
+                  <Line connectNulls={false} type="monotone" dataKey="costPerSale" name={lang === "uk" ? "Рекламна вартість продажу" : "Ad cost / sale"} stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
-            </div> : <ChartEmpty text={salesUnavailable || adsUnavailable ? (lang === "uk" ? "Ефективність недоступна через помилку джерела." : "Efficiency is unavailable because a source errored.") : (lang === "uk" ? "Недостатньо даних для розрахунку вартості продажу." : "Not enough data to calculate cost per sale.")} />}
+            </div> : <ChartEmpty text={salesUnavailable || adsUnavailable ? (lang === "uk" ? "Ефективність недоступна через помилку джерела." : "Efficiency is unavailable because a source errored.") : (lang === "uk" ? "Недостатньо даних для розрахунку рекламної вартості продажу." : "Not enough data to calculate ad cost per sale.")} />}
           </ChartCard>
 
           <ChartCard title={lang === "uk" ? "Потребують уваги" : "Needs attention"} description={lang === "uk" ? "Мапінг, сповіщення та імпорти" : "Mapping, alerts, and imports"} badge={openIssues && openIssues > 0 ? (lang === "uk" ? "Перевірити" : "Review") : null}>
@@ -356,15 +497,37 @@ export default function Overview() {
         </div>
       </SectionCard> : null}
 
-      {session && !readiness.error && <SectionCard title="Стан робочого простору"><div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">{cards.map(([title, desc]) => <div key={String(title)} className="rounded-md border p-3"><p className="text-xs text-muted-foreground">{title}</p><p className="font-medium">{desc}</p></div>)}</div></SectionCard>}
+      {session && !readiness.error ? <SectionCard title={lang === "uk" ? "Операційний стан" : "Operational status"} description={lang === "uk" ? "Компактний стан робочого простору, налаштувань і останніх сигналів" : "Compact workspace readiness, setup, and recent signals"}>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold">{lang === "uk" ? "Стан робочого простору" : "Workspace readiness"}</h3>
+              <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {cards.map(([title, desc]) => <div key={String(title)} className="rounded-md border bg-background/50 p-2.5"><p className="text-[11px] text-muted-foreground">{title}</p><p className="text-sm font-medium">{desc}</p></div>)}
+              </div>
+            </div>
 
-      <SectionCard title="Налаштування робочого простору"><div className="grid grid-cols-2 gap-2 md:grid-cols-4">{[
-        ["Клієнти", counts.data?.clients], ["Проєкти", counts.data?.projects], ["Воронки", counts.data?.funnels], ["Джерела даних", counts.data?.sources], ["Рекламні акаунти", counts.data?.ads], ["Мапінг на перевірку", counts.data?.mapping], [String((counts.data?.alerts as {label?:string}|undefined)?.label ?? "Відкриті сповіщення"), counts.data?.alerts],
-      ].map(([label, item]) => <div key={String(label)} className="rounded-md border p-3"><p className="text-xs text-muted-foreground">{label}</p><p className="text-lg font-semibold">{(item as {error:string|null,count:number}|undefined)?.error ? "Дані поки недоступні" : (item as {count:number}|undefined)?.count ?? "—"}</p></div>)}</div></SectionCard>
+            <div>
+              <h3 className="text-sm font-semibold">{lang === "uk" ? "Налаштування робочого простору" : "Workspace setup"}</h3>
+              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                {setupCounts.map(([label, item]) => <div key={String(label)} className="rounded-md border bg-background/50 p-2.5"><p className="text-[11px] text-muted-foreground">{label}</p><p className="num text-base font-semibold">{(item as {error:string|null,count:number}|undefined)?.error ? (lang === "uk" ? "Дані поки недоступні" : "Data unavailable") : (item as {count:number}|undefined)?.count ?? "—"}</p></div>)}
+              </div>
+            </div>
+          </div>
 
-      <SectionCard title="Наступні кроки"><div className="space-y-3">{steps.map((s, i) => <div key={i} className="rounded-md border p-3"><p className="text-sm">{s.text}</p><Button asChild variant="outline" size="sm" className="mt-2"><Link to={s.href}>{s.label}</Link></Button></div>)}</div></SectionCard>
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-sm font-semibold">{lang === "uk" ? "Наступні кроки" : "Next actions"}</h3>
+              <div className="mt-2 space-y-2">{steps.map((s, i) => <div key={i} className="rounded-md border bg-background/50 p-2.5"><p className="text-sm">{s.text}</p><Button asChild variant="outline" size="sm" className="mt-2 h-8"><Link to={s.href}>{s.label}</Link></Button></div>)}</div>
+            </div>
 
-      <SectionCard title="Остання активність"><ul className="space-y-2 text-sm"><li>{activity.data?.hasImports ? "Імпорти оновлюються" : "Імпортів поки немає"}</li><li>{activity.data?.hasImportErrors ? "Є помилки імпорту" : "Помилок імпорту немає"}</li><li>{(counts.data?.alerts.count ?? 0) > 0 ? "Є відкриті сповіщення" : "Критичних сповіщень немає"}</li><li>{activity.data?.aiOk === false ? "AI тимчасово недоступний" : "AI працює"}</li></ul></SectionCard>
+            <div>
+              <h3 className="text-sm font-semibold">{lang === "uk" ? "Остання активність" : "Recent activity"}</h3>
+              <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">{recentActivity.map((line) => <li key={line} className="rounded-md border bg-background/50 px-2.5 py-2">{line}</li>)}</ul>
+            </div>
+          </div>
+        </div>
+      </SectionCard> : null}
 
       <DeveloperDetails><pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap">{JSON.stringify({ readiness: readiness.data, counts: counts.data, activity: activity.data, businessDashboard: businessDashboard.data, errors: activity.data?.errors }, null, 2)}</pre></DeveloperDetails>
     </div>
