@@ -44,6 +44,13 @@ type PlacementAgg = {
   landing_conversion: number | null;
 };
 
+type SourceDiagnosticsData = {
+  factCount: number;
+  performanceCount: number;
+  missing: string[];
+  unavailableReason: string | null;
+};
+
 export default function Campaigns() {
   const { session } = useAuth();
   const date = useDateFilter();
@@ -98,6 +105,11 @@ export default function Campaigns() {
     enabled: Boolean(session),
     queryFn: async () => readPlacementsDaily(from, to),
   });
+  const sourceDiagnosticsQuery = useQuery({
+    queryKey: ["campaigns-page-source-diagnostics", WORKSPACE_ID],
+    enabled: Boolean(session),
+    queryFn: async () => readSourceDiagnostics(),
+  });
   const comparisonQuery = useQuery({
     queryKey: ["campaigns-page-comparison", WORKSPACE_ID, compareMode, comparisonRange?.from, comparisonRange?.to],
     enabled: Boolean(session) && compareMode !== "none" && Boolean(comparisonRange),
@@ -131,6 +143,7 @@ export default function Campaigns() {
   const handleRefresh = () => {
     void query.refetch();
     void placementsQuery.refetch();
+    void sourceDiagnosticsQuery.refetch();
     if (compareMode !== "none" && comparisonRange) {
       void comparisonQuery.refetch();
       void comparisonPlacementsQuery.refetch();
@@ -140,6 +153,7 @@ export default function Campaigns() {
   const isRefreshing =
     query.isFetching ||
     placementsQuery.isFetching ||
+    sourceDiagnosticsQuery.isFetching ||
     (compareMode !== "none" && Boolean(comparisonRange) && (comparisonQuery.isFetching || comparisonPlacementsQuery.isFetching));
 
   const dailyRows = useMemo(() => (query.data?.daily.rows ?? []) as Row[], [query.data?.daily.rows]);
@@ -318,8 +332,8 @@ export default function Campaigns() {
           {!showAll && sortedPlacementRows.length > 25 ? <Button variant="outline" size="sm" onClick={() => setShowAll(true)}>{t("campaignsShowAll")}</Button> : null}
         </div>
         </SectionCard>
-        <NonAdSourcesDiagnostics t={t} />
       </> : null}
+      {session ? <SourceDiagnostics data={sourceDiagnosticsQuery.data} isLoading={sourceDiagnosticsQuery.isLoading} t={t} /> : null}
     </>}
     {filteredBindingsRows.length > 0 ? <details className="rounded border">
       <summary className="cursor-pointer px-4 py-3 text-sm font-medium">{t("campaignsExtraBindings")}</summary>
@@ -333,37 +347,52 @@ export default function Campaigns() {
     : null}
   </div></DashboardLayout>;
 }
-const NON_AD_SOURCE_LABELS = ["Лимон", "ОрганикаНеизвестно", "Промо"] as const;
-
 type Translate = ReturnType<typeof useI18n>["t"];
 
-function NonAdSourcesDiagnostics({ t }: { t: Translate }) {
+function SourceDiagnostics({ data, isLoading, t }: { data?: SourceDiagnosticsData; isLoading: boolean; t: Translate }) {
+  const rows = [
+    kpi(t("sourceDiagnosticsRawFactPlacements"), data?.factCount ?? null, null, "count", "absolute", false, "neutral"),
+    kpi(t("sourceDiagnosticsPerformancePlacements"), data?.performanceCount ?? null, null, "count", "absolute", false, "neutral"),
+    kpi(t("sourceDiagnosticsMissingFromPerformance"), data?.missing.length ?? null, null, "count", "absolute", false, "neutral"),
+  ];
+
   return (
-    <SectionCard title={t("nonAdSourcesTitle")} description={t("nonAdSourcesDescription")} noPadding>
+    <SectionCard title={t("sourceDiagnosticsTitle")} description={t("sourceDiagnosticsDescription")} noPadding>
       <div className="space-y-3 p-4">
         <div className="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium text-muted-foreground">
-          {t("nonAdSourcesDiagnosticsLabel")}
+          {t("sourceDiagnosticsScope")}
         </div>
-        <div className="overflow-x-auto rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">{t("tableSource")}</TableHead>
-                <TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">{t("tableStatus")}</TableHead>
-                <TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">{t("tableNote")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {NON_AD_SOURCE_LABELS.map((source) => (
-                <TableRow key={source}>
-                  <TableCell className="whitespace-nowrap py-2 text-sm font-medium">{source}</TableCell>
-                  <TableCell className="whitespace-nowrap py-2 text-sm">{t("nonAdSourceStatus")}</TableCell>
-                  <TableCell className="py-2 text-sm text-muted-foreground">{t("nonAdSourceNote")}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        {isLoading ? <Msg t={t("sourceDiagnosticsLoading")} /> : null}
+        {!isLoading && data?.unavailableReason ? <Msg t={`${t("sourceDiagnosticsUnavailable")} ${data.unavailableReason}`} /> : null}
+        {!isLoading && data && !data.unavailableReason ? (
+          <>
+            <KpiCards rows={rows} />
+            {data.missing.length > 0 ? (
+              <div className="overflow-x-auto rounded-md border">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">{t("tableSource")}</TableHead>
+                      <TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">{t("tableStatus")}</TableHead>
+                      <TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">{t("tableNote")}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {data.missing.map((source) => (
+                      <TableRow key={source}>
+                        <TableCell className="whitespace-nowrap py-2 text-sm font-medium">{source}</TableCell>
+                        <TableCell className="whitespace-nowrap py-2 text-sm">{t("sourceDiagnosticsStatus")}</TableCell>
+                        <TableCell className="py-2 text-sm text-muted-foreground">{t("sourceDiagnosticsNote")}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <Msg t={t("sourceDiagnosticsEmpty")} />
+            )}
+          </>
+        ) : null}
       </div>
     </SectionCard>
   );
@@ -596,6 +625,73 @@ async function readPlacementsDaily(from: string, to: string) {
     .limit(10000);
 
   return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null };
+}
+
+async function readSourceDiagnostics(): Promise<SourceDiagnosticsData> {
+  const [fact, performance] = await Promise.all([
+    readPlacementNames("fact_placements"),
+    readPlacementNames("placement_performance_raw"),
+  ]);
+  const unavailableReason = [fact.unavailableReason, performance.unavailableReason].filter(Boolean).join(" ") || null;
+
+  if (unavailableReason) {
+    return { factCount: 0, performanceCount: 0, missing: [], unavailableReason };
+  }
+
+  const factNames = buildPlacementNameMap(fact.rows);
+  const performanceNames = buildPlacementNameMap(performance.rows);
+  const missing = Array.from(factNames.entries())
+    .filter(([normalized]) => !performanceNames.has(normalized))
+    .map(([, display]) => display)
+    .sort((a, b) => a.localeCompare(b, "uk"));
+
+  return {
+    factCount: factNames.size,
+    performanceCount: performanceNames.size,
+    missing,
+    unavailableReason: null,
+  };
+}
+
+async function readPlacementNames(tableName: "fact_placements" | "placement_performance_raw") {
+  const pageSize = 1000;
+  const maxRows = 50000;
+  const rows: Row[] = [];
+
+  for (let from = 0; from < maxRows; from += pageSize) {
+    const to = from + pageSize - 1;
+    const res = await supabase
+      .from(tableName)
+      .select("placement_name")
+      .eq("workspace_id", WORKSPACE_ID)
+      .not("placement_name", "is", null)
+      .order("placement_name", { ascending: true })
+      .range(from, to);
+
+    if (res.error) return { rows: [] as Row[], unavailableReason: res.error.message };
+
+    const page = (res.data ?? []) as Row[];
+    rows.push(...page);
+    if (page.length < pageSize) break;
+  }
+
+  return { rows, unavailableReason: null };
+}
+
+function buildPlacementNameMap(rows: Row[]) {
+  const map = new Map<string, string>();
+  rows.forEach((row) => {
+    const placementName = normalizePlacementName(row.placement_name);
+    if (!placementName || map.has(placementName)) return;
+    map.set(placementName, placementName);
+  });
+  return map;
+}
+
+function normalizePlacementName(value: Row[string]) {
+  if (value == null) return null;
+  const text = String(value).trim();
+  return text || null;
 }
 
 async function readMetricDateBound(viewName: "v_unified_ads_performance_daily" | "v_unified_placements_performance_daily", ascending: boolean) {
