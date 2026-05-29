@@ -65,8 +65,8 @@ export function DateFilterProvider({ children }: { children: ReactNode }) {
   }, [mode, preset, exactDate, rangeFrom, rangeTo, today, dataBounds]);
 
   const activeLabel = useMemo(() => {
-    if (mode === "exact") return formatLocalizedDate(exactDate, "en");
-    if (mode === "range") return formatRange(rangeFrom, rangeTo, "en");
+    if (mode === "exact") return formatLocalizedDate(exactDate, "uk");
+    if (mode === "range") return formatRange(rangeFrom, rangeTo, "uk");
     return preset;
   }, [mode, exactDate, rangeFrom, rangeTo, preset]);
 

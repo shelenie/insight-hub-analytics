@@ -77,7 +77,8 @@ const formatNumberValue = (value: unknown) => {
 };
 
 type ComparisonMetric = "currency" | "number";
-type KpiDelta = { text: string; direction: "up" | "down" | "flat" } | { text: string; direction: "muted" };
+type DeltaPolarity = "higherIsBetter" | "lowerIsBetter" | "neutral";
+type KpiDelta = { text: string; direction: "up" | "down" | "flat"; tone: "positive" | "negative" | "neutral" } | { text: string; direction: "muted"; tone: "muted" };
 
 const metricTotals = (salesRows: Row[], adsRows: Row[]) => {
   const revenueUsd = sumField(salesRows, "total_payment_usd");
@@ -96,24 +97,31 @@ const buildKpiDelta = ({
   metric,
   compareDisplay,
   unavailableText,
+  polarity = "higherIsBetter",
 }: {
   current: number | null;
   previous: number | null;
   metric: ComparisonMetric;
   compareDisplay: "percent" | "absolute";
   unavailableText: string;
+  polarity?: DeltaPolarity;
 }): KpiDelta => {
-  if (current === null || previous === null || !Number.isFinite(current) || !Number.isFinite(previous)) return { text: "—", direction: "muted" };
-  if (compareDisplay === "percent" && previous === 0) return { text: "—", direction: "muted" };
+  if (current === null || previous === null || !Number.isFinite(current) || !Number.isFinite(previous)) return { text: "—", direction: "muted", tone: "muted" };
+  if (previous <= 0) return { text: "—", direction: "muted", tone: "muted" };
   const diff = current - previous;
   const direction = diff > 0 ? "up" : diff < 0 ? "down" : "flat";
+  const tone = polarity === "neutral" || direction === "flat"
+    ? "neutral"
+    : polarity === "lowerIsBetter"
+      ? diff < 0 ? "positive" : "negative"
+      : diff > 0 ? "positive" : "negative";
   if (compareDisplay === "percent") {
     const pct = (diff / Math.abs(previous)) * 100;
-    if (!Number.isFinite(pct)) return { text: unavailableText, direction: "muted" };
-    return { text: `${diff > 0 ? "+" : ""}${pct.toFixed(1)}%`, direction };
+    if (!Number.isFinite(pct)) return { text: unavailableText, direction: "muted", tone: "muted" };
+    return { text: `${diff > 0 ? "+" : ""}${pct.toFixed(1)}%`, direction, tone };
   }
-  if (!Number.isFinite(diff)) return { text: unavailableText, direction: "muted" };
-  return { text: `${diff > 0 ? "+" : diff < 0 ? "−" : ""}${formatDeltaValue(diff, metric)}`, direction };
+  if (!Number.isFinite(diff)) return { text: unavailableText, direction: "muted", tone: "muted" };
+  return { text: `${diff > 0 ? "+" : diff < 0 ? "−" : ""}${formatDeltaValue(diff, metric)}`, direction, tone };
 };
 
 const readBusinessDashboard = async (fromIso: string, toIso: string): Promise<BusinessDashboardData> => {
@@ -188,9 +196,9 @@ function KpiCard({
   compareLabel?: string;
 }) {
   const deltaClass =
-    delta?.direction === "up"
+    delta?.tone === "positive"
       ? "text-emerald-600"
-      : delta?.direction === "down"
+      : delta?.tone === "negative"
         ? "text-destructive"
         : "text-muted-foreground";
   return <div className="rounded-xl border bg-background/40 p-4">
@@ -220,15 +228,15 @@ const CLOSED_STATUSES = ["resolved","closed","archived"];
 const countOpenAlerts = async () => {
   const res = await supabase.from("v_operational_alerts_recent").select("*").eq("workspace_id", WORKSPACE_ID);
   const rows = filterRows((res.data ?? []) as Row[]);
-  if (rows.length === 0) return { count: 0, error: res.error?.message ?? null, label: "Відкриті сповіщення" };
+  if (rows.length === 0) return { count: 0, error: res.error?.message ?? null, labelKey: "openAlerts" };
   const hasStatus = rows.some((r) => r.status !== undefined);
   if (hasStatus) {
     const count = rows.filter((r) => { const st=String(r.status ?? "").toLowerCase(); return OPEN_STATUSES.includes(st) && !CLOSED_STATUSES.includes(st); }).length;
-    return { count, error: res.error?.message ?? null, label: "Відкриті сповіщення" };
+    return { count, error: res.error?.message ?? null, labelKey: "openAlerts" };
   }
   const hasResolved = rows.some((r) => r.resolved_at !== undefined);
-  if (hasResolved) return { count: rows.filter((r)=>!r.resolved_at).length, error: res.error?.message ?? null, label: "Відкриті сповіщення" };
-  return { count: rows.length, error: res.error?.message ?? null, label: "Останні сповіщення" };
+  if (hasResolved) return { count: rows.filter((r)=>!r.resolved_at).length, error: res.error?.message ?? null, labelKey: "openAlerts" };
+  return { count: rows.length, error: res.error?.message ?? null, labelKey: "recentAlerts" };
 };
 
 export default function Overview() {
@@ -249,6 +257,7 @@ export default function Overview() {
     if (days <= 0) return null;
     return { from: addDays(date.resolved.from, -days), to: addDays(date.resolved.from, -1) };
   }, [compareMode, date.mode, date.resolved.from, date.resolved.to]);
+  const hasActiveComparison = compareMode !== "none" && Boolean(comparisonRange);
   const compareFromIso = comparisonRange ? format(comparisonRange.from, "yyyy-MM-dd") : null;
   const compareToIso = comparisonRange ? format(comparisonRange.to, "yyyy-MM-dd") : null;
   const readiness = useQuery({ queryKey: ["backend-readiness", WORKSPACE_ID], enabled: Boolean(session), queryFn: async () => {
@@ -284,7 +293,7 @@ export default function Overview() {
 
   const comparisonDashboard = useQuery({
     queryKey: ["overview-business-dashboard-compare", WORKSPACE_ID, compareMode, compareFromIso, compareToIso],
-    enabled: Boolean(session && compareMode !== "none" && compareFromIso && compareToIso),
+    enabled: Boolean(session && hasActiveComparison && compareFromIso && compareToIso),
     queryFn: () => readBusinessDashboard(compareFromIso!, compareToIso!),
   });
 
@@ -304,26 +313,26 @@ export default function Overview() {
     ? lang === "uk" ? "до попереднього періоду" : "vs previous period"
     : lang === "uk" ? "до вчора" : "vs yesterday";
   const comparisonUnavailableText = lang === "uk" ? "порівняння недоступне" : "comparison unavailable";
-  const shouldShowComparison = compareMode !== "none";
+  const shouldShowComparison = hasActiveComparison;
   const revenueDelta = shouldShowComparison
     ? comparisonSalesUnavailable || comparisonDashboard.isError
-      ? { text: comparisonUnavailableText, direction: "muted" as const }
-      : buildKpiDelta({ current: salesUnavailable || !salesRows.length ? null : revenueUsd, previous: comparisonTotals && comparisonData.salesRows.length ? comparisonTotals.revenueUsd : null, metric: "currency", compareDisplay, unavailableText: comparisonUnavailableText })
+      ? { text: comparisonUnavailableText, direction: "muted" as const, tone: "muted" as const }
+      : buildKpiDelta({ current: salesUnavailable || !salesRows.length ? null : revenueUsd, previous: comparisonTotals && comparisonData.salesRows.length ? comparisonTotals.revenueUsd : null, metric: "currency", compareDisplay, unavailableText: comparisonUnavailableText, polarity: "higherIsBetter" })
     : null;
   const salesDelta = shouldShowComparison
     ? comparisonSalesUnavailable || comparisonDashboard.isError
-      ? { text: comparisonUnavailableText, direction: "muted" as const }
-      : buildKpiDelta({ current: salesUnavailable || !salesRows.length ? null : salesCount, previous: comparisonTotals && comparisonData.salesRows.length ? comparisonTotals.salesCount : null, metric: "number", compareDisplay, unavailableText: comparisonUnavailableText })
+      ? { text: comparisonUnavailableText, direction: "muted" as const, tone: "muted" as const }
+      : buildKpiDelta({ current: salesUnavailable || !salesRows.length ? null : salesCount, previous: comparisonTotals && comparisonData.salesRows.length ? comparisonTotals.salesCount : null, metric: "number", compareDisplay, unavailableText: comparisonUnavailableText, polarity: "higherIsBetter" })
     : null;
   const adSpendDelta = shouldShowComparison
     ? comparisonAdsUnavailable || comparisonDashboard.isError
-      ? { text: comparisonUnavailableText, direction: "muted" as const }
-      : buildKpiDelta({ current: adsUnavailable || !adsRows.length ? null : adSpend, previous: comparisonTotals && comparisonData.adsRows.length ? comparisonTotals.adSpend : null, metric: "currency", compareDisplay, unavailableText: comparisonUnavailableText })
+      ? { text: comparisonUnavailableText, direction: "muted" as const, tone: "muted" as const }
+      : buildKpiDelta({ current: adsUnavailable || !adsRows.length ? null : adSpend, previous: comparisonTotals && comparisonData.adsRows.length ? comparisonTotals.adSpend : null, metric: "currency", compareDisplay, unavailableText: comparisonUnavailableText, polarity: "neutral" })
     : null;
   const costPerSaleDelta = shouldShowComparison
     ? comparisonSalesUnavailable || comparisonAdsUnavailable || comparisonDashboard.isError
-      ? { text: comparisonUnavailableText, direction: "muted" as const }
-      : buildKpiDelta({ current: adsUnavailable || salesUnavailable ? null : costPerSale, previous: comparisonTotals?.costPerSale ?? null, metric: "currency", compareDisplay, unavailableText: comparisonUnavailableText })
+      ? { text: comparisonUnavailableText, direction: "muted" as const, tone: "muted" as const }
+      : buildKpiDelta({ current: adsUnavailable || salesUnavailable ? null : costPerSale, previous: comparisonTotals?.costPerSale ?? null, metric: "currency", compareDisplay, unavailableText: comparisonUnavailableText, polarity: "lowerIsBetter" })
     : null;
   const issuesUnavailable = Boolean(counts.data?.mapping.error || counts.data?.alerts.error || activity.data?.errors.importErrors);
   const openIssues = issuesUnavailable || !counts.data || !activity.data ? null : counts.data.mapping.count + counts.data.alerts.count + (activity.data.hasImportErrors ? 1 : 0);
@@ -387,7 +396,7 @@ export default function Overview() {
     [lang === "uk" ? "Джерела даних" : "Data sources", counts.data?.sources],
     [lang === "uk" ? "Рекламні акаунти" : "Ad accounts", counts.data?.ads],
     [lang === "uk" ? "Мапінг на перевірку" : "Mapping to review", counts.data?.mapping],
-    [lang === "uk" ? String((counts.data?.alerts as {label?:string}|undefined)?.label ?? "Відкриті сповіщення") : "Open alerts", counts.data?.alerts],
+    [counts.data?.alerts.labelKey === "recentAlerts" ? (lang === "uk" ? "Останні сповіщення" : "Recent alerts") : (lang === "uk" ? "Відкриті сповіщення" : "Open alerts"), counts.data?.alerts],
   ];
   const recentActivity = [
     activity.data?.hasImports ? (lang === "uk" ? "Імпорти оновлюються" : "Imports are updating") : (lang === "uk" ? "Імпортів поки немає" : "No imports yet"),
@@ -400,8 +409,9 @@ export default function Overview() {
     void counts.refetch();
     void activity.refetch();
     void businessDashboard.refetch();
+    if (hasActiveComparison) void comparisonDashboard.refetch();
   };
-  const isOverviewRefreshing = readiness.isFetching || counts.isFetching || activity.isFetching || businessDashboard.isFetching;
+  const isOverviewRefreshing = readiness.isFetching || counts.isFetching || activity.isFetching || businessDashboard.isFetching || (hasActiveComparison && comparisonDashboard.isFetching);
 
   return <DashboardLayout title={lang === "uk" ? "Огляд" : "Overview"} subtitle={lang === "uk" ? "Головний дашборд робочого простору" : "Workspace executive dashboard"}>
     <div className="space-y-4">
