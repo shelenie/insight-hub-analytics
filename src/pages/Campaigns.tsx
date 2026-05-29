@@ -318,6 +318,7 @@ export default function Campaigns() {
           {!showAll && sortedPlacementRows.length > 25 ? <Button variant="outline" size="sm" onClick={() => setShowAll(true)}>{t("campaignsShowAll")}</Button> : null}
         </div>
         </SectionCard>
+        <NonAdSourcesDiagnostics t={t} />
       </> : null}
     </>}
     {filteredBindingsRows.length > 0 ? <details className="rounded border">
@@ -332,6 +333,42 @@ export default function Campaigns() {
     : null}
   </div></DashboardLayout>;
 }
+const NON_AD_SOURCE_LABELS = ["Лимон", "ОрганикаНеизвестно", "Промо"] as const;
+
+type Translate = ReturnType<typeof useI18n>["t"];
+
+function NonAdSourcesDiagnostics({ t }: { t: Translate }) {
+  return (
+    <SectionCard title={t("nonAdSourcesTitle")} description={t("nonAdSourcesDescription")} noPadding>
+      <div className="space-y-3 p-4">
+        <div className="inline-flex rounded-full border px-2.5 py-1 text-xs font-medium text-muted-foreground">
+          {t("nonAdSourcesDiagnosticsLabel")}
+        </div>
+        <div className="overflow-x-auto rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">{t("tableSource")}</TableHead>
+                <TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">{t("tableStatus")}</TableHead>
+                <TableHead className="whitespace-nowrap py-2 text-[10px] leading-tight tracking-normal">{t("tableNote")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {NON_AD_SOURCE_LABELS.map((source) => (
+                <TableRow key={source}>
+                  <TableCell className="whitespace-nowrap py-2 text-sm font-medium">{source}</TableCell>
+                  <TableCell className="whitespace-nowrap py-2 text-sm">{t("nonAdSourceStatus")}</TableCell>
+                  <TableCell className="py-2 text-sm text-muted-foreground">{t("nonAdSourceNote")}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+    </SectionCard>
+  );
+}
+
 function aggregatePlacements(rows: Row[]): PlacementAgg[] {
   const map = new Map<string, PlacementAgg>();
   (rows ?? []).forEach((row) => {
