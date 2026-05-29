@@ -17,6 +17,7 @@ const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
 type Row = Record<string, string | number | boolean | null>;
 type Delta = { text: string; tone: "positive" | "negative" | "neutral" };
+type ContactLevelFunnelRow = { key: string; label: string; fromCount: number; reachedCount: number; droppedCount: number; conversionRate: number | null };
 
 const STAGE_ORDER = ["registration", "questionnaire", "application", "booking", "sale", "payment"];
 const SELECTED_ROW_CLASS = "cursor-pointer bg-primary/10 hover:bg-primary/15 [&>td:first-child]:border-l-4 [&>td:first-child]:border-primary";
@@ -97,6 +98,7 @@ export default function Conversions() {
 
   const aggregates = useMemo(() => computeAggregates(dataQuery.data?.stageEvents ?? [], dataQuery.data?.paymentRecords ?? [], dataQuery.data?.paymentLines ?? []), [dataQuery.data]);
   const comparisonAggregates = useMemo(() => computeAggregates(comparisonQuery.data?.stageEvents ?? [], comparisonQuery.data?.paymentRecords ?? [], comparisonQuery.data?.paymentLines ?? []), [comparisonQuery.data]);
+  const contactLevelFunnel = useMemo(() => computeContactLevelFunnel(dataQuery.data?.stageEvents ?? [], dataQuery.data?.paymentRecords ?? [], lang), [dataQuery.data, lang]);
   const filteredOnboardingRows = useMemo(() => filterPlaceholderRows(dataQuery.data?.onboarding as Record<string, unknown>[] | undefined) as Row[], [dataQuery.data?.onboarding]);
   const meaningfulOnboardingRows = useMemo(() => filterMeaningfulContextRows(filteredOnboardingRows), [filteredOnboardingRows]);
   const filteredBindingsRows = useMemo(() => filterPlaceholderRows(dataQuery.data?.bindings as Record<string, unknown>[] | undefined) as Row[], [dataQuery.data?.bindings]);
@@ -138,6 +140,8 @@ export default function Conversions() {
           </div>
           <details className="mt-3 rounded border"><summary className="cursor-pointer px-3 py-2 text-xs font-medium">{t("conversionsStageMeaningTitle")}</summary><div className="space-y-1 px-3 pb-3 text-xs text-muted-foreground"><p>{t("conversionsStageMeaningRegistrations")}</p><p>{t("conversionsStageMeaningQuestionnaires")}</p><p>{t("conversionsStageMeaningApplications")}</p><p>{t("conversionsStageMeaningBookings")}</p><p>{t("conversionsStageMeaningPayments")}</p></div></details>
         </SectionCard>
+
+        <ContactLevelFunnelTable rows={contactLevelFunnel} t={t} />
 
         <SectionCard title={lang === "uk" ? "Платежі та суми" : "Payments and totals"} description={t("conversionsPaymentsSectionDesc")}>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
@@ -182,6 +186,11 @@ export default function Conversions() {
   </DashboardLayout>;
 }
 
+function ContactLevelFunnelTable({ rows, t }: { rows: ContactLevelFunnelRow[]; t: (key: string) => string }) {
+  const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
+  return <SectionCard title={t("conversionsContactFunnelTitle")} description={t("conversionsContactFunnelDesc")} noPadding><p className="px-4 pb-1 pt-2 text-xs text-muted-foreground">{t("conversionsContactFunnelHelper")}</p><Table className="w-full table-fixed"><colgroup><col /><col style={{ width: 120 }} /><col style={{ width: 120 }} /><col style={{ width: 110 }} /><col style={{ width: 110 }} /></colgroup><TableHeader><TableRow><TableHead className={TABLE_HEAD_CLASS}>{t("conversionsContactFunnelThTransition")}</TableHead><TableHead className={TABLE_CENTER_HEAD_CLASS}>{t("conversionsContactFunnelThAtStage")}</TableHead><TableHead className={TABLE_CENTER_HEAD_CLASS}>{t("conversionsContactFunnelThReached")}</TableHead><TableHead className={TABLE_CENTER_HEAD_CLASS}>{t("conversionsContactFunnelThDropped")}</TableHead><TableHead className={TABLE_CENTER_HEAD_CLASS}>{t("conversionsContactFunnelThConversion")}</TableHead></TableRow></TableHeader><TableBody>{rows.map((row) => { const selected = selectedRowKey === row.key; return <TableRow key={row.key} onClick={() => setSelectedRowKey((current) => current === row.key ? null : row.key)} className={selected ? SELECTED_ROW_CLASS : HOVER_ROW_CLASS}><TableCell className={TABLE_CELL_CLASS}>{row.label}</TableCell><TableCell className={TABLE_CENTER_CLASS}>{fmtNum(row.fromCount)}</TableCell><TableCell className={TABLE_CENTER_CLASS}>{fmtNum(row.reachedCount)}</TableCell><TableCell className={TABLE_CENTER_CLASS}>{fmtNum(row.droppedCount)}</TableCell><TableCell className={TABLE_CENTER_CLASS}>{row.conversionRate === null ? "—" : `${fmtNum(row.conversionRate)}%`}</TableCell></TableRow>; })}</TableBody></Table></SectionCard>;
+}
+
 function PaymentTypeTable({ rows, t }: { rows: Array<{ category: string; total_records: number; included_records: number; refund_records: number; needs_review_records: number }>; t: (key: string) => string }) {
   const [selectedRowKey, setSelectedRowKey] = useState<string | null>(null);
   return <SectionCard title={t("conversionsPaymentTypeStructureTitle")} description={t("conversionsPaymentTypeStructureDesc")} noPadding><p className="px-4 pb-1 pt-2 text-xs text-muted-foreground">{t("conversionsPaymentTypeStructureHelper")}</p><Table className="w-full table-fixed"><colgroup><col /><col style={{ width: 86 }} /><col style={{ width: 104 }} /><col style={{ width: 86 }} /><col style={{ width: 110 }} /></colgroup><TableHeader><TableRow><TableHead className={TABLE_HEAD_CLASS}>{t("conversionsPaymentTypeThType")}</TableHead><TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsPaymentTypeThTotal")}</TableHead><TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsPaymentTypeThIncluded")}</TableHead><TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsPaymentTypeThRefund")}</TableHead><TableHead className={TABLE_NUM_HEAD_CLASS}>{t("conversionsPaymentTypeThNeedsReview")}</TableHead></TableRow></TableHeader><TableBody>{rows.map((row, idx) => { const labelKey = getPaymentCategoryLabelKey(row.category); const rowKey = `${row.category}-${idx}`; const selected = selectedRowKey === rowKey; return <TableRow key={rowKey} onClick={() => setSelectedRowKey((current) => current === rowKey ? null : rowKey)} className={selected ? SELECTED_ROW_CLASS : HOVER_ROW_CLASS}><TableCell className={TABLE_CELL_CLASS}>{labelKey ? t(labelKey) : row.category}</TableCell><TableCell className={TABLE_NUM_CLASS}>{fmtNum(row.total_records)}</TableCell><TableCell className={TABLE_NUM_CLASS}>{fmtNum(row.included_records)}</TableCell><TableCell className={TABLE_NUM_CLASS}>{fmtNum(row.refund_records)}</TableCell><TableCell className={TABLE_NUM_CLASS}>{fmtNum(row.needs_review_records)}</TableCell></TableRow>; })}</TableBody></Table></SectionCard>;
@@ -214,7 +223,7 @@ function computeAggregates(stageEvents: Row[], paymentRecordsRows: Row[], paymen
     byStage.set(stage, item);
   }
 
-  const goodPayments = (r: Row) => !["refund", "needs_review"].includes(String(r.sale_status_norm ?? "").toLowerCase());
+  const goodPayments = isGoodPaymentRecord;
   const paymentPhones = new Set<string>();
   const payerSet = new Set<string>();
   let activePaymentRows = 0, refundPaymentRows = 0, needsReviewPaymentRows = 0, fullPaymentRows = 0, installmentRows = 0, depositRows = 0, additionalPaymentRows = 0, debtTotal = 0, tariffTotal = 0;
@@ -294,6 +303,77 @@ function computeAggregates(stageEvents: Row[], paymentRecordsRows: Row[], paymen
     paymentsWithoutBooking: paymentPhones.size - matchedPhones,
     bookingsWithoutPayment: bookingPhones.size - matchedPhones,
   };
+}
+
+function computeContactLevelFunnel(stageEvents: Row[], paymentRecordsRows: Row[], lang: "uk" | "en"): ContactLevelFunnelRow[] {
+  const stages = {
+    registration: new Set<string>(),
+    questionnaire: new Set<string>(),
+    application: new Set<string>(),
+    booking: new Set<string>(),
+    payment: new Set<string>(),
+  };
+
+  for (const row of stageEvents) {
+    const stage = String(row.stage ?? "").toLowerCase();
+    if (stage !== "registration" && stage !== "questionnaire" && stage !== "application" && stage !== "booking") continue;
+    const contactId = getStableContactId(row);
+    if (contactId) stages[stage].add(contactId);
+  }
+
+  for (const row of paymentRecordsRows) {
+    if (!isGoodPaymentRecord(row)) continue;
+    const contactId = getPaymentContactId(row);
+    if (contactId) stages.payment.add(contactId);
+  }
+
+  const labels = {
+    registration_to_questionnaire: { uk: "Реєстрація → Анкета", en: "Registration → Questionnaire" },
+    questionnaire_to_application: { uk: "Анкета → Заявка", en: "Questionnaire → Application" },
+    application_to_booking: { uk: "Заявка → Бронювання", en: "Application → Booking" },
+    booking_to_payment: { uk: "Бронювання → Платіж", en: "Booking → Payment" },
+    registration_to_payment: { uk: "Реєстрація → Платіж", en: "Registration → Payment" },
+  };
+  const transitions = [
+    { key: "registration_to_questionnaire", from: stages.registration, to: stages.questionnaire },
+    { key: "questionnaire_to_application", from: stages.questionnaire, to: stages.application },
+    { key: "application_to_booking", from: stages.application, to: stages.booking },
+    { key: "booking_to_payment", from: stages.booking, to: stages.payment },
+    { key: "registration_to_payment", from: stages.registration, to: stages.payment },
+  ] as const;
+
+  return transitions.map(({ key, from, to }) => {
+    const fromCount = from.size;
+    const reachedCount = [...from].filter((contactId) => to.has(contactId)).length;
+    return {
+      key,
+      label: labels[key][lang],
+      fromCount,
+      reachedCount,
+      droppedCount: fromCount - reachedCount,
+      conversionRate: fromCount === 0 ? null : (reachedCount / fromCount) * 100,
+    };
+  });
+}
+
+function getStableContactId(row: Row) {
+  return firstNonEmpty(row.contact_key, row.customer_key, row.phone_key);
+}
+
+function getPaymentContactId(row: Row) {
+  return firstNonEmpty(row.customer_key, row.phone_key);
+}
+
+function firstNonEmpty(...values: Array<Row[string]>) {
+  for (const value of values) {
+    const normalized = String(value ?? "").trim();
+    if (normalized) return normalized;
+  }
+  return null;
+}
+
+function isGoodPaymentRecord(row: Row) {
+  return !["refund", "needs_review"].includes(String(row.sale_status_norm ?? "").toLowerCase());
 }
 
 async function readView(viewName: string, scopedByWorkspace: boolean, from?: string, to?: string): Promise<Row[]> {
