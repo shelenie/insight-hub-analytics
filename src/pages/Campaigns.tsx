@@ -47,8 +47,16 @@ type PlacementAgg = {
 type SourceDiagnosticsData = {
   factCount: number;
   performanceCount: number;
+  missingCount: number;
   missing: string[];
   unavailableReason: string | null;
+};
+
+type SourceDiagnosticsRpcRow = {
+  fact_count: number | null;
+  performance_count: number | null;
+  missing_count: number | null;
+  missing_sources: string[] | null;
 };
 
 export default function Campaigns() {
@@ -353,7 +361,7 @@ function SourceDiagnostics({ data, isLoading, t }: { data?: SourceDiagnosticsDat
   const rows = [
     kpi(t("sourceDiagnosticsRawFactPlacements"), data?.factCount ?? null, null, "count", "absolute", false, "neutral"),
     kpi(t("sourceDiagnosticsPerformancePlacements"), data?.performanceCount ?? null, null, "count", "absolute", false, "neutral"),
-    kpi(t("sourceDiagnosticsMissingFromPerformance"), data?.missing.length ?? null, null, "count", "absolute", false, "neutral"),
+    kpi(t("sourceDiagnosticsMissingFromPerformance"), data?.missingCount ?? null, null, "count", "absolute", false, "neutral"),
   ];
 
   return (
@@ -628,70 +636,29 @@ async function readPlacementsDaily(from: string, to: string) {
 }
 
 async function readSourceDiagnostics(): Promise<SourceDiagnosticsData> {
-  const [fact, performance] = await Promise.all([
-    readPlacementNames("fact_placements"),
-    readPlacementNames("placement_performance_raw"),
-  ]);
-  const unavailableReason = [fact.unavailableReason, performance.unavailableReason].filter(Boolean).join(" ") || null;
+  const { data, error } = await supabase.rpc("get_campaign_source_diagnostics" as never, { p_workspace_id: WORKSPACE_ID } as never);
 
-  if (unavailableReason) {
-    return { factCount: 0, performanceCount: 0, missing: [], unavailableReason };
+  if (error) {
+    return { factCount: 0, performanceCount: 0, missingCount: 0, missing: [], unavailableReason: error.message };
   }
 
-  const factNames = buildPlacementNameMap(fact.rows);
-  const performanceNames = buildPlacementNameMap(performance.rows);
-  const missing = Array.from(factNames.entries())
-    .filter(([normalized]) => !performanceNames.has(normalized))
-    .map(([, display]) => display)
+  const row = Array.isArray(data) ? (data[0] as SourceDiagnosticsRpcRow | undefined) : (data as SourceDiagnosticsRpcRow | null);
+  if (!row) {
+    return { factCount: 0, performanceCount: 0, missingCount: 0, missing: [], unavailableReason: "Workspace access is unavailable." };
+  }
+
+  const missing = (row.missing_sources ?? [])
+    .map((source) => source.trim())
+    .filter(Boolean)
     .sort((a, b) => a.localeCompare(b, "uk"));
 
   return {
-    factCount: factNames.size,
-    performanceCount: performanceNames.size,
+    factCount: Number(row.fact_count ?? 0),
+    performanceCount: Number(row.performance_count ?? 0),
+    missingCount: Number(row.missing_count ?? missing.length),
     missing,
     unavailableReason: null,
   };
-}
-
-async function readPlacementNames(tableName: "fact_placements" | "placement_performance_raw") {
-  const pageSize = 1000;
-  const maxRows = 50000;
-  const rows: Row[] = [];
-
-  for (let from = 0; from < maxRows; from += pageSize) {
-    const to = from + pageSize - 1;
-    const res = await supabase
-      .from(tableName)
-      .select("placement_name")
-      .eq("workspace_id", WORKSPACE_ID)
-      .not("placement_name", "is", null)
-      .order("placement_name", { ascending: true })
-      .range(from, to);
-
-    if (res.error) return { rows: [] as Row[], unavailableReason: res.error.message };
-
-    const page = (res.data ?? []) as Row[];
-    rows.push(...page);
-    if (page.length < pageSize) break;
-  }
-
-  return { rows, unavailableReason: null };
-}
-
-function buildPlacementNameMap(rows: Row[]) {
-  const map = new Map<string, string>();
-  rows.forEach((row) => {
-    const placementName = normalizePlacementName(row.placement_name);
-    if (!placementName || map.has(placementName)) return;
-    map.set(placementName, placementName);
-  });
-  return map;
-}
-
-function normalizePlacementName(value: Row[string]) {
-  if (value == null) return null;
-  const text = String(value).trim();
-  return text || null;
 }
 
 async function readMetricDateBound(viewName: "v_unified_ads_performance_daily" | "v_unified_placements_performance_daily", ascending: boolean) {
