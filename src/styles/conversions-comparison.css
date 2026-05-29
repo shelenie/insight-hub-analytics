@@ -1,0 +1,5 @@
+/* Conversions comparison: neutral states like "немає бази" should read as a note, not as a strong KPI delta. */
+div[class*="min-h-[2rem]"] > p.text-muted-foreground:first-child {
+  font-weight: 400 !important;
+  opacity: 0.72;
+}
