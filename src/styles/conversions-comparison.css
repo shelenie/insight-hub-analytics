@@ -1,0 +1,17 @@
+/* Conversions comparison: neutral states like "немає бази" should read as a note, not as a strong KPI delta. */
+div[class*="min-h-[2rem]"] > p.text-muted-foreground:first-child {
+  font-weight: 400 !important;
+  opacity: 0.72;
+}
+
+/* Contact-level funnel: keep the data-quality warning calm and compact. */
+.conversions-contact-funnel-note {
+  margin: 0.5rem 1rem 0.75rem;
+  border-radius: 0.5rem;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--muted) / 0.35);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  line-height: 1.35;
+  color: hsl(var(--muted-foreground));
+}
