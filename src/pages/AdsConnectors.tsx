@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
@@ -18,7 +18,8 @@ type OptionalViewData = { rows: Row[]; unavailableReason: string | null };
 type ConnectorKey = "meta" | "google" | "tiktok";
 type ConnectorState = { loading: boolean; error: string | null };
 type SyncRunState = { loading: boolean; error: string | null; success: string | null; details: Record<string, unknown> | null };
-type PlatformConnectionState = { label: string; note?: string };
+type Tone = "success" | "warning" | "muted";
+type PlatformConnectionState = { label: string; note?: string; tone: Tone };
 type UiLang = "uk" | "en";
 type Copy = (typeof copy)[UiLang];
 
@@ -31,15 +32,15 @@ const CONNECTOR_FN: Record<ConnectorKey, string> = {
 
 const copy = {
   uk: {
-    pageTitle: "Ads конектори",
+    pageTitle: "Рекламні конектори",
     pageSubtitle: "Операційний стан підключень, рекламних акаунтів і синхронізації.",
     authRequired: "Потрібен вхід",
-    signedOut: "Ви вийшли з системи. Увійдіть, щоб відкрити Ads конектори.",
-    loadingTitle: "Завантаження Ads конекторів",
+    signedOut: "Ви вийшли з системи. Увійдіть, щоб відкрити рекламні конектори.",
+    loadingTitle: "Завантаження рекламних конекторів",
     loadingDescription: "Завантажуємо операційні дані…",
-    loadError: "Не вдалося завантажити Ads конектори:",
+    loadError: "Не вдалося завантажити рекламні конектори:",
     checkingAccess: "Перевіряємо права доступу…",
-    noManageAccess: "У вас немає доступу до керування Ads конекторами.",
+    noManageAccess: "У вас немає доступу до керування рекламними конекторами.",
     roleUnavailable: "Роль робочого простору тимчасово недоступна. Дії вимкнено з міркувань безпеки.",
     tabs: {
       overview: "Огляд",
@@ -72,7 +73,7 @@ const copy = {
     notConnectedState: "Не підключено",
     unknownConnectionState: "Стан невідомий",
     testBindingsNotReal: "Є тестові прив’язки, але реального OAuth-підключення ще немає.",
-    stateManagedThroughMeta: "Через Meta Ads",
+    stateManagedThroughMeta: "Керується через Meta Ads",
     oauthMayCreate: "Після OAuth система створить реальне підключення. Синхронізація не запускається автоматично.",
     facebookLeadSafetyNote: "Працює через підключення Meta Ads. Окреме OAuth-підключення не потрібне.",
     metaDescription: "Підключення рекламних акаунтів Facebook та Instagram через Meta OAuth.",
@@ -113,7 +114,7 @@ const copy = {
     leadsLast24h: "Ліди за 24 год",
     failedLeads: "Помилки лідів",
     unprocessedWebhookEvents: "Необроблені webhook-події",
-    failedSyncsLast24h: "Помилки sync за 24 год",
+    failedSyncsLast24h: "Помилки синхронізації за 24 год",
     formsTitle: "Форми",
     leadsTitle: "Останні ліди",
     syncRunsTitle: "Останні запуски синхронізації",
@@ -128,14 +129,15 @@ const copy = {
     recentIssues: "Останні проблеми",
     adsContextUnavailable: "Контекст реклами з’явиться після першої успішної синхронізації.",
     dailyContextAfterSync: "Контекст реклами з’явиться після першої успішної синхронізації.",
-    anomaliesAfterPerformance: "Кандидати на аномалії з’являться після появи performance-даних.",
+    anomaliesAfterPerformance: "Кандидати на аномалії з’являться після появи даних ефективності.",
     noIssues: "Поточних проблем не знайдено.",
     readinessTimeoutLabel: "Таймаут перевірки готовності",
-    readinessTimeoutDescription: "Один із запитів готовності перевищив ліміт часу. Це не означає, що Ads OAuth не працює, але потребує окремої оптимізації backend.",
+    readinessTimeoutDescription: "Один із запитів готовності перевищив ліміт часу. Це не означає, що OAuth не працює, але потребує окремої оптимізації серверної частини.",
     technicalDetails: "Технічні деталі",
     oauthIssue: "Помилка OAuth",
     sectionUnavailable: "Розділ тимчасово недоступний.",
     dataUnavailable: "Дані тимчасово недоступні.",
+    limitedRows: "Показано {shown} із {total}. Повний набір приховано в технічних деталях.",
     emptyFields: "Дані є, але немає полів для відображення.",
     yes: "Так",
     no: "Ні",
@@ -183,7 +185,7 @@ const copy = {
       leads_last_24h: "Ліди за 24 год",
       failed_leads: "Помилки лідів",
       unprocessed_webhook_events: "Необроблені webhook-події",
-      failed_syncs_last_24h: "Помилки sync за 24 год",
+      failed_syncs_last_24h: "Помилки синхронізації за 24 год",
     },
   },
   en: {
@@ -228,7 +230,7 @@ const copy = {
     notConnectedState: "Not connected",
     unknownConnectionState: "Unknown",
     testBindingsNotReal: "Test binding records exist, but there is no real OAuth connection yet.",
-    stateManagedThroughMeta: "Via Meta Ads",
+    stateManagedThroughMeta: "Managed through Meta Ads",
     oauthMayCreate: "OAuth may create a real connection record. Sync does not start automatically.",
     facebookLeadSafetyNote: "Uses the Meta Ads connection. Separate OAuth is not required.",
     metaDescription: "Connect Facebook and Instagram ad accounts through Meta OAuth.",
@@ -292,6 +294,7 @@ const copy = {
     oauthIssue: "OAuth error",
     sectionUnavailable: "This section is temporarily unavailable.",
     dataUnavailable: "Data is temporarily unavailable.",
+    limitedRows: "Showing {shown} of {total}. Full data is hidden in technical details.",
     emptyFields: "Data exists, but there are no fields to display.",
     yes: "Yes",
     no: "No",
@@ -523,6 +526,7 @@ export default function AdsConnectors() {
                     description={ui.metaDescription}
                     buttonText={ui.connectMeta}
                     stateText={platformConnectionStates.meta.label}
+                    stateTone={platformConnectionStates.meta.tone}
                     helperNote={platformConnectionStates.meta.note}
                     state={connectorState.meta}
                     onConnect={() => void connect("meta")}
@@ -534,6 +538,7 @@ export default function AdsConnectors() {
                     description={ui.googleDescription}
                     buttonText={ui.connectGoogle}
                     stateText={platformConnectionStates.google.label}
+                    stateTone={platformConnectionStates.google.tone}
                     helperNote={platformConnectionStates.google.note}
                     state={connectorState.google}
                     onConnect={() => void connect("google")}
@@ -545,19 +550,20 @@ export default function AdsConnectors() {
                     description={ui.tiktokDescription}
                     buttonText={ui.connectTiktok}
                     stateText={platformConnectionStates.tiktok.label}
+                    stateTone={platformConnectionStates.tiktok.tone}
                     helperNote={platformConnectionStates.tiktok.note}
                     state={connectorState.tiktok}
                     onConnect={() => void connect("tiktok")}
                     canManage={canManage}
                     ui={ui}
                   />
-                  <div className="rounded-lg border border-border/70 bg-card/60 p-4 text-sm">
+                  <div className="flex h-full flex-col rounded-lg border border-border/70 bg-card/60 p-4 text-sm">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-semibold">Facebook Lead Ads</p>
                         <p className="mt-1 text-muted-foreground">{ui.facebookLeadDescription}</p>
                       </div>
-                      <span className="rounded-full bg-muted px-2 py-1 text-[11px] text-muted-foreground">{ui.stateManagedThroughMeta}</span>
+                      <StatusPill tone="muted">{ui.stateManagedThroughMeta}</StatusPill>
                     </div>
                     <div className="mt-3 rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">
                       <p className="font-medium text-foreground">{ui.safety}</p>
@@ -570,9 +576,9 @@ export default function AdsConnectors() {
 
             <TabsContent value="ad-accounts">
               <SectionCard title={ui.adAccountsTitle} description={ui.adAccountsDescription}>
-                <p className="mb-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
-                  {ui.adAccountsExplain}
-                </p>
+                <div className="mb-4">
+                  <WarningNotice>{ui.adAccountsExplain}</WarningNotice>
+                </div>
                 <AdAccountsTable data={query.data?.adBindings} ui={ui} />
               </SectionCard>
             </TabsContent>
@@ -580,14 +586,12 @@ export default function AdsConnectors() {
             <TabsContent value="sync">
               <SectionCard title={ui.scheduledTitle} description={ui.scheduledDescription}>
                 <div className="space-y-4">
-                  <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
-                    {ui.scheduledWarning}
-                  </p>
+                  <WarningNotice>{ui.scheduledWarning}</WarningNotice>
                   <div className="grid gap-4 lg:grid-cols-2">
                     <CompactDataSection title={ui.syncRules} data={query.data?.syncRules} columns={["platform", "cadence", "schedule", "status", "last_run_at", "next_run_at", "updated_at"]} emptyText={ui.syncRulesEmpty} ui={ui} />
                     <CompactDataSection title={ui.syncDue} data={query.data?.syncDue} columns={["platform", "status", "last_run_at", "next_run_at", "due_status", "is_due"]} emptyText={ui.syncDueEmpty} ui={ui} />
                   </div>
-                  <div className="rounded-lg border border-dashed border-border/70 bg-muted/30 p-4">
+                  <div className="rounded-lg border border-border/70 bg-card/50 p-4">
                     <p className="mb-3 text-sm font-semibold">{ui.manualSync}</p>
                     <Button type="button" onClick={() => void runScheduledSync()} disabled={!session || !canManage || !capabilities.can_run_ads_scheduled_sync || syncRunState.loading}>
                       {syncRunState.loading ? ui.runningSync : ui.runSyncCheck}
@@ -596,7 +600,7 @@ export default function AdsConnectors() {
                     {syncRunState.success && <p className="mt-2 text-xs text-emerald-700">{ui.syncSuccess}</p>}
                     {syncRunState.error && <p className="mt-2 text-xs text-destructive">{ui.syncError} {syncRunState.error}</p>}
                     {syncRunState.details ? <p className="mt-2 text-xs text-muted-foreground">{ui.detailsDebug}</p> : null}
-                    <DeveloperDetails>{syncRunState.details ? <pre className="mt-2 overflow-x-auto rounded bg-background p-2 text-xs text-muted-foreground">{JSON.stringify(syncRunState.details, null, 2)}</pre> : null}</DeveloperDetails>
+                    <DeveloperDetails title={ui.technicalDetails}>{syncRunState.details ? <pre className="mt-2 overflow-x-auto rounded bg-background p-2 text-xs text-muted-foreground">{JSON.stringify(syncRunState.details, null, 2)}</pre> : null}</DeveloperDetails>
                   </div>
                 </div>
               </SectionCard>
@@ -624,9 +628,9 @@ export default function AdsConnectors() {
             <TabsContent value="diagnostics">
               <SectionCard title={ui.diagnosticsTitle} description={ui.diagnosticsDescription}>
                 <div className="space-y-4">
-                  <CompactDataSection title={ui.adsContext} data={query.data?.adsSummary} columns={preferredColumns(query.data?.adsSummary?.rows)} emptyText={ui.adsContextUnavailable} ui={ui} />
-                  <CompactDataSection title={ui.dailyContext} data={query.data?.adsDaily} columns={preferredColumns(query.data?.adsDaily?.rows)} emptyText={ui.dailyContextAfterSync} ui={ui} />
-                  <CompactDataSection title={ui.anomalyCandidates} data={query.data?.adsAnomalies} columns={preferredColumns(query.data?.adsAnomalies?.rows)} emptyText={ui.anomaliesAfterPerformance} ui={ui} />
+                  <CompactDataSection title={ui.adsContext} data={query.data?.adsSummary} columns={preferredColumns(query.data?.adsSummary?.rows)} emptyText={ui.adsContextUnavailable} ui={ui} maxRows={5} />
+                  <CompactDataSection title={ui.dailyContext} data={query.data?.adsDaily} columns={preferredColumns(query.data?.adsDaily?.rows)} emptyText={ui.dailyContextAfterSync} ui={ui} maxRows={5} />
+                  <CompactDataSection title={ui.anomalyCandidates} data={query.data?.adsAnomalies} columns={preferredColumns(query.data?.adsAnomalies?.rows)} emptyText={ui.anomaliesAfterPerformance} ui={ui} maxRows={5} />
                   <IssuesPanel data={query.data} connectorState={connectorState} ui={ui} />
                 </div>
               </SectionCard>
@@ -644,6 +648,27 @@ async function readOptionalView(viewName: string): Promise<OptionalViewData> {
   return { rows: ((result.data ?? []) as Row[]), unavailableReason: null };
 }
 
+function StatusPill({ tone, children }: { tone: Tone; children: ReactNode }) {
+  return (
+    <span className={cn(
+      "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium",
+      tone === "success" && "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200",
+      tone === "warning" && "bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200",
+      tone === "muted" && "bg-muted text-muted-foreground",
+    )}>
+      {children}
+    </span>
+  );
+}
+
+function WarningNotice({ children }: { children: ReactNode }) {
+  return (
+    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+      {children}
+    </div>
+  );
+}
+
 function StatusCard({ label, value, raw, ui }: { label: string; value: string; raw: string | null; ui: Copy }) {
   return (
     <div className="rounded-lg border border-border/70 bg-card/60 p-4">
@@ -654,7 +679,7 @@ function StatusCard({ label, value, raw, ui }: { label: string; value: string; r
   );
 }
 
-function ReadinessStep({ label, value, tone }: { label: string; value?: string; tone: "success" | "warning" | "muted" }) {
+function ReadinessStep({ label, value, tone }: { label: string; value?: string; tone: Tone }) {
   return (
     <div className="rounded-lg border border-border/70 bg-background p-3 text-sm">
       <div className="flex items-center gap-2">
@@ -666,28 +691,30 @@ function ReadinessStep({ label, value, tone }: { label: string; value?: string; 
   );
 }
 
-function ConnectorCard({ name, description, buttonText, stateText, helperNote, state, onConnect, canManage, ui }: { name: string; description: string; buttonText: string; stateText: string; helperNote?: string; state: ConnectorState; onConnect: () => void; canManage: boolean; ui: Copy }) {
+function ConnectorCard({ name, description, buttonText, stateText, stateTone, helperNote, state, onConnect, canManage, ui }: { name: string; description: string; buttonText: string; stateText: string; stateTone: Tone; helperNote?: string; state: ConnectorState; onConnect: () => void; canManage: boolean; ui: Copy }) {
   return (
-    <div className="rounded-lg border border-border/70 bg-card/60 p-4 text-sm">
+    <div className="flex h-full flex-col rounded-lg border border-border/70 bg-card/60 p-4 text-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-semibold">{name}</p>
           <p className="mt-1 text-muted-foreground">{description}</p>
         </div>
-        <span className="rounded-full bg-muted px-2 py-1 text-[11px] text-muted-foreground">{stateText}</span>
+        <StatusPill tone={stateTone}>{stateText}</StatusPill>
       </div>
       <div className="mt-3 grid gap-2 text-xs text-muted-foreground">
         <p><span className="font-medium text-foreground">{ui.currentState}:</span> {stateText}</p>
-        {helperNote ? <p className="text-amber-700 dark:text-amber-300">{helperNote}</p> : null}
+        {helperNote ? <WarningNotice>{helperNote}</WarningNotice> : null}
         <div className="rounded-md bg-muted/40 p-3">
           <p className="font-medium text-foreground">{ui.safety}</p>
           <p className="mt-1">{ui.oauthMayCreate}</p>
         </div>
       </div>
-      <Button type="button" className="mt-3" onClick={onConnect} disabled={state.loading || !canManage}>
-        {state.loading ? ui.openingOauth : buttonText}
-      </Button>
-      {state.error && <p className="mt-2 text-xs text-destructive">{state.error}</p>}
+      <div className="mt-auto pt-3">
+        <Button type="button" onClick={onConnect} disabled={state.loading || !canManage}>
+          {state.loading ? ui.openingOauth : buttonText}
+        </Button>
+        {state.error && <p className="mt-2 text-xs text-destructive">{state.error}</p>}
+      </div>
     </div>
   );
 }
@@ -701,32 +728,35 @@ function AdAccountsTable({ data, ui }: { data: OptionalViewData | undefined; ui:
   return <GenericDataTable rows={data.rows} columns={columns} ui={ui} markPlaceholders />;
 }
 
-function CompactDataSection({ title, data, columns, emptyText, ui }: { title: string; data: OptionalViewData | undefined; columns: string[]; emptyText: string; ui: Copy }) {
+function CompactDataSection({ title, data, columns, emptyText, ui, maxRows }: { title: string; data: OptionalViewData | undefined; columns: string[]; emptyText: string; ui: Copy; maxRows?: number }) {
   return (
     <div className="rounded-lg border border-border/70 bg-card/50 p-3">
       <p className="mb-2 text-sm font-semibold">{title}</p>
-      <OptionalKnownColumns data={data} columns={columns} emptyText={emptyText} ui={ui} />
+      <OptionalKnownColumns data={data} columns={columns} emptyText={emptyText} ui={ui} maxRows={maxRows} />
     </div>
   );
 }
 
-function OptionalKnownColumns({ data, columns, emptyText, ui }: { data: OptionalViewData | undefined; columns: string[]; emptyText: string; ui: Copy }) {
+function OptionalKnownColumns({ data, columns, emptyText, ui, maxRows }: { data: OptionalViewData | undefined; columns: string[]; emptyText: string; ui: Copy; maxRows?: number }) {
   if (!data) return <p className="text-sm text-muted-foreground">{ui.dataUnavailable}</p>;
   if (data.unavailableReason) return <UnavailableMessage reason={data.unavailableReason} ui={ui} />;
   const filtered = columns.filter((column) => data.rows.some((row) => row[column] !== undefined));
-  return filtered.length === 0 ? <GenericTable rows={data.rows} emptyText={emptyText} ui={ui} /> : <GenericDataTable rows={data.rows} columns={filtered} ui={ui} />;
+  return filtered.length === 0 ? <GenericTable rows={data.rows} emptyText={emptyText} ui={ui} maxRows={maxRows} /> : <GenericDataTable rows={data.rows} columns={filtered} ui={ui} maxRows={maxRows} />;
 }
 
-function GenericTable({ rows, emptyText, ui }: { rows: Row[]; emptyText: string; ui: Copy }) {
+function GenericTable({ rows, emptyText, ui, maxRows }: { rows: Row[]; emptyText: string; ui: Copy; maxRows?: number }) {
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">{emptyText}</p>;
   const columns = Object.keys(rows[0] ?? {}).filter((column) => column !== "workspace_id");
   if (columns.length === 0) return <p className="text-sm text-muted-foreground">{ui.emptyFields}</p>;
-  return <GenericDataTable rows={rows} columns={columns} ui={ui} />;
+  return <GenericDataTable rows={rows} columns={columns} ui={ui} maxRows={maxRows} />;
 }
 
-function GenericDataTable({ rows, columns, ui, markPlaceholders = false }: { rows: Row[]; columns: string[]; ui: Copy; markPlaceholders?: boolean }) {
+function GenericDataTable({ rows, columns, ui, markPlaceholders = false, maxRows }: { rows: Row[]; columns: string[]; ui: Copy; markPlaceholders?: boolean; maxRows?: number }) {
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">{ui.noDataYet}</p>;
+  const visibleRows = maxRows ? rows.slice(0, maxRows) : rows;
+  const hiddenRows = rows.length - visibleRows.length;
   return (
+    <>
     <div className="overflow-x-auto rounded-md">
       <table className="min-w-full table-fixed text-left text-sm">
         <thead>
@@ -735,7 +765,7 @@ function GenericDataTable({ rows, columns, ui, markPlaceholders = false }: { row
           </tr>
         </thead>
         <tbody>
-          {rows.map((row, index) => {
+          {visibleRows.map((row, index) => {
             const placeholder = markPlaceholders && isPlaceholderAccount(row);
             return (
               <tr key={`${index}-${String(row.id ?? "row")}`} className="border-b border-border/40 last:border-0">
@@ -755,6 +785,15 @@ function GenericDataTable({ rows, columns, ui, markPlaceholders = false }: { row
         </tbody>
       </table>
     </div>
+    {hiddenRows > 0 ? (
+      <div className="mt-2 text-xs text-muted-foreground">
+        <p>{formatLimitedRows(ui.limitedRows, visibleRows.length, rows.length)}</p>
+        <DeveloperDetails title={ui.technicalDetails}>
+          <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-muted/50 p-2 text-xs text-muted-foreground">{JSON.stringify(rows.slice(visibleRows.length), null, 2)}</pre>
+        </DeveloperDetails>
+      </div>
+    ) : null}
+    </>
   );
 }
 
@@ -771,13 +810,12 @@ function IssuesPanel({ data, connectorState, ui }: { data: { [k: string]: Option
         {unavailable.map((item) => {
           const isTimeout = item.reason.toLowerCase().includes("statement timeout") || item.reason.toLowerCase().includes("readiness");
           return (
-            <div key={`${item.name}-${item.reason}`} className="rounded-lg border border-border/70 bg-card/60 p-3 text-sm">
-              <p className="font-semibold">{isTimeout ? ui.readinessTimeoutLabel : item.name}</p>
+            <div key={`${item.name}-${item.reason}`} className={cn("rounded-lg border p-3 text-sm", isTimeout ? "border-amber-200 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/20" : "border-border/70 bg-card/60")}>
+              <p className="font-semibold">{isTimeout ? ui.readinessTimeoutLabel : friendlyIssueName(item.name, ui)}</p>
               <p className="mt-1 text-muted-foreground">{isTimeout ? ui.readinessTimeoutDescription : ui.sectionUnavailable}</p>
-              <details className="mt-2">
-                <summary className="cursor-pointer text-xs text-muted-foreground">{ui.technicalDetails}</summary>
+              <DeveloperDetails title={ui.technicalDetails}>
                 <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-muted/50 p-2 text-xs text-muted-foreground">{`${item.name}: ${item.reason}`}</pre>
-              </details>
+              </DeveloperDetails>
             </div>
           );
         })}
@@ -805,12 +843,33 @@ function UnavailableMessage({ reason, ui }: { reason: string; ui: Copy }) {
   return (
     <div className="text-sm text-muted-foreground">
       <p>{ui.sectionUnavailable}</p>
-      <details className="mt-2">
-        <summary className="cursor-pointer text-xs">{ui.technicalDetails}</summary>
+      <DeveloperDetails title={ui.technicalDetails}>
         <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-muted/50 p-2 text-xs">{reason}</pre>
-      </details>
+      </DeveloperDetails>
     </div>
   );
+}
+
+function formatLimitedRows(template: string, shown: number, total: number) {
+  return template.replace("{shown}", String(shown)).replace("{total}", String(total));
+}
+
+function friendlyIssueName(name: string, ui: Copy) {
+  const labels: Record<string, string> = {
+    readiness: ui.operationalChecklist,
+    snapshot: ui.overviewTitle,
+    adBindings: ui.adAccountsTitle,
+    syncRules: ui.syncRules,
+    syncDue: ui.syncDue,
+    adsSummary: ui.adsContext,
+    adsDaily: ui.dailyContext,
+    adsAnomalies: ui.anomalyCandidates,
+    fbHealth: ui.fbTitle,
+    fbForms: ui.formsTitle,
+    fbLeads: ui.leadsTitle,
+    fbSyncRuns: ui.syncRunsTitle,
+  };
+  return labels[name] ?? name;
 }
 
 function friendlyLabel(value: string, ui: Copy) {
@@ -851,13 +910,13 @@ function isPlaceholderAccount(row: Row) {
 }
 
 function getPlatformConnectionState(platform: ConnectorKey, data: OptionalViewData | undefined, ui: Copy): PlatformConnectionState {
-  if (!data || data.unavailableReason) return { label: ui.unknownConnectionState };
+  if (!data || data.unavailableReason) return { label: ui.unknownConnectionState, tone: "muted" };
 
   const platformRows = data.rows.filter((row) => rowMatchesPlatform(row, platform));
-  if (platformRows.some((row) => !isPlaceholderAccount(row))) return { label: ui.connectedState };
-  if (platformRows.length > 0) return { label: ui.notConnectedState, note: ui.testBindingsNotReal };
+  if (platformRows.some((row) => !isPlaceholderAccount(row))) return { label: ui.connectedState, tone: "success" };
+  if (platformRows.length > 0) return { label: ui.notConnectedState, note: ui.testBindingsNotReal, tone: "warning" };
 
-  return { label: ui.notConnectedState };
+  return { label: ui.notConnectedState, tone: "warning" };
 }
 
 function rowMatchesPlatform(row: Row, platform: ConnectorKey) {
