@@ -984,12 +984,9 @@ export default function Imports() {
 
 async function readImportsDashboard(): Promise<ImportsData> {
   const [health, errors, mappings, mappingReview, alerts] = await Promise.all([
-    supabase
-      .from("v_import_health")
-      .select(
-        "workspace_id,open_rejected_rows,critical_rejected_rows,rejected_rows_last_24h,latest_rejected_row_at,latest_sync_status,latest_sync_rows_failed,latest_sync_at,import_health_status",
-      )
-      .eq("workspace_id", WORKSPACE_ID),
+    supabase.rpc("get_import_health_summary" as never, {
+      p_workspace_id: WORKSPACE_ID,
+    } as never),
     supabase
       .from("v_import_error_summary")
       .select(
@@ -1018,7 +1015,7 @@ async function readImportsDashboard(): Promise<ImportsData> {
       .limit(200),
   ]);
 
-  warnUnavailable("v_import_health", health.error);
+  warnUnavailable("get_import_health_summary", health.error);
   warnUnavailable("v_import_error_summary", errors.error);
   warnUnavailable("v_file_import_mappings", mappings.error);
   warnUnavailable("v_mapping_review_queue", mappingReview.error);
