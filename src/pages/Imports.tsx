@@ -46,26 +46,41 @@ type ImportsData = {
 };
 
 type ImportHealthRow = {
-  source_name: Primitive;
-  source_type: Primitive;
-  status: Primitive;
-  last_sync_at: Primitive;
-  rows_received: Primitive;
-  rows_inserted: Primitive;
-  rows_failed: Primitive;
+  workspace_id: Primitive;
+  open_rejected_rows: Primitive;
+  critical_rejected_rows: Primitive;
+  rejected_rows_last_24h: Primitive;
+  latest_rejected_row_at: Primitive;
+  latest_sync_status: Primitive;
+  latest_sync_rows_failed: Primitive;
+  latest_sync_at: Primitive;
+  import_health_status: Primitive;
 };
 
 type ImportErrorRow = {
+  workspace_id: Primitive;
   source_name: Primitive;
-  error_type: Primitive;
-  error_count: Primitive;
-  last_error_at: Primitive;
+  source_type: Primitive;
+  source_table: Primitive;
+  target_table: Primitive;
+  error_code: Primitive;
+  severity: Primitive;
+  status: Primitive;
+  rejected_rows_count: Primitive;
+  first_seen_at: Primitive;
+  last_seen_at: Primitive;
 };
 
 type MappingRow = {
-  source_name: Primitive;
-  mapping_status: Primitive;
+  workspace_id: Primitive;
+  name: Primitive;
+  source_type: Primitive;
+  target_table: Primitive;
+  file_type: Primitive;
+  status: Primitive;
   updated_at: Primitive;
+  active_fields_count: Primitive;
+  required_fields_count: Primitive;
 };
 
 type AlertRow = {
@@ -76,27 +91,40 @@ type AlertRow = {
 };
 
 type NormalizedImportHealth = {
-  source: string;
-  type: string;
-  status: string;
-  statusKind: SourceStatus;
-  lastSync: string | null;
-  rowsReceived: number | null;
-  rowsInserted: number | null;
-  rowsFailed: number | null;
+  importHealthStatus: string;
+  importHealthStatusKind: SourceStatus;
+  latestSyncStatus: string;
+  latestSyncStatusKind: SourceStatus;
+  latestSyncAt: string | null;
+  latestSyncRowsFailed: number;
+  openRejectedRows: number;
+  criticalRejectedRows: number;
+  rejectedRowsLast24h: number;
+  latestRejectedRowAt: string | null;
 };
 
 type NormalizedImportError = {
   source: string;
-  type: string;
+  sourceType: string;
+  errorCode: string;
+  severity: string;
+  severityKind: SourceStatus;
+  status: string;
+  statusKind: SourceStatus;
   count: number;
-  lastError: string | null;
+  firstSeen: string | null;
+  lastSeen: string | null;
 };
 type NormalizedMapping = {
-  source: string;
+  name: string;
+  sourceType: string;
+  targetTable: string;
+  fileType: string;
   status: string;
   statusKind: SourceStatus;
   updatedAt: string | null;
+  activeFieldsCount: number | null;
+  requiredFieldsCount: number | null;
   needsReview: boolean;
 };
 type NormalizedAlert = {
@@ -138,9 +166,9 @@ const copy = {
       lastUpdate: "Останнє оновлення",
       lastUpdateHelper: "Максимальна дата з доступних джерел",
       importErrors: "Помилки імпорту",
-      importErrorsHelper: "Сума помилок у зведенні імпорту",
-      problemRows: "Проблемні рядки",
-      problemRowsHelper: "Сума проблемних рядків у стані імпортів",
+      importErrorsHelper: "Сума rejected rows у зведенні помилок",
+      problemRows: "Rejected / failed rows",
+      problemRowsHelper: "Сума відкритих, критичних, 24-год rejected rows і помилок останнього sync",
       noRowCounter: "Немає окремого лічильника",
       mapping: "Мапінг",
       mappingHelper: "Очевидні pending/error статуси",
@@ -149,35 +177,45 @@ const copy = {
       recentAlertsHelper: "Останні сигнали без статусу відкриття",
     },
     activity: {
-      title: "Остання активність джерел",
-      desc: "Синхронізації та лічильники імпортованих рядків",
+      title: "Стан імпортів",
+      desc: "Зведення синхронізацій і rejected rows",
       error: "Не вдалося завантажити стан імпортів.",
-      empty: "Активність імпортів поки не зафіксована.",
-      source: "Джерело",
-      type: "Тип",
-      status: "Статус",
-      lastSync: "Остання синхронізація",
-      received: "Отримано",
-      inserted: "Додано",
-      failed: "Помилки",
+      empty: "Стан імпортів поки не зафіксований.",
+      importHealth: "Стан імпортів",
+      latestSync: "Останній sync",
+      latestSyncTime: "Час останнього sync",
+      latestSyncFailedRows: "Помилки в останньому sync",
+      openRejectedRows: "Відкриті rejected rows",
+      criticalRejectedRows: "Критичні rejected rows",
+      rejectedRowsLast24h: "Rejected rows за 24 год",
+      latestRejectedRow: "Останній rejected row",
     },
     errors: {
       title: "Помилки імпорту",
-      desc: "Типи помилок та час останнього збою",
+      desc: "Коди помилок і rejected rows за джерелами",
       error: "Не вдалося завантажити помилки імпорту.",
       empty: "Помилок імпорту не знайдено.",
       source: "Джерело",
-      type: "Тип помилки",
-      count: "Кількість",
-      lastError: "Остання помилка",
+      sourceType: "Тип джерела",
+      errorCode: "Код помилки",
+      severity: "Рівень",
+      status: "Статус",
+      count: "Rejected rows",
+      firstSeen: "Перша поява",
+      lastSeen: "Остання поява",
     },
     mapping: {
       title: "Стан мапінгу",
       desc: "Привʼязка імпортованих джерел до бізнес-структури",
       error: "Не вдалося завантажити стан мапінгу.",
       empty: "Рядків мапінгу поки немає.",
-      source: "Джерело",
-      status: "Статус мапінгу",
+      name: "Назва",
+      sourceType: "Тип джерела",
+      targetTable: "Цільова таблиця",
+      fileType: "Тип файлу",
+      status: "Статус",
+      activeFields: "Активні поля",
+      requiredFields: "Обовʼязкові поля",
       updatedAt: "Оновлено",
       goBindings: "Перейти до звʼязків даних",
     },
@@ -241,9 +279,9 @@ const copy = {
       lastUpdate: "Last update",
       lastUpdateHelper: "Latest timestamp from available sources",
       importErrors: "Import errors",
-      importErrorsHelper: "Sum of errors in import summary",
-      problemRows: "Problem rows",
-      problemRowsHelper: "Sum of failed rows in import health",
+      importErrorsHelper: "Sum of rejected rows in import error summary",
+      problemRows: "Rejected / failed rows",
+      problemRowsHelper: "Open, critical, 24h rejected rows plus latest sync failures",
       noRowCounter: "No row-level counter",
       mapping: "Mapping",
       mappingHelper: "Obvious pending/error statuses",
@@ -252,36 +290,46 @@ const copy = {
       recentAlertsHelper: "Recent signals without open status",
     },
     activity: {
-      title: "Recent source activity",
-      desc: "Syncs and imported-row counters",
+      title: "Import health",
+      desc: "Sync and rejected-row summary",
       error: "Could not load import status.",
-      empty: "No import activity has been recorded yet.",
-      source: "Source",
-      type: "Type",
-      status: "Status",
-      lastSync: "Last sync",
-      received: "Received",
-      inserted: "Inserted",
-      failed: "Failed",
+      empty: "Import health has not been recorded yet.",
+      importHealth: "Import health",
+      latestSync: "Latest sync",
+      latestSyncTime: "Latest sync time",
+      latestSyncFailedRows: "Failed rows in latest sync",
+      openRejectedRows: "Open rejected rows",
+      criticalRejectedRows: "Critical rejected rows",
+      rejectedRowsLast24h: "Rejected rows last 24h",
+      latestRejectedRow: "Latest rejected row",
     },
     errors: {
       title: "Import errors",
-      desc: "Error types and latest failure time",
+      desc: "Error codes and rejected rows by source",
       error: "Could not load import errors.",
       empty: "No import errors found.",
       source: "Source",
-      type: "Error type",
-      count: "Count",
-      lastError: "Last error",
+      sourceType: "Source type",
+      errorCode: "Error code",
+      severity: "Severity",
+      status: "Status",
+      count: "Rejected rows",
+      firstSeen: "First seen",
+      lastSeen: "Last seen",
     },
     mapping: {
       title: "Mapping health",
       desc: "Imported source bindings to business structure",
       error: "Could not load mapping health.",
       empty: "No mapping rows yet.",
-      source: "Source",
-      status: "Mapping status",
-      updatedAt: "Updated at",
+      name: "Name",
+      sourceType: "Source type",
+      targetTable: "Target table",
+      fileType: "File type",
+      status: "Status",
+      activeFields: "Active fields",
+      requiredFields: "Required fields",
+      updatedAt: "Updated",
       goBindings: "Go to Bindings / Mapping",
     },
     alerts: {
@@ -378,7 +426,15 @@ export default function Imports() {
     pageUnavailableReason ||
     query.data?.health.unavailableReason
       ? null
-      : sum(healthRows.map((row) => row.rowsFailed ?? 0));
+      : sum(
+          healthRows.map(
+            (row) =>
+              row.openRejectedRows +
+              row.criticalRejectedRows +
+              row.rejectedRowsLast24h +
+              row.latestSyncRowsFailed,
+          ),
+        );
   const mappingReviewCount = query.data?.mappingReview.count ?? 0;
   const mappingIssues =
     !hasLoadedData ||
@@ -401,13 +457,20 @@ export default function Imports() {
     pageUnavailableReason ||
     query.data?.health.unavailableReason
       ? null
-      : healthRows.filter((row) => row.statusKind === "warning").length;
+      : healthRows.filter(
+          (row) =>
+            row.importHealthStatusKind === "warning" ||
+            row.latestSyncStatusKind === "warning",
+        ).length;
   const lastUpdate =
     !hasLoadedData || pageUnavailableReason
       ? null
       : latestDate([
-          ...healthRows.map((row) => row.lastSync),
-          ...errorRows.map((row) => row.lastError),
+          ...healthRows.flatMap((row) => [
+            row.latestSyncAt,
+            row.latestRejectedRowAt,
+          ]),
+          ...errorRows.map((row) => row.lastSeen),
           ...mappingRows.map((row) => row.updatedAt),
           ...alertRows.map((row) => row.createdAt),
         ]);
@@ -512,7 +575,7 @@ export default function Imports() {
               unavailable={
                 pageUnavailableReason ?? query.data?.health.unavailableReason
               }
-              href="#source-activity"
+              href="#import-health"
             />
             <MetricCard
               title={ui.kpis.mapping}
@@ -540,7 +603,7 @@ export default function Imports() {
         {!signedOut && !isInitialLoading ? (
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-4">
-              <div id="source-activity">
+              <div id="import-health">
                 <SectionCard
                   title={ui.activity.title}
                   description={ui.activity.desc}
@@ -555,66 +618,66 @@ export default function Imports() {
                     empty={!healthRows.length}
                     emptyText={ui.activity.empty}
                   >
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>{ui.activity.source}</TableHead>
-                            <TableHead>{ui.activity.type}</TableHead>
-                            <TableHead>{ui.activity.status}</TableHead>
-                            <TableHead>{ui.activity.lastSync}</TableHead>
-                            <TableHead className="text-right">
-                              {ui.activity.received}
-                            </TableHead>
-                            <TableHead className="text-right">
-                              {ui.activity.inserted}
-                            </TableHead>
-                            <TableHead className="text-right">
-                              {ui.activity.failed}
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {healthRows.slice(0, 100).map((row, index) => (
-                            <TableRow
-                              key={`${row.source}-${row.lastSync ?? index}`}
-                            >
-                              <TableCell className="font-medium">
-                                {row.source}
-                              </TableCell>
-                              <TableCell>{row.type}</TableCell>
-                              <TableCell>
-                                <HumanStatusBadge
-                                  status={row.statusKind}
-                                  label={statusLabel(
-                                    row.status,
-                                    row.statusKind,
-                                    ui,
-                                  )}
-                                />
-                              </TableCell>
-                              <TableCell>
-                                {formatNullableDate(row.lastSync, lang)}
-                              </TableCell>
-                              <TableCell className="text-right num">
-                                {formatNullableNumber(row.rowsReceived)}
-                              </TableCell>
-                              <TableCell className="text-right num">
-                                {formatNullableNumber(row.rowsInserted)}
-                              </TableCell>
-                              <TableCell
-                                className={cn(
-                                  "text-right num",
-                                  (row.rowsFailed ?? 0) > 0 &&
-                                    "font-semibold text-destructive",
+                    <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
+                      {healthRows.map((row, index) => (
+                        <div
+                          key={`${row.latestSyncAt ?? "sync"}-${row.latestRejectedRowAt ?? index}`}
+                          className="rounded-lg border border-border/70 bg-muted/20 p-3"
+                        >
+                          <div className="space-y-3">
+                            <HealthSummaryItem label={ui.activity.importHealth}>
+                              <HumanStatusBadge
+                                status={row.importHealthStatusKind}
+                                label={statusLabel(
+                                  row.importHealthStatus,
+                                  row.importHealthStatusKind,
+                                  ui,
                                 )}
-                              >
-                                {formatNullableNumber(row.rowsFailed)}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                              />
+                            </HealthSummaryItem>
+                            <HealthSummaryItem label={ui.activity.latestSync}>
+                              <HumanStatusBadge
+                                status={row.latestSyncStatusKind}
+                                label={statusLabel(
+                                  row.latestSyncStatus,
+                                  row.latestSyncStatusKind,
+                                  ui,
+                                )}
+                              />
+                            </HealthSummaryItem>
+                            <HealthSummaryItem label={ui.activity.latestSyncTime}>
+                              {formatNullableDate(row.latestSyncAt, lang)}
+                            </HealthSummaryItem>
+                            <HealthSummaryItem
+                              label={ui.activity.latestSyncFailedRows}
+                              emphasize={row.latestSyncRowsFailed > 0}
+                            >
+                              {fmtNum(row.latestSyncRowsFailed)}
+                            </HealthSummaryItem>
+                            <HealthSummaryItem
+                              label={ui.activity.openRejectedRows}
+                              emphasize={row.openRejectedRows > 0}
+                            >
+                              {fmtNum(row.openRejectedRows)}
+                            </HealthSummaryItem>
+                            <HealthSummaryItem
+                              label={ui.activity.criticalRejectedRows}
+                              emphasize={row.criticalRejectedRows > 0}
+                            >
+                              {fmtNum(row.criticalRejectedRows)}
+                            </HealthSummaryItem>
+                            <HealthSummaryItem
+                              label={ui.activity.rejectedRowsLast24h}
+                              emphasize={row.rejectedRowsLast24h > 0}
+                            >
+                              {fmtNum(row.rejectedRowsLast24h)}
+                            </HealthSummaryItem>
+                            <HealthSummaryItem label={ui.activity.latestRejectedRow}>
+                              {formatNullableDate(row.latestRejectedRowAt, lang)}
+                            </HealthSummaryItem>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   </AvailabilityBoundary>
                 </SectionCard>
@@ -640,27 +703,51 @@ export default function Imports() {
                         <TableHeader>
                           <TableRow>
                             <TableHead>{ui.errors.source}</TableHead>
-                            <TableHead>{ui.errors.type}</TableHead>
+                            <TableHead>{ui.errors.sourceType}</TableHead>
+                            <TableHead>{ui.errors.errorCode}</TableHead>
+                            <TableHead>{ui.errors.severity}</TableHead>
+                            <TableHead>{ui.errors.status}</TableHead>
                             <TableHead className="text-right">
                               {ui.errors.count}
                             </TableHead>
-                            <TableHead>{ui.errors.lastError}</TableHead>
+                            <TableHead>{ui.errors.firstSeen}</TableHead>
+                            <TableHead>{ui.errors.lastSeen}</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {errorRows.slice(0, 100).map((row, index) => (
                             <TableRow
-                              key={`${row.source}-${row.type}-${index}`}
+                              key={`${row.source}-${row.errorCode}-${index}`}
                             >
                               <TableCell className="font-medium">
                                 {row.source}
                               </TableCell>
-                              <TableCell>{row.type}</TableCell>
+                              <TableCell>{row.sourceType}</TableCell>
+                              <TableCell>{row.errorCode}</TableCell>
+                              <TableCell>
+                                <HumanStatusBadge
+                                  status={row.severityKind}
+                                  label={humanize(row.severity)}
+                                />
+                              </TableCell>
+                              <TableCell>
+                                <HumanStatusBadge
+                                  status={row.statusKind}
+                                  label={statusLabel(
+                                    row.status,
+                                    row.statusKind,
+                                    ui,
+                                  )}
+                                />
+                              </TableCell>
                               <TableCell className="text-right num font-semibold text-destructive">
                                 {fmtNum(row.count)}
                               </TableCell>
                               <TableCell>
-                                {formatNullableDate(row.lastError, lang)}
+                                {formatNullableDate(row.firstSeen, lang)}
+                              </TableCell>
+                              <TableCell>
+                                {formatNullableDate(row.lastSeen, lang)}
                               </TableCell>
                             </TableRow>
                           ))}
@@ -705,8 +792,17 @@ export default function Imports() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>{ui.mapping.source}</TableHead>
+                          <TableHead>{ui.mapping.name}</TableHead>
+                          <TableHead>{ui.mapping.sourceType}</TableHead>
+                          <TableHead>{ui.mapping.targetTable}</TableHead>
+                          <TableHead>{ui.mapping.fileType}</TableHead>
                           <TableHead>{ui.mapping.status}</TableHead>
+                          <TableHead className="text-right">
+                            {ui.mapping.activeFields}
+                          </TableHead>
+                          <TableHead className="text-right">
+                            {ui.mapping.requiredFields}
+                          </TableHead>
                           <TableHead>{ui.mapping.updatedAt}</TableHead>
                           <TableHead>{ui.actions}</TableHead>
                         </TableRow>
@@ -714,14 +810,17 @@ export default function Imports() {
                       <TableBody>
                         {mappingRows.slice(0, 100).map((row, index) => (
                           <TableRow
-                            key={`${row.source}-${row.updatedAt ?? index}`}
+                            key={`${row.name}-${row.updatedAt ?? index}`}
                             className={
                               row.needsReview ? "bg-warning-soft/30" : undefined
                             }
                           >
                             <TableCell className="font-medium">
-                              {row.source}
+                              {row.name}
                             </TableCell>
+                            <TableCell>{row.sourceType}</TableCell>
+                            <TableCell>{row.targetTable}</TableCell>
+                            <TableCell>{row.fileType}</TableCell>
                             <TableCell>
                               <HumanStatusBadge
                                 status={row.statusKind}
@@ -731,6 +830,12 @@ export default function Imports() {
                                   ui,
                                 )}
                               />
+                            </TableCell>
+                            <TableCell className="text-right num">
+                              {formatNullableNumber(row.activeFieldsCount)}
+                            </TableCell>
+                            <TableCell className="text-right num">
+                              {formatNullableNumber(row.requiredFieldsCount)}
                             </TableCell>
                             <TableCell>
                               {formatNullableDate(row.updatedAt, lang)}
@@ -895,22 +1000,26 @@ async function readImportsDashboard(): Promise<ImportsData> {
     supabase
       .from("v_import_health")
       .select(
-        "source_name,source_type,status,last_sync_at,rows_received,rows_inserted,rows_failed",
+        "workspace_id,open_rejected_rows,critical_rejected_rows,rejected_rows_last_24h,latest_rejected_row_at,latest_sync_status,latest_sync_rows_failed,latest_sync_at,import_health_status",
       )
       .eq("workspace_id", WORKSPACE_ID)
-      .order("last_sync_at", { ascending: false })
+      .order("latest_sync_at", { ascending: false, nullsFirst: false })
       .limit(200),
     supabase
       .from("v_import_error_summary")
-      .select("source_name,error_type,error_count,last_error_at")
+      .select(
+        "workspace_id,source_name,source_type,source_table,target_table,error_code,severity,status,rejected_rows_count,first_seen_at,last_seen_at",
+      )
       .eq("workspace_id", WORKSPACE_ID)
-      .order("last_error_at", { ascending: false })
+      .order("last_seen_at", { ascending: false, nullsFirst: false })
       .limit(200),
     supabase
       .from("v_file_import_mappings")
-      .select("source_name,mapping_status,updated_at")
+      .select(
+        "workspace_id,name,source_type,target_table,file_type,status,updated_at,active_fields_count,required_fields_count",
+      )
       .eq("workspace_id", WORKSPACE_ID)
-      .order("updated_at", { ascending: false })
+      .order("updated_at", { ascending: false, nullsFirst: false })
       .limit(200),
     supabase
       .from("v_mapping_review_queue")
@@ -974,21 +1083,32 @@ function normalizeImportHealthRows(
   rows: ImportHealthRow[],
 ): NormalizedImportHealth[] {
   return rows.map((row) => {
-    const failed = toNullableNumber(row.rows_failed);
-    const status =
-      readString(row.status) || (failed && failed > 0 ? "failed" : "unknown");
+    const importHealthStatus =
+      readString(row.import_health_status) || "unknown";
+    const latestSyncStatus = readString(row.latest_sync_status) || "unknown";
+    const latestSyncRowsFailed = toNumber(row.latest_sync_rows_failed);
+    const openRejectedRows = toNumber(row.open_rejected_rows);
+    const criticalRejectedRows = toNumber(row.critical_rejected_rows);
+    const rejectedRowsLast24h = toNumber(row.rejected_rows_last_24h);
     return {
-      source: readString(row.source_name) || "—",
-      type: readString(row.source_type) || "—",
-      status,
-      statusKind: statusKind(
-        status,
-        failed && failed > 0 ? "error" : "unknown",
+      importHealthStatus,
+      importHealthStatusKind: statusKind(
+        importHealthStatus,
+        openRejectedRows + criticalRejectedRows + rejectedRowsLast24h > 0
+          ? "warning"
+          : "unknown",
       ),
-      lastSync: readString(row.last_sync_at) || null,
-      rowsReceived: toNullableNumber(row.rows_received),
-      rowsInserted: toNullableNumber(row.rows_inserted),
-      rowsFailed: failed,
+      latestSyncStatus,
+      latestSyncStatusKind: statusKind(
+        latestSyncStatus,
+        latestSyncRowsFailed > 0 ? "error" : "unknown",
+      ),
+      latestSyncAt: readString(row.latest_sync_at) || null,
+      latestSyncRowsFailed,
+      openRejectedRows,
+      criticalRejectedRows,
+      rejectedRowsLast24h,
+      latestRejectedRowAt: readString(row.latest_rejected_row_at) || null,
     };
   });
 }
@@ -996,25 +1116,40 @@ function normalizeImportHealthRows(
 function normalizeImportErrors(
   rows: ImportErrorRow[],
 ): NormalizedImportError[] {
-  return rows.map((row) => ({
-    source: readString(row.source_name) || "—",
-    type: humanize(readString(row.error_type) || "—"),
-    count: toNumber(row.error_count),
-    lastError: readString(row.last_error_at) || null,
-  }));
+  return rows.map((row) => {
+    const severity = readString(row.severity) || "unknown";
+    const status = readString(row.status) || "unknown";
+    return {
+      source: readString(row.source_name) || readString(row.source_table) || "—",
+      sourceType: readString(row.source_type) || "—",
+      errorCode: readString(row.error_code) || "—",
+      severity,
+      severityKind: severityKind(severity),
+      status,
+      statusKind: statusKind(status, "unknown"),
+      count: toNumber(row.rejected_rows_count),
+      firstSeen: readString(row.first_seen_at) || null,
+      lastSeen: readString(row.last_seen_at) || null,
+    };
+  });
 }
 
 function normalizeMappings(rows: MappingRow[]): NormalizedMapping[] {
   return rows.map((row) => {
-    const status = readString(row.mapping_status) || "unknown";
+    const status = readString(row.status) || "unknown";
     const needsReview = isMappingIssueStatus(status);
     return {
-      source: readString(row.source_name) || "—",
+      name: readString(row.name) || "—",
+      sourceType: readString(row.source_type) || "—",
+      targetTable: readString(row.target_table) || "—",
+      fileType: readString(row.file_type) || "—",
       status,
       statusKind: needsReview
         ? statusKind(status, "warning")
         : statusKind(status, "success"),
       updatedAt: readString(row.updated_at) || null,
+      activeFieldsCount: toNullableNumber(row.active_fields_count),
+      requiredFieldsCount: toNullableNumber(row.required_fields_count),
       needsReview,
     };
   });
@@ -1150,7 +1285,7 @@ function buildActions({
     actions.push({
       key: "rows",
       label: ui.actionPanel.rowsFailed,
-      href: "#source-activity",
+      href: "#import-health",
       tone: "error",
     });
   if ((mappingIssues ?? 0) > 0)
@@ -1231,39 +1366,69 @@ function MetricCard({
   const content = (
     <div
       className={cn(
-        "group rounded-xl border border-border/70 bg-card p-4 shadow-card transition-all",
-        href && "hover:border-primary/40 hover:shadow-card-md",
+        "group flex min-h-[148px] flex-col rounded-xl border border-border/70 bg-card p-4 shadow-card transition-all",
+        href && "h-full hover:border-primary/40 hover:shadow-card-md",
         tone === "success" && "ring-accent-top",
         tone === "warning" && "border-warning/30",
         tone === "error" && "border-destructive/25",
       )}
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+      <div className="flex min-h-[34px] items-start justify-between gap-2">
+        <p className="min-w-0 text-[10px] font-semibold uppercase leading-snug tracking-[0.1em] text-muted-foreground">
           {title}
         </p>
         {href ? (
-          <ArrowUpRight className="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-primary" />
+          <ArrowUpRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
         ) : null}
       </div>
-      <p
-        className={cn(
-          "mt-2 text-2xl font-semibold leading-tight tracking-tight",
-          unavailable && "text-base text-muted-foreground",
-        )}
-      >
-        {unavailable ? value : value}
-      </p>
-      <p className="mt-2 text-xs leading-snug text-muted-foreground">
-        {unavailable ? helper : helper}
+      <div className="mt-2 flex min-h-[40px] items-start">
+        <p
+          className={cn(
+            "text-2xl font-semibold leading-tight tracking-tight",
+            unavailable && "text-base text-muted-foreground",
+          )}
+        >
+          {value}
+        </p>
+      </div>
+      <p className="mt-2 min-h-[34px] text-xs leading-snug text-muted-foreground">
+        {helper}
       </p>
     </div>
   );
   if (!href) return content;
   return href.startsWith("#") ? (
-    <a href={href}>{content}</a>
+    <a className="block h-full" href={href}>
+      {content}
+    </a>
   ) : (
-    <Link to={href}>{content}</Link>
+    <Link className="block h-full" to={href}>
+      {content}
+    </Link>
+  );
+}
+
+function HealthSummaryItem({
+  label,
+  emphasize = false,
+  children,
+}: {
+  label: string;
+  emphasize?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span className="text-xs leading-snug text-muted-foreground">{label}</span>
+      <div
+        className={cn(
+          "shrink-0 text-right text-sm font-medium",
+          emphasize && "text-destructive",
+        )}
+      >
+        {children}
+      </div>
+    </div>
   );
 }
 
