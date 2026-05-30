@@ -1,5 +1,6 @@
 import { useMemo, type ReactNode } from "react";
-import { addDays, differenceInCalendarDays, format } from "date-fns";
+import { addDays, differenceInCalendarDays, format, isSameDay } from "date-fns";
+import { uk } from "date-fns/locale";
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -61,6 +62,17 @@ const toNumber = (value: unknown) => {
 };
 
 const sumField = (rows: Row[], field: string) => rows.reduce((total, row) => total + toNumber(row[field]), 0);
+
+const formatOverviewDate = (date: Date, lang: "uk" | "en") =>
+  lang === "uk" ? format(date, "d MMMM yyyy", { locale: uk }) : format(date, "d MMMM yyyy");
+
+const buildPeriodSummary = (range: { from: Date; to: Date }, lang: "uk" | "en") => {
+  const label = isSameDay(range.from, range.to)
+    ? formatOverviewDate(range.from, lang)
+    : `${formatOverviewDate(range.from, lang)} — ${formatOverviewDate(range.to, lang)}`;
+  return lang === "uk" ? `Період: ${label}` : `Period: ${label}`;
+};
+
 const formatDateLabel = (value: string) => {
   const [year, month, day] = value.split("-");
   return year && month && day ? `${day}.${month}` : value;
@@ -177,7 +189,7 @@ const buildDailySeries = (salesRows: Row[], adsRows: Row[]) => {
 };
 
 function KpiValue({ value, unavailable }: { value: string; unavailable?: boolean }) {
-  return <p className={unavailable ? "mt-1 text-sm font-medium text-muted-foreground" : "num mt-1 text-2xl font-semibold tracking-tight"}>{value}</p>;
+  return <p className={unavailable ? "text-sm font-medium leading-snug text-muted-foreground" : "num text-2xl font-semibold leading-tight tracking-tight"}>{value}</p>;
 }
 
 function KpiCard({
@@ -187,6 +199,7 @@ function KpiCard({
   unavailable,
   delta,
   compareLabel,
+  deltaTitle,
 }: {
   title: string;
   value: string;
@@ -194,6 +207,7 @@ function KpiCard({
   unavailable?: boolean;
   delta?: KpiDelta | null;
   compareLabel?: string;
+  deltaTitle?: string;
 }) {
   const deltaClass =
     delta?.tone === "positive"
@@ -201,11 +215,13 @@ function KpiCard({
       : delta?.tone === "negative"
         ? "text-destructive"
         : "text-muted-foreground";
-  return <div className="rounded-xl border bg-background/40 p-4">
-    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
-    <KpiValue unavailable={unavailable} value={value} />
-    {delta ? <p className={`mt-1 text-xs ${deltaClass}`}><span className="font-medium">{delta.text}</span>{compareLabel ? <span className="text-muted-foreground"> {compareLabel}</span> : null}</p> : null}
-    <p className="mt-2 text-xs text-muted-foreground">{subtitle}</p>
+  return <div className="flex h-full min-h-[150px] flex-col rounded-xl border bg-background/40 p-4">
+    <p className="flex min-h-8 items-start text-xs font-medium uppercase leading-4 tracking-wide text-muted-foreground">{title}</p>
+    <div className="flex min-h-11 items-end pt-2"><KpiValue unavailable={unavailable} value={value} /></div>
+    <div className="flex min-h-9 items-start pt-1">
+      {delta ? <p className={`text-xs leading-snug ${deltaClass}`} title={deltaTitle}><span className="font-medium">{delta.text}</span>{compareLabel ? <span className="text-muted-foreground"> {compareLabel}</span> : null}</p> : <span className="text-xs leading-snug opacity-0" aria-hidden="true">—</span>}
+    </div>
+    <p className="mt-auto pt-2 text-xs leading-snug text-muted-foreground">{subtitle}</p>
   </div>;
 }
 
@@ -349,6 +365,10 @@ export default function Overview() {
     { key: "alerts", label: lang === "uk" ? "Сповіщення" : "Alerts", value: counts.data?.alerts.count ?? null, unavailable: Boolean(counts.data?.alerts.error) || !counts.data },
     { key: "imports", label: lang === "uk" ? "Імпорт" : "Imports", value: activity.data ? (activity.data.hasImportErrors ? 1 : 0) : null, unavailable: Boolean(activity.data?.errors.importErrors) || !activity.data },
   ];
+  const attentionHasUnavailable = attentionItems.some((item) => item.unavailable);
+  const attentionHasActiveValue = attentionItems.some((item) => (item.value ?? 0) > 0);
+  const showAttentionDetails = attentionHasUnavailable || attentionHasActiveValue;
+  const attentionAllClear = !attentionHasUnavailable && attentionItems.every((item) => item.value === 0);
   const attentionMax = Math.max(...attentionItems.map((item) => item.value ?? 0), 1);
   const relationshipSummary = salesUnavailable || adsUnavailable
     ? lang === "uk" ? "Одне з бізнес-джерел тимчасово недоступне, тому частина висновків не показана як нуль." : "One business source is temporarily unavailable, so missing insights are not shown as zero."
@@ -360,7 +380,7 @@ export default function Overview() {
           ? lang === "uk" ? "Рекламні витрати є, але продажів за період не знайдено." : "Ad spend is available, but no sales were found for the selected period."
           : lang === "uk" ? "За вибраний період бізнес-дані для графіків поки не знайдені." : "No business data was found for the selected period yet.";
   const businessSummary = [
-    lang === "uk" ? `Період: ${date.contextLabel(lang)}.` : `Period: ${date.contextLabel(lang)}.`,
+    buildPeriodSummary(date.resolved, lang),
     relationshipSummary,
     openIssues && openIssues > 0
       ? lang === "uk" ? "Є сигнали, які потребують перевірки." : "There are signals that need review."
@@ -424,8 +444,8 @@ export default function Overview() {
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
           <KpiCard title={lang === "uk" ? "Дохід" : "Revenue"} unavailable={Boolean(salesUnavailable)} value={salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : salesRows.length ? fmtCurrency(revenueUsd) : "—"} delta={revenueDelta} compareLabel={compareLabel} subtitle="USD" />
           <KpiCard title={lang === "uk" ? "Продажі" : "Sales"} unavailable={Boolean(salesUnavailable)} value={salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : salesRows.length ? fmtNum(salesCount) : "—"} delta={salesDelta} compareLabel={compareLabel} subtitle={lang === "uk" ? "записів продажів" : "sales records"} />
-          <KpiCard title={lang === "uk" ? "Витрати на рекламу" : "Ad Spend"} unavailable={Boolean(adsUnavailable)} value={adsUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : adsRows.length ? fmtCurrency(adSpend) : "—"} delta={adSpendDelta} compareLabel={compareLabel} subtitle="USD" />
-          <KpiCard title={lang === "uk" ? "Рекламна вартість продажу" : "Ad cost / sale"} unavailable={Boolean(adsUnavailable || salesUnavailable)} value={adsUnavailable || salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : costPerSale === null ? "—" : fmtCurrency(costPerSale, { compact: false })} delta={costPerSaleDelta} compareLabel={compareLabel} subtitle={lang === "uk" ? "витрати на рекламу / продажі" : "ad spend / sales"} />
+          <KpiCard title={lang === "uk" ? "Витрати на рекламу" : "Ad Spend"} unavailable={Boolean(adsUnavailable)} value={adsUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : adsRows.length ? fmtCurrency(adSpend) : "—"} delta={adSpendDelta} compareLabel={compareLabel} deltaTitle={lang === "uk" ? "Нейтральна зміна: вищі витрати оцінюються разом із доходом." : "Neutral change: higher spend is evaluated together with revenue."} subtitle="USD" />
+          <KpiCard title={lang === "uk" ? "Вартість продажу з реклами" : "Ad cost / sale"} unavailable={Boolean(adsUnavailable || salesUnavailable)} value={adsUnavailable || salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : costPerSale === null ? "—" : fmtCurrency(costPerSale, { compact: false })} delta={costPerSaleDelta} compareLabel={compareLabel} subtitle={lang === "uk" ? "витрати на рекламу / продажі" : "ad spend / sales"} />
           <KpiCard title={lang === "uk" ? "Потребують уваги" : "Open issues"} unavailable={issuesUnavailable} value={issuesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : openIssues === null ? "—" : fmtNum(openIssues)} subtitle={lang === "uk" ? "мапінг, сповіщення, імпорт" : "mapping, alerts, imports"} />
         </div>
 
@@ -439,9 +459,9 @@ export default function Overview() {
                     <XAxis dataKey="date" tickFormatter={formatDateLabel} tickLine={false} axisLine={false} className="text-xs" />
                     <YAxis tickFormatter={(value) => formatCurrencyValue(value, true)} tickLine={false} axisLine={false} width={72} className="text-xs" />
                     <Tooltip formatter={(value, name) => [formatCurrencyValue(value), name === "revenueUsd" ? (lang === "uk" ? "Дохід" : "Revenue") : (lang === "uk" ? "Витрати" : "Ad spend")]} labelFormatter={(value) => formatDateLabel(String(value))} />
-                    <Legend />
-                    {hasRevenueSeries ? <Line connectNulls={false} type="monotone" dataKey="revenueUsd" name={lang === "uk" ? "Дохід" : "Revenue"} stroke="hsl(var(--primary))" strokeWidth={2} dot={false} /> : null}
-                    {hasSpendSeries ? <Line connectNulls={false} type="monotone" dataKey="adSpend" name={lang === "uk" ? "Витрати" : "Ad spend"} stroke="hsl(var(--muted-foreground))" strokeWidth={2} dot={false} /> : null}
+                    <Legend wrapperStyle={{ fontSize: 12, paddingTop: 4 }} iconType="line" />
+                    {hasRevenueSeries ? <Line connectNulls={false} type="monotone" dataKey="revenueUsd" name={lang === "uk" ? "Дохід" : "Revenue"} stroke="hsl(var(--primary))" strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} /> : null}
+                    {hasSpendSeries ? <Line connectNulls={false} type="monotone" dataKey="adSpend" name={lang === "uk" ? "Витрати" : "Ad spend"} stroke="hsl(var(--foreground))" strokeOpacity={0.7} strokeWidth={2.5} dot={false} activeDot={{ r: 4 }} /> : null}
                   </LineChart>
                 </ResponsiveContainer>
               </div> : <ChartEmpty text={salesUnavailable && adsUnavailable ? (lang === "uk" ? "Тренд тимчасово недоступний через помилки джерел даних." : "Trend is temporarily unavailable due to data source errors.") : (lang === "uk" ? "Даних для графіка за вибраний період поки немає." : "No chart data is available for the selected period yet.")} />}
@@ -470,32 +490,37 @@ export default function Overview() {
                   <XAxis dataKey="date" tickFormatter={formatDateLabel} tickLine={false} axisLine={false} className="text-xs" />
                   <YAxis tickFormatter={(value) => formatCurrencyValue(value, true)} tickLine={false} axisLine={false} width={64} className="text-xs" />
                   <Tooltip formatter={(value) => [formatCurrencyValue(value), lang === "uk" ? "Витрати" : "Ad spend"]} labelFormatter={(value) => formatDateLabel(String(value))} />
-                  <Bar dataKey="adSpend" name={lang === "uk" ? "Витрати" : "Ad spend"} fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="adSpend" name={lang === "uk" ? "Витрати" : "Ad spend"} fill="hsl(var(--foreground))" fillOpacity={0.7} radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div> : <ChartEmpty text={adsUnavailable ? (lang === "uk" ? "Рекламні витрати тимчасово недоступні." : "Ad spend is temporarily unavailable.") : (lang === "uk" ? "Рекламних витрат за вибраний період поки немає." : "No ad spend was found for the selected period yet.")} />}
           </ChartCard>
 
-          <ChartCard title={lang === "uk" ? "Рекламна вартість продажу" : "Ad cost / sale"} description={lang === "uk" ? "Витрати на рекламу / продажі за день" : "Daily ad spend divided by sales"} badge={!hasCostPerSaleSeries && !businessDashboard.isLoading ? "—" : null}>
+          <ChartCard title={lang === "uk" ? "Вартість продажу з реклами" : "Ad cost / sale"} description={lang === "uk" ? "Витрати на рекламу / продажі за день" : "Daily ad spend divided by sales"} badge={!hasCostPerSaleSeries && !businessDashboard.isLoading ? "—" : null}>
             {businessDashboard.isLoading ? <ChartEmpty text={lang === "uk" ? "Завантажуємо ефективність…" : "Loading efficiency…"} /> : hasCostPerSaleSeries ? <div className="h-[220px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartRows} margin={{ left: 8, right: 8, top: 8, bottom: 8 }}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
                   <XAxis dataKey="date" tickFormatter={formatDateLabel} tickLine={false} axisLine={false} className="text-xs" />
                   <YAxis tickFormatter={(value) => formatCurrencyValue(value, true)} tickLine={false} axisLine={false} width={64} className="text-xs" />
-                  <Tooltip formatter={(value) => [formatCurrencyValue(value), lang === "uk" ? "Рекламна вартість продажу" : "Ad cost / sale"]} labelFormatter={(value) => formatDateLabel(String(value))} />
-                  <Line connectNulls={false} type="monotone" dataKey="costPerSale" name={lang === "uk" ? "Рекламна вартість продажу" : "Ad cost / sale"} stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                  <Tooltip formatter={(value) => [formatCurrencyValue(value), lang === "uk" ? "Вартість продажу з реклами" : "Ad cost / sale"]} labelFormatter={(value) => formatDateLabel(String(value))} />
+                  <Line connectNulls={false} type="monotone" dataKey="costPerSale" name={lang === "uk" ? "Вартість продажу з реклами" : "Ad cost / sale"} stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
-            </div> : <ChartEmpty text={salesUnavailable || adsUnavailable ? (lang === "uk" ? "Ефективність недоступна через помилку джерела." : "Efficiency is unavailable because a source errored.") : (lang === "uk" ? "Недостатньо даних для розрахунку рекламної вартості продажу." : "Not enough data to calculate ad cost per sale.")} />}
+            </div> : <ChartEmpty text={salesUnavailable || adsUnavailable ? (lang === "uk" ? "Ефективність недоступна через помилку джерела." : "Efficiency is unavailable because a source errored.") : (lang === "uk" ? "Недостатньо даних для розрахунку вартості продажу з реклами." : "Not enough data to calculate ad cost per sale.")} />}
           </ChartCard>
 
           <ChartCard title={lang === "uk" ? "Потребують уваги" : "Needs attention"} description={lang === "uk" ? "Мапінг, сповіщення та імпорти" : "Mapping, alerts, and imports"} badge={openIssues && openIssues > 0 ? (lang === "uk" ? "Перевірити" : "Review") : null}>
-            {counts.isLoading || activity.isLoading ? <ChartEmpty text={lang === "uk" ? "Завантажуємо сигнали…" : "Loading signals…"} /> : <div className="space-y-3">
-              {attentionItems.map((item) => <div key={item.key} className="rounded-md border bg-card/60 p-3">
+            {counts.isLoading || activity.isLoading ? <ChartEmpty text={lang === "uk" ? "Завантажуємо сигнали…" : "Loading signals…"} /> : attentionAllClear ? <div className="flex min-h-[180px] items-center rounded-md border border-dashed bg-muted/20 p-4">
+              <div>
+                <p className="text-sm font-semibold">{lang === "uk" ? "Активних сигналів немає" : "No active signals"}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{lang === "uk" ? "Мапінг, сповіщення та імпорти не потребують дій." : "Mapping, alerts, and imports do not need action."}</p>
+              </div>
+            </div> : <div className="space-y-3">
+              {showAttentionDetails ? attentionItems.map((item) => <div key={item.key} className="rounded-md border bg-card/60 p-3">
                 <div className="flex items-center justify-between gap-3 text-sm"><span className="font-medium">{item.label}</span><span className="num font-semibold">{item.unavailable ? (lang === "uk" ? "Недоступно" : "Unavailable") : item.value === null ? "—" : fmtNum(item.value)}</span></div>
                 {!item.unavailable && item.value !== null ? <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted"><div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(100, (item.value / attentionMax) * 100)}%` }} /></div> : null}
-              </div>)}
+              </div>) : null}
               <p className="text-xs text-muted-foreground">{openIssues && openIssues > 0 ? (lang === "uk" ? "Є пункти, які потребують перевірки зараз." : "There are items that need review now.") : openIssues === null ? (lang === "uk" ? "Частина сигналів недоступна." : "Some signals are unavailable.") : (lang === "uk" ? "Активних сигналів для перевірки не видно." : "No active review signals are visible.")}</p>
             </div>}
           </ChartCard>
@@ -508,32 +533,32 @@ export default function Overview() {
       </SectionCard> : null}
 
       {session && !readiness.error ? <SectionCard title={lang === "uk" ? "Операційний стан" : "Operational status"} description={lang === "uk" ? "Компактний стан робочого простору, налаштувань і останніх сигналів" : "Compact workspace readiness, setup, and recent signals"}>
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="space-y-4">
+        <div className="grid gap-5 lg:grid-cols-2">
+          <div className="space-y-5">
             <div>
               <h3 className="text-sm font-semibold">{lang === "uk" ? "Стан робочого простору" : "Workspace readiness"}</h3>
               <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {cards.map(([title, desc]) => <div key={String(title)} className="rounded-md border bg-background/50 p-2.5"><p className="text-[11px] text-muted-foreground">{title}</p><p className="text-sm font-medium">{desc}</p></div>)}
+                {cards.map(([title, desc]) => <div key={String(title)} className="rounded-md border bg-background/50 px-3 py-2"><p className="text-[11px] uppercase tracking-wide text-muted-foreground">{title}</p><p className="mt-1 text-sm font-medium leading-snug">{desc}</p></div>)}
               </div>
             </div>
 
             <div>
               <h3 className="text-sm font-semibold">{lang === "uk" ? "Налаштування робочого простору" : "Workspace setup"}</h3>
-              <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {setupCounts.map(([label, item]) => <div key={String(label)} className="rounded-md border bg-background/50 p-2.5"><p className="text-[11px] text-muted-foreground">{label}</p><p className="num text-base font-semibold">{(item as {error:string|null,count:number}|undefined)?.error ? (lang === "uk" ? "Дані поки недоступні" : "Data unavailable") : (item as {count:number}|undefined)?.count ?? "—"}</p></div>)}
+              <div className="mt-2 flex flex-wrap gap-2">
+                {setupCounts.map(([label, item]) => <div key={String(label)} className="min-w-[132px] flex-1 rounded-full border bg-background/50 px-3 py-2 sm:flex-none"><p className="text-[11px] leading-none text-muted-foreground">{label}</p><p className="num mt-1 text-sm font-semibold leading-none">{(item as {error:string|null,count:number}|undefined)?.error ? (lang === "uk" ? "Недоступно" : "Unavailable") : (item as {count:number}|undefined)?.count ?? "—"}</p></div>)}
               </div>
             </div>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-5">
             <div>
               <h3 className="text-sm font-semibold">{lang === "uk" ? "Наступні кроки" : "Next actions"}</h3>
-              <div className="mt-2 space-y-2">{steps.map((s, i) => <div key={i} className="rounded-md border bg-background/50 p-2.5"><p className="text-sm">{s.text}</p><Button asChild variant="outline" size="sm" className="mt-2 h-8"><Link to={s.href}>{s.label}</Link></Button></div>)}</div>
+              <div className="mt-2 space-y-2">{steps.map((s, i) => <div key={i} className="rounded-md border bg-background/50 p-3"><p className="text-sm leading-snug">{s.text}</p><Button asChild variant="outline" size="sm" className="mt-2 h-8"><Link to={s.href}>{s.label}</Link></Button></div>)}</div>
             </div>
 
             <div>
               <h3 className="text-sm font-semibold">{lang === "uk" ? "Остання активність" : "Recent activity"}</h3>
-              <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">{recentActivity.map((line) => <li key={line} className="rounded-md border bg-background/50 px-2.5 py-2">{line}</li>)}</ul>
+              <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">{recentActivity.map((line) => <li key={line} className="rounded-md border bg-background/50 px-3 py-2 leading-snug">{line}</li>)}</ul>
             </div>
           </div>
         </div>
