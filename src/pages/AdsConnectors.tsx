@@ -18,6 +18,7 @@ type OptionalViewData = { rows: Row[]; unavailableReason: string | null };
 type ConnectorKey = "meta" | "google" | "tiktok";
 type ConnectorState = { loading: boolean; error: string | null };
 type SyncRunState = { loading: boolean; error: string | null; success: string | null; details: Record<string, unknown> | null };
+type PlatformConnectionState = { label: string; note?: string };
 type UiLang = "uk" | "en";
 type Copy = (typeof copy)[UiLang];
 
@@ -52,22 +53,22 @@ const copy = {
     overviewTitle: "Огляд Ads конекторів",
     overviewSubtitle: "Стан підключень, рекламних акаунтів і готовності синхронізації.",
     connectionStatus: "Статус підключень",
-    productionReadiness: "Production readiness",
+    productionReadiness: "Готовність production",
     latestAdsHealth: "Останній стан реклами",
-    backendFoundation: "Backend foundation",
+    backendFoundation: "Backend готовність",
     oauthStartCallback: "OAuth start/callback",
-    mockSync: "Mock sync",
+    mockSync: "Тестова синхронізація",
     realOAuth: "Реальне OAuth підключення",
     realAdAccount: "Реальний рекламний акаунт",
     realSyncData: "Реальні sync дані",
     foundationReady: "Готово за backend readiness",
     foundationPending: "Потребує перевірки readiness",
     oauthImplemented: "Start функції налаштовані; callback перевіряється після OAuth.",
-    mockSyncPassed: "Mock sync пройдений",
-    mockSyncUnknown: "Mock sync не підтверджений у поточних safe views",
+    mockSyncPassed: "Тестова синхронізація пройдена",
+    mockSyncUnknown: "Тестова синхронізація не підтверджена в поточних safe views",
     realOAuthActive: "Є ознаки активного реального connection",
     realOAuthPending: "Потрібно пройти реальний OAuth",
-    realAccountConnected: "Є реальні binding records",
+    realAccountConnected: "Є реальні записи привʼязок",
     realAccountPending: "Реальний рекламний акаунт ще не підтверджений",
     realSyncAvailable: "Дані синхронізації доступні",
     realSyncPending: "Зʼявляться після реальної синхронізації",
@@ -76,9 +77,13 @@ const copy = {
     connectionsDescription: "Запуск безпечних OAuth потоків для рекламних платформ.",
     currentState: "Поточний стан",
     safety: "Безпека",
-    stateReadyForTesting: "Готово до OAuth тестування",
+    connectedState: "Підключено",
+    notConnectedState: "Не підключено",
+    unknownConnectionState: "Стан невідомий",
+    testBindingsNotReal: "Є test binding records, але це не real OAuth connection.",
     stateManagedThroughMeta: "Керується через Meta Ads",
-    oauthMayCreate: "OAuth може створити реальний connection record. Синхронізація не запускається автоматично.",
+    oauthMayCreate: "OAuth може створити реальний запис підключення. Синхронізація не запускається автоматично.",
+    facebookLeadSafetyNote: "Facebook Lead Ads використовує Meta Ads підключення. Форми й ліди перевіряємо після Meta OAuth.",
     useTestAccounts: "Для тесту використовуйте тестові рекламні кабінети.",
     metaDescription: "Підключає Facebook / Instagram рекламний акаунт через Meta OAuth.",
     googleDescription: "Підключає Google Ads акаунт через Google OAuth.",
@@ -102,21 +107,21 @@ const copy = {
     syncDue: "Поточна черга",
     syncRulesEmpty: "Правил планової синхронізації поки немає.",
     syncDueEmpty: "Немає синхронізацій, які потрібно запускати зараз.",
-    runSyncCheck: "Запустити перевірку синхронізації",
-    runningSync: "Запускаємо перевірку…",
+    runSyncCheck: "Запустити sync вручну",
+    runningSync: "Запускаємо sync…",
     syncSubmitNote: "Натискання викликає наявну безпечну sync-функцію лише вручну.",
-    syncSuccess: "Перевірку синхронізації надіслано.",
+    syncSuccess: "Ручний sync надіслано.",
     syncError: "Синхронізація завершилась з помилкою.",
     detailsDebug: "Технічні деталі доступні в developer details.",
     fbTitle: "Facebook Lead Ads",
     fbDescription: "Стан форм, лідів, webhook подій і sync запусків.",
-    healthStatus: "Health status",
+    healthStatus: "Стан",
     activeForms: "Активні форми",
     formsNeedMapping: "Форми без mapping",
     leadsLast24h: "Ліди за 24 год",
-    failedLeads: "Failed leads",
+    failedLeads: "Ліди з помилками",
     unprocessedWebhookEvents: "Необроблені webhook events",
-    failedSyncsLast24h: "Failed syncs за 24 год",
+    failedSyncsLast24h: "Помилки sync за 24 год",
     formsTitle: "Форми",
     leadsTitle: "Останні ліди",
     syncRunsTitle: "Останні sync запуски",
@@ -127,7 +132,7 @@ const copy = {
     adsHealthDescription: "Контекст реклами для AI і операційного моніторингу.",
     adsContextUnavailable: "Контекст реклами поки недоступний.",
     dailyContextAfterSync: "Щоденний контекст реклами зʼявиться після реальної синхронізації рекламних даних.",
-    anomaliesAfterPerformance: "Кандидати на аномалії зʼявляться після накопичення performance data.",
+    anomaliesAfterPerformance: "Кандидати на аномалії зʼявляться після накопичення performance-даних.",
     summaryContext: "Підсумковий контекст",
     dailyContext: "Щоденний контекст реклами",
     anomalyCandidates: "Кандидати на аномалії",
@@ -180,13 +185,13 @@ const copy = {
       leads_count: "Ліди",
       created_at: "Створено",
       error_message: "Помилка",
-      health_status: "Health status",
+      health_status: "Стан",
       active_forms: "Активні форми",
       forms_needing_mapping: "Форми без mapping",
       leads_last_24h: "Ліди за 24 год",
-      failed_leads: "Failed leads",
+      failed_leads: "Ліди з помилками",
       unprocessed_webhook_events: "Необроблені webhook events",
-      failed_syncs_last_24h: "Failed syncs за 24 год",
+      failed_syncs_last_24h: "Помилки sync за 24 год",
     },
   },
   en: {
@@ -212,11 +217,11 @@ const copy = {
     overviewTitle: "Ads connectors overview",
     overviewSubtitle: "Connection, ad account, and sync readiness status.",
     connectionStatus: "Connection status",
-    productionReadiness: "Production readiness",
+    productionReadiness: "Готовність production",
     latestAdsHealth: "Latest ads health",
-    backendFoundation: "Backend foundation",
+    backendFoundation: "Backend готовність",
     oauthStartCallback: "OAuth start/callback",
-    mockSync: "Mock sync",
+    mockSync: "Тестова синхронізація",
     realOAuth: "Real OAuth connection",
     realAdAccount: "Real ad account",
     realSyncData: "Real sync data",
@@ -236,9 +241,13 @@ const copy = {
     connectionsDescription: "Start secure OAuth flows for advertising platforms.",
     currentState: "Current state",
     safety: "Safety",
-    stateReadyForTesting: "Ready for OAuth testing",
+    connectedState: "Connected",
+    notConnectedState: "Not connected",
+    unknownConnectionState: "Unknown status",
+    testBindingsNotReal: "Test binding records exist, but this is not a real OAuth connection.",
     stateManagedThroughMeta: "Managed through Meta Ads",
     oauthMayCreate: "OAuth may create a real connection record. Sync does not start automatically.",
+    facebookLeadSafetyNote: "Facebook Lead Ads uses the Meta Ads connection. Forms and leads are checked after Meta OAuth.",
     useTestAccounts: "Use test ad accounts for testing.",
     metaDescription: "Connects a Facebook / Instagram ad account through Meta OAuth.",
     googleDescription: "Connects a Google Ads account through Google OAuth.",
@@ -262,19 +271,19 @@ const copy = {
     syncDue: "Current queue",
     syncRulesEmpty: "No scheduled sync rules yet.",
     syncDueEmpty: "No syncs need to run right now.",
-    runSyncCheck: "Run sync check",
-    runningSync: "Running check…",
+    runSyncCheck: "Run manual sync",
+    runningSync: "Running sync…",
     syncSubmitNote: "Clicking calls the existing secure sync function only when submitted manually.",
-    syncSuccess: "Sync check submitted.",
+    syncSuccess: "Manual sync submitted.",
     syncError: "Sync finished with an error.",
     detailsDebug: "Technical details are available in developer details.",
     fbTitle: "Facebook Lead Ads",
     fbDescription: "Forms, leads, webhook events, and sync run status.",
-    healthStatus: "Health status",
+    healthStatus: "Стан",
     activeForms: "Active forms",
     formsNeedMapping: "Forms needing mapping",
     leadsLast24h: "Leads last 24h",
-    failedLeads: "Failed leads",
+    failedLeads: "Ліди з помилками",
     unprocessedWebhookEvents: "Unprocessed webhook events",
     failedSyncsLast24h: "Failed syncs last 24h",
     formsTitle: "Forms",
@@ -411,6 +420,12 @@ export default function AdsConnectors() {
     (query.data?.fbSyncRuns.rows.length ?? 0) > 0,
   );
 
+  const platformConnectionStates = useMemo(() => ({
+    meta: getPlatformConnectionState("meta", query.data?.adBindings, ui),
+    google: getPlatformConnectionState("google", query.data?.adBindings, ui),
+    tiktok: getPlatformConnectionState("tiktok", query.data?.adBindings, ui),
+  }), [query.data?.adBindings, ui]);
+
   const runScheduledSync = async () => {
     setSyncRunState({ loading: true, error: null, success: null, details: null });
     const { data, error } = await supabase.functions.invoke("ads-scheduled-sync-run", {
@@ -528,7 +543,8 @@ export default function AdsConnectors() {
                     name="Meta Ads"
                     description={ui.metaDescription}
                     buttonText={ui.connectMeta}
-                    stateText={ui.stateReadyForTesting}
+                    stateText={platformConnectionStates.meta.label}
+                    helperNote={platformConnectionStates.meta.note}
                     state={connectorState.meta}
                     onConnect={() => void connect("meta")}
                     canManage={canManage}
@@ -538,7 +554,8 @@ export default function AdsConnectors() {
                     name="Google Ads"
                     description={ui.googleDescription}
                     buttonText={ui.connectGoogle}
-                    stateText={ui.stateReadyForTesting}
+                    stateText={platformConnectionStates.google.label}
+                    helperNote={platformConnectionStates.google.note}
                     state={connectorState.google}
                     onConnect={() => void connect("google")}
                     canManage={canManage}
@@ -548,7 +565,8 @@ export default function AdsConnectors() {
                     name="TikTok Ads"
                     description={ui.tiktokDescription}
                     buttonText={ui.connectTiktok}
-                    stateText={ui.stateReadyForTesting}
+                    stateText={platformConnectionStates.tiktok.label}
+                    helperNote={platformConnectionStates.tiktok.note}
                     state={connectorState.tiktok}
                     onConnect={() => void connect("tiktok")}
                     canManage={canManage}
@@ -564,8 +582,7 @@ export default function AdsConnectors() {
                     </div>
                     <div className="mt-3 rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">
                       <p className="font-medium text-foreground">{ui.safety}</p>
-                      <p className="mt-1">{ui.oauthMayCreate}</p>
-                      <p>{ui.useTestAccounts}</p>
+                      <p className="mt-1">{ui.facebookLeadSafetyNote}</p>
                     </div>
                     <Button type="button" className="mt-3" variant="secondary" disabled>{ui.managedThroughMeta}</Button>
                   </div>
@@ -616,7 +633,6 @@ export default function AdsConnectors() {
                   <MetricCard label={ui.failedLeads} value={formatMetric(findMetric(query.data?.fbHealth.rows, ["failed_leads", "failed_leads_count"]))} />
                   <MetricCard label={ui.unprocessedWebhookEvents} value={formatMetric(findMetric(query.data?.fbHealth.rows, ["unprocessed_webhook_events", "pending_webhook_events"]))} />
                   <MetricCard label={ui.failedSyncsLast24h} value={formatMetric(findMetric(query.data?.fbHealth.rows, ["failed_syncs_last_24h", "failed_sync_runs_last_24h"]))} />
-                  <MetricCard label={ui.healthStatus} value={friendlyStatus(readLikelyStatus(query.data?.fbHealth.rows[0]), ui)} />
                 </div>
                 <div className="mt-4 space-y-4">
                   <CompactDataSection title={ui.formsTitle} data={query.data?.fbForms} columns={["form_name", "form_id", "status", "mapping_status", "leads_count", "updated_at"]} emptyText={ui.fbFormsEmpty} ui={ui} />
@@ -681,7 +697,7 @@ function ReadinessStep({ label, value, tone }: { label: string; value: string; t
   );
 }
 
-function ConnectorCard({ name, description, buttonText, stateText, state, onConnect, canManage, ui }: { name: string; description: string; buttonText: string; stateText: string; state: ConnectorState; onConnect: () => void; canManage: boolean; ui: Copy }) {
+function ConnectorCard({ name, description, buttonText, stateText, helperNote, state, onConnect, canManage, ui }: { name: string; description: string; buttonText: string; stateText: string; helperNote?: string; state: ConnectorState; onConnect: () => void; canManage: boolean; ui: Copy }) {
   return (
     <div className="rounded-lg border border-border/70 bg-card/60 p-4 text-sm">
       <div className="flex items-start justify-between gap-3">
@@ -693,6 +709,7 @@ function ConnectorCard({ name, description, buttonText, stateText, state, onConn
       </div>
       <div className="mt-3 grid gap-2 text-xs text-muted-foreground">
         <p><span className="font-medium text-foreground">{ui.currentState}:</span> {stateText}</p>
+        {helperNote ? <p className="text-amber-700 dark:text-amber-300">{helperNote}</p> : null}
         <div className="rounded-md bg-muted/40 p-3">
           <p className="font-medium text-foreground">{ui.safety}</p>
           <p className="mt-1">{ui.oauthMayCreate}</p>
@@ -872,6 +889,27 @@ function isPlaceholderAccount(row: Row) {
     .filter((value) => value !== null && value !== undefined)
     .map((value) => String(value).toLowerCase());
   return values.some((value) => value.includes("placeholder") || value.includes("test_") || value.includes("_test") || value.includes("northstar"));
+}
+
+function getPlatformConnectionState(platform: ConnectorKey, data: OptionalViewData | undefined, ui: Copy): PlatformConnectionState {
+  if (!data || data.unavailableReason) return { label: ui.unknownConnectionState };
+
+  const platformRows = data.rows.filter((row) => rowMatchesPlatform(row, platform));
+  if (platformRows.some((row) => !isPlaceholderAccount(row))) return { label: ui.connectedState };
+  if (platformRows.length > 0) return { label: ui.notConnectedState, note: ui.testBindingsNotReal };
+
+  return { label: ui.notConnectedState };
+}
+
+function rowMatchesPlatform(row: Row, platform: ConnectorKey) {
+  const searchable = [row.platform, row.external_account_id, row.ad_account_name, row.source_name]
+    .filter((value) => value !== null && value !== undefined)
+    .map((value) => String(value).toLowerCase())
+    .join(" ");
+
+  if (platform === "meta") return searchable.includes("meta") || searchable.includes("facebook") || searchable.includes("instagram") || searchable.includes("act_");
+  if (platform === "google") return searchable.includes("google");
+  return searchable.includes("tiktok");
 }
 
 function findMetric(rows: Row[] | undefined, keys: string[]): unknown {
