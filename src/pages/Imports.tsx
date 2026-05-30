@@ -168,7 +168,7 @@ const copy = {
       importErrors: "Помилки імпорту",
       importErrorsHelper: "Відхилені рядки у зведенні помилок",
       problemRows: "Проблемні рядки",
-      problemRowsHelper: "Відхилені рядки та помилки sync",
+      problemRowsHelper: "Відхилені рядки та помилки синхронізації",
       noRowCounter: "Немає окремого лічильника",
       mapping: "Мапінг",
       mappingHelper: "Статуси очікування або помилки",
@@ -183,9 +183,9 @@ const copy = {
       errorHelp: "Цей розділ недоступний. Інші секції можуть працювати.",
       empty: "Стан імпортів поки не зафіксований.",
       importHealth: "Стан",
-      latestSync: "Sync",
-      latestSyncTime: "Час sync",
-      latestSyncFailedRows: "Помилки sync",
+      latestSync: "Синхронізація",
+      latestSyncTime: "Час синхронізації",
+      latestSyncFailedRows: "Помилки синхронізації",
       openRejectedRows: "Відкриті рядки",
       criticalRejectedRows: "Критичні",
       rejectedRowsLast24h: "За 24 год",
@@ -195,7 +195,7 @@ const copy = {
       title: "Помилки імпорту",
       desc: "Коди помилок і відхилені рядки за джерелами",
       error: "Не вдалося завантажити помилки імпорту.",
-      empty: "Помилок імпорту не знайдено.",
+      empty: "Помилок імпорту не знайдено. Відхилених рядків у зведенні немає.",
       source: "Джерело",
       sourceType: "Тип джерела",
       errorCode: "Код помилки",
@@ -233,7 +233,7 @@ const copy = {
     },
     actionPanel: {
       title: "Що перевірити",
-      desc: "Дії формуються лише з фактичних сигналів на сторінці.",
+      desc: "Дії з’являться тут, якщо система знайде проблеми.",
       importErrors: "Перевірити помилки імпорту",
       rowsFailed: "Перевірити проблемні рядки",
       mapping: "Перевірити мапінг",
@@ -309,7 +309,7 @@ const copy = {
       title: "Import errors",
       desc: "Error codes and rejected rows by source",
       error: "Could not load import errors.",
-      empty: "No import errors found.",
+      empty: "No import errors found. No rejected rows are currently listed.",
       source: "Source",
       sourceType: "Source type",
       errorCode: "Error code",
@@ -347,7 +347,7 @@ const copy = {
     },
     actionPanel: {
       title: "What to check",
-      desc: "Actions are based only on actual signals on this page.",
+      desc: "Actions will appear here when the system detects issues.",
       importErrors: "Review import errors",
       rowsFailed: "Review problem rows",
       mapping: "Review mapping",
@@ -966,13 +966,15 @@ export default function Imports() {
                     </div>
                   ),
                 )}
-                <Link
-                  to={ROUTES.adsConnectors}
-                  className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-primary hover:underline"
-                >
-                  {ui.actionPanel.sources}
-                  <ArrowUpRight className="h-3 w-3" />
-                </Link>
+                {actions.some((action) => action.key !== "clear") ? (
+                  <Link
+                    to={ROUTES.adsConnectors}
+                    className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-primary hover:underline"
+                  >
+                    {ui.actionPanel.sources}
+                    <ArrowUpRight className="h-3 w-3" />
+                  </Link>
+                ) : null}
               </div>
             </SectionCard>
           </div>
@@ -1391,7 +1393,7 @@ function MetricCard({
   const content = (
     <div
       className={cn(
-        "group flex min-h-[92px] flex-col rounded-xl border border-border/70 bg-card p-3 shadow-card transition-all",
+        "group flex min-h-[82px] flex-col rounded-xl border border-border/70 bg-card px-3 py-2.5 shadow-card transition-all",
         href && "h-full hover:border-primary/40 hover:shadow-card-md",
         tone === "success" && "ring-accent-top",
         tone === "warning" && "border-warning/30 bg-warning-soft/10",
@@ -1408,13 +1410,13 @@ function MetricCard({
       </div>
       <p
         className={cn(
-          "mt-1.5 truncate text-lg font-semibold leading-tight tracking-tight",
+          "mt-1 truncate text-lg font-semibold leading-tight tracking-tight",
           unavailable && "text-sm text-muted-foreground",
         )}
       >
         {value}
       </p>
-      <p className="mt-auto line-clamp-2 pt-1.5 text-[11px] leading-snug text-muted-foreground">
+      <p className="mt-auto line-clamp-2 pt-1 text-[11px] leading-snug text-muted-foreground">
         {helper}
       </p>
     </div>
