@@ -55,31 +55,31 @@ const copy = {
     connectionStatus: "Стан підключень",
     adAccountsKpi: "Рекламні акаунти",
     syncData: "Дані синхронізації",
-    readyAfterOauth: "Буде готово після OAuth",
+    readyAfterOauth: "Очікує OAuth-підключення",
     accountsNeedConnection: "Потрібно підключити рекламні акаунти",
     noRealSyncDataYet: "Реальних даних синхронізації ще немає",
     noDataYet: "Даних ще немає",
     technicalStatus: "Технічний статус",
     operationalChecklist: "Операційний чекліст",
-    oauthStartCallback: "OAuth start/callback налаштовано",
-    realOAuthStillNeeded: "Потрібне реальне OAuth-підключення",
-    placeholderAccountsNotReal: "Тестові акаунти не є реальними",
+    oauthStartCallback: "OAuth-процес налаштований",
+    realOAuthStillNeeded: "Потрібно пройти реальне підключення",
+    placeholderAccountsNotReal: "Тестові акаунти не запускають реальну синхронізацію",
     realDataAfterFirstSync: "Дані з’являться після першої успішної синхронізації",
     connectionsTitle: "Підключення",
     connectionsDescription: "Безпечні OAuth-підключення для рекламних платформ.",
     currentState: "Поточний стан",
-    safety: "Безпека",
+    safety: "Що станеться після підключення",
     connectedState: "Підключено",
     notConnectedState: "Не підключено",
     unknownConnectionState: "Стан невідомий",
     testBindingsNotReal: "Є тестові прив’язки, але реального OAuth-підключення ще немає.",
     stateManagedThroughMeta: "Керується через Meta Ads",
-    oauthMayCreate: "Після OAuth система створить реальне підключення. Синхронізація не запускається автоматично.",
-    facebookLeadSafetyNote: "Працює через підключення Meta Ads. Окреме OAuth-підключення не потрібне.",
+    oauthMayCreate: "Система створить реальне підключення. Синхронізація не стартує автоматично.",
+    facebookLeadSafetyNote: "Працює через Meta Ads. Окреме підключення не потрібне.",
     metaDescription: "Підключення рекламних акаунтів Facebook та Instagram через Meta OAuth.",
     googleDescription: "Підключення рекламного акаунта Google Ads через Google OAuth.",
     tiktokDescription: "Підключення TikTok Business або Advertiser акаунта через TikTok OAuth.",
-    facebookLeadDescription: "Працює через підключення Meta Ads. Окреме OAuth-підключення не потрібне.",
+    facebookLeadDescription: "Працює через Meta Ads. Окреме підключення не потрібне.",
     connectMeta: "Підключити Meta Ads",
     connectGoogle: "Підключити Google Ads",
     connectTiktok: "Підключити TikTok Ads",
@@ -89,6 +89,7 @@ const copy = {
     adAccountsDescription: "Прив’язки акаунтів до клієнтів, проєктів і воронок.",
     adAccountsExplain: "Це можуть бути тестові прив’язки. Реальне підключення підтверджується тільки після OAuth.",
     testPlaceholder: "Тестовий акаунт",
+    testAccountNote: "Тестова прив’язка не є реальним OAuth-підключенням.",
     adAccountsEmpty: "Рекламні акаунти ще не прив’язані.",
     scheduledTitle: "Синхронізація",
     scheduledDescription: "Правила синхронізації, поточна черга та ручний запуск.",
@@ -118,9 +119,9 @@ const copy = {
     formsTitle: "Форми",
     leadsTitle: "Останні ліди",
     syncRunsTitle: "Останні запуски синхронізації",
-    fbFormsEmpty: "Форми Facebook Lead Ads ще не знайдені. Перевірте після підключення Meta Ads.",
-    fbLeadsEmpty: "Останніх лідів Facebook ще немає.",
-    fbSyncRunsEmpty: "Останніх запусків синхронізації Facebook Lead Ads ще немає.",
+    fbFormsEmpty: "Форми з’являться після підключення Meta Ads.",
+    fbLeadsEmpty: "Ліди з’являться після отримання Facebook Lead Ads даних.",
+    fbSyncRunsEmpty: "Запуски синхронізації з’являться після першого sync.",
     diagnosticsTitle: "Діагностика",
     diagnosticsDescription: "Контекст реклами, кандидати на аномалії та поточні проблеми.",
     adsContext: "Контекст реклами",
@@ -212,31 +213,31 @@ const copy = {
     connectionStatus: "Connection status",
     adAccountsKpi: "Ad accounts",
     syncData: "Sync data",
-    readyAfterOauth: "Ready after OAuth",
+    readyAfterOauth: "Waiting for OAuth connection",
     accountsNeedConnection: "Ad accounts need to be connected",
     noRealSyncDataYet: "No real sync data yet",
     noDataYet: "No data yet",
     technicalStatus: "Technical status",
     operationalChecklist: "Operational checklist",
-    oauthStartCallback: "OAuth start/callback configured",
-    realOAuthStillNeeded: "Real OAuth connection still needed",
-    placeholderAccountsNotReal: "Placeholder accounts do not count as real accounts",
+    oauthStartCallback: "OAuth flow is configured",
+    realOAuthStillNeeded: "Real connection still needs to be completed",
+    placeholderAccountsNotReal: "Test accounts do not start real sync",
     realDataAfterFirstSync: "Real data appears after first successful sync",
     connectionsTitle: "Connections",
     connectionsDescription: "Secure OAuth connections for advertising platforms.",
     currentState: "Current state",
-    safety: "Safety",
+    safety: "What happens after connection",
     connectedState: "Connected",
     notConnectedState: "Not connected",
     unknownConnectionState: "Unknown",
     testBindingsNotReal: "Test binding records exist, but there is no real OAuth connection yet.",
     stateManagedThroughMeta: "Managed through Meta Ads",
-    oauthMayCreate: "OAuth may create a real connection record. Sync does not start automatically.",
-    facebookLeadSafetyNote: "Uses the Meta Ads connection. Separate OAuth is not required.",
+    oauthMayCreate: "The system will create a real connection. Sync will not start automatically.",
+    facebookLeadSafetyNote: "Uses Meta Ads. No separate connection is required.",
     metaDescription: "Connect Facebook and Instagram ad accounts through Meta OAuth.",
     googleDescription: "Connect a Google Ads account through Google OAuth.",
     tiktokDescription: "Connect a TikTok Business or Advertiser account through TikTok OAuth.",
-    facebookLeadDescription: "Uses the Meta Ads connection. Separate OAuth is not required.",
+    facebookLeadDescription: "Uses Meta Ads. No separate connection is required.",
     connectMeta: "Connect Meta Ads",
     connectGoogle: "Connect Google Ads",
     connectTiktok: "Connect TikTok Ads",
@@ -245,7 +246,8 @@ const copy = {
     adAccountsTitle: "Ad accounts",
     adAccountsDescription: "Account bindings to clients, projects, and funnels.",
     adAccountsExplain: "These may be test binding records. A real connection is verified only after OAuth.",
-    testPlaceholder: "Test / placeholder account",
+    testPlaceholder: "Test account",
+    testAccountNote: "Test binding is not a real OAuth connection.",
     adAccountsEmpty: "Ad accounts are not bound yet.",
     scheduledTitle: "Sync",
     scheduledDescription: "Sync rules, current queue, and manual run controls.",
@@ -275,9 +277,9 @@ const copy = {
     formsTitle: "Forms",
     leadsTitle: "Recent leads",
     syncRunsTitle: "Recent sync runs",
-    fbFormsEmpty: "No Facebook Lead Ads forms found yet. Check after Meta Ads connection.",
-    fbLeadsEmpty: "No recent Facebook leads yet.",
-    fbSyncRunsEmpty: "No recent Facebook Lead Ads sync runs yet.",
+    fbFormsEmpty: "Forms will appear after Meta Ads is connected.",
+    fbLeadsEmpty: "Leads will appear after Facebook Lead Ads data is received.",
+    fbSyncRunsEmpty: "Sync runs will appear after the first sync.",
     diagnosticsTitle: "Diagnostics",
     diagnosticsDescription: "Ads context, anomaly candidates, and current issues.",
     adsContext: "Ads context",
@@ -569,6 +571,9 @@ export default function AdsConnectors() {
                       <p className="font-medium text-foreground">{ui.safety}</p>
                       <p className="mt-1">{ui.facebookLeadSafetyNote}</p>
                     </div>
+                    <div className="mt-auto pt-3">
+                      <Button type="button" variant="secondary" disabled>{ui.stateManagedThroughMeta}</Button>
+                    </div>
                   </div>
                 </div>
               </SectionCard>
@@ -724,8 +729,55 @@ function AdAccountsTable({ data, ui }: { data: OptionalViewData | undefined; ui:
   if (data.unavailableReason) return <UnavailableMessage reason={data.unavailableReason} ui={ui} />;
   if (data.rows.length === 0) return <p className="text-sm text-muted-foreground">{ui.adAccountsEmpty}</p>;
 
-  const columns = ["platform", "external_account_id", "client_name", "project_name", "funnel_name", "mapping_status", "binding_status", "confidence"];
-  return <GenericDataTable rows={data.rows} columns={columns} ui={ui} markPlaceholders />;
+  return (
+    <div className="grid gap-3 xl:grid-cols-2">
+      {data.rows.map((row, index) => <AdAccountCard key={`${index}-${String(row.external_account_id ?? row.id ?? "account")}`} row={row} ui={ui} />)}
+    </div>
+  );
+}
+
+function AdAccountCard({ row, ui }: { row: Row; ui: Copy }) {
+  const placeholder = isPlaceholderAccount(row);
+  return (
+    <article className={cn(
+      "rounded-lg border bg-card/60 p-4 text-sm",
+      placeholder ? "border-amber-200 dark:border-amber-900/60" : "border-border/70",
+    )}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{ui.columnLabels.platform}</p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <StatusPill tone="muted">{formatValue(row.platform, ui)}</StatusPill>
+              {placeholder ? <StatusPill tone="warning">{ui.testPlaceholder}</StatusPill> : null}
+            </div>
+          </div>
+          <div>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{ui.columnLabels.external_account_id}</p>
+            <p className="break-all font-mono text-xs text-muted-foreground">{formatValue(row.external_account_id, ui)}</p>
+          </div>
+        </div>
+        {placeholder ? <p className="max-w-sm text-xs text-amber-700 dark:text-amber-300">{ui.testAccountNote}</p> : null}
+      </div>
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <AccountField label={ui.columnLabels.client_name} value={row.client_name} ui={ui} />
+        <AccountField label={ui.columnLabels.project_name} value={row.project_name} ui={ui} />
+        <AccountField label={ui.columnLabels.funnel_name} value={row.funnel_name} ui={ui} />
+        <AccountField label={ui.columnLabels.mapping_status} value={row.mapping_status} ui={ui} />
+        <AccountField label={ui.columnLabels.binding_status} value={row.binding_status} ui={ui} />
+        <AccountField label={ui.columnLabels.confidence} value={row.confidence} ui={ui} />
+      </div>
+    </article>
+  );
+}
+
+function AccountField({ label, value, ui }: { label: string; value: unknown; ui: Copy }) {
+  return (
+    <div className="min-w-0 rounded-md bg-muted/30 px-3 py-2">
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="mt-1 break-words text-sm text-foreground">{formatValue(value, ui)}</p>
+    </div>
+  );
 }
 
 function CompactDataSection({ title, data, columns, emptyText, ui, maxRows }: { title: string; data: OptionalViewData | undefined; columns: string[]; emptyText: string; ui: Copy; maxRows?: number }) {
