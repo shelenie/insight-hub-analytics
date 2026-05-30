@@ -89,7 +89,11 @@ const copy = {
     adAccountsDescription: "Прив’язки акаунтів до клієнтів, проєктів і воронок.",
     adAccountsExplain: "Це можуть бути тестові прив’язки. Реальне підключення підтверджується тільки після OAuth.",
     testPlaceholder: "Тестовий акаунт",
-    testAccountNote: "Тестова прив’язка не є реальним OAuth-підключенням.",
+    realAccount: "Реальний акаунт",
+    bindingScope: "Область прив’язки",
+    accountStatus: "Статус акаунта",
+    testAccountNote: "Це тестова прив’язка. Вона не підтверджує реальне OAuth-підключення.",
+    realAccountHelper: "Реальне підключення потрібно перевірити після OAuth.",
     adAccountsEmpty: "Рекламні акаунти ще не прив’язані.",
     scheduledTitle: "Синхронізація",
     scheduledDescription: "Правила синхронізації, поточна черга та ручний запуск.",
@@ -247,7 +251,11 @@ const copy = {
     adAccountsDescription: "Account bindings to clients, projects, and funnels.",
     adAccountsExplain: "These may be test binding records. A real connection is verified only after OAuth.",
     testPlaceholder: "Test account",
-    testAccountNote: "Test binding is not a real OAuth connection.",
+    realAccount: "Real account",
+    bindingScope: "Binding scope",
+    accountStatus: "Account status",
+    testAccountNote: "This is a test binding. It does not confirm a real OAuth connection.",
+    realAccountHelper: "Real connection should be verified after OAuth.",
     adAccountsEmpty: "Ad accounts are not bound yet.",
     scheduledTitle: "Sync",
     scheduledDescription: "Sync rules, current queue, and manual run controls.",
@@ -740,32 +748,43 @@ function AdAccountCard({ row, ui }: { row: Row; ui: Copy }) {
   const placeholder = isPlaceholderAccount(row);
   return (
     <article className={cn(
-      "rounded-lg border bg-card/60 p-4 text-sm",
+      "flex h-full flex-col rounded-lg border bg-card/60 p-4 text-sm",
       placeholder ? "border-amber-200 dark:border-amber-900/60" : "border-border/70",
     )}>
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{ui.columnLabels.platform}</p>
-            <div className="mt-1 flex flex-wrap items-center gap-2">
-              <StatusPill tone="muted">{formatValue(row.platform, ui)}</StatusPill>
-              {placeholder ? <StatusPill tone="warning">{ui.testPlaceholder}</StatusPill> : null}
-            </div>
-          </div>
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{ui.columnLabels.external_account_id}</p>
-            <p className="break-all font-mono text-xs text-muted-foreground">{formatValue(row.external_account_id, ui)}</p>
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{ui.columnLabels.platform}</p>
+          <p className="mt-1 text-base font-semibold text-foreground">{formatValue(row.platform, ui)}</p>
+        </div>
+        <StatusPill tone={placeholder ? "warning" : "success"}>{placeholder ? ui.testPlaceholder : ui.realAccount}</StatusPill>
+      </div>
+
+      <div className="mt-4 rounded-md bg-muted/30 px-3 py-2">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{ui.columnLabels.external_account_id}</p>
+        <p className="mt-1 break-all font-mono text-sm text-foreground">{formatValue(row.external_account_id, ui)}</p>
+      </div>
+
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <div>
+          <p className="mb-2 text-xs font-semibold text-muted-foreground">{ui.bindingScope}</p>
+          <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
+            <AccountField label={ui.columnLabels.client_name} value={row.client_name} ui={ui} />
+            <AccountField label={ui.columnLabels.project_name} value={row.project_name} ui={ui} />
+            <AccountField label={ui.columnLabels.funnel_name} value={row.funnel_name} ui={ui} />
           </div>
         </div>
-        {placeholder ? <p className="max-w-sm text-xs text-amber-700 dark:text-amber-300">{ui.testAccountNote}</p> : null}
+        <div>
+          <p className="mb-2 text-xs font-semibold text-muted-foreground">{ui.accountStatus}</p>
+          <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
+            <AccountField label={ui.columnLabels.mapping_status} value={row.mapping_status} ui={ui} />
+            <AccountField label={ui.columnLabels.binding_status} value={row.binding_status} ui={ui} />
+            <AccountField label={ui.columnLabels.confidence} value={row.confidence} ui={ui} />
+          </div>
+        </div>
       </div>
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <AccountField label={ui.columnLabels.client_name} value={row.client_name} ui={ui} />
-        <AccountField label={ui.columnLabels.project_name} value={row.project_name} ui={ui} />
-        <AccountField label={ui.columnLabels.funnel_name} value={row.funnel_name} ui={ui} />
-        <AccountField label={ui.columnLabels.mapping_status} value={row.mapping_status} ui={ui} />
-        <AccountField label={ui.columnLabels.binding_status} value={row.binding_status} ui={ui} />
-        <AccountField label={ui.columnLabels.confidence} value={row.confidence} ui={ui} />
+
+      <div className="mt-auto pt-4">
+        {placeholder ? <WarningNotice>{ui.testAccountNote}</WarningNotice> : <p className="text-xs text-muted-foreground">{ui.realAccountHelper}</p>}
       </div>
     </article>
   );
