@@ -163,7 +163,7 @@ const copy = {
       healthOk: "Критичних сигналів не видно",
       healthReview: "Є сигнали, які потребують уваги",
       healthPartial: "Один або більше розділів недоступні",
-      lastUpdate: "Останнє оновлення",
+      lastUpdate: "Оновлено",
       lastUpdateHelper: "Найсвіжіша дата з доступних джерел",
       importErrors: "Помилки імпорту",
       importErrorsHelper: "Відхилені рядки у зведенні помилок",
@@ -182,14 +182,14 @@ const copy = {
       error: "Не вдалося завантажити стан імпортів.",
       errorHelp: "Цей розділ недоступний. Інші секції можуть працювати.",
       empty: "Стан імпортів поки не зафіксований.",
-      importHealth: "Стан імпортів",
-      latestSync: "Останній sync",
-      latestSyncTime: "Час останнього sync",
-      latestSyncFailedRows: "Помилки в останньому sync",
-      openRejectedRows: "Відкриті відхилені рядки",
-      criticalRejectedRows: "Критичні відхилені рядки",
-      rejectedRowsLast24h: "Відхилені рядки за 24 год",
-      latestRejectedRow: "Останній відхилений рядок",
+      importHealth: "Стан",
+      latestSync: "Sync",
+      latestSyncTime: "Час sync",
+      latestSyncFailedRows: "Помилки sync",
+      openRejectedRows: "Відкриті рядки",
+      criticalRejectedRows: "Критичні",
+      rejectedRowsLast24h: "За 24 год",
+      latestRejectedRow: "Останній рядок",
     },
     errors: {
       title: "Помилки імпорту",
@@ -209,7 +209,7 @@ const copy = {
       title: "Стан мапінгу",
       desc: "Привʼязка імпортованих джерел до бізнес-структури",
       error: "Не вдалося завантажити стан мапінгу.",
-      empty: "Рядків мапінгу поки немає.",
+      empty: "Рядків мапінгу поки немає. Якщо джерела вже додані, перевірте зв’язки даних.",
       name: "Назва",
       sourceType: "Тип джерела",
       targetTable: "Цільова таблиця",
@@ -296,14 +296,14 @@ const copy = {
       error: "Could not load import status.",
       errorHelp: "This section is unavailable. Other sections may still work.",
       empty: "Import health has not been recorded yet.",
-      importHealth: "Import health",
-      latestSync: "Latest sync",
-      latestSyncTime: "Latest sync time",
-      latestSyncFailedRows: "Failed rows in latest sync",
-      openRejectedRows: "Open rejected rows",
-      criticalRejectedRows: "Critical rejected rows",
-      rejectedRowsLast24h: "Rejected rows last 24h",
-      latestRejectedRow: "Latest rejected row",
+      importHealth: "Status",
+      latestSync: "Sync",
+      latestSyncTime: "Sync time",
+      latestSyncFailedRows: "Sync failures",
+      openRejectedRows: "Open rows",
+      criticalRejectedRows: "Critical",
+      rejectedRowsLast24h: "Last 24h",
+      latestRejectedRow: "Latest row",
     },
     errors: {
       title: "Import errors",
@@ -323,7 +323,7 @@ const copy = {
       title: "Mapping health",
       desc: "Imported source bindings to business structure",
       error: "Could not load mapping health.",
-      empty: "No mapping rows yet.",
+      empty: "No mapping rows yet. If sources are already added, check data bindings.",
       name: "Name",
       sourceType: "Source type",
       targetTable: "Target table",
@@ -613,8 +613,8 @@ export default function Imports() {
                     emptyText={ui.activity.empty}
                   >
                     {healthSummary ? (
-                      <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
-                        <HealthSummaryCard label={ui.activity.importHealth}>
+                      <dl className="grid gap-x-6 p-3 sm:grid-cols-2">
+                        <HealthSummaryItem label={ui.activity.importHealth}>
                           <HumanStatusBadge
                             status={healthSummary.importHealthStatusKind}
                             label={statusLabel(
@@ -623,8 +623,8 @@ export default function Imports() {
                               ui,
                             )}
                           />
-                        </HealthSummaryCard>
-                        <HealthSummaryCard label={ui.activity.latestSync}>
+                        </HealthSummaryItem>
+                        <HealthSummaryItem label={ui.activity.latestSync}>
                           <HumanStatusBadge
                             status={healthSummary.latestSyncStatusKind}
                             label={statusLabel(
@@ -633,38 +633,38 @@ export default function Imports() {
                               ui,
                             )}
                           />
-                        </HealthSummaryCard>
-                        <HealthSummaryCard label={ui.activity.latestSyncTime}>
+                        </HealthSummaryItem>
+                        <HealthSummaryItem label={ui.activity.latestSyncTime}>
                           {formatNullableDate(healthSummary.latestSyncAt, lang)}
-                        </HealthSummaryCard>
-                        <HealthSummaryCard
+                        </HealthSummaryItem>
+                        <HealthSummaryItem
                           label={ui.activity.latestSyncFailedRows}
                           emphasize={healthSummary.latestSyncRowsFailed > 0}
                         >
                           {fmtNum(healthSummary.latestSyncRowsFailed)}
-                        </HealthSummaryCard>
-                        <HealthSummaryCard
+                        </HealthSummaryItem>
+                        <HealthSummaryItem
                           label={ui.activity.openRejectedRows}
                           emphasize={healthSummary.openRejectedRows > 0}
                         >
                           {fmtNum(healthSummary.openRejectedRows)}
-                        </HealthSummaryCard>
-                        <HealthSummaryCard
+                        </HealthSummaryItem>
+                        <HealthSummaryItem
                           label={ui.activity.criticalRejectedRows}
                           emphasize={healthSummary.criticalRejectedRows > 0}
                         >
                           {fmtNum(healthSummary.criticalRejectedRows)}
-                        </HealthSummaryCard>
-                        <HealthSummaryCard
+                        </HealthSummaryItem>
+                        <HealthSummaryItem
                           label={ui.activity.rejectedRowsLast24h}
                           emphasize={healthSummary.rejectedRowsLast24h > 0}
                         >
                           {fmtNum(healthSummary.rejectedRowsLast24h)}
-                        </HealthSummaryCard>
-                        <HealthSummaryCard label={ui.activity.latestRejectedRow}>
+                        </HealthSummaryItem>
+                        <HealthSummaryItem label={ui.activity.latestRejectedRow}>
                           {formatNullableDate(healthSummary.latestRejectedRowAt, lang)}
-                        </HealthSummaryCard>
-                      </div>
+                        </HealthSummaryItem>
+                      </dl>
                     ) : null}
                   </AvailabilityBoundary>
                 </SectionCard>
@@ -934,14 +934,14 @@ export default function Imports() {
               description={ui.actionPanel.desc}
               className="xl:sticky xl:top-4 xl:self-start"
             >
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {actions.map((action) =>
                   action.href ? (
                     <Link
                       key={action.key}
                       to={action.href}
                       className={cn(
-                        "flex items-start gap-3 rounded-lg border p-3 transition-colors hover:bg-muted/50",
+                        "flex items-start gap-2.5 rounded-lg border p-2.5 transition-colors hover:bg-muted/50",
                         action.tone === "warning" &&
                           "border-warning/30 bg-warning-soft/20",
                         action.tone === "error" &&
@@ -957,10 +957,10 @@ export default function Imports() {
                   ) : (
                     <div
                       key={action.key}
-                      className="flex items-start gap-3 rounded-lg border border-success/25 bg-success-soft/20 p-3"
+                      className="flex items-start gap-2.5 rounded-lg border border-success/25 bg-success-soft/10 p-2.5"
                     >
                       <ActionIcon tone={action.tone} />
-                      <span className="text-sm font-medium">
+                      <span className="text-sm font-medium text-success">
                         {action.label}
                       </span>
                     </div>
@@ -1391,7 +1391,7 @@ function MetricCard({
   const content = (
     <div
       className={cn(
-        "group flex min-h-[118px] flex-col rounded-xl border border-border/70 bg-card p-3.5 shadow-card transition-all",
+        "group flex min-h-[92px] flex-col rounded-xl border border-border/70 bg-card p-3 shadow-card transition-all",
         href && "h-full hover:border-primary/40 hover:shadow-card-md",
         tone === "success" && "ring-accent-top",
         tone === "warning" && "border-warning/30 bg-warning-soft/10",
@@ -1408,13 +1408,13 @@ function MetricCard({
       </div>
       <p
         className={cn(
-          "mt-2 text-xl font-semibold leading-tight tracking-tight",
-          unavailable && "text-base text-muted-foreground",
+          "mt-1.5 truncate text-lg font-semibold leading-tight tracking-tight",
+          unavailable && "text-sm text-muted-foreground",
         )}
       >
         {value}
       </p>
-      <p className="mt-auto line-clamp-2 pt-2 text-xs leading-snug text-muted-foreground">
+      <p className="mt-auto line-clamp-2 pt-1.5 text-[11px] leading-snug text-muted-foreground">
         {helper}
       </p>
     </div>
@@ -1431,7 +1431,7 @@ function MetricCard({
   );
 }
 
-function HealthSummaryCard({
+function HealthSummaryItem({
   label,
   emphasize = false,
   children,
@@ -1441,18 +1441,18 @@ function HealthSummaryCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-[86px] rounded-lg border border-border/70 bg-muted/20 p-3">
-      <p className="text-[10px] font-semibold uppercase leading-snug tracking-[0.08em] text-muted-foreground">
+    <div className="grid grid-cols-[minmax(8rem,0.9fr)_minmax(0,1.1fr)] items-center gap-3 border-b border-border/60 py-2 last:border-b-0 sm:even:last:border-b-0 sm:[&:nth-last-child(2)]:border-b-0">
+      <dt className="text-[11px] font-semibold uppercase leading-tight tracking-[0.08em] text-muted-foreground">
         {label}
-      </p>
-      <div
+      </dt>
+      <dd
         className={cn(
-          "mt-2 text-sm font-semibold leading-tight",
+          "min-w-0 text-right text-sm font-semibold leading-tight sm:text-left",
           emphasize && "text-destructive",
         )}
       >
         {children}
-      </div>
+      </dd>
     </div>
   );
 }
@@ -1613,10 +1613,26 @@ function formatNullableDate(value: string | null, lang: "uk" | "en") {
 function formatDateTime(value: string, lang: "uk" | "en") {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(lang === "uk" ? "uk-UA" : "en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+
+  const parts = new Intl.DateTimeFormat(lang === "uk" ? "uk-UA" : "en-US", {
+    day: "numeric",
+    month: lang === "uk" ? "short" : "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  })
+    .formatToParts(date)
+    .reduce<Record<string, string>>((acc, part) => {
+      if (part.type !== "literal") acc[part.type] = part.value;
+      return acc;
+    }, {});
+
+  const time = `${parts.hour ?? "00"}:${parts.minute ?? "00"}`;
+  if (lang === "uk") {
+    return `${parts.day} ${parts.month} ${parts.year}, ${time}`;
+  }
+  return `${parts.month} ${parts.day}, ${parts.year}, ${time}`;
 }
 
 function latestDate(values: (string | null)[]) {
