@@ -306,6 +306,11 @@ export default function Imports() {
     queryFn: readImportsDashboard,
   });
 
+  const hasLoadedData = Boolean(query.data);
+  const isInitialLoading = query.isLoading && !query.data;
+  const signedOut = !session;
+  const pageUnavailableReason = query.isError ? query.error?.message ?? "Query failed" : null;
+
   const healthRows = useMemo(() => normalizeImportHealthRows(query.data?.health.rows ?? []), [query.data?.health.rows]);
   const errorRows = useMemo(() => normalizeImportErrors(query.data?.errors.rows ?? []), [query.data?.errors.rows]);
   const mappingRows = useMemo(
@@ -317,23 +322,22 @@ export default function Imports() {
   const unavailableSections = [query.data?.health, query.data?.errors, query.data?.mappings, query.data?.mappingReview, query.data?.alerts]
     .filter((slice): slice is QuerySlice<unknown> => Boolean(slice))
     .filter((slice) => Boolean(slice.unavailableReason));
-  const hasUnavailable = query.isError || unavailableSections.length > 0;
-  const failedImports = query.data?.errors.unavailableReason ? null : sum(errorRows.map((row) => row.count));
-  const failedRows = query.data?.health.unavailableReason ? null : sum(healthRows.map((row) => row.rowsFailed ?? 0));
-  const mappingIssues = query.data?.mappings.unavailableReason && query.data?.mappingReview.unavailableReason ? null : mappingRows.filter((row) => row.needsReview).length;
-  const alertCount = query.data?.alerts.unavailableReason ? null : countAlerts(alertRows).count;
-  const alertLabel = countAlerts(alertRows).label;
-  const staleSources = query.data?.health.unavailableReason ? null : healthRows.filter((row) => row.statusKind === "warning").length;
-  const lastUpdate = latestDate([
+  const hasUnavailable = Boolean(pageUnavailableReason) || unavailableSections.length > 0;
+  const failedImports = !hasLoadedData || pageUnavailableReason || query.data?.errors.unavailableReason ? null : sum(errorRows.map((row) => row.count));
+  const failedRows = !hasLoadedData || pageUnavailableReason || query.data?.health.unavailableReason ? null : sum(healthRows.map((row) => row.rowsFailed ?? 0));
+  const mappingIssues = !hasLoadedData || pageUnavailableReason || (query.data?.mappings.unavailableReason && query.data?.mappingReview.unavailableReason) ? null : mappingRows.filter((row) => row.needsReview).length;
+  const alertSummary = countAlerts(alertRows);
+  const alertCount = !hasLoadedData || pageUnavailableReason || query.data?.alerts.unavailableReason ? null : alertSummary.count;
+  const alertLabel = alertSummary.label;
+  const staleSources = !hasLoadedData || pageUnavailableReason || query.data?.health.unavailableReason ? null : healthRows.filter((row) => row.statusKind === "warning").length;
+  const lastUpdate = !hasLoadedData || pageUnavailableReason ? null : latestDate([
     ...healthRows.map((row) => row.lastSync),
     ...errorRows.map((row) => row.lastError),
     ...mappingRows.map((row) => row.updatedAt),
     ...alertRows.map((row) => row.createdAt),
   ]);
-  const needsReview = [failedImports, failedRows, mappingIssues, alertCount, staleSources].some((value) => (value ?? 0) > 0);
+  const needsReview = hasLoadedData && [failedImports, failedRows, mappingIssues, alertCount, staleSources].some((value) => (value ?? 0) > 0);
   const overall = hasUnavailable ? "partial" : needsReview ? "review" : "healthy";
-  const loading = query.isLoading || query.isFetching;
-  const signedOut = !session;
 
   const actions = buildActions({ ui, failedImports, failedRows, mappingIssues, alertCount, hasUnavailable });
 
@@ -341,34 +345,34 @@ export default function Imports() {
     <DashboardLayout title={t("importsTitle")} subtitle={t("importsSubtitle")}>
       <div className="space-y-4">
         {signedOut ? <Message>{ui.signIn}</Message> : null}
-        {query.isLoading ? <Message>{ui.loading}</Message> : null}
+        {!signedOut && isInitialLoading ? <Message>{ui.loading}</Message> : null}
 
-        <Toolbar
+        {!signedOut && !isInitialLoading ? <Toolbar
           label={hasUnavailable ? ui.someUnavailable : ui.dataAvailable}
           unavailable={hasUnavailable}
           refreshLabel={query.isFetching ? ui.refreshing : ui.refresh}
           onRefresh={() => void query.refetch()}
           isRefreshing={query.isFetching}
-        />
+        /> : null}
 
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+        {!signedOut && !isInitialLoading ? <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
           <MetricCard
             title={ui.kpis.health}
             value={overall === "partial" ? ui.kpis.partial : overall === "review" ? ui.kpis.needsReview : ui.kpis.healthy}
             helper={overall === "partial" ? ui.kpis.healthPartial : overall === "review" ? ui.kpis.healthReview : ui.kpis.healthOk}
             tone={overall === "partial" ? "error" : overall === "review" ? "warning" : "success"}
           />
-          <MetricCard title={ui.kpis.lastUpdate} value={lastUpdate ? formatDateTime(lastUpdate, lang) : ui.noUpdates} helper={ui.kpis.lastUpdateHelper} href={ROUTES.adsConnectors} />
-          <MetricCard title={ui.kpis.importErrors} value={formatNullableCount(failedImports, ui)} helper={ui.kpis.importErrorsHelper} unavailable={query.data?.errors.unavailableReason} href="#import-errors" />
-          <MetricCard title={ui.kpis.problemRows} value={formatNullableCount(failedRows, ui)} helper={query.data?.health.unavailableReason ? ui.sourceUnavailable : ui.kpis.problemRowsHelper} unavailable={query.data?.health.unavailableReason} href="#source-activity" />
+          <MetricCard title={ui.kpis.lastUpdate} value={pageUnavailableReason ? ui.unavailable : lastUpdate ? formatDateTime(lastUpdate, lang) : ui.noUpdates} helper={pageUnavailableReason ? ui.sourceUnavailable : ui.kpis.lastUpdateHelper} unavailable={pageUnavailableReason} href={ROUTES.adsConnectors} />
+          <MetricCard title={ui.kpis.importErrors} value={formatNullableCount(failedImports, ui)} helper={ui.kpis.importErrorsHelper} unavailable={pageUnavailableReason ?? query.data?.errors.unavailableReason} href="#import-errors" />
+          <MetricCard title={ui.kpis.problemRows} value={formatNullableCount(failedRows, ui)} helper={(pageUnavailableReason ?? query.data?.health.unavailableReason) ? ui.sourceUnavailable : ui.kpis.problemRowsHelper} unavailable={pageUnavailableReason ?? query.data?.health.unavailableReason} href="#source-activity" />
           <MetricCard title={ui.kpis.mapping} value={formatNullableCount(mappingIssues, ui)} helper={ui.kpis.mappingHelper} unavailable={mappingIssues === null} href={ROUTES.bindings} />
-          <MetricCard title={ui.kpis.alerts} value={formatNullableCount(alertCount, ui)} helper={alertLabel === "open" ? ui.kpis.openAlertsHelper : ui.kpis.recentAlertsHelper} unavailable={query.data?.alerts.unavailableReason} href={ROUTES.alerts} />
-        </div>
+          <MetricCard title={ui.kpis.alerts} value={formatNullableCount(alertCount, ui)} helper={alertLabel === "open" ? ui.kpis.openAlertsHelper : ui.kpis.recentAlertsHelper} unavailable={pageUnavailableReason ?? query.data?.alerts.unavailableReason} href={ROUTES.alerts} />
+        </div> : null}
 
-        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+        {!signedOut && !isInitialLoading ? <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
           <div className="space-y-4">
             <div id="source-activity"><SectionCard title={ui.activity.title} description={ui.activity.desc} noPadding>
-              <AvailabilityBoundary unavailableReason={query.data?.health.unavailableReason} errorText={ui.activity.error} empty={!healthRows.length} emptyText={ui.activity.empty}>
+              <AvailabilityBoundary unavailableReason={pageUnavailableReason ?? query.data?.health.unavailableReason} errorText={ui.activity.error} empty={!healthRows.length} emptyText={ui.activity.empty}>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
@@ -401,7 +405,7 @@ export default function Imports() {
             </SectionCard></div>
 
             <div id="import-errors"><SectionCard title={ui.errors.title} description={ui.errors.desc} noPadding>
-              <AvailabilityBoundary unavailableReason={query.data?.errors.unavailableReason} errorText={ui.errors.error} empty={!errorRows.length} emptyText={ui.errors.empty}>
+              <AvailabilityBoundary unavailableReason={pageUnavailableReason ?? query.data?.errors.unavailableReason} errorText={ui.errors.error} empty={!errorRows.length} emptyText={ui.errors.empty}>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader><TableRow><TableHead>{ui.errors.source}</TableHead><TableHead>{ui.errors.type}</TableHead><TableHead className="text-right">{ui.errors.count}</TableHead><TableHead>{ui.errors.lastError}</TableHead></TableRow></TableHeader>
@@ -421,7 +425,7 @@ export default function Imports() {
             </SectionCard></div>
 
             <SectionCard title={ui.mapping.title} description={ui.mapping.desc} actions={<Button asChild size="sm" variant="outline" className="h-8 text-xs"><Link to={ROUTES.bindings}>{ui.mapping.goBindings}<ArrowUpRight className="ml-1 h-3.5 w-3.5" /></Link></Button>} noPadding>
-              <AvailabilityBoundary unavailableReason={query.data?.mappings.unavailableReason && query.data?.mappingReview.unavailableReason ? query.data.mappings.unavailableReason : null} errorText={ui.mapping.error} empty={!mappingRows.length} emptyText={ui.mapping.empty}>
+              <AvailabilityBoundary unavailableReason={pageUnavailableReason ?? (query.data?.mappings.unavailableReason && query.data?.mappingReview.unavailableReason ? query.data.mappings.unavailableReason : null)} errorText={ui.mapping.error} empty={!mappingRows.length} emptyText={ui.mapping.empty}>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader><TableRow><TableHead>{ui.mapping.source}</TableHead><TableHead>{ui.mapping.status}</TableHead><TableHead>{ui.mapping.updatedAt}</TableHead><TableHead>{ui.actions}</TableHead></TableRow></TableHeader>
@@ -441,7 +445,7 @@ export default function Imports() {
             </SectionCard>
 
             <SectionCard title={ui.alerts.title} description={ui.alerts.desc} actions={<Button asChild size="sm" variant="outline" className="h-8 text-xs"><Link to={ROUTES.alerts}>{ui.alerts.goAlerts}<ArrowUpRight className="ml-1 h-3.5 w-3.5" /></Link></Button>} noPadding>
-              <AvailabilityBoundary unavailableReason={query.data?.alerts.unavailableReason} errorText={ui.alerts.error} empty={!alertRows.length} emptyText={ui.alerts.empty}>
+              <AvailabilityBoundary unavailableReason={pageUnavailableReason ?? query.data?.alerts.unavailableReason} errorText={ui.alerts.error} empty={!alertRows.length} emptyText={ui.alerts.empty}>
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader><TableRow><TableHead>{ui.alerts.severity}</TableHead><TableHead>{ui.alerts.titleCol}</TableHead><TableHead>{ui.alerts.status}</TableHead><TableHead>{ui.alerts.createdAt}</TableHead><TableHead>{ui.actions}</TableHead></TableRow></TableHeader>
@@ -481,7 +485,7 @@ export default function Imports() {
               <Link to={ROUTES.adsConnectors} className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-primary hover:underline">{ui.actionPanel.sources}<ArrowUpRight className="h-3 w-3" /></Link>
             </div>
           </SectionCard>
-        </div>
+        </div> : null}
       </div>
     </DashboardLayout>
   );
