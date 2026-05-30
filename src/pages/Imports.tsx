@@ -164,35 +164,36 @@ const copy = {
       healthReview: "Є сигнали, які потребують уваги",
       healthPartial: "Один або більше розділів недоступні",
       lastUpdate: "Останнє оновлення",
-      lastUpdateHelper: "Максимальна дата з доступних джерел",
+      lastUpdateHelper: "Найсвіжіша дата з доступних джерел",
       importErrors: "Помилки імпорту",
-      importErrorsHelper: "Сума rejected rows у зведенні помилок",
-      problemRows: "Rejected / failed rows",
-      problemRowsHelper: "Сума відкритих, критичних, 24-год rejected rows і помилок останнього sync",
+      importErrorsHelper: "Відхилені рядки у зведенні помилок",
+      problemRows: "Проблемні рядки",
+      problemRowsHelper: "Відхилені рядки та помилки sync",
       noRowCounter: "Немає окремого лічильника",
       mapping: "Мапінг",
-      mappingHelper: "Очевидні pending/error статуси",
+      mappingHelper: "Статуси очікування або помилки",
       alerts: "Сповіщення",
-      openAlertsHelper: "Відкриті / активні сигнали",
-      recentAlertsHelper: "Останні сигнали без статусу відкриття",
+      openAlertsHelper: "Останні відкриті сигнали",
+      recentAlertsHelper: "Останні відкриті сигнали",
     },
     activity: {
       title: "Стан імпортів",
-      desc: "Зведення синхронізацій і rejected rows",
+      desc: "Зведення синхронізацій і відхилених рядків",
       error: "Не вдалося завантажити стан імпортів.",
+      errorHelp: "Цей розділ недоступний. Інші секції можуть працювати.",
       empty: "Стан імпортів поки не зафіксований.",
       importHealth: "Стан імпортів",
       latestSync: "Останній sync",
       latestSyncTime: "Час останнього sync",
       latestSyncFailedRows: "Помилки в останньому sync",
-      openRejectedRows: "Відкриті rejected rows",
-      criticalRejectedRows: "Критичні rejected rows",
-      rejectedRowsLast24h: "Rejected rows за 24 год",
-      latestRejectedRow: "Останній rejected row",
+      openRejectedRows: "Відкриті відхилені рядки",
+      criticalRejectedRows: "Критичні відхилені рядки",
+      rejectedRowsLast24h: "Відхилені рядки за 24 год",
+      latestRejectedRow: "Останній відхилений рядок",
     },
     errors: {
       title: "Помилки імпорту",
-      desc: "Коди помилок і rejected rows за джерелами",
+      desc: "Коди помилок і відхилені рядки за джерелами",
       error: "Не вдалося завантажити помилки імпорту.",
       empty: "Помилок імпорту не знайдено.",
       source: "Джерело",
@@ -200,7 +201,7 @@ const copy = {
       errorCode: "Код помилки",
       severity: "Рівень",
       status: "Статус",
-      count: "Rejected rows",
+      count: "Відхилені рядки",
       firstSeen: "Перша поява",
       lastSeen: "Остання поява",
     },
@@ -279,20 +280,21 @@ const copy = {
       lastUpdate: "Last update",
       lastUpdateHelper: "Latest timestamp from available sources",
       importErrors: "Import errors",
-      importErrorsHelper: "Sum of rejected rows in import error summary",
-      problemRows: "Rejected / failed rows",
-      problemRowsHelper: "Open, critical, 24h rejected rows plus latest sync failures",
+      importErrorsHelper: "Rejected rows in error summary",
+      problemRows: "Problem rows",
+      problemRowsHelper: "Rejected rows and sync failures",
       noRowCounter: "No row-level counter",
       mapping: "Mapping",
-      mappingHelper: "Obvious pending/error statuses",
+      mappingHelper: "Pending or error statuses",
       alerts: "Alerts",
-      openAlertsHelper: "Open / active signals",
-      recentAlertsHelper: "Recent signals without open status",
+      openAlertsHelper: "Recent open signals",
+      recentAlertsHelper: "Recent open signals",
     },
     activity: {
       title: "Import health",
       desc: "Sync and rejected-row summary",
       error: "Could not load import status.",
+      errorHelp: "This section is unavailable. Other sections may still work.",
       empty: "Import health has not been recorded yet.",
       importHealth: "Import health",
       latestSync: "Latest sync",
@@ -385,8 +387,8 @@ export default function Imports() {
     ? (query.error?.message ?? "Query failed")
     : null;
 
-  const healthRows = useMemo(
-    () => normalizeImportHealthRows(query.data?.health.rows ?? []),
+  const healthSummary = useMemo(
+    () => normalizeImportHealthSummary(query.data?.health.rows ?? null),
     [query.data?.health.rows],
   );
   const errorRows = useMemo(
@@ -426,15 +428,12 @@ export default function Imports() {
     pageUnavailableReason ||
     query.data?.health.unavailableReason
       ? null
-      : sum(
-          healthRows.map(
-            (row) =>
-              row.openRejectedRows +
-              row.criticalRejectedRows +
-              row.rejectedRowsLast24h +
-              row.latestSyncRowsFailed,
-          ),
-        );
+      : healthSummary
+        ? healthSummary.openRejectedRows +
+          healthSummary.criticalRejectedRows +
+          healthSummary.rejectedRowsLast24h +
+          healthSummary.latestSyncRowsFailed
+        : 0;
   const mappingReviewCount = query.data?.mappingReview.count ?? 0;
   const mappingIssues =
     !hasLoadedData ||
@@ -457,19 +456,17 @@ export default function Imports() {
     pageUnavailableReason ||
     query.data?.health.unavailableReason
       ? null
-      : healthRows.filter(
-          (row) =>
-            row.importHealthStatusKind === "warning" ||
-            row.latestSyncStatusKind === "warning",
-        ).length;
+      : healthSummary &&
+          (healthSummary.importHealthStatusKind === "warning" ||
+            healthSummary.latestSyncStatusKind === "warning")
+        ? 1
+        : 0;
   const lastUpdate =
     !hasLoadedData || pageUnavailableReason
       ? null
       : latestDate([
-          ...healthRows.flatMap((row) => [
-            row.latestSyncAt,
-            row.latestRejectedRowAt,
-          ]),
+          healthSummary?.latestSyncAt ?? null,
+          healthSummary?.latestRejectedRowAt ?? null,
           ...errorRows.map((row) => row.lastSeen),
           ...mappingRows.map((row) => row.updatedAt),
           ...alertRows.map((row) => row.createdAt),
@@ -513,7 +510,7 @@ export default function Imports() {
         ) : null}
 
         {!signedOut && !isInitialLoading ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             <MetricCard
               title={ui.kpis.health}
               value={
@@ -567,11 +564,7 @@ export default function Imports() {
             <MetricCard
               title={ui.kpis.problemRows}
               value={formatNullableCount(failedRows, ui)}
-              helper={
-                (pageUnavailableReason ?? query.data?.health.unavailableReason)
-                  ? ui.sourceUnavailable
-                  : ui.kpis.problemRowsHelper
-              }
+              helper={ui.kpis.problemRowsHelper}
               unavailable={
                 pageUnavailableReason ?? query.data?.health.unavailableReason
               }
@@ -615,70 +608,64 @@ export default function Imports() {
                       query.data?.health.unavailableReason
                     }
                     errorText={ui.activity.error}
-                    empty={!healthRows.length}
+                    errorHelp={ui.activity.errorHelp}
+                    empty={!healthSummary}
                     emptyText={ui.activity.empty}
                   >
-                    <div className="grid gap-3 p-4 md:grid-cols-2 xl:grid-cols-4">
-                      {healthRows.map((row, index) => (
-                        <div
-                          key={`${row.latestSyncAt ?? "sync"}-${row.latestRejectedRowAt ?? index}`}
-                          className="rounded-lg border border-border/70 bg-muted/20 p-3"
+                    {healthSummary ? (
+                      <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-4">
+                        <HealthSummaryCard label={ui.activity.importHealth}>
+                          <HumanStatusBadge
+                            status={healthSummary.importHealthStatusKind}
+                            label={statusLabel(
+                              healthSummary.importHealthStatus,
+                              healthSummary.importHealthStatusKind,
+                              ui,
+                            )}
+                          />
+                        </HealthSummaryCard>
+                        <HealthSummaryCard label={ui.activity.latestSync}>
+                          <HumanStatusBadge
+                            status={healthSummary.latestSyncStatusKind}
+                            label={statusLabel(
+                              healthSummary.latestSyncStatus,
+                              healthSummary.latestSyncStatusKind,
+                              ui,
+                            )}
+                          />
+                        </HealthSummaryCard>
+                        <HealthSummaryCard label={ui.activity.latestSyncTime}>
+                          {formatNullableDate(healthSummary.latestSyncAt, lang)}
+                        </HealthSummaryCard>
+                        <HealthSummaryCard
+                          label={ui.activity.latestSyncFailedRows}
+                          emphasize={healthSummary.latestSyncRowsFailed > 0}
                         >
-                          <div className="space-y-3">
-                            <HealthSummaryItem label={ui.activity.importHealth}>
-                              <HumanStatusBadge
-                                status={row.importHealthStatusKind}
-                                label={statusLabel(
-                                  row.importHealthStatus,
-                                  row.importHealthStatusKind,
-                                  ui,
-                                )}
-                              />
-                            </HealthSummaryItem>
-                            <HealthSummaryItem label={ui.activity.latestSync}>
-                              <HumanStatusBadge
-                                status={row.latestSyncStatusKind}
-                                label={statusLabel(
-                                  row.latestSyncStatus,
-                                  row.latestSyncStatusKind,
-                                  ui,
-                                )}
-                              />
-                            </HealthSummaryItem>
-                            <HealthSummaryItem label={ui.activity.latestSyncTime}>
-                              {formatNullableDate(row.latestSyncAt, lang)}
-                            </HealthSummaryItem>
-                            <HealthSummaryItem
-                              label={ui.activity.latestSyncFailedRows}
-                              emphasize={row.latestSyncRowsFailed > 0}
-                            >
-                              {fmtNum(row.latestSyncRowsFailed)}
-                            </HealthSummaryItem>
-                            <HealthSummaryItem
-                              label={ui.activity.openRejectedRows}
-                              emphasize={row.openRejectedRows > 0}
-                            >
-                              {fmtNum(row.openRejectedRows)}
-                            </HealthSummaryItem>
-                            <HealthSummaryItem
-                              label={ui.activity.criticalRejectedRows}
-                              emphasize={row.criticalRejectedRows > 0}
-                            >
-                              {fmtNum(row.criticalRejectedRows)}
-                            </HealthSummaryItem>
-                            <HealthSummaryItem
-                              label={ui.activity.rejectedRowsLast24h}
-                              emphasize={row.rejectedRowsLast24h > 0}
-                            >
-                              {fmtNum(row.rejectedRowsLast24h)}
-                            </HealthSummaryItem>
-                            <HealthSummaryItem label={ui.activity.latestRejectedRow}>
-                              {formatNullableDate(row.latestRejectedRowAt, lang)}
-                            </HealthSummaryItem>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                          {fmtNum(healthSummary.latestSyncRowsFailed)}
+                        </HealthSummaryCard>
+                        <HealthSummaryCard
+                          label={ui.activity.openRejectedRows}
+                          emphasize={healthSummary.openRejectedRows > 0}
+                        >
+                          {fmtNum(healthSummary.openRejectedRows)}
+                        </HealthSummaryCard>
+                        <HealthSummaryCard
+                          label={ui.activity.criticalRejectedRows}
+                          emphasize={healthSummary.criticalRejectedRows > 0}
+                        >
+                          {fmtNum(healthSummary.criticalRejectedRows)}
+                        </HealthSummaryCard>
+                        <HealthSummaryCard
+                          label={ui.activity.rejectedRowsLast24h}
+                          emphasize={healthSummary.rejectedRowsLast24h > 0}
+                        >
+                          {fmtNum(healthSummary.rejectedRowsLast24h)}
+                        </HealthSummaryCard>
+                        <HealthSummaryCard label={ui.activity.latestRejectedRow}>
+                          {formatNullableDate(healthSummary.latestRejectedRowAt, lang)}
+                        </HealthSummaryCard>
+                      </div>
+                    ) : null}
                   </AvailabilityBoundary>
                 </SectionCard>
               </div>
@@ -1002,9 +989,7 @@ async function readImportsDashboard(): Promise<ImportsData> {
       .select(
         "workspace_id,open_rejected_rows,critical_rejected_rows,rejected_rows_last_24h,latest_rejected_row_at,latest_sync_status,latest_sync_rows_failed,latest_sync_at,import_health_status",
       )
-      .eq("workspace_id", WORKSPACE_ID)
-      .order("latest_sync_at", { ascending: false, nullsFirst: false })
-      .limit(200),
+      .eq("workspace_id", WORKSPACE_ID),
     supabase
       .from("v_import_error_summary")
       .select(
@@ -1058,13 +1043,18 @@ async function readImportsDashboard(): Promise<ImportsData> {
 }
 
 function toSlice<T>(
-  data: unknown[] | null,
+  data: unknown,
   unavailableReason: string | null,
 ): QuerySlice<T> {
   return {
-    rows: unavailableReason ? [] : ((data ?? []) as T[]),
+    rows: unavailableReason ? [] : toRows<T>(data),
     unavailableReason,
   };
+}
+
+function toRows<T>(data: unknown): T[] {
+  if (!data) return [];
+  return (Array.isArray(data) ? data : [data]) as T[];
 }
 
 function toCountSlice(
@@ -1079,12 +1069,13 @@ function warnUnavailable(viewName: string, error: { message?: string } | null) {
     console.warn(`Imports/Data Health: ${viewName} unavailable`, error);
 }
 
-function normalizeImportHealthRows(
-  rows: ImportHealthRow[],
-): NormalizedImportHealth[] {
-  return rows.map((row) => {
-    const importHealthStatus =
-      readString(row.import_health_status) || "unknown";
+function normalizeImportHealthSummary(
+  rows: ImportHealthRow[] | null,
+): NormalizedImportHealth | null {
+  if (!rows?.length) return null;
+
+  const normalizedRows = rows.map((row) => {
+    const importHealthStatus = readString(row.import_health_status) || "unknown";
     const latestSyncStatus = readString(row.latest_sync_status) || "unknown";
     const latestSyncRowsFailed = toNumber(row.latest_sync_rows_failed);
     const openRejectedRows = toNumber(row.open_rejected_rows);
@@ -1103,14 +1094,51 @@ function normalizeImportHealthRows(
         latestSyncStatus,
         latestSyncRowsFailed > 0 ? "error" : "unknown",
       ),
-      latestSyncAt: readString(row.latest_sync_at) || null,
+      latestSyncAt: readTimestamp(row.latest_sync_at),
       latestSyncRowsFailed,
       openRejectedRows,
       criticalRejectedRows,
       rejectedRowsLast24h,
-      latestRejectedRowAt: readString(row.latest_rejected_row_at) || null,
-    };
+      latestRejectedRowAt: readTimestamp(row.latest_rejected_row_at),
+    } satisfies NormalizedImportHealth;
   });
+
+  if (normalizedRows.length === 1) return normalizedRows[0];
+
+  const importHealthStatusKind = mostSevereStatus(
+    normalizedRows.map((row) => row.importHealthStatusKind),
+  );
+  const latestSyncStatusKind = mostSevereStatus(
+    normalizedRows.map((row) => row.latestSyncStatusKind),
+  );
+
+  return {
+    importHealthStatus:
+      normalizedRows.find(
+        (row) => row.importHealthStatusKind === importHealthStatusKind,
+      )?.importHealthStatus ?? "unknown",
+    importHealthStatusKind,
+    latestSyncStatus:
+      normalizedRows.find((row) => row.latestSyncStatusKind === latestSyncStatusKind)
+        ?.latestSyncStatus ?? "unknown",
+    latestSyncStatusKind,
+    latestSyncAt: latestDate(normalizedRows.map((row) => row.latestSyncAt)),
+    latestSyncRowsFailed: maxNumber(
+      normalizedRows.map((row) => row.latestSyncRowsFailed),
+    ),
+    openRejectedRows: maxNumber(
+      normalizedRows.map((row) => row.openRejectedRows),
+    ),
+    criticalRejectedRows: maxNumber(
+      normalizedRows.map((row) => row.criticalRejectedRows),
+    ),
+    rejectedRowsLast24h: maxNumber(
+      normalizedRows.map((row) => row.rejectedRowsLast24h),
+    ),
+    latestRejectedRowAt: latestDate(
+      normalizedRows.map((row) => row.latestRejectedRowAt),
+    ),
+  };
 }
 
 function normalizeImportErrors(
@@ -1359,39 +1387,37 @@ function MetricCard({
   title: string;
   value: string;
   helper: string;
-  unavailable?: string | null;
+  unavailable?: string | boolean | null;
   tone?: "success" | "warning" | "error" | "neutral";
   href?: string;
 }) {
   const content = (
     <div
       className={cn(
-        "group flex min-h-[148px] flex-col rounded-xl border border-border/70 bg-card p-4 shadow-card transition-all",
+        "group flex min-h-[118px] flex-col rounded-xl border border-border/70 bg-card p-3.5 shadow-card transition-all",
         href && "h-full hover:border-primary/40 hover:shadow-card-md",
         tone === "success" && "ring-accent-top",
-        tone === "warning" && "border-warning/30",
-        tone === "error" && "border-destructive/25",
+        tone === "warning" && "border-warning/30 bg-warning-soft/10",
+        tone === "error" && "border-destructive/20 bg-destructive-soft/10",
       )}
     >
-      <div className="flex min-h-[34px] items-start justify-between gap-2">
-        <p className="min-w-0 text-[10px] font-semibold uppercase leading-snug tracking-[0.1em] text-muted-foreground">
+      <div className="flex items-start justify-between gap-2">
+        <p className="min-w-0 text-[10px] font-semibold uppercase leading-tight tracking-[0.08em] text-muted-foreground">
           {title}
         </p>
         {href ? (
-          <ArrowUpRight className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
+          <ArrowUpRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground transition-colors group-hover:text-primary" />
         ) : null}
       </div>
-      <div className="mt-2 flex min-h-[40px] items-start">
-        <p
-          className={cn(
-            "text-2xl font-semibold leading-tight tracking-tight",
-            unavailable && "text-base text-muted-foreground",
-          )}
-        >
-          {value}
-        </p>
-      </div>
-      <p className="mt-2 min-h-[34px] text-xs leading-snug text-muted-foreground">
+      <p
+        className={cn(
+          "mt-2 text-xl font-semibold leading-tight tracking-tight",
+          unavailable && "text-base text-muted-foreground",
+        )}
+      >
+        {value}
+      </p>
+      <p className="mt-auto line-clamp-2 pt-2 text-xs leading-snug text-muted-foreground">
         {helper}
       </p>
     </div>
@@ -1408,7 +1434,7 @@ function MetricCard({
   );
 }
 
-function HealthSummaryItem({
+function HealthSummaryCard({
   label,
   emphasize = false,
   children,
@@ -1418,11 +1444,13 @@ function HealthSummaryItem({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex items-start justify-between gap-3">
-      <span className="text-xs leading-snug text-muted-foreground">{label}</span>
+    <div className="min-h-[86px] rounded-lg border border-border/70 bg-muted/20 p-3">
+      <p className="text-[10px] font-semibold uppercase leading-snug tracking-[0.08em] text-muted-foreground">
+        {label}
+      </p>
       <div
         className={cn(
-          "shrink-0 text-right text-sm font-medium",
+          "mt-2 text-sm font-semibold leading-tight",
           emphasize && "text-destructive",
         )}
       >
@@ -1435,39 +1463,52 @@ function HealthSummaryItem({
 function AvailabilityBoundary({
   unavailableReason,
   errorText,
+  errorHelp,
   empty,
   emptyText,
   children,
 }: {
   unavailableReason?: string | null;
   errorText: string;
+  errorHelp?: string;
   empty: boolean;
   emptyText: string;
   children: React.ReactNode;
 }) {
-  if (unavailableReason) return <Message tone="error">{errorText}</Message>;
+  if (unavailableReason)
+    return (
+      <Message tone="error" helper={errorHelp}>
+        {errorText}
+      </Message>
+    );
   if (empty) return <Message>{emptyText}</Message>;
   return <>{children}</>;
 }
 
+
 function Message({
   children,
+  helper,
   tone = "neutral",
 }: {
   children: React.ReactNode;
+  helper?: string;
   tone?: "neutral" | "error";
 }) {
   return (
-    <p
+    <div
       className={cn(
         "m-4 rounded-lg border p-3 text-sm",
         tone === "error"
-          ? "border-destructive/25 bg-destructive-soft/20 text-destructive"
-          : "text-muted-foreground",
+          ? "border-destructive/20 bg-destructive-soft/10 text-foreground"
+          : "border-border/70 bg-muted/20 text-muted-foreground",
       )}
     >
-      {children}
-    </p>
+      <p className={cn("font-medium", tone === "error" && "text-destructive")}>
+        {children}
+      </p>
+      {helper ? <p className="mt-1 text-xs text-muted-foreground">{helper}</p> : null}
+    </div>
   );
 }
 
@@ -1500,6 +1541,7 @@ function ActionIcon({ tone }: { tone: "success" | "warning" | "error" }) {
 
 function statusLabel(value: string, kind: SourceStatus, ui: Copy) {
   const normalized = value.toLowerCase();
+  if (normalized === "unknown" || !normalized) return ui.statuses.unknown;
   if (normalized.includes("confirm") || normalized.includes("complete"))
     return ui.statuses.confirmed;
   if (normalized.includes("pending") || normalized.includes("review"))
@@ -1528,6 +1570,11 @@ function readString(value: Primitive | undefined) {
   return String(value);
 }
 
+function readTimestamp(value: Primitive | undefined) {
+  const timestamp = readString(value);
+  return timestamp || null;
+}
+
 function toNumber(value: Primitive | undefined) {
   const numeric = Number(value ?? 0);
   return Number.isFinite(numeric) ? numeric : 0;
@@ -1541,6 +1588,17 @@ function toNullableNumber(value: Primitive | undefined) {
 
 function sum(values: number[]) {
   return values.reduce((total, value) => total + value, 0);
+}
+
+function maxNumber(values: number[]) {
+  return values.reduce((highest, value) => Math.max(highest, value), 0);
+}
+
+function mostSevereStatus(values: SourceStatus[]): SourceStatus {
+  if (values.includes("error")) return "error";
+  if (values.includes("warning")) return "warning";
+  if (values.includes("success")) return "success";
+  return "unknown";
 }
 
 function formatNullableCount(value: number | null, ui: Copy) {
