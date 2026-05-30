@@ -3,7 +3,7 @@ import { addDays, differenceInCalendarDays, format, isSameDay } from "date-fns";
 import { uk } from "date-fns/locale";
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Link } from "react-router-dom";
-import { CheckCircle2 } from "lucide-react";
+import { ArrowUpRight, CheckCircle2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
@@ -204,7 +204,6 @@ function KpiCard({
   deltaTitle,
   showComparison = false,
   href,
-  linkLabel,
   linkAriaLabel,
 }: {
   title: string;
@@ -216,7 +215,6 @@ function KpiCard({
   deltaTitle?: string;
   showComparison?: boolean;
   href?: string;
-  linkLabel?: string;
   linkAriaLabel?: string;
 }) {
   const deltaClass =
@@ -226,14 +224,18 @@ function KpiCard({
         ? "text-destructive"
         : "text-muted-foreground";
   return <div className={`flex h-full flex-col rounded-xl border bg-background/40 p-4 ${showComparison ? "min-h-[150px]" : "min-h-[124px]"}`}>
-    <p className="flex min-h-8 items-start text-xs font-medium uppercase leading-4 tracking-wide text-muted-foreground">{title}</p>
+    <div className="flex min-h-8 items-start justify-between gap-3">
+      <p className="text-xs font-medium uppercase leading-4 tracking-wide text-muted-foreground">{title}</p>
+      {href ? <Link to={href} aria-label={linkAriaLabel} className="-mr-1 -mt-1 inline-flex size-8 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-primary/5 hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+        <ArrowUpRight className="size-4" aria-hidden="true" />
+      </Link> : null}
+    </div>
     <div className="flex min-h-11 items-end pt-2"><KpiValue unavailable={unavailable} value={value} /></div>
     {showComparison ? <div className="flex min-h-9 items-start pt-1">
       {delta ? <p className={`text-xs leading-snug ${deltaClass}`} title={deltaTitle}><span className="font-medium">{delta.text}</span>{compareLabel ? <span className="text-muted-foreground"> {compareLabel}</span> : null}</p> : <span className="text-xs leading-snug opacity-0" aria-hidden="true">—</span>}
     </div> : null}
-    <div className={`flex items-end justify-between gap-3 ${showComparison ? "mt-auto pt-2" : "mt-2 pt-1"}`}>
+    <div className={showComparison ? "mt-auto pt-2" : "mt-2 pt-1"}>
       <p className="text-xs leading-snug text-muted-foreground">{subtitle}</p>
-      {href ? <Link to={href} aria-label={linkAriaLabel ?? linkLabel} className="shrink-0 text-xs font-medium text-primary underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">{linkLabel}</Link> : null}
     </div>
   </div>;
 }
@@ -464,11 +466,11 @@ export default function Overview() {
       {session ? <SectionCard title={lang === "uk" ? "Бізнес-дашборд" : "Executive dashboard"} description={lang === "uk" ? "Ключові бізнес-показники за вибраний період" : "Key business metrics for the selected period"}>
         {dashboardLoading ? <p className="rounded-md border p-3 text-sm text-muted-foreground">{lang === "uk" ? "Завантажуємо бізнес-показники…" : "Loading business metrics…"}</p> : null}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <KpiCard title={lang === "uk" ? "Дохід" : "Revenue"} unavailable={Boolean(salesUnavailable)} value={salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : salesRows.length ? fmtCurrency(revenueUsd) : "—"} delta={revenueDelta} compareLabel={compareLabel} subtitle="USD" showComparison={shouldShowComparison} href={ROUTES.sales} linkLabel={lang === "uk" ? "Деталі" : "Details"} linkAriaLabel={lang === "uk" ? "Відкрити деталі доходу" : "Open revenue details"} />
-          <KpiCard title={lang === "uk" ? "Продажі" : "Sales"} unavailable={Boolean(salesUnavailable)} value={salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : salesRows.length ? fmtNum(salesCount) : "—"} delta={salesDelta} compareLabel={compareLabel} subtitle={lang === "uk" ? "записів продажів" : "sales records"} showComparison={shouldShowComparison} href={ROUTES.sales} linkLabel={lang === "uk" ? "Деталі" : "Details"} linkAriaLabel={lang === "uk" ? "Відкрити деталі продажів" : "Open sales details"} />
-          <KpiCard title={lang === "uk" ? "Витрати на рекламу" : "Ad Spend"} unavailable={Boolean(adsUnavailable)} value={adsUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : adsRows.length ? fmtCurrency(adSpend) : "—"} delta={adSpendDelta} compareLabel={compareLabel} deltaTitle={lang === "uk" ? "Нейтральна зміна: вищі витрати оцінюються разом із доходом." : "Neutral change: higher spend is evaluated together with revenue."} subtitle="USD" showComparison={shouldShowComparison} href={ROUTES.campaigns} linkLabel={lang === "uk" ? "Деталі" : "Details"} linkAriaLabel={lang === "uk" ? "Відкрити деталі рекламних кампаній" : "Open campaign details"} />
-          <KpiCard title={lang === "uk" ? "Вартість продажу з реклами" : "Ad cost / sale"} unavailable={Boolean(adsUnavailable || salesUnavailable)} value={adsUnavailable || salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : costPerSale === null ? "—" : fmtCurrency(costPerSale, { compact: false })} delta={costPerSaleDelta} compareLabel={compareLabel} subtitle={lang === "uk" ? "витрати на рекламу / продажі" : "ad spend / sales"} showComparison={shouldShowComparison} href={ROUTES.campaigns} linkLabel={lang === "uk" ? "Деталі" : "Details"} linkAriaLabel={lang === "uk" ? "Відкрити деталі вартості продажу з реклами" : "Open ad cost per sale details"} />
-          <KpiCard title={lang === "uk" ? "Потребують уваги" : "Open issues"} unavailable={issuesUnavailable} value={issuesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : openIssues === null ? "—" : fmtNum(openIssues)} subtitle={lang === "uk" ? "мапінг, сповіщення, імпорт" : "mapping, alerts, imports"} showComparison={shouldShowComparison} href={ROUTES.imports} linkLabel={lang === "uk" ? "Деталі" : "Details"} linkAriaLabel={lang === "uk" ? "Відкрити операційні деталі" : "Open operational details"} />
+          <KpiCard title={lang === "uk" ? "Дохід" : "Revenue"} unavailable={Boolean(salesUnavailable)} value={salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : salesRows.length ? fmtCurrency(revenueUsd) : "—"} delta={revenueDelta} compareLabel={compareLabel} subtitle="USD" showComparison={shouldShowComparison} href={ROUTES.sales} linkAriaLabel={lang === "uk" ? "Відкрити деталі доходу" : "Open revenue details"} />
+          <KpiCard title={lang === "uk" ? "Продажі" : "Sales"} unavailable={Boolean(salesUnavailable)} value={salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : salesRows.length ? fmtNum(salesCount) : "—"} delta={salesDelta} compareLabel={compareLabel} subtitle={lang === "uk" ? "записів продажів" : "sales records"} showComparison={shouldShowComparison} href={ROUTES.sales} linkAriaLabel={lang === "uk" ? "Відкрити деталі продажів" : "Open sales details"} />
+          <KpiCard title={lang === "uk" ? "Витрати на рекламу" : "Ad Spend"} unavailable={Boolean(adsUnavailable)} value={adsUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : adsRows.length ? fmtCurrency(adSpend) : "—"} delta={adSpendDelta} compareLabel={compareLabel} deltaTitle={lang === "uk" ? "Нейтральна зміна: вищі витрати оцінюються разом із доходом." : "Neutral change: higher spend is evaluated together with revenue."} subtitle="USD" showComparison={shouldShowComparison} href={ROUTES.campaigns} linkAriaLabel={lang === "uk" ? "Відкрити деталі рекламних кампаній" : "Open campaign details"} />
+          <KpiCard title={lang === "uk" ? "Вартість продажу з реклами" : "Ad cost / sale"} unavailable={Boolean(adsUnavailable || salesUnavailable)} value={adsUnavailable || salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : costPerSale === null ? "—" : fmtCurrency(costPerSale, { compact: false })} delta={costPerSaleDelta} compareLabel={compareLabel} subtitle={lang === "uk" ? "витрати на рекламу / продажі" : "ad spend / sales"} showComparison={shouldShowComparison} href={ROUTES.campaigns} linkAriaLabel={lang === "uk" ? "Відкрити деталі вартості продажу з реклами" : "Open ad cost per sale details"} />
+          <KpiCard title={lang === "uk" ? "Потребують уваги" : "Open issues"} unavailable={issuesUnavailable} value={issuesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : openIssues === null ? "—" : fmtNum(openIssues)} subtitle={lang === "uk" ? "мапінг, сповіщення, імпорт" : "mapping, alerts, imports"} showComparison={shouldShowComparison} href={ROUTES.imports} linkAriaLabel={lang === "uk" ? "Відкрити операційні деталі" : "Open operational details"} />
         </div>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
