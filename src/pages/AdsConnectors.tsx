@@ -60,25 +60,27 @@ const copy = {
     noRealSyncDataYet: "Реальних даних синхронізації ще немає",
     noDataYet: "Даних ще немає",
     technicalStatus: "Технічний статус",
-    operationalChecklist: "Операційний чекліст",
-    oauthStartCallback: "OAuth-процес налаштований",
-    realOAuthStillNeeded: "Потрібно пройти реальне підключення",
-    placeholderAccountsNotReal: "Тестові акаунти не запускають реальну синхронізацію",
-    realDataAfterFirstSync: "Дані з’являться після першої успішної синхронізації",
+    operationalChecklist: "Готовність до роботи",
+    oauthStartCallback: "OAuth-підключення",
+    realOAuthStillNeeded: "Реальне OAuth-підключення",
+    placeholderAccountsNotReal: "Реальний рекламний акаунт",
+    realDataAfterFirstSync: "Реальні дані синхронізації",
     connectionsTitle: "Підключення",
     connectionsDescription: "Безпечні OAuth-підключення для рекламних платформ.",
     currentState: "Поточний стан",
     safety: "Що станеться після підключення",
     connectedState: "Підключено",
-    notConnectedState: "Не підключено",
+    oauthNotCompletedState: "OAuth не пройдено",
+    realConnectionNotCreated: "Реальне підключення ще не створено",
     unknownConnectionState: "Стан невідомий",
-    testBindingsNotReal: "Є тестові прив’язки, але реального OAuth-підключення ще немає.",
+    testBindingsNotReal: "Є тестові прив’язки, але OAuth ще не завершено.",
+    testBindingsNoRealOauth: "Є тестові прив’язки, але реального OAuth-підключення ще немає.",
     stateManagedThroughMeta: "Керується через Meta Ads",
-    oauthMayCreate: "Система створить реальне підключення. Синхронізація не стартує автоматично.",
+    oauthMayCreate: "Після OAuth система створить реальне підключення. Синхронізація не стартує автоматично.",
     facebookLeadSafetyNote: "Працює через Meta Ads. Окреме підключення не потрібне.",
     metaDescription: "Підключення рекламних акаунтів Facebook та Instagram через Meta OAuth.",
     googleDescription: "Підключення рекламного акаунта Google Ads через Google OAuth.",
-    tiktokDescription: "Підключення TikTok Business або Advertiser акаунта через TikTok OAuth.",
+    tiktokDescription: "Підключення TikTok Business або advertiser account через TikTok OAuth.",
     facebookLeadDescription: "Працює через Meta Ads. Окреме підключення не потрібне.",
     connectMeta: "Підключити Meta Ads",
     connectGoogle: "Підключити Google Ads",
@@ -113,6 +115,7 @@ const copy = {
     detailsDebug: "Додаткові технічні відомості доступні в блоці для розробника.",
     fbTitle: "Ліди Facebook",
     fbDescription: "Форми, ліди, webhook-події та запуски синхронізації Facebook Lead Ads.",
+    fbOauthHelper: "Facebook Lead Ads використовує Meta Ads OAuth. Після підключення Meta Ads тут з’являться форми, ліди та webhook-події.",
     healthStatus: "Стан",
     activeForms: "Активні форми",
     formsNeedMapping: "Форми без мапінгу",
@@ -125,16 +128,18 @@ const copy = {
     syncRunsTitle: "Останні запуски синхронізації",
     fbFormsEmpty: "Форми з’являться після підключення Meta Ads.",
     fbLeadsEmpty: "Ліди з’являться після отримання Facebook Lead Ads даних.",
-    fbSyncRunsEmpty: "Запуски синхронізації з’являться після першого sync.",
+    fbSyncRunsEmpty: "Запуски синхронізації з’являться після першої синхронізації.",
     diagnosticsTitle: "Діагностика",
     diagnosticsDescription: "Контекст реклами, кандидати на аномалії та поточні проблеми.",
     adsContext: "Контекст реклами",
-    dailyContext: "Щоденний контекст реклами",
+    dailyContext: "Щоденний контекст",
     anomalyCandidates: "Кандидати на аномалії",
     recentIssues: "Останні проблеми",
-    adsContextUnavailable: "Контекст реклами з’явиться після першої успішної синхронізації.",
-    dailyContextAfterSync: "Контекст реклами з’явиться після першої успішної синхронізації.",
-    anomaliesAfterPerformance: "Кандидати на аномалії з’являться після появи даних ефективності.",
+    diagnosticsEmptyTitle: "Діагностика стане доступною після першої успішної синхронізації реклами.",
+    diagnosticsEmptyText: "Поки що реальних рекламних даних немає. Після синхронізації тут з’являться контекст реклами, щоденні показники та кандидати на аномалії.",
+    adsContextUnavailable: "Очікує першу синхронізацію",
+    dailyContextAfterSync: "Очікує дані ефективності",
+    anomaliesAfterPerformance: "З’являться після появи даних ефективності",
     noIssues: "Поточних проблем не знайдено.",
     readinessTimeoutLabel: "Таймаут перевірки готовності",
     readinessTimeoutDescription: "Один із запитів готовності перевищив ліміт часу. Це не означає, що OAuth не працює, але потребує окремої оптимізації серверної частини.",
@@ -151,13 +156,21 @@ const copy = {
       healthy: "Все працює",
       unavailable: "Даних ще немає",
       no_active_connections: "Немає активних реальних OAuth-підключень",
+      need_mapping: "Потрібен мапінг",
+      needs_mapping: "Потрібен мапінг",
+      in_review: "На перевірці",
+      needs_review: "Потребує перевірки",
+      disabled: "Вимкнено",
+      enabled: "Увімкнено",
       active: "Активно",
       inactive: "Неактивно",
       ready: "Готово",
       ok: "Готово",
       connected: "Підключено",
+      confirmed: "Підтверджено",
       success: "Успішно",
       pending: "Очікує",
+      rejected: "Відхилено",
       failed: "Помилка",
       error: "Помилка",
     },
@@ -209,7 +222,7 @@ const copy = {
       connections: "Connections",
       adAccounts: "Ad accounts",
       sync: "Sync",
-      facebookLeadAds: "Facebook leads",
+      facebookLeadAds: "Facebook Lead Ads",
       diagnostics: "Diagnostics",
     },
     overviewTitle: "Operational overview",
@@ -222,25 +235,27 @@ const copy = {
     noRealSyncDataYet: "No real sync data yet",
     noDataYet: "No data yet",
     technicalStatus: "Technical status",
-    operationalChecklist: "Operational checklist",
-    oauthStartCallback: "OAuth flow is configured",
-    realOAuthStillNeeded: "Real connection still needs to be completed",
-    placeholderAccountsNotReal: "Test accounts do not start real sync",
-    realDataAfterFirstSync: "Real data appears after first successful sync",
+    operationalChecklist: "Production readiness",
+    oauthStartCallback: "OAuth connection",
+    realOAuthStillNeeded: "Real OAuth connection",
+    placeholderAccountsNotReal: "Real ad account",
+    realDataAfterFirstSync: "Real sync data",
     connectionsTitle: "Connections",
     connectionsDescription: "Secure OAuth connections for advertising platforms.",
     currentState: "Current state",
     safety: "What happens after connection",
     connectedState: "Connected",
-    notConnectedState: "Not connected",
+    oauthNotCompletedState: "OAuth not completed",
+    realConnectionNotCreated: "Real connection has not been created yet",
     unknownConnectionState: "Unknown",
-    testBindingsNotReal: "Test binding records exist, but there is no real OAuth connection yet.",
+    testBindingsNotReal: "Test bindings exist, but OAuth has not been completed yet.",
+    testBindingsNoRealOauth: "Test bindings exist, but there is no real OAuth connection yet.",
     stateManagedThroughMeta: "Managed through Meta Ads",
-    oauthMayCreate: "The system will create a real connection. Sync will not start automatically.",
+    oauthMayCreate: "After OAuth, the system will create a real connection. Sync will not start automatically.",
     facebookLeadSafetyNote: "Uses Meta Ads. No separate connection is required.",
     metaDescription: "Connect Facebook and Instagram ad accounts through Meta OAuth.",
     googleDescription: "Connect a Google Ads account through Google OAuth.",
-    tiktokDescription: "Connect a TikTok Business or Advertiser account through TikTok OAuth.",
+    tiktokDescription: "Connect a TikTok Business or advertiser account through TikTok OAuth.",
     facebookLeadDescription: "Uses Meta Ads. No separate connection is required.",
     connectMeta: "Connect Meta Ads",
     connectGoogle: "Connect Google Ads",
@@ -264,7 +279,7 @@ const copy = {
     syncDue: "Current queue",
     manualSync: "Manual sync",
     syncRulesEmpty: "No sync rules yet.",
-    syncDueEmpty: "No syncs need to run right now.",
+    syncDueEmpty: "There are no syncs in the queue right now.",
     runSyncCheck: "Run manual sync",
     runningSync: "Running sync…",
     syncSubmitNote: "Clicking calls the existing secure sync function only when submitted manually.",
@@ -273,9 +288,10 @@ const copy = {
     syncSubmittedToastTitle: "Sync submitted",
     syncError: "Sync finished with an error.",
     detailsDebug: "Additional technical information is available in developer details.",
-    fbTitle: "Facebook leads",
-    fbDescription: "Facebook Lead Ads forms, leads, webhook events, and sync runs.",
-    healthStatus: "Health status",
+    fbTitle: "Facebook Lead Ads",
+    fbDescription: "Forms, leads, webhook events, and Facebook Lead Ads sync runs.",
+    fbOauthHelper: "Facebook Lead Ads uses Meta Ads OAuth. After Meta Ads is connected, forms, leads, and webhook events will appear here.",
+    healthStatus: "State",
     activeForms: "Active forms",
     formsNeedMapping: "Forms needing mapping",
     leadsLast24h: "Leads last 24h",
@@ -291,12 +307,14 @@ const copy = {
     diagnosticsTitle: "Diagnostics",
     diagnosticsDescription: "Ads context, anomaly candidates, and current issues.",
     adsContext: "Ads context",
-    dailyContext: "Daily ads context",
+    dailyContext: "Daily context",
     anomalyCandidates: "Anomaly candidates",
     recentIssues: "Recent issues",
-    adsContextUnavailable: "Ads context will appear after the first successful sync.",
-    dailyContextAfterSync: "Ads context will appear after the first successful sync.",
-    anomaliesAfterPerformance: "Anomaly candidates will appear after performance data is available.",
+    diagnosticsEmptyTitle: "Diagnostics will become available after the first successful ads sync.",
+    diagnosticsEmptyText: "No real ads data is available yet. After sync, this page will show ads context, daily metrics, and anomaly candidates.",
+    adsContextUnavailable: "Waiting for first sync",
+    dailyContextAfterSync: "Waiting for performance data",
+    anomaliesAfterPerformance: "Will appear after performance data is available",
     noIssues: "No current issues found.",
     readinessTimeoutLabel: "Readiness query timeout",
     readinessTimeoutDescription: "One readiness query exceeded the time limit. This does not mean Ads OAuth is broken, but needs separate backend optimization.",
@@ -313,13 +331,21 @@ const copy = {
       healthy: "Healthy",
       unavailable: "No data yet",
       no_active_connections: "No active real OAuth connections",
+      need_mapping: "Needs mapping",
+      needs_mapping: "Needs mapping",
+      in_review: "In review",
+      needs_review: "Needs review",
+      disabled: "Disabled",
+      enabled: "Enabled",
       active: "Active",
       inactive: "Inactive",
       ready: "Ready",
       ok: "Ready",
       connected: "Connected",
+      confirmed: "Confirmed",
       success: "Success",
       pending: "Pending",
+      rejected: "Rejected",
       failed: "Failed",
       error: "Error",
     },
@@ -346,7 +372,7 @@ const copy = {
       leads_count: "Leads",
       created_at: "Created",
       error_message: "Error",
-      health_status: "Health status",
+      health_status: "State",
       active_forms: "Active forms",
       forms_needing_mapping: "Forms needing mapping",
       leads_last_24h: "Leads last 24h",
@@ -575,9 +601,12 @@ export default function AdsConnectors() {
                       </div>
                       <StatusPill tone="muted">{ui.stateManagedThroughMeta}</StatusPill>
                     </div>
-                    <div className="mt-3 rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">
-                      <p className="font-medium text-foreground">{ui.safety}</p>
-                      <p className="mt-1">{ui.facebookLeadSafetyNote}</p>
+                    <div className="mt-3 grid gap-2 text-xs text-muted-foreground">
+                      <p><span className="font-medium text-foreground">{ui.currentState}:</span> {ui.stateManagedThroughMeta}</p>
+                      <div className="rounded-md bg-muted/40 p-3">
+                        <p className="font-medium text-foreground">{ui.safety}</p>
+                        <p className="mt-1">{ui.facebookLeadSafetyNote}</p>
+                      </div>
                     </div>
                     <div className="mt-auto pt-3">
                       <Button type="button" variant="secondary" disabled>{ui.stateManagedThroughMeta}</Button>
@@ -630,6 +659,7 @@ export default function AdsConnectors() {
                   <MetricCard label={ui.unprocessedWebhookEvents} value={formatMetric(findMetric(query.data?.fbHealth.rows, ["unprocessed_webhook_events", "pending_webhook_events"]))} />
                   <MetricCard label={ui.failedSyncsLast24h} value={formatMetric(findMetric(query.data?.fbHealth.rows, ["failed_syncs_last_24h", "failed_sync_runs_last_24h"]))} />
                 </div>
+                <p className="mt-3 rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">{ui.fbOauthHelper}</p>
                 <div className="mt-4 space-y-4">
                   <CompactDataSection title={ui.formsTitle} data={query.data?.fbForms} columns={["form_name", "form_id", "status", "mapping_status", "leads_count", "updated_at"]} emptyText={ui.fbFormsEmpty} ui={ui} />
                   <CompactDataSection title={ui.leadsTitle} data={query.data?.fbLeads} columns={["created_at", "status", "form_name", "client_name", "project_name", "error_message"]} emptyText={ui.fbLeadsEmpty} ui={ui} />
@@ -640,12 +670,7 @@ export default function AdsConnectors() {
 
             <TabsContent value="diagnostics">
               <SectionCard title={ui.diagnosticsTitle} description={ui.diagnosticsDescription}>
-                <div className="space-y-4">
-                  <CompactDataSection title={ui.adsContext} data={query.data?.adsSummary} columns={preferredColumns(query.data?.adsSummary?.rows)} emptyText={ui.adsContextUnavailable} ui={ui} maxRows={5} />
-                  <CompactDataSection title={ui.dailyContext} data={query.data?.adsDaily} columns={preferredColumns(query.data?.adsDaily?.rows)} emptyText={ui.dailyContextAfterSync} ui={ui} maxRows={5} />
-                  <CompactDataSection title={ui.anomalyCandidates} data={query.data?.adsAnomalies} columns={preferredColumns(query.data?.adsAnomalies?.rows)} emptyText={ui.anomaliesAfterPerformance} ui={ui} maxRows={5} />
-                  <IssuesPanel data={query.data} connectorState={connectorState} ui={ui} />
-                </div>
+                <DiagnosticsPanel data={query.data} connectorState={connectorState} ui={ui} />
               </SectionCard>
             </TabsContent>
           </Tabs>
@@ -715,7 +740,7 @@ function ConnectorCard({ name, description, buttonText, stateText, stateTone, he
         <StatusPill tone={stateTone}>{stateText}</StatusPill>
       </div>
       <div className="mt-3 grid gap-2 text-xs text-muted-foreground">
-        <p><span className="font-medium text-foreground">{ui.currentState}:</span> {stateText}</p>
+        <p><span className="font-medium text-foreground">{ui.currentState}:</span> {stateTone === "success" ? stateText : ui.oauthNotCompletedState}</p>
         {helperNote ? <WarningNotice>{helperNote}</WarningNotice> : null}
         <div className="rounded-md bg-muted/40 p-3">
           <p className="font-medium text-foreground">{ui.safety}</p>
@@ -868,6 +893,49 @@ function GenericDataTable({ rows, columns, ui, markPlaceholders = false, maxRows
   );
 }
 
+
+function DiagnosticsPanel({ data, connectorState, ui }: { data: { [k: string]: OptionalViewData } | undefined; connectorState: Record<ConnectorKey, ConnectorState>; ui: Copy }) {
+  const hasDiagnosticRows = Boolean(
+    (data?.adsSummary.rows.length ?? 0) > 0 ||
+    (data?.adsDaily.rows.length ?? 0) > 0 ||
+    (data?.adsAnomalies.rows.length ?? 0) > 0,
+  );
+
+  return (
+    <div className="space-y-4">
+      {!hasDiagnosticRows ? (
+        <div className="rounded-lg border border-border/70 bg-card/50 p-4">
+          <p className="text-sm font-semibold">{ui.diagnosticsEmptyTitle}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{ui.diagnosticsEmptyText}</p>
+        </div>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-3">
+          <CompactDataSection title={ui.adsContext} data={data?.adsSummary} columns={preferredColumns(data?.adsSummary?.rows)} emptyText={ui.adsContextUnavailable} ui={ui} maxRows={5} />
+          <CompactDataSection title={ui.dailyContext} data={data?.adsDaily} columns={preferredColumns(data?.adsDaily?.rows)} emptyText={ui.dailyContextAfterSync} ui={ui} maxRows={5} />
+          <CompactDataSection title={ui.anomalyCandidates} data={data?.adsAnomalies} columns={preferredColumns(data?.adsAnomalies?.rows)} emptyText={ui.anomaliesAfterPerformance} ui={ui} maxRows={5} />
+        </div>
+      )}
+
+      <div className="grid gap-3 md:grid-cols-3">
+        <DiagnosticStatusCard title={ui.adsContext} text={ui.adsContextUnavailable} />
+        <DiagnosticStatusCard title={ui.dailyContext} text={ui.dailyContextAfterSync} />
+        <DiagnosticStatusCard title={ui.anomalyCandidates} text={ui.anomaliesAfterPerformance} />
+      </div>
+
+      <IssuesPanel data={data} connectorState={connectorState} ui={ui} />
+    </div>
+  );
+}
+
+function DiagnosticStatusCard({ title, text }: { title: string; text: string }) {
+  return (
+    <div className="rounded-lg border border-border/70 bg-background p-3 text-sm">
+      <p className="font-medium">{title}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{text}</p>
+    </div>
+  );
+}
+
 function IssuesPanel({ data, connectorState, ui }: { data: { [k: string]: OptionalViewData } | undefined; connectorState: Record<ConnectorKey, ConnectorState>; ui: Copy }) {
   const unavailable = collectUnavailableViews(data);
   const connectorErrors = Object.entries(connectorState).filter(([, state]) => state.error);
@@ -985,9 +1053,9 @@ function getPlatformConnectionState(platform: ConnectorKey, data: OptionalViewDa
 
   const platformRows = data.rows.filter((row) => rowMatchesPlatform(row, platform));
   if (platformRows.some((row) => !isPlaceholderAccount(row))) return { label: ui.connectedState, tone: "success" };
-  if (platformRows.length > 0) return { label: ui.notConnectedState, note: ui.testBindingsNotReal, tone: "warning" };
+  if (platformRows.length > 0) return { label: ui.oauthNotCompletedState, note: ui.testBindingsNoRealOauth, tone: "warning" };
 
-  return { label: ui.notConnectedState, tone: "warning" };
+  return { label: ui.realConnectionNotCreated, tone: "warning" };
 }
 
 function rowMatchesPlatform(row: Row, platform: ConnectorKey) {
