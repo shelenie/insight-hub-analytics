@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { addDays, format, parse, subDays, isValid } from "date-fns";
-import { uk } from "date-fns/locale";
+import { enUS, uk } from "date-fns/locale";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { CalendarIcon, ChevronLeft, ChevronRight, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useDateFilter, type DatePresetId } from "@/filters/DateContext";
+import { formatRange, useDateFilter, type DatePresetId } from "@/filters/DateContext";
 import { useI18n } from "@/i18n/I18nProvider";
 
 const presets: { id: DatePresetId; key: "dateToday" | "dateYesterday" | "date7d" | "date30d" | "dateMtd" | "dateQtd" | "dateYtd" | "dateAll" }[] = [
@@ -24,7 +24,7 @@ const presets: { id: DatePresetId; key: "dateToday" | "dateYesterday" | "date7d"
 ];
 
 export function DateFilter() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const f = useDateFilter();
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"preset" | "exact" | "range">(f.mode);
@@ -33,6 +33,16 @@ export function DateFilter() {
   const [draftRange, setDraftRange] = useState<{ from?: Date; to?: Date }>({ from: f.rangeFrom, to: f.rangeTo });
   const [exactMonth, setExactMonth] = useState<Date>(f.exactDate);
   const [rangeMonth, setRangeMonth] = useState<Date>(f.rangeFrom ?? f.rangeTo ?? f.exactDate);
+
+  const formatLongDate = (date: Date) => lang === "uk" ? format(date, "d MMMM yyyy", { locale: uk }) : format(date, "d MMMM yyyy");
+  const calendarLocaleProps = lang === "uk"
+    ? { locale: uk }
+    : {
+        locale: enUS,
+        formatters: {
+          formatWeekdayName: (date: Date) => format(date, "EEEEEE", { locale: enUS }),
+        },
+      };
 
   function onExactInputBlur() {
     const parsed = parse(draftExactInput, "dd.MM.yyyy", new Date());
@@ -47,9 +57,9 @@ export function DateFilter() {
 
   const triggerLabel =
     f.mode === "exact"
-      ? format(f.exactDate, "d MMMM yyyy", { locale: uk })
+      ? formatLongDate(f.exactDate)
       : f.mode === "range"
-      ? `${format(f.rangeFrom, "d MMMM yyyy", { locale: uk })} — ${format(f.rangeTo, "d MMMM yyyy", { locale: uk })}`
+      ? formatRange(f.rangeFrom, f.rangeTo, lang)
       : t(`date${f.preset.charAt(0).toUpperCase() + f.preset.slice(1)}` as "dateToday");
 
   return (
@@ -111,7 +121,7 @@ export function DateFilter() {
                     )}
                   >
                     <span>{t(p.key)}</span>
-                    {isAllDisabled ? <span className="text-[10px] text-muted-foreground">Немає даних</span> : f.mode === "preset" && f.preset === p.id ? <Check className="h-3 w-3" /> : null}
+                    {isAllDisabled ? <span className="text-[10px] text-muted-foreground">{lang === "uk" ? "Немає даних" : "No data"}</span> : f.mode === "preset" && f.preset === p.id ? <Check className="h-3 w-3" /> : null}
                   </button>
                 );
               })}
@@ -162,7 +172,7 @@ export function DateFilter() {
                       onChange={(e) => setDraftExactInput(e.target.value)}
                       onBlur={onExactInputBlur}
                       onKeyDown={(e) => { if (e.key === "Enter") onExactInputBlur(); }}
-                      placeholder="ДД.ММ.РРРР"
+                      placeholder={lang === "uk" ? "ДД.ММ.РРРР" : "DD.MM.YYYY"}
                       className="h-8 flex-1 text-xs num"
                     />
                     <Button
@@ -192,6 +202,7 @@ export function DateFilter() {
                     onMonthChange={setExactMonth}
                     className="rounded-md border bg-background pointer-events-auto"
                     initialFocus
+                    {...calendarLocaleProps}
                   />
                   </div>
                   <div className="flex justify-end">
@@ -205,8 +216,8 @@ export function DateFilter() {
                   <div className="text-xs font-medium">{t("dateCustom")}</div>
                   <div className="text-[11px] text-muted-foreground">
                     {draftRange.from && draftRange.to
-                      ? `${format(draftRange.from, "d MMMM yyyy", { locale: uk })} — ${format(draftRange.to, "d MMMM yyyy", { locale: uk })}`
-                      : "Оберіть дату початку і дату завершення."}
+                      ? formatRange(draftRange.from, draftRange.to, lang)
+                      : lang === "uk" ? "Оберіть дату початку і дату завершення." : "Choose a start and end date."}
                   </div>
                   <div className="flex justify-center">
                     <Calendar
@@ -220,6 +231,7 @@ export function DateFilter() {
                     onMonthChange={setRangeMonth}
                     className="rounded-md border bg-background pointer-events-auto"
                     initialFocus
+                    {...calendarLocaleProps}
                   />
                   </div>
                   <div className="flex justify-end">
