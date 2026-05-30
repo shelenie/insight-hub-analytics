@@ -1,4 +1,5 @@
 import { type ReactNode, useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
@@ -17,9 +18,11 @@ type Row = Record<string, Primitive | Primitive[] | Record<string, unknown>>;
 type OptionalViewData = { rows: Row[]; unavailableReason: string | null };
 type ConnectorKey = "meta" | "google" | "tiktok";
 type ConnectorState = { loading: boolean; error: string | null };
+type TabKey = "overview" | "connections" | "ad-accounts" | "sync" | "facebook-lead-ads" | "diagnostics";
+type ActiveConnectionDetails = { displayName: string | null; lastConnectedAt: string | null };
 type SyncRunState = { loading: boolean; error: string | null; success: string | null; details: Record<string, unknown> | null };
 type Tone = "success" | "warning" | "muted";
-type PlatformConnectionState = { label: string; note?: string; tone: Tone };
+type PlatformConnectionState = { label: string; currentState?: string; note?: string; tone: Tone; details?: string[] };
 type UiLang = "uk" | "en";
 type Copy = (typeof copy)[UiLang];
 
@@ -29,6 +32,7 @@ const CONNECTOR_FN: Record<ConnectorKey, string> = {
   google: "google-ads-oauth-start",
   tiktok: "tiktok-oauth-start",
 };
+const TAB_KEYS: TabKey[] = ["overview", "connections", "ad-accounts", "sync", "facebook-lead-ads", "diagnostics"];
 
 const copy = {
   uk: {
@@ -67,9 +71,19 @@ const copy = {
     realDataAfterFirstSync: "Реальні дані синхронізації",
     connectionsTitle: "Підключення",
     connectionsDescription: "Безпечні підключення для рекламних платформ.",
+    refresh: "Оновити",
+    refreshing: "Оновлюємо…",
+    oauthSuccessTitle: "Meta Ads підключено",
+    oauthSuccessDescription: "Meta Ads підключено. Тепер перевірте рекламні акаунти.",
+    checkAdAccounts: "Перевірити рекламні акаунти",
+    dismiss: "Закрити",
     currentState: "Поточний стан",
     safety: "Що станеться після підключення",
     connectedState: "Підключено",
+    oauthConnectedState: "OAuth-підключення виконано",
+    metaConnectedState: "Meta Ads підключено",
+    connectedAccount: "Акаунт",
+    lastConnected: "Останнє підключення",
     oauthNotCompletedState: "Підключення ще не виконано",
     realConnectionNotCreated: "Реальне підключення ще не створено",
     unknownConnectionState: "Стан невідомий",
@@ -255,9 +269,19 @@ const copy = {
     realDataAfterFirstSync: "Real sync data",
     connectionsTitle: "Connections",
     connectionsDescription: "Secure connections for advertising platforms.",
+    refresh: "Refresh",
+    refreshing: "Refreshing…",
+    oauthSuccessTitle: "Meta Ads connected",
+    oauthSuccessDescription: "Meta Ads connected. Now check ad accounts.",
+    checkAdAccounts: "Check ad accounts",
+    dismiss: "Dismiss",
     currentState: "Current state",
     safety: "What happens after connection",
     connectedState: "Connected",
+    oauthConnectedState: "OAuth connected",
+    metaConnectedState: "Meta Ads connected",
+    connectedAccount: "Account",
+    lastConnected: "Last connected",
     oauthNotCompletedState: "Connection is not completed yet",
     realConnectionNotCreated: "Real connection has not been created yet",
     unknownConnectionState: "Unknown",
@@ -414,6 +438,13 @@ export default function AdsConnectors() {
   const { lang } = useI18n();
   const ui = copy[lang];
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const oauthParam = searchParams.get("oauth");
+  const isMetaOauthSuccess = isMetaOauthSuccessParam(oauthParam);
+  const requestedTab = searchParams.get("tab");
+  const initialTab = isTabKey(requestedTab) ? requestedTab : isMetaOauthSuccess ? "connections" : "overview";
+  const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
+  const [oauthSuccessDismissed, setOauthSuccessDismissed] = useState(false);
   const { capabilities, isLoading: roleLoading, error: roleError } = useWorkspaceRole(WORKSPACE_ID);
   const canManage = capabilities.can_manage_bindings;
   const [connectorState, setConnectorState] = useState<Record<ConnectorKey, ConnectorState>>({
@@ -433,10 +464,11 @@ export default function AdsConnectors() {
     queryKey: ["ads-connectors-workspace", WORKSPACE_ID],
     enabled: Boolean(session),
     queryFn: async () => {
-      const [readiness, snapshot, adBindings, syncRules, syncDue, adsSummary, adsDaily, adsAnomalies, fbHealth, fbForms, fbLeads, fbSyncRuns] = await Promise.all([
+      const [readiness, snapshot, adBindings, adPlatformConnections, syncRules, syncDue, adsSummary, adsDaily, adsAnomalies, fbHealth, fbForms, fbLeads, fbSyncRuns] = await Promise.all([
         readOptionalView("v_production_backend_readiness"),
         readOptionalView("v_production_backend_snapshot"),
         readOptionalView("v_ad_account_bindings"),
+        readAdPlatformConnections(),
         readOptionalView("v_ads_scheduled_sync_rules"),
         readOptionalView("v_ads_scheduled_sync_due"),
         readOptionalView("v_ai_ads_summary_context"),
@@ -448,7 +480,7 @@ export default function AdsConnectors() {
         readOptionalView("v_facebook_lead_sync_runs_recent"),
       ]);
 
-      return { readiness, snapshot, adBindings, syncRules, syncDue, adsSummary, adsDaily, adsAnomalies, fbHealth, fbForms, fbLeads, fbSyncRuns };
+      return { readiness, snapshot, adBindings, adPlatformConnections, syncRules, syncDue, adsSummary, adsDaily, adsAnomalies, fbHealth, fbForms, fbLeads, fbSyncRuns };
     },
   });
 
@@ -469,11 +501,16 @@ export default function AdsConnectors() {
     (query.data?.fbSyncRuns.rows.length ?? 0) > 0,
   );
 
+  const activeMetaConnection = useMemo(
+    () => findActiveOAuthConnection("meta", query.data?.adPlatformConnections),
+    [query.data?.adPlatformConnections],
+  );
+
   const platformConnectionStates = useMemo(() => ({
-    meta: getPlatformConnectionState("meta", query.data?.adBindings, ui),
-    google: getPlatformConnectionState("google", query.data?.adBindings, ui),
-    tiktok: getPlatformConnectionState("tiktok", query.data?.adBindings, ui),
-  }), [query.data?.adBindings, ui]);
+    meta: getPlatformConnectionState("meta", query.data?.adBindings, query.data?.adPlatformConnections, ui, lang),
+    google: getPlatformConnectionState("google", query.data?.adBindings, query.data?.adPlatformConnections, ui, lang),
+    tiktok: getPlatformConnectionState("tiktok", query.data?.adBindings, query.data?.adPlatformConnections, ui, lang),
+  }), [lang, query.data?.adBindings, query.data?.adPlatformConnections, ui]);
 
   const runScheduledSync = async () => {
     setSyncRunState({ loading: true, error: null, success: null, details: null });
@@ -527,10 +564,23 @@ export default function AdsConnectors() {
   };
 
   const connectionRaw = readString(overview.snapshot, "ads_connector_status");
-  const hasRealOAuth = connectionRaw === "active" || connectionRaw === "healthy" || connectionRaw === "connected" || realAccountRows.length > 0;
+  const hasRealOAuth = Boolean(activeMetaConnection) || connectionRaw === "active" || connectionRaw === "healthy" || connectionRaw === "connected" || realAccountRows.length > 0;
   const overviewConnectionStatus = hasRealOAuth ? ui.connectedState : connectionRaw ? ui.readyAfterOauth : ui.noDataYet;
   const overviewAdAccountsStatus = realAccountRows.length > 0 ? formatMetric(realAccountRows.length) : ui.accountsNeedConnection;
   const overviewSyncStatus = realSyncDataAvailable ? ui.connectedState : ui.noRealSyncDataYet;
+
+  const refreshStatus = async () => {
+    await query.refetch();
+    await queryClient.invalidateQueries({ queryKey: ["ads-connectors-workspace", WORKSPACE_ID] });
+  };
+
+  const selectTab = (tab: string) => {
+    if (!isTabKey(tab)) return;
+    setActiveTab(tab);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set("tab", tab);
+    setSearchParams(nextParams, { replace: true });
+  };
 
   return (
     <DashboardLayout title={ui.pageTitle} subtitle={ui.pageSubtitle}>
@@ -551,7 +601,26 @@ export default function AdsConnectors() {
           {roleLoading ? <p className="text-xs text-muted-foreground">{ui.checkingAccess}</p> : null}
           {!roleLoading && !canManage ? <p className="text-xs text-muted-foreground">{ui.noManageAccess}</p> : null}
           {!roleLoading && roleError ? <p className="text-xs text-muted-foreground">{ui.roleUnavailable}</p> : null}
-          <Tabs defaultValue="overview" className="space-y-4">
+          {isMetaOauthSuccess && !oauthSuccessDismissed ? (
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <p className="font-semibold">{ui.oauthSuccessTitle}</p>
+                  <p className="mt-1">{ui.oauthSuccessDescription}</p>
+                </div>
+                <div className="flex shrink-0 flex-wrap gap-2">
+                  <Button type="button" size="sm" variant="secondary" onClick={() => selectTab("ad-accounts")}>{ui.checkAdAccounts}</Button>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => setOauthSuccessDismissed(true)}>{ui.dismiss}</Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          <div className="flex justify-end">
+            <Button type="button" variant="outline" onClick={() => void refreshStatus()} disabled={query.isFetching}>
+              {query.isFetching ? ui.refreshing : ui.refresh}
+            </Button>
+          </div>
+          <Tabs value={activeTab} onValueChange={selectTab} className="space-y-4">
             <TabsList className="w-full justify-start overflow-x-auto">
               <TabsTrigger value="overview">{ui.tabs.overview}</TabsTrigger>
               <TabsTrigger value="connections">{ui.tabs.connections}</TabsTrigger>
@@ -589,7 +658,9 @@ export default function AdsConnectors() {
                     buttonText={ui.connectMeta}
                     stateText={platformConnectionStates.meta.label}
                     stateTone={platformConnectionStates.meta.tone}
+                    currentStateText={platformConnectionStates.meta.currentState}
                     helperNote={platformConnectionStates.meta.note}
+                    details={platformConnectionStates.meta.details}
                     state={connectorState.meta}
                     onConnect={() => void connect("meta")}
                     canManage={canManage}
@@ -601,7 +672,9 @@ export default function AdsConnectors() {
                     buttonText={ui.connectGoogle}
                     stateText={platformConnectionStates.google.label}
                     stateTone={platformConnectionStates.google.tone}
+                    currentStateText={platformConnectionStates.google.currentState}
                     helperNote={platformConnectionStates.google.note}
+                    details={platformConnectionStates.google.details}
                     state={connectorState.google}
                     onConnect={() => void connect("google")}
                     canManage={canManage}
@@ -613,7 +686,9 @@ export default function AdsConnectors() {
                     buttonText={ui.connectTiktok}
                     stateText={platformConnectionStates.tiktok.label}
                     stateTone={platformConnectionStates.tiktok.tone}
+                    currentStateText={platformConnectionStates.tiktok.currentState}
                     helperNote={platformConnectionStates.tiktok.note}
+                    details={platformConnectionStates.tiktok.details}
                     state={connectorState.tiktok}
                     onConnect={() => void connect("tiktok")}
                     canManage={canManage}
@@ -625,10 +700,10 @@ export default function AdsConnectors() {
                         <p className="font-semibold">Facebook Lead Ads</p>
                         <p className="mt-1 text-muted-foreground">{ui.facebookLeadDescription}</p>
                       </div>
-                      <StatusPill tone="muted">{ui.stateManagedThroughMeta}</StatusPill>
+                      <StatusPill tone={activeMetaConnection ? "success" : "muted"}>{ui.stateManagedThroughMeta}</StatusPill>
                     </div>
                     <div className="mt-3 grid gap-2 text-xs text-muted-foreground">
-                      <p><span className="font-medium text-foreground">{ui.currentState}:</span> {ui.stateManagedThroughMeta}</p>
+                      <p><span className="font-medium text-foreground">{ui.currentState}:</span> {activeMetaConnection ? ui.metaConnectedState : ui.stateManagedThroughMeta}</p>
                       <div className="rounded-md bg-muted/40 p-3">
                         <p className="font-medium text-foreground">{ui.safety}</p>
                         <p className="mt-1">{ui.facebookLeadSafetyNote}</p>
@@ -712,6 +787,23 @@ async function readOptionalView(viewName: string): Promise<OptionalViewData> {
   return { rows: ((result.data ?? []) as Row[]), unavailableReason: null };
 }
 
+async function readAdPlatformConnections(): Promise<OptionalViewData> {
+  const safeColumns = [
+    "id",
+    "workspace_id",
+    "platform",
+    "connection_name",
+    "status",
+    "provider_business_name",
+    "provider_account_email",
+    "last_connected_at",
+    "token_expires_at",
+  ].join(",");
+  const result = await supabase.from("ad_platform_connections").select(safeColumns).eq("workspace_id", WORKSPACE_ID).limit(50);
+  if (result.error) return { rows: [], unavailableReason: result.error.message };
+  return { rows: ((result.data ?? []) as Row[]), unavailableReason: null };
+}
+
 function StatusPill({ tone, children }: { tone: Tone; children: ReactNode }) {
   return (
     <span className={cn(
@@ -755,7 +847,7 @@ function ReadinessStep({ label, value, tone }: { label: string; value?: string; 
   );
 }
 
-function ConnectorCard({ name, description, buttonText, stateText, stateTone, helperNote, state, onConnect, canManage, ui }: { name: string; description: string; buttonText: string; stateText: string; stateTone: Tone; helperNote?: string; state: ConnectorState; onConnect: () => void; canManage: boolean; ui: Copy }) {
+function ConnectorCard({ name, description, buttonText, stateText, currentStateText, stateTone, helperNote, details, state, onConnect, canManage, ui }: { name: string; description: string; buttonText: string; stateText: string; currentStateText?: string; stateTone: Tone; helperNote?: string; details?: string[]; state: ConnectorState; onConnect: () => void; canManage: boolean; ui: Copy }) {
   return (
     <div className="flex h-full flex-col rounded-lg border border-border/70 bg-card/60 p-4 text-sm">
       <div className="flex items-start justify-between gap-3">
@@ -766,7 +858,8 @@ function ConnectorCard({ name, description, buttonText, stateText, stateTone, he
         <StatusPill tone={stateTone}>{stateText}</StatusPill>
       </div>
       <div className="mt-3 grid gap-2 text-xs text-muted-foreground">
-        <p><span className="font-medium text-foreground">{ui.currentState}:</span> {stateTone === "success" ? stateText : ui.oauthNotCompletedState}</p>
+        <p><span className="font-medium text-foreground">{ui.currentState}:</span> {currentStateText ?? (stateTone === "success" ? stateText : ui.oauthNotCompletedState)}</p>
+        {details?.map((detail) => <p key={detail}>{detail}</p>)}
         {helperNote ? <WarningNotice>{helperNote}</WarningNotice> : null}
         <div className="rounded-md bg-muted/40 p-3">
           <p className="font-medium text-foreground">{ui.safety}</p>
@@ -1080,14 +1173,63 @@ function isPlaceholderAccount(row: Row) {
   return values.some((value) => value.includes("placeholder") || value.includes("test_") || value.includes("_test") || value.includes("northstar"));
 }
 
-function getPlatformConnectionState(platform: ConnectorKey, data: OptionalViewData | undefined, ui: Copy): PlatformConnectionState {
-  if (!data || data.unavailableReason) return { label: ui.unknownConnectionState, tone: "muted" };
+function getPlatformConnectionState(platform: ConnectorKey, bindings: OptionalViewData | undefined, connections: OptionalViewData | undefined, ui: Copy, lang: UiLang): PlatformConnectionState {
+  const activeConnection = findActiveOAuthConnection(platform, connections);
+  if (activeConnection) {
+    const details: string[] = [];
+    if (activeConnection.displayName) details.push(`${ui.connectedAccount}: ${activeConnection.displayName}`);
+    if (activeConnection.lastConnectedAt) details.push(`${ui.lastConnected}: ${formatDateTime(activeConnection.lastConnectedAt, lang)}`);
+    return {
+      label: ui.connectedState,
+      currentState: ui.oauthConnectedState,
+      tone: "success",
+      details,
+    };
+  }
 
-  const platformRows = data.rows.filter((row) => rowMatchesPlatform(row, platform));
-  if (platformRows.some((row) => !isPlaceholderAccount(row))) return { label: ui.connectedState, tone: "success" };
+  if (!bindings || bindings.unavailableReason) return { label: ui.unknownConnectionState, tone: "muted" };
+
+  const platformRows = bindings.rows.filter((row) => rowMatchesPlatform(row, platform));
+  if (platformRows.some((row) => !isPlaceholderAccount(row))) return { label: ui.connectedState, currentState: ui.oauthConnectedState, tone: "success" };
   if (platformRows.length > 0) return { label: ui.oauthNotCompletedState, note: ui.testBindingsNoRealOauth, tone: "warning" };
 
-  return { label: ui.realConnectionNotCreated, tone: "warning" };
+  return { label: ui.oauthNotCompletedState, tone: "warning" };
+}
+
+
+function findActiveOAuthConnection(platform: ConnectorKey, data: OptionalViewData | undefined): ActiveConnectionDetails | null {
+  if (!data || data.unavailableReason) return null;
+  const platformName = platform === "meta" ? "meta_ads" : platform === "google" ? "google_ads" : "tiktok_ads";
+  const row = data.rows.find((connection) => {
+    const rowPlatform = String(connection.platform ?? "").toLowerCase();
+    const rowStatus = String(connection.status ?? "").toLowerCase();
+    return rowPlatform === platformName && rowStatus === "active";
+  });
+
+  if (!row) return null;
+  return {
+    displayName: readString(row, "provider_business_name") ?? readString(row, "connection_name") ?? readString(row, "provider_account_email"),
+    lastConnectedAt: readString(row, "last_connected_at"),
+  };
+}
+
+function formatDateTime(value: string, lang: UiLang): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat(lang === "uk" ? "uk-UA" : "en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
+
+function isTabKey(value: string | null): value is TabKey {
+  return Boolean(value && TAB_KEYS.includes(value as TabKey));
+}
+
+function isMetaOauthSuccessParam(value: string | null): boolean {
+  if (!value) return false;
+  const normalized = value.toLowerCase();
+  return normalized.includes("meta") && normalized.includes("success");
 }
 
 function rowMatchesPlatform(row: Row, platform: ConnectorKey) {
