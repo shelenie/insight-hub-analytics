@@ -9,6 +9,11 @@ import { useDateFilter } from "@/filters/DateContext";
 import { SavedViewsMenu } from "./SavedViewsMenu";
 import { CompareControl } from "./CompareControl";
 
+const cleanActiveDateContextLabel = (label: string, lang: "uk" | "en") => {
+  const prefixes = lang === "uk" ? ["Дані за ", "Період: "] : ["Data for ", "Range: "];
+  return prefixes.reduce((current, prefix) => current.startsWith(prefix) ? current.slice(prefix.length) : current, label);
+};
+
 interface FilterBarProps {
   onRefresh?: () => void;
   isRefreshing?: boolean;
@@ -167,7 +172,7 @@ export function FilterBar({
         <span className="inline-flex h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_0_3px_hsl(var(--primary)/0.15)]" />
         <span>
           {date.mode === "exact" ? t("activeDate") : t("activeRange")}:
-          <span className="ml-1 font-semibold text-foreground">{date.contextLabel(lang)}</span>
+          <span className="ml-1 font-semibold text-foreground">{cleanActiveDateContextLabel(date.contextLabel(lang), lang)}</span>
         </span>
       </div>
     </div>

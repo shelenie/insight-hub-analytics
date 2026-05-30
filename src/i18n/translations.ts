@@ -519,8 +519,8 @@ export const translations = {
   compareMode: { uk: "Режим порівняння", en: "Compare mode" },
   compareDisplay: { uk: "Відображення", en: "Display" },
   compareNone: { uk: "Без порівняння", en: "None" },
-  compareYesterday: { uk: "vs вчора", en: "vs yesterday" },
-  comparePrevious: { uk: "vs попередній період", en: "vs previous period" },
+  compareYesterday: { uk: "vs вчора", en: "Yesterday" },
+  comparePrevious: { uk: "vs попередній період", en: "Previous period" },
   comparePercent: { uk: "У відсотках", en: "Percent (%)" },
   compareAbsolute: { uk: "Абсолютне (Δ)", en: "Absolute (Δ)" },
 } as const;

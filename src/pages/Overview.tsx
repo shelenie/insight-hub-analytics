@@ -3,6 +3,7 @@ import { addDays, differenceInCalendarDays, format, isSameDay } from "date-fns";
 import { uk } from "date-fns/locale";
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { Link } from "react-router-dom";
+import { CheckCircle2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
@@ -200,6 +201,7 @@ function KpiCard({
   delta,
   compareLabel,
   deltaTitle,
+  showComparison = false,
 }: {
   title: string;
   value: string;
@@ -208,6 +210,7 @@ function KpiCard({
   delta?: KpiDelta | null;
   compareLabel?: string;
   deltaTitle?: string;
+  showComparison?: boolean;
 }) {
   const deltaClass =
     delta?.tone === "positive"
@@ -215,13 +218,13 @@ function KpiCard({
       : delta?.tone === "negative"
         ? "text-destructive"
         : "text-muted-foreground";
-  return <div className="flex h-full min-h-[150px] flex-col rounded-xl border bg-background/40 p-4">
+  return <div className={`flex h-full flex-col rounded-xl border bg-background/40 p-4 ${showComparison ? "min-h-[150px]" : "min-h-[124px]"}`}>
     <p className="flex min-h-8 items-start text-xs font-medium uppercase leading-4 tracking-wide text-muted-foreground">{title}</p>
     <div className="flex min-h-11 items-end pt-2"><KpiValue unavailable={unavailable} value={value} /></div>
-    <div className="flex min-h-9 items-start pt-1">
+    {showComparison ? <div className="flex min-h-9 items-start pt-1">
       {delta ? <p className={`text-xs leading-snug ${deltaClass}`} title={deltaTitle}><span className="font-medium">{delta.text}</span>{compareLabel ? <span className="text-muted-foreground"> {compareLabel}</span> : null}</p> : <span className="text-xs leading-snug opacity-0" aria-hidden="true">—</span>}
-    </div>
-    <p className="mt-auto pt-2 text-xs leading-snug text-muted-foreground">{subtitle}</p>
+    </div> : null}
+    <p className={`text-xs leading-snug text-muted-foreground ${showComparison ? "mt-auto pt-2" : "mt-2 pt-1"}`}>{subtitle}</p>
   </div>;
 }
 
@@ -442,11 +445,11 @@ export default function Overview() {
       {session ? <SectionCard title={lang === "uk" ? "Бізнес-дашборд" : "Executive dashboard"} description={lang === "uk" ? "Ключові бізнес-показники за вибраний період" : "Key business metrics for the selected period"}>
         {dashboardLoading ? <p className="rounded-md border p-3 text-sm text-muted-foreground">{lang === "uk" ? "Завантажуємо бізнес-показники…" : "Loading business metrics…"}</p> : null}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          <KpiCard title={lang === "uk" ? "Дохід" : "Revenue"} unavailable={Boolean(salesUnavailable)} value={salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : salesRows.length ? fmtCurrency(revenueUsd) : "—"} delta={revenueDelta} compareLabel={compareLabel} subtitle="USD" />
-          <KpiCard title={lang === "uk" ? "Продажі" : "Sales"} unavailable={Boolean(salesUnavailable)} value={salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : salesRows.length ? fmtNum(salesCount) : "—"} delta={salesDelta} compareLabel={compareLabel} subtitle={lang === "uk" ? "записів продажів" : "sales records"} />
-          <KpiCard title={lang === "uk" ? "Витрати на рекламу" : "Ad Spend"} unavailable={Boolean(adsUnavailable)} value={adsUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : adsRows.length ? fmtCurrency(adSpend) : "—"} delta={adSpendDelta} compareLabel={compareLabel} deltaTitle={lang === "uk" ? "Нейтральна зміна: вищі витрати оцінюються разом із доходом." : "Neutral change: higher spend is evaluated together with revenue."} subtitle="USD" />
-          <KpiCard title={lang === "uk" ? "Вартість продажу з реклами" : "Ad cost / sale"} unavailable={Boolean(adsUnavailable || salesUnavailable)} value={adsUnavailable || salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : costPerSale === null ? "—" : fmtCurrency(costPerSale, { compact: false })} delta={costPerSaleDelta} compareLabel={compareLabel} subtitle={lang === "uk" ? "витрати на рекламу / продажі" : "ad spend / sales"} />
-          <KpiCard title={lang === "uk" ? "Потребують уваги" : "Open issues"} unavailable={issuesUnavailable} value={issuesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : openIssues === null ? "—" : fmtNum(openIssues)} subtitle={lang === "uk" ? "мапінг, сповіщення, імпорт" : "mapping, alerts, imports"} />
+          <KpiCard title={lang === "uk" ? "Дохід" : "Revenue"} unavailable={Boolean(salesUnavailable)} value={salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : salesRows.length ? fmtCurrency(revenueUsd) : "—"} delta={revenueDelta} compareLabel={compareLabel} subtitle="USD" showComparison={shouldShowComparison} />
+          <KpiCard title={lang === "uk" ? "Продажі" : "Sales"} unavailable={Boolean(salesUnavailable)} value={salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : salesRows.length ? fmtNum(salesCount) : "—"} delta={salesDelta} compareLabel={compareLabel} subtitle={lang === "uk" ? "записів продажів" : "sales records"} showComparison={shouldShowComparison} />
+          <KpiCard title={lang === "uk" ? "Витрати на рекламу" : "Ad Spend"} unavailable={Boolean(adsUnavailable)} value={adsUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : adsRows.length ? fmtCurrency(adSpend) : "—"} delta={adSpendDelta} compareLabel={compareLabel} deltaTitle={lang === "uk" ? "Нейтральна зміна: вищі витрати оцінюються разом із доходом." : "Neutral change: higher spend is evaluated together with revenue."} subtitle="USD" showComparison={shouldShowComparison} />
+          <KpiCard title={lang === "uk" ? "Вартість продажу з реклами" : "Ad cost / sale"} unavailable={Boolean(adsUnavailable || salesUnavailable)} value={adsUnavailable || salesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : costPerSale === null ? "—" : fmtCurrency(costPerSale, { compact: false })} delta={costPerSaleDelta} compareLabel={compareLabel} subtitle={lang === "uk" ? "витрати на рекламу / продажі" : "ad spend / sales"} showComparison={shouldShowComparison} />
+          <KpiCard title={lang === "uk" ? "Потребують уваги" : "Open issues"} unavailable={issuesUnavailable} value={issuesUnavailable ? (lang === "uk" ? "Дані недоступні" : "Unavailable") : openIssues === null ? "—" : fmtNum(openIssues)} subtitle={lang === "uk" ? "мапінг, сповіщення, імпорт" : "mapping, alerts, imports"} showComparison={shouldShowComparison} />
         </div>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
@@ -511,7 +514,10 @@ export default function Overview() {
           </ChartCard>
 
           <ChartCard title={lang === "uk" ? "Потребують уваги" : "Needs attention"} description={lang === "uk" ? "Мапінг, сповіщення та імпорти" : "Mapping, alerts, and imports"} badge={openIssues && openIssues > 0 ? (lang === "uk" ? "Перевірити" : "Review") : null}>
-            {counts.isLoading || activity.isLoading ? <ChartEmpty text={lang === "uk" ? "Завантажуємо сигнали…" : "Loading signals…"} /> : attentionAllClear ? <div className="flex min-h-[180px] items-center rounded-md border border-dashed bg-muted/20 p-4">
+            {counts.isLoading || activity.isLoading ? <ChartEmpty text={lang === "uk" ? "Завантажуємо сигнали…" : "Loading signals…"} /> : attentionAllClear ? <div className="flex min-h-[76px] items-center gap-3 rounded-md border bg-emerald-500/5 px-3 py-3">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+                <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+              </span>
               <div>
                 <p className="text-sm font-semibold">{lang === "uk" ? "Активних сигналів немає" : "No active signals"}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{lang === "uk" ? "Мапінг, сповіщення та імпорти не потребують дій." : "Mapping, alerts, and imports do not need action."}</p>
