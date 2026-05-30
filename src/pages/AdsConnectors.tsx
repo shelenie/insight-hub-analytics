@@ -103,7 +103,7 @@ const copy = {
     scheduledTitle: "Планова синхронізація",
     scheduledDescription: "Правила запуску синхронізацій і поточна черга.",
     scheduledWarning: "Не запускайте sync, доки не перевірене реальне OAuth-підключення.",
-    syncRules: "Правила sync",
+    syncRules: "Правила синхронізації",
     syncDue: "Поточна черга",
     syncRulesEmpty: "Правил планової синхронізації поки немає.",
     syncDueEmpty: "Немає синхронізацій, які потрібно запускати зараз.",
@@ -111,6 +111,8 @@ const copy = {
     runningSync: "Запускаємо sync…",
     syncSubmitNote: "Натискання викликає наявну безпечну sync-функцію лише вручну.",
     syncSuccess: "Ручний sync надіслано.",
+    syncFailedToastTitle: "Sync не запустився",
+    syncSubmittedToastTitle: "Sync надіслано",
     syncError: "Синхронізація завершилась з помилкою.",
     detailsDebug: "Технічні деталі доступні в developer details.",
     fbTitle: "Facebook Lead Ads",
@@ -124,7 +126,7 @@ const copy = {
     failedSyncsLast24h: "Помилки sync за 24 год",
     formsTitle: "Форми",
     leadsTitle: "Останні ліди",
-    syncRunsTitle: "Останні sync запуски",
+    syncRunsTitle: "Останні запуски синхронізації",
     fbFormsEmpty: "Форми Facebook Lead Ads поки не знайдені. Перевіримо після Meta OAuth підключення.",
     fbLeadsEmpty: "Останніх Facebook лідів поки немає.",
     fbSyncRunsEmpty: "Запусків синхронізації Facebook Lead Ads поки немає.",
@@ -164,22 +166,22 @@ const copy = {
     },
     columnLabels: {
       platform: "Платформа",
-      external_account_id: "External account ID",
+      external_account_id: "ID рекламного акаунта",
       ad_account_name: "Рекламний акаунт",
       client_name: "Клієнт",
       project_name: "Проєкт",
       funnel_name: "Воронка",
-      mapping_status: "Статус mapping",
-      binding_status: "Статус binding",
-      confidence: "Confidence",
-      cadence: "Cadence",
-      schedule: "Schedule",
+      mapping_status: "Статус мапінгу",
+      binding_status: "Статус привʼязки",
+      confidence: "Впевненість",
+      cadence: "Частота",
+      schedule: "Розклад",
       status: "Статус",
       last_run_at: "Останній запуск",
       next_run_at: "Наступний запуск",
       updated_at: "Оновлено",
       due_status: "Статус черги",
-      is_due: "Due",
+      is_due: "Потрібен запуск",
       form_name: "Форма",
       form_id: "Form ID",
       leads_count: "Ліди",
@@ -275,15 +277,17 @@ const copy = {
     runningSync: "Running sync…",
     syncSubmitNote: "Clicking calls the existing secure sync function only when submitted manually.",
     syncSuccess: "Manual sync submitted.",
+    syncFailedToastTitle: "Sync failed",
+    syncSubmittedToastTitle: "Sync submitted",
     syncError: "Sync finished with an error.",
     detailsDebug: "Technical details are available in developer details.",
     fbTitle: "Facebook Lead Ads",
     fbDescription: "Forms, leads, webhook events, and sync run status.",
-    healthStatus: "Стан",
+    healthStatus: "Health status",
     activeForms: "Active forms",
     formsNeedMapping: "Forms needing mapping",
     leadsLast24h: "Leads last 24h",
-    failedLeads: "Ліди з помилками",
+    failedLeads: "Failed leads",
     unprocessedWebhookEvents: "Unprocessed webhook events",
     failedSyncsLast24h: "Failed syncs last 24h",
     formsTitle: "Forms",
@@ -434,7 +438,7 @@ export default function AdsConnectors() {
 
     if (error) {
       setSyncRunState({ loading: false, error: error.message, success: null, details: null });
-      toast({ title: "Scheduled sync failed", description: error.message, variant: "destructive" });
+      toast({ title: ui.syncFailedToastTitle, description: error.message, variant: "destructive" });
       return;
     }
 
@@ -445,7 +449,7 @@ export default function AdsConnectors() {
       "Scheduled sync submitted securely.";
 
     setSyncRunState({ loading: false, error: null, success: message, details });
-    toast({ title: "Scheduled sync submitted", description: message });
+    toast({ title: ui.syncSubmittedToastTitle, description: message });
 
     await Promise.all([
       query.refetch(),
