@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { addDays, format, parse, subDays, isValid } from "date-fns";
-import { uk } from "date-fns/locale";
+import { enUS, uk } from "date-fns/locale";
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
@@ -35,7 +35,14 @@ export function DateFilter() {
   const [rangeMonth, setRangeMonth] = useState<Date>(f.rangeFrom ?? f.rangeTo ?? f.exactDate);
 
   const formatLongDate = (date: Date) => lang === "uk" ? format(date, "d MMMM yyyy", { locale: uk }) : format(date, "d MMMM yyyy");
-  const calendarLocaleProps = lang === "uk" ? {} : { locale: undefined, formatters: undefined };
+  const calendarLocaleProps = lang === "uk"
+    ? { locale: uk }
+    : {
+        locale: enUS,
+        formatters: {
+          formatWeekdayName: (date: Date) => format(date, "EEEEEE", { locale: enUS }),
+        },
+      };
 
   function onExactInputBlur() {
     const parsed = parse(draftExactInput, "dd.MM.yyyy", new Date());
