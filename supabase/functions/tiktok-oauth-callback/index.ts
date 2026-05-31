@@ -2,6 +2,9 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.8";
 
 const APP_URL = "https://shelenie.github.io/insight-hub-analytics";
 const TIKTOK_TOKEN_URL = "https://business-api.tiktok.com/open_api/v1.3/oauth2/access_token/";
+const DEFAULT_OAUTH_STATE_RPC = "consume_ad_platform_oauth_state";
+const DEFAULT_AUDIT_RPC = "record_ad_platform_oauth_audit";
+const DEFAULT_STORE_CONNECTION_RPC = "store_ad_platform_oauth_connection";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,7 +15,6 @@ type JsonObject = Record<string, unknown>;
 
 type OAuthState = {
   id?: string;
-  state?: string;
   workspace_id?: string;
   user_id?: string;
   redirect_uri?: string;
@@ -65,36 +67,17 @@ function escapeHtml(value: string) {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 }
 
-function json(payload: unknown, status = 200) {
-  return new Response(JSON.stringify(payload), {
-    status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
-  });
-}
-
 function asObject(value: unknown): JsonObject | null {
   return value && typeof value === "object" && !Array.isArray(value) ? value as JsonObject : null;
 }
 
-function getNestedObject(payload: JsonObject, key: string): JsonObject | null {
+function nestedObject(payload: JsonObject, key: string): JsonObject | null {
   return asObject(payload[key]);
 }
 
-function hasField(payload: JsonObject, key: string) {
-  const nestedData = getNestedObject(payload, "data");
-  return payload[key] != null || nestedData?.[key] != null;
-}
-
-function pickTokenValue(payload: JsonObject, key: string): string | null {
-  const nestedData = getNestedObject(payload, "data");
-  const value = payload[key] ?? nestedData?.[key];
-  return typeof value === "string" && value.trim() ? value : null;
-}
-
-function pickNumberValue(payload: JsonObject, key: string): number | null {
-  const nestedData = getNestedObject(payload, "data");
-  const value = payload[key] ?? nestedData?.[key];
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
+function hasTokenResponseField(payload: JsonObject, key: string) {
+  const data = nestedObject(payload, "data");
+  return payload[key] != null || data?.[key] != null;
 }
 
 function pickString(payload: JsonObject | null | undefined, keys: string[]) {
@@ -108,71 +91,64 @@ function pickString(payload: JsonObject | null | undefined, keys: string[]) {
 
 function sanitizeTokenResponse(payload: unknown): TokenDiagnostics {
   const response = asObject(payload) ?? {};
-  const nestedData = getNestedObject(response, "data");
+  const data = nestedObject(response, "data");
   return {
     token_response_top_level_keys: Object.keys(response).sort(),
-    has_access_token: hasField(response, "access_token"),
-    has_refresh_token: hasField(response, "refresh_token"),
-    has_expires_in: hasField(response, "expires_in"),
-    has_refresh_expires_in: hasField(response, "refresh_expires_in"),
+    has_access_token: hasTokenResponseField(response, "access_token"),
+    has_refresh_token: hasTokenResponseField(response, "refresh_token"),
+    has_expires_in: hasTokenResponseField(response, "expires_in"),
+    has_refresh_expires_in: hasTokenResponseField(response, "refresh_expires_in"),
     tiktok_code: typeof response.code === "string" || typeof response.code === "number" ? response.code : null,
     tiktok_message: typeof response.message === "string" ? response.message : null,
-    tiktok_request_id: pickString(response, ["request_id", "log_id"]) ?? pickString(nestedData, ["request_id", "log_id"]),
+    tiktok_request_id: pickString(response, ["request_id", "log_id"]) ?? pickString(data, ["request_id", "log_id"]),
   };
 }
 
-function getRequiredEnv(name: string) {
+function requiredEnv(name: string) {
   const value = Deno.env.get(name);
   if (!value) throw new Error(`${name} is not configured`);
   return value;
 }
 
-function getTikTokClientKey() {
+function tiktokClientKey() {
   return Deno.env.get("TIKTOK_CLIENT_KEY") ?? Deno.env.get("TIKTOK_APP_ID") ?? Deno.env.get("TIKTOK_CLIENT_ID") ?? "";
 }
 
-function getTikTokClientSecret() {
+function tiktokClientSecret() {
   return Deno.env.get("TIKTOK_CLIENT_SECRET") ?? Deno.env.get("TIKTOK_APP_SECRET") ?? "";
 }
 
+function rpcName(envName: string, fallback: string) {
+  return Deno.env.get(envName) ?? fallback;
+}
+
 async function loadOAuthState(adminClient: ReturnType<typeof createClient>, state: string): Promise<OAuthState | null> {
-  const tables = ["oauth_states", "ad_platform_oauth_states", "oauth_state"];
-  for (const table of tables) {
-    const { data, error } = await adminClient.from(table).select("*").eq("state", state).maybeSingle();
-    if (!error && data) return data as OAuthState;
-    if (error && !/does not exist|schema cache|Could not find/i.test(error.message)) {
-      console.warn("[tiktok-oauth-callback] state lookup failed", { table, message: error.message });
-    }
-  }
-  return null;
+  const { data, error } = await adminClient.rpc(rpcName("AD_PLATFORM_OAUTH_STATE_RPC", DEFAULT_OAUTH_STATE_RPC), {
+    p_platform: "tiktok_ads",
+    p_state: state,
+  });
+  if (error) throw error;
+  return asObject(data) as OAuthState | null;
 }
 
 async function recordAudit(adminClient: ReturnType<typeof createClient>, action: string, metadata: JsonObject, stateRow?: OAuthState | null) {
-  const auditPayload: JsonObject = {
-    action,
-    metadata,
-  };
-  if (stateRow?.workspace_id) auditPayload.workspace_id = stateRow.workspace_id;
-  if (stateRow?.user_id) auditPayload.user_id = stateRow.user_id;
-
-  const tables = ["audit_logs", "workspace_audit_logs", "audit_events"];
-  for (const table of tables) {
-    const { error } = await adminClient.from(table).insert(auditPayload);
-    if (!error) return;
-    if (!/does not exist|schema cache|Could not find|column/i.test(error.message)) {
-      console.warn("[tiktok-oauth-callback] audit insert failed", { table, action, message: error.message });
-    }
-  }
-
-  console.warn("[tiktok-oauth-callback] audit not recorded", { action, metadata_keys: Object.keys(metadata).sort() });
+  const { error } = await adminClient.rpc(rpcName("AD_PLATFORM_OAUTH_AUDIT_RPC", DEFAULT_AUDIT_RPC), {
+    p_action: action,
+    p_platform: "tiktok_ads",
+    p_workspace_id: stateRow?.workspace_id ?? null,
+    p_user_id: stateRow?.user_id ?? null,
+    p_metadata: metadata,
+  });
+  if (error) console.warn("[tiktok-oauth-callback] audit rpc failed", { action, message: error.message, metadata_keys: Object.keys(metadata).sort() });
 }
 
 async function exchangeCodeForToken(code: string, stateRow: OAuthState | null) {
-  const clientKey = getTikTokClientKey();
-  const clientSecret = getTikTokClientSecret();
+  const clientKey = tiktokClientKey();
+  const clientSecret = tiktokClientSecret();
   if (!clientKey || !clientSecret) throw new Error("TikTok OAuth client credentials are not configured");
 
   const redirectUri = stateRow?.redirect_uri ?? pickString(stateRow?.metadata, ["redirect_uri"]) ?? Deno.env.get("TIKTOK_REDIRECT_URI") ?? undefined;
+  const codeVerifier = stateRow?.code_verifier ?? pickString(stateRow?.metadata, ["code_verifier"]);
   const body: JsonObject = {
     app_id: clientKey,
     secret: clientSecret,
@@ -180,7 +156,6 @@ async function exchangeCodeForToken(code: string, stateRow: OAuthState | null) {
     grant_type: "auth_code",
   };
   if (redirectUri) body.redirect_uri = redirectUri;
-  const codeVerifier = stateRow?.code_verifier ?? pickString(stateRow?.metadata, ["code_verifier"]);
   if (codeVerifier) body.code_verifier = codeVerifier;
 
   return await fetch(TIKTOK_TOKEN_URL, {
@@ -190,41 +165,29 @@ async function exchangeCodeForToken(code: string, stateRow: OAuthState | null) {
   });
 }
 
-async function createConnection(adminClient: ReturnType<typeof createClient>, stateRow: OAuthState, tokenPayload: JsonObject) {
-  const accessToken = pickTokenValue(tokenPayload, "access_token");
-  const refreshToken = pickTokenValue(tokenPayload, "refresh_token");
-  const expiresIn = pickNumberValue(tokenPayload, "expires_in");
-  const refreshExpiresIn = pickNumberValue(tokenPayload, "refresh_expires_in");
-
-  if (!refreshToken) throw new Error("Cannot create TikTok connection without refresh token");
+async function storeConnectionWithExistingVaultPattern(adminClient: ReturnType<typeof createClient>, stateRow: OAuthState, tokenPayload: JsonObject, tokenDiagnostics: TokenDiagnostics) {
+  if (!tokenDiagnostics.has_refresh_token) throw new Error("Cannot create TikTok connection without refresh token");
   if (!stateRow.workspace_id) throw new Error("OAuth state is missing workspace_id");
 
-  const now = new Date();
-  const credentials: JsonObject = { refresh_token: refreshToken };
-  if (accessToken) credentials.access_token = accessToken;
-  if (expiresIn) credentials.expires_at = new Date(now.getTime() + expiresIn * 1000).toISOString();
-  if (refreshExpiresIn) credentials.refresh_expires_at = new Date(now.getTime() + refreshExpiresIn * 1000).toISOString();
-
-  const payload: JsonObject = {
-    workspace_id: stateRow.workspace_id,
-    platform: "tiktok_ads",
-    status: "connected",
-    credentials,
-    metadata: {
+  const { error } = await adminClient.rpc(rpcName("AD_PLATFORM_OAUTH_STORE_CONNECTION_RPC", DEFAULT_STORE_CONNECTION_RPC), {
+    p_platform: "tiktok_ads",
+    p_status: "active",
+    p_workspace_id: stateRow.workspace_id,
+    p_user_id: stateRow.user_id ?? null,
+    p_oauth_state_id: stateRow.id ?? null,
+    p_token_payload: tokenPayload,
+    p_metadata: {
       provider: "tiktok",
-      token_diagnostics: sanitizeTokenResponse(tokenPayload),
+      token_diagnostics: tokenDiagnostics,
     },
-  };
-  if (stateRow.user_id) payload.created_by = stateRow.user_id;
-
-  const { error } = await adminClient.from("ad_platform_connections").insert(payload);
+  });
   if (error) throw error;
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
-  const adminClient = createClient(getRequiredEnv("SUPABASE_URL"), getRequiredEnv("SUPABASE_SERVICE_ROLE_KEY"));
+  const adminClient = createClient(requiredEnv("SUPABASE_URL"), requiredEnv("SUPABASE_SERVICE_ROLE_KEY"));
 
   try {
     const url = new URL(req.url);
@@ -248,7 +211,7 @@ Deno.serve(async (req) => {
         has_code: Boolean(code),
         has_state: Boolean(state),
       });
-      return json({ ok: false, error: "Missing OAuth callback parameters" }, 400);
+      return htmlPage("TikTok Ads connection needs attention", "TikTok authorization could not be verified. Please return to Insight Hub and try again.", 400);
     }
 
     const stateRow = await loadOAuthState(adminClient, state);
@@ -289,7 +252,7 @@ Deno.serve(async (req) => {
       return htmlPage("TikTok Ads connection needs attention", "TikTok authorization could not be completed. Please return to Insight Hub and try again after settings are checked.", 400);
     }
 
-    await createConnection(adminClient, stateRow, asObject(tokenPayload) ?? {});
+    await storeConnectionWithExistingVaultPattern(adminClient, stateRow, asObject(tokenPayload) ?? {}, tokenDiagnostics);
     await recordAudit(adminClient, "tiktok_oauth_callback_succeeded", {
       step: "connection_created",
       ...tokenDiagnostics,
