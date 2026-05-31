@@ -207,6 +207,25 @@ function extractTokenData(raw: unknown) {
   };
 }
 
+function normalizeStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) =>
+        typeof item === "string" ? item.trim() : String(item ?? "").trim()
+      )
+      .filter(Boolean);
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return value
+      .split(/[\s,]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
 function extractAdvertisers(raw: unknown) {
   const rawRecord = asRecord(raw);
   const data = optionalRecord(rawRecord.data) ?? rawRecord;
@@ -427,7 +446,12 @@ Deno.serve(async (req: Request) => {
       ...tokenDiagnostics,
     });
 
-    if (!tokenResult.ok || tokenData.code !== 0 || !tokenData.accessToken) {
+    const accessToken = typeof tokenData.accessToken === "string" &&
+        tokenData.accessToken.trim()
+      ? tokenData.accessToken
+      : null;
+
+    if (!tokenResult.ok || String(tokenData.code) !== "0" || !accessToken) {
       await writeAuditLog({
         supabaseAdmin,
         workspaceId: WORKSPACE_ID,
@@ -447,30 +471,52 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    if (!tokenData.refreshToken) {
+    const advertiserIds = normalizeStringArray(tokenData.advertiserIds);
+
+    if (advertiserIds.length === 0) {
       await writeAuditLog({
         supabaseAdmin,
         workspaceId: WORKSPACE_ID,
-        action: "tiktok_oauth_callback_missing_refresh_token",
+        action: "tiktok_oauth_callback_failed",
         severity: "error",
         metadata: {
-          step: "missing_refresh_token",
+          step: "missing_advertiser_ids",
           status: tokenResult.status,
           ...tokenDiagnostics,
         },
       });
 
       return htmlResponse(
-        "TikTok Ads connection needs attention",
-        "TikTok did not return a refresh token. Please return to Insight Hub and try again after settings are checked.",
+        "TikTok token exchange failed",
+        "TikTok did not return any advertiser accounts. Please try connecting TikTok Ads again.",
         400,
       );
+    }
+
+    const refreshToken = typeof tokenData.refreshToken === "string" &&
+        tokenData.refreshToken.trim()
+      ? tokenData.refreshToken
+      : null;
+
+    if (!refreshToken) {
+      await writeAuditLog({
+        supabaseAdmin,
+        workspaceId: WORKSPACE_ID,
+        action: "tiktok_oauth_callback_refresh_token_missing_but_continuing",
+        severity: "warning",
+        metadata: {
+          step: "missing_refresh_token",
+          status: tokenResult.status,
+          advertiser_ids_count: advertiserIds.length,
+          ...tokenDiagnostics,
+        },
+      });
     }
 
     const advertisersResult = await fetchTikTokAdvertisers({
       appId: tiktokAppId,
       secret: tiktokSecret,
-      accessToken: String(tokenData.accessToken),
+      accessToken,
       apiVersion: tiktokApiVersion,
     });
 
@@ -483,7 +529,7 @@ Deno.serve(async (req: Request) => {
     const advertiserId =
       firstAdvertiser?.advertiser_id ??
       firstAdvertiser?.advertiserId ??
-      (Array.isArray(tokenData.advertiserIds) ? tokenData.advertiserIds[0] : null) ??
+      advertiserIds[0] ??
       Deno.env.get("TIKTOK_ADVERTISER_ID") ??
       null;
 
@@ -509,17 +555,30 @@ Deno.serve(async (req: Request) => {
         p_advertiser_id: advertiserId,
         p_advertiser_name: advertiserName,
         p_scopes: scopes,
-        p_access_token: tokenData.accessToken,
-        p_refresh_token: tokenData.refreshToken,
+        p_access_token: accessToken,
+        p_refresh_token: refreshToken,
         p_token_expires_at: tokenData.accessTokenExpiresAt,
         p_refresh_token_expires_at: tokenData.refreshTokenExpiresAt,
         p_token_metadata: {
           api_version: tiktokApiVersion,
+          token_type: refreshToken
+            ? "access_and_refresh_token"
+            : "access_token_only",
+          refresh_token_returned: Boolean(refreshToken),
+          access_token_returned: true,
+          advertiser_ids_count: advertiserIds.length,
+          token_response_top_level_keys:
+            tokenDiagnostics.token_response_top_level_keys,
+          token_response_data_keys: tokenDiagnostics.token_response_data_keys,
+          tiktok_code: tokenDiagnostics.tiktok_code,
+          tiktok_message: tokenDiagnostics.tiktok_message,
+          tiktok_request_id: tokenDiagnostics.tiktok_request_id,
+          warning: refreshToken ? null : "tiktok_did_not_return_refresh_token",
           token_response: {
             code: tokenData.code,
             message: tokenData.message,
             scope: tokenData.scope,
-            advertiser_ids: tokenData.advertiserIds,
+            advertiser_ids: advertiserIds,
             access_token_expires_at: tokenData.accessTokenExpiresAt,
             refresh_token_expires_at: tokenData.refreshTokenExpiresAt,
             diagnostics: tokenDiagnostics,
@@ -530,7 +589,9 @@ Deno.serve(async (req: Request) => {
           advertisers_count: advertisers.length,
           advertisers_error: advertisersResult.ok
             ? null
-            : asRecord(advertisersResult.data).message ?? asRecord(advertisersResult.data).msg ?? null,
+            : asRecord(advertisersResult.data).message ??
+              asRecord(advertisersResult.data).msg ??
+              null,
         },
       });
 
@@ -575,6 +636,10 @@ Deno.serve(async (req: Request) => {
         vault_secret_name: connectionRecord?.vault_secret_name ?? null,
         token_expires_at: tokenData.accessTokenExpiresAt,
         refresh_token_expires_at: tokenData.refreshTokenExpiresAt,
+        token_type: refreshToken
+          ? "access_and_refresh_token"
+          : "access_token_only",
+        refresh_token_returned: Boolean(refreshToken),
         advertisers_count: advertisers.length,
         scopes,
       },
@@ -582,11 +647,7 @@ Deno.serve(async (req: Request) => {
 
     return htmlResponse(
       "TikTok Ads connected",
-      `TikTok advertiser <strong>${escapeHtml(advertiserName ?? "connected")}</strong> was connected successfully.<br><br>
-      You can close this tab and return to the dashboard.<br><br>
-      Ad platform connection ID: <code>${escapeHtml(
-        connectionRecord?.ad_platform_connection_id ?? "unknown",
-      )}</code>`,
+      "TikTok Ads account was connected. You can return to Insight Hub.",
       200,
     );
   } catch (error) {
