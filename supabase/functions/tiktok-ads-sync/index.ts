@@ -29,6 +29,51 @@ type ActorContext = {
   reason: string | null;
 };
 
+type JsonRecord = Record<string, unknown>;
+
+type SupabaseErrorLike = {
+  message?: string;
+  hint?: unknown;
+  code?: unknown;
+};
+
+type SupabaseResultLike = {
+  data: unknown;
+  error: SupabaseErrorLike | null;
+  count?: number | null;
+};
+
+type SupabaseQueryLike = PromiseLike<SupabaseResultLike> & {
+  select: (columns?: string, options?: JsonRecord) => SupabaseQueryLike;
+  single: () => PromiseLike<SupabaseResultLike>;
+  eq: (column: string, value: unknown) => SupabaseQueryLike;
+};
+
+type SupabaseTableLike = {
+  insert: (values: unknown) => SupabaseQueryLike;
+  select: (columns?: string, options?: JsonRecord) => SupabaseQueryLike;
+  delete: () => SupabaseQueryLike;
+};
+
+type SupabaseClientLike = {
+  from: (table: string) => SupabaseTableLike;
+  rpc: (
+    functionName: string,
+    args?: JsonRecord,
+  ) => PromiseLike<SupabaseResultLike>;
+  auth: {
+    getUser: (token: string) => Promise<{
+      data?: {
+        user?: {
+          id: string;
+          email?: string | null;
+        } | null;
+      } | null;
+      error?: SupabaseErrorLike | null;
+    }>;
+  };
+};
+
 type TokenAuditMetadata = {
   token_mode: string | null;
   has_access_token: boolean;
@@ -145,7 +190,7 @@ function getProvidedTestActorEmail(req: Request, body: RequestBody) {
   );
 }
 
-function normalizeAccessRow(row: any) {
+function normalizeAccessRow(row: JsonRecord | null | undefined) {
   return {
     allowed: row?.allowed === true,
     actor_user_id: row?.result_actor_user_id ?? row?.actor_user_id ?? null,
@@ -159,11 +204,17 @@ function normalizeAccessRow(row: any) {
   };
 }
 
-function normalizeSecretPayload(payload: unknown): any {
+function asRecord(value: unknown): JsonRecord {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as JsonRecord)
+    : {};
+}
+
+function normalizeSecretPayload(payload: unknown): JsonRecord {
   if (typeof payload === "string") {
-    return JSON.parse(payload);
+    return asRecord(JSON.parse(payload));
   }
-  return payload ?? {};
+  return asRecord(payload);
 }
 
 function hasStringValue(value: unknown): value is string {
@@ -175,8 +226,8 @@ function pickBoolean(value: unknown): boolean | null {
 }
 
 function buildTokenAuditMetadata(params: {
-  secretPayload: any;
-  connection: any;
+  secretPayload: JsonRecord;
+  connection: JsonRecord;
   usedAccessTokenDirectly?: boolean;
   reconnectRequired?: boolean;
 }): TokenAuditMetadata {
@@ -246,7 +297,7 @@ function messageForTikTokError(
 }
 
 async function writeAuditLog(params: {
-  supabaseAdmin: any;
+  supabaseAdmin: SupabaseClientLike;
   workspaceId: string;
   actor: ActorContext | null;
   action: string;
@@ -275,8 +326,8 @@ async function getActorContext(params: {
   req: Request;
   body: RequestBody;
   workspaceId: string;
-  supabaseAnon: any;
-  supabaseAdmin: any;
+  supabaseAnon: SupabaseClientLike;
+  supabaseAdmin: SupabaseClientLike;
 }): Promise<ActorContext> {
   const { req, body, workspaceId, supabaseAnon, supabaseAdmin } = params;
 
@@ -491,8 +542,9 @@ async function tiktokGet(params: {
   return data;
 }
 
-function extractAdvertisers(raw: any) {
-  const data = raw?.data ?? raw ?? {};
+function extractAdvertisers(raw: unknown) {
+  const rawRecord = asRecord(raw);
+  const data = rawRecord.data ? asRecord(rawRecord.data) : rawRecord;
   const list = data?.list ?? data?.advertiser_list ?? data?.advertisers ?? [];
 
   return Array.isArray(list) ? list : [];
@@ -504,7 +556,7 @@ function dataLevelFromLevel(level: "campaign" | "adgroup" | "ad") {
   return "AUCTION_CAMPAIGN";
 }
 
-function normalizeAdvertiser(row: any) {
+function normalizeAdvertiser(row: JsonRecord) {
   const advertiserId =
     row?.advertiser_id ?? row?.advertiserId ?? row?.id ?? null;
 
@@ -521,12 +573,14 @@ function normalizeAdvertiser(row: any) {
 }
 
 function normalizeReportRow(params: {
-  row: any;
-  account: any;
+  row: JsonRecord;
+  account: JsonRecord;
   level: "campaign" | "adgroup" | "ad";
 }) {
-  const dimensions = params.row?.dimensions ?? {};
-  const metrics = params.row?.metrics ?? params.row ?? {};
+  const dimensions = asRecord(params.row.dimensions);
+  const metrics = params.row.metrics
+    ? asRecord(params.row.metrics)
+    : params.row;
 
   const advertiserId =
     dimensions.advertiser_id ??
@@ -653,7 +707,7 @@ async function fetchTikTokIntegratedReport(params: {
 }
 
 async function runMockSync(params: {
-  supabaseAdmin: any;
+  supabaseAdmin: SupabaseClientLike;
   workspaceId: string;
   actor: ActorContext;
 }) {
