@@ -5,6 +5,23 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal, RefreshCw } from "lucide-react";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,10 +36,11 @@ type OptionalViewData = { rows: Row[]; unavailableReason: string | null };
 type ConnectorKey = "meta" | "google" | "tiktok";
 type ConnectorState = { loading: boolean; error: string | null };
 type TabKey = "overview" | "connections" | "ad-accounts" | "sync" | "facebook-lead-ads" | "diagnostics";
-type ActiveConnectionDetails = { displayName: string | null; lastConnectedAt: string | null };
+type ActiveConnectionDetails = { id: string; displayName: string | null; lastConnectedAt: string | null; activeCount: number };
 type SyncRunState = { loading: boolean; error: string | null; success: string | null; details: Record<string, unknown> | null };
 type Tone = "success" | "warning" | "muted";
-type PlatformConnectionState = { label: string; currentState?: string; note?: string; tone: Tone; details?: string[] };
+type PlatformConnectionState = { label: string; currentState?: string; note?: string; tone: Tone; details?: string[]; activeConnection?: ActiveConnectionDetails | null };
+type DisconnectTarget = { id: string; name: string } | null;
 type UiLang = "uk" | "en";
 type Copy = (typeof copy)[UiLang];
 
@@ -75,21 +93,26 @@ const copy = {
     refreshing: "Оновлюємо…",
     oauthSuccessTitle: "Meta Ads підключено",
     oauthSuccessDescription: "Meta Ads підключено. Тепер перевірте рекламні акаунти.",
+    oauthErrorTitle: "Не вдалося підключити Meta Ads",
+    oauthErrorDescription: "Спробуйте повторити підключення або перевірте повідомлення в callback-функції.",
     checkAdAccounts: "Перевірити рекламні акаунти",
     dismiss: "Закрити",
+    cancel: "Скасувати",
     currentState: "Поточний стан",
     safety: "Що станеться після підключення",
     connectedState: "Підключено",
     oauthConnectedState: "OAuth-підключення виконано",
     metaConnectedState: "Meta Ads підключено",
     connectedAccount: "Акаунт",
+    activeConnections: "Активних підключень",
     lastConnected: "Останнє підключення",
     oauthNotCompletedState: "Підключення ще не виконано",
     realConnectionNotCreated: "Реальне підключення ще не створено",
     unknownConnectionState: "Стан невідомий",
     testBindingsNotReal: "Є тестові прив’язки, але підключення ще не завершено.",
-    testBindingsNoRealOauth: "Є тестові прив’язки, але реального підключення ще немає.",
-    stateManagedThroughMeta: "Керується через Meta Ads",
+    testBindingsNoRealOauth: "Є тестові прив’язки, але реального OAuth-підключення ще немає.",
+    stateManagedThroughMeta: "Через Meta Ads",
+    facebookLeadAvailableAfterMeta: "Facebook Lead Ads стане доступним після підключення Meta Ads.",
     oauthMayCreate: "Після підключення система створить реальний запис підключення. Синхронізація не стартує автоматично.",
     facebookLeadSafetyNote: "Працює через Meta Ads. Окреме підключення не потрібне.",
     metaDescription: "Підключення рекламних акаунтів Facebook та Instagram через безпечне підключення Meta Ads.",
@@ -99,12 +122,21 @@ const copy = {
     connectMeta: "Підключити Meta Ads",
     connectGoogle: "Підключити Google Ads",
     connectTiktok: "Підключити TikTok Ads",
+    reconnect: "Перепідключити",
+    disconnect: "Від’єднати",
+    disconnectMetaTitle: "Від’єднати Meta Ads?",
+    disconnectTitle: "Від’єднати {platform}?",
+    disconnectMetaDescription: "Синхронізація зупиниться. Історичні дані залишаться в системі. Ви зможете підключити акаунт повторно.",
+    disconnecting: "Від’єднуємо…",
+    disconnectSuccessTitle: "Meta Ads від’єднано",
+    disconnectSuccessDescription: "Підключення вимкнено без видалення історичних даних.",
+    disconnectErrorTitle: "Не вдалося від’єднати Meta Ads",
     openingOauth: "Відкриваємо авторизацію…",
     oauthUrlMissing: "Не вдалося отримати посилання для безпечного підключення.",
     adAccountsTitle: "Рекламні акаунти",
     adAccountsDescription: "Прив’язки акаунтів до клієнтів, проєктів і воронок.",
-    adAccountsExplain: "Це можуть бути тестові прив’язки. Реальне підключення підтверджується тільки після авторизації.",
-    testPlaceholder: "Тестовий акаунт",
+    adAccountsExplain: "Це можуть бути тестові прив’язки. Реальні рекламні акаунти з’являться після OAuth і синхронізації акаунтів.",
+    testPlaceholder: "Тестова прив’язка",
     realAccount: "Реальний акаунт",
     bindingScope: "Область прив’язки",
     accountStatus: "Статус акаунта",
@@ -113,7 +145,7 @@ const copy = {
     adAccountsEmpty: "Рекламні акаунти ще не прив’язані.",
     scheduledTitle: "Синхронізація",
     scheduledDescription: "Правила синхронізації, поточна черга та ручний запуск.",
-    scheduledWarning: "Не запускайте синхронізацію, доки реальне підключення не перевірене.",
+    scheduledWarning: "Не запускайте синхронізацію, доки реальне OAuth-підключення та рекламний акаунт не перевірені.",
     syncRules: "Правила синхронізації",
     syncDue: "Поточна черга",
     manualSync: "Ручна синхронізація",
@@ -273,21 +305,26 @@ const copy = {
     refreshing: "Refreshing…",
     oauthSuccessTitle: "Meta Ads connected",
     oauthSuccessDescription: "Meta Ads connected. Now check ad accounts.",
+    oauthErrorTitle: "Meta Ads could not be connected",
+    oauthErrorDescription: "Try reconnecting or check the callback function message.",
     checkAdAccounts: "Check ad accounts",
     dismiss: "Dismiss",
+    cancel: "Cancel",
     currentState: "Current state",
     safety: "What happens after connection",
     connectedState: "Connected",
     oauthConnectedState: "OAuth connected",
     metaConnectedState: "Meta Ads connected",
     connectedAccount: "Account",
+    activeConnections: "Active connections",
     lastConnected: "Last connected",
     oauthNotCompletedState: "Connection is not completed yet",
     realConnectionNotCreated: "Real connection has not been created yet",
     unknownConnectionState: "Unknown",
     testBindingsNotReal: "Test bindings exist, but connection has not been completed yet.",
-    testBindingsNoRealOauth: "Test bindings exist, but there is no real connection yet.",
-    stateManagedThroughMeta: "Managed through Meta Ads",
+    testBindingsNoRealOauth: "Test bindings exist, but there is no real OAuth connection yet.",
+    stateManagedThroughMeta: "Through Meta Ads",
+    facebookLeadAvailableAfterMeta: "Facebook Lead Ads will become available after Meta Ads is connected.",
     oauthMayCreate: "After connection, the system will create a real connection record. Sync will not start automatically.",
     facebookLeadSafetyNote: "Uses the Meta Ads connection. No separate connection is required.",
     metaDescription: "Connect Facebook and Instagram ad accounts through a secure Meta Ads connection.",
@@ -297,12 +334,21 @@ const copy = {
     connectMeta: "Connect Meta Ads",
     connectGoogle: "Connect Google Ads",
     connectTiktok: "Connect TikTok Ads",
+    reconnect: "Reconnect",
+    disconnect: "Disconnect",
+    disconnectMetaTitle: "Disconnect Meta Ads?",
+    disconnectTitle: "Disconnect {platform}?",
+    disconnectMetaDescription: "Sync will stop. Historical data will remain in the system. You can reconnect the account later.",
+    disconnecting: "Disconnecting…",
+    disconnectSuccessTitle: "Meta Ads disconnected",
+    disconnectSuccessDescription: "Connection was disabled without deleting historical data.",
+    disconnectErrorTitle: "Could not disconnect Meta Ads",
     openingOauth: "Opening authorization…",
     oauthUrlMissing: "A secure connection link was not returned.",
     adAccountsTitle: "Ad accounts",
     adAccountsDescription: "Account bindings to clients, projects, and funnels.",
-    adAccountsExplain: "These may be test binding records. A real connection is verified only after authorization.",
-    testPlaceholder: "Test account",
+    adAccountsExplain: "These may be test bindings. Real ad accounts will appear after OAuth and account sync.",
+    testPlaceholder: "Test binding",
     realAccount: "Real account",
     bindingScope: "Binding scope",
     accountStatus: "Account status",
@@ -311,7 +357,7 @@ const copy = {
     adAccountsEmpty: "Ad accounts are not bound yet.",
     scheduledTitle: "Sync",
     scheduledDescription: "Sync rules, current queue, and manual run controls.",
-    scheduledWarning: "Do not run sync until a real connection is verified.",
+    scheduledWarning: "Do not run sync until a real OAuth connection and ad account have been verified.",
     syncRules: "Sync rules",
     syncDue: "Current queue",
     manualSync: "Manual sync",
@@ -440,11 +486,17 @@ export default function AdsConnectors() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const oauthParam = searchParams.get("oauth");
-  const isMetaOauthSuccess = isMetaOauthSuccessParam(oauthParam);
+  const platformParam = searchParams.get("platform");
+  const isMetaCallback = platformParam === "meta_ads" || !platformParam;
+  const isMetaOauthSuccess = isMetaCallback && isMetaOauthSuccessParam(oauthParam);
+  const isMetaOauthError = isMetaCallback && isMetaOauthErrorParam(oauthParam);
   const requestedTab = searchParams.get("tab");
   const initialTab = isTabKey(requestedTab) ? requestedTab : isMetaOauthSuccess ? "connections" : "overview";
   const [activeTab, setActiveTab] = useState<TabKey>(initialTab);
   const [oauthSuccessDismissed, setOauthSuccessDismissed] = useState(false);
+  const [oauthErrorDismissed, setOauthErrorDismissed] = useState(false);
+  const [disconnectTarget, setDisconnectTarget] = useState<DisconnectTarget>(null);
+  const [disconnectLoading, setDisconnectLoading] = useState(false);
   const { capabilities, isLoading: roleLoading, error: roleError } = useWorkspaceRole(WORKSPACE_ID);
   const canManage = capabilities.can_manage_bindings;
   const [connectorState, setConnectorState] = useState<Record<ConnectorKey, ConnectorState>>({
@@ -563,6 +615,31 @@ export default function AdsConnectors() {
     window.location.href = url;
   };
 
+
+  const disconnectConnection = async () => {
+    if (!disconnectTarget) return;
+    setDisconnectLoading(true);
+    const { error } = await supabase.rpc("disconnect_ad_platform_connection" as never, {
+      p_workspace_id: WORKSPACE_ID,
+      p_connection_id: disconnectTarget.id,
+      p_reason: "user_disconnect",
+    } as never);
+
+    if (error) {
+      setDisconnectLoading(false);
+      toast({ title: ui.disconnectErrorTitle, description: error.message, variant: "destructive" });
+      return;
+    }
+
+    await Promise.all([
+      query.refetch(),
+      queryClient.invalidateQueries({ queryKey: ["ads-connectors-workspace", WORKSPACE_ID] }),
+    ]);
+    setDisconnectLoading(false);
+    setDisconnectTarget(null);
+    toast({ title: ui.disconnectSuccessTitle, description: ui.disconnectSuccessDescription });
+  };
+
   const connectionRaw = readString(overview.snapshot, "ads_connector_status");
   const hasRealOAuth = Boolean(activeMetaConnection) || connectionRaw === "active" || connectionRaw === "healthy" || connectionRaw === "connected" || realAccountRows.length > 0;
   const overviewConnectionStatus = hasRealOAuth ? ui.connectedState : connectionRaw ? ui.readyAfterOauth : ui.noDataYet;
@@ -579,6 +656,15 @@ export default function AdsConnectors() {
     setActiveTab(tab);
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set("tab", tab);
+    setSearchParams(nextParams, { replace: true });
+  };
+
+  const dismissOauthBanner = (kind: "success" | "error") => {
+    if (kind === "success") setOauthSuccessDismissed(true);
+    else setOauthErrorDismissed(true);
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete("oauth");
+    nextParams.delete("platform");
     setSearchParams(nextParams, { replace: true });
   };
 
@@ -610,25 +696,43 @@ export default function AdsConnectors() {
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
                   <Button type="button" size="sm" variant="secondary" onClick={() => selectTab("ad-accounts")}>{ui.checkAdAccounts}</Button>
-                  <Button type="button" size="sm" variant="ghost" onClick={() => setOauthSuccessDismissed(true)}>{ui.dismiss}</Button>
+                  <Button type="button" size="sm" variant="ghost" onClick={() => dismissOauthBanner("success")}>{ui.dismiss}</Button>
                 </div>
               </div>
             </div>
           ) : null}
-          <div className="flex justify-end">
-            <Button type="button" variant="outline" onClick={() => void refreshStatus()} disabled={query.isFetching}>
+          {isMetaOauthError && !oauthErrorDismissed ? (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+              <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <p className="font-semibold">{ui.oauthErrorTitle}</p>
+                  <p className="mt-1">{ui.oauthErrorDescription}</p>
+                </div>
+                <Button type="button" size="sm" variant="ghost" onClick={() => dismissOauthBanner("error")}>{ui.dismiss}</Button>
+              </div>
+            </div>
+          ) : null}
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{ui.pageTitle}</p>
+              <p className="mt-1 text-sm text-muted-foreground">{ui.pageSubtitle}</p>
+            </div>
+            <Button type="button" size="sm" variant="outline" className="h-8 shrink-0 gap-1.5 text-xs" onClick={() => void refreshStatus()} disabled={query.isFetching}>
+              <RefreshCw className={cn("h-3.5 w-3.5", query.isFetching && "animate-spin")} />
               {query.isFetching ? ui.refreshing : ui.refresh}
             </Button>
           </div>
           <Tabs value={activeTab} onValueChange={selectTab} className="space-y-4">
-            <TabsList className="w-full justify-start overflow-x-auto">
-              <TabsTrigger value="overview">{ui.tabs.overview}</TabsTrigger>
-              <TabsTrigger value="connections">{ui.tabs.connections}</TabsTrigger>
-              <TabsTrigger value="ad-accounts">{ui.tabs.adAccounts}</TabsTrigger>
-              <TabsTrigger value="sync">{ui.tabs.sync}</TabsTrigger>
-              <TabsTrigger value="facebook-lead-ads">{ui.tabs.facebookLeadAds}</TabsTrigger>
-              <TabsTrigger value="diagnostics">{ui.tabs.diagnostics}</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto pb-1">
+              <TabsList className="inline-flex h-10 w-max min-w-full justify-start gap-1 rounded-lg bg-muted/50 p-1">
+                <TabsTrigger className="h-8 whitespace-nowrap px-3 text-xs" value="overview">{ui.tabs.overview}</TabsTrigger>
+                <TabsTrigger className="h-8 whitespace-nowrap px-3 text-xs" value="connections">{ui.tabs.connections}</TabsTrigger>
+                <TabsTrigger className="h-8 whitespace-nowrap px-3 text-xs" value="ad-accounts">{ui.tabs.adAccounts}</TabsTrigger>
+                <TabsTrigger className="h-8 whitespace-nowrap px-3 text-xs" value="sync">{ui.tabs.sync}</TabsTrigger>
+                <TabsTrigger className="h-8 whitespace-nowrap px-3 text-xs" value="facebook-lead-ads">{ui.tabs.facebookLeadAds}</TabsTrigger>
+                <TabsTrigger className="h-8 whitespace-nowrap px-3 text-xs" value="diagnostics">{ui.tabs.diagnostics}</TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="overview">
               <SectionCard title={ui.overviewTitle} description={ui.overviewSubtitle} accent>
@@ -661,8 +765,10 @@ export default function AdsConnectors() {
                     currentStateText={platformConnectionStates.meta.currentState}
                     helperNote={platformConnectionStates.meta.note}
                     details={platformConnectionStates.meta.details}
+                    activeConnection={platformConnectionStates.meta.activeConnection}
                     state={connectorState.meta}
                     onConnect={() => void connect("meta")}
+                    onDisconnect={(connection) => setDisconnectTarget({ id: connection.id, name: "Meta Ads" })}
                     canManage={canManage}
                     ui={ui}
                   />
@@ -675,8 +781,10 @@ export default function AdsConnectors() {
                     currentStateText={platformConnectionStates.google.currentState}
                     helperNote={platformConnectionStates.google.note}
                     details={platformConnectionStates.google.details}
+                    activeConnection={platformConnectionStates.google.activeConnection}
                     state={connectorState.google}
                     onConnect={() => void connect("google")}
+                    onDisconnect={(connection) => setDisconnectTarget({ id: connection.id, name: "Google Ads" })}
                     canManage={canManage}
                     ui={ui}
                   />
@@ -689,8 +797,10 @@ export default function AdsConnectors() {
                     currentStateText={platformConnectionStates.tiktok.currentState}
                     helperNote={platformConnectionStates.tiktok.note}
                     details={platformConnectionStates.tiktok.details}
+                    activeConnection={platformConnectionStates.tiktok.activeConnection}
                     state={connectorState.tiktok}
                     onConnect={() => void connect("tiktok")}
+                    onDisconnect={(connection) => setDisconnectTarget({ id: connection.id, name: "TikTok Ads" })}
                     canManage={canManage}
                     ui={ui}
                   />
@@ -698,19 +808,19 @@ export default function AdsConnectors() {
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="font-semibold">Facebook Lead Ads</p>
-                        <p className="mt-1 text-muted-foreground">{ui.facebookLeadDescription}</p>
+                        <p className="mt-1 text-muted-foreground">{activeMetaConnection ? ui.facebookLeadSafetyNote : ui.facebookLeadAvailableAfterMeta}</p>
                       </div>
                       <StatusPill tone={activeMetaConnection ? "success" : "muted"}>{ui.stateManagedThroughMeta}</StatusPill>
                     </div>
                     <div className="mt-3 grid gap-2 text-xs text-muted-foreground">
-                      <p><span className="font-medium text-foreground">{ui.currentState}:</span> {activeMetaConnection ? ui.metaConnectedState : ui.stateManagedThroughMeta}</p>
+                      <p><span className="font-medium text-foreground">{ui.currentState}:</span> {activeMetaConnection ? ui.metaConnectedState : ui.facebookLeadAvailableAfterMeta}</p>
                       <div className="rounded-md bg-muted/40 p-3">
                         <p className="font-medium text-foreground">{ui.safety}</p>
                         <p className="mt-1">{ui.facebookLeadSafetyNote}</p>
                       </div>
                     </div>
-                    <div className="mt-auto pt-3">
-                      <Button type="button" variant="secondary" disabled>{ui.stateManagedThroughMeta}</Button>
+                    <div className="mt-auto pt-3 text-xs text-muted-foreground">
+                      {activeMetaConnection ? ui.metaConnectedState : ui.facebookLeadAvailableAfterMeta}
                     </div>
                   </div>
                 </div>
@@ -775,6 +885,27 @@ export default function AdsConnectors() {
               </SectionCard>
             </TabsContent>
           </Tabs>
+          <AlertDialog open={Boolean(disconnectTarget)} onOpenChange={(open) => !open && !disconnectLoading && setDisconnectTarget(null)}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>{formatDisconnectTitle(ui, disconnectTarget)}</AlertDialogTitle>
+                <AlertDialogDescription>{ui.disconnectMetaDescription}</AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={disconnectLoading}>{ui.cancel}</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  disabled={disconnectLoading}
+                  onClick={(event) => {
+                    event.preventDefault();
+                    void disconnectConnection();
+                  }}
+                >
+                  {disconnectLoading ? ui.disconnecting : ui.disconnect}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </>
       )}
     </DashboardLayout>
@@ -847,31 +978,91 @@ function ReadinessStep({ label, value, tone }: { label: string; value?: string; 
   );
 }
 
-function ConnectorCard({ name, description, buttonText, stateText, currentStateText, stateTone, helperNote, details, state, onConnect, canManage, ui }: { name: string; description: string; buttonText: string; stateText: string; currentStateText?: string; stateTone: Tone; helperNote?: string; details?: string[]; state: ConnectorState; onConnect: () => void; canManage: boolean; ui: Copy }) {
+function ConnectorCard({
+  name,
+  description,
+  buttonText,
+  stateText,
+  currentStateText,
+  stateTone,
+  helperNote,
+  details,
+  activeConnection,
+  state,
+  onConnect,
+  onDisconnect,
+  canManage,
+  ui,
+}: {
+  name: string;
+  description: string;
+  buttonText: string;
+  stateText: string;
+  currentStateText?: string;
+  stateTone: Tone;
+  helperNote?: string;
+  details?: string[];
+  activeConnection?: ActiveConnectionDetails | null;
+  state: ConnectorState;
+  onConnect: () => void;
+  onDisconnect?: (connection: ActiveConnectionDetails) => void;
+  canManage: boolean;
+  ui: Copy;
+}) {
+  const connected = Boolean(activeConnection);
   return (
-    <div className="flex h-full flex-col rounded-lg border border-border/70 bg-card/60 p-4 text-sm">
+    <div className="flex h-full flex-col rounded-xl border border-border/70 bg-card/70 p-4 text-sm shadow-sm">
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-semibold">{name}</p>
-          <p className="mt-1 text-muted-foreground">{description}</p>
+        <div className="min-w-0">
+          <p className="font-semibold leading-none">{name}</p>
+          <p className="mt-2 text-sm leading-5 text-muted-foreground">{description}</p>
         </div>
         <StatusPill tone={stateTone}>{stateText}</StatusPill>
       </div>
-      <div className="mt-3 grid gap-2 text-xs text-muted-foreground">
-        <p><span className="font-medium text-foreground">{ui.currentState}:</span> {currentStateText ?? (stateTone === "success" ? stateText : ui.oauthNotCompletedState)}</p>
-        {details?.map((detail) => <p key={detail}>{detail}</p>)}
+      <div className="mt-4 grid gap-3 text-xs text-muted-foreground">
+        <div className="rounded-lg bg-muted/30 p-3">
+          <p className="font-medium text-foreground">{ui.currentState}</p>
+          <p className="mt-1">{currentStateText ?? (connected ? ui.oauthConnectedState : ui.oauthNotCompletedState)}</p>
+        </div>
+        {details?.length ? (
+          <div className="grid gap-2 sm:grid-cols-2">
+            {details.map((detail) => <p className="rounded-md bg-background/70 px-3 py-2" key={detail}>{detail}</p>)}
+          </div>
+        ) : null}
         {helperNote ? <WarningNotice>{helperNote}</WarningNotice> : null}
         <div className="rounded-md bg-muted/40 p-3">
           <p className="font-medium text-foreground">{ui.safety}</p>
           <p className="mt-1">{ui.oauthMayCreate}</p>
         </div>
       </div>
-      <div className="mt-auto pt-3">
-        <Button type="button" onClick={onConnect} disabled={state.loading || !canManage}>
-          {state.loading ? ui.openingOauth : buttonText}
-        </Button>
-        {state.error && <p className="mt-2 text-xs text-destructive">{state.error}</p>}
+      <div className="mt-auto flex items-center justify-between gap-2 pt-4">
+        {connected && activeConnection ? (
+          <>
+            <Button type="button" size="sm" variant="secondary" className="h-8" onClick={onConnect} disabled={state.loading || !canManage}>
+              {state.loading ? ui.openingOauth : ui.reconnect}
+            </Button>
+            {onDisconnect ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" size="icon" variant="ghost" className="h-8 w-8" disabled={!canManage || state.loading} aria-label={ui.disconnect}>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => onDisconnect(activeConnection)}>
+                    {ui.disconnect}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+          </>
+        ) : (
+          <Button type="button" size="sm" className="h-8" onClick={onConnect} disabled={state.loading || !canManage}>
+            {state.loading ? ui.openingOauth : buttonText}
+          </Button>
+        )}
       </div>
+      {state.error && <p className="mt-2 text-xs text-destructive">{state.error}</p>}
     </div>
   );
 }
@@ -1114,6 +1305,11 @@ function UnavailableMessage({ reason, ui }: { reason: string; ui: Copy }) {
   );
 }
 
+function formatDisconnectTitle(ui: Copy, target: DisconnectTarget): string {
+  if (!target || target.name === "Meta Ads") return ui.disconnectMetaTitle;
+  return ui.disconnectTitle.replace("{platform}", target.name);
+}
+
 function formatLimitedRows(template: string, shown: number, total: number) {
   return template.replace("{shown}", String(shown)).replace("{total}", String(total));
 }
@@ -1176,7 +1372,7 @@ function isPlaceholderAccount(row: Row) {
 function getPlatformConnectionState(platform: ConnectorKey, bindings: OptionalViewData | undefined, connections: OptionalViewData | undefined, ui: Copy, lang: UiLang): PlatformConnectionState {
   const activeConnection = findActiveOAuthConnection(platform, connections);
   if (activeConnection) {
-    const details: string[] = [];
+    const details: string[] = [`${ui.activeConnections}: ${activeConnection.activeCount}`];
     if (activeConnection.displayName) details.push(`${ui.connectedAccount}: ${activeConnection.displayName}`);
     if (activeConnection.lastConnectedAt) details.push(`${ui.lastConnected}: ${formatDateTime(activeConnection.lastConnectedAt, lang)}`);
     return {
@@ -1184,6 +1380,7 @@ function getPlatformConnectionState(platform: ConnectorKey, bindings: OptionalVi
       currentState: ui.oauthConnectedState,
       tone: "success",
       details,
+      activeConnection,
     };
   }
 
@@ -1200,16 +1397,22 @@ function getPlatformConnectionState(platform: ConnectorKey, bindings: OptionalVi
 function findActiveOAuthConnection(platform: ConnectorKey, data: OptionalViewData | undefined): ActiveConnectionDetails | null {
   if (!data || data.unavailableReason) return null;
   const platformName = platform === "meta" ? "meta_ads" : platform === "google" ? "google_ads" : "tiktok_ads";
-  const row = data.rows.find((connection) => {
+  const rows = data.rows.filter((connection) => {
     const rowPlatform = String(connection.platform ?? "").toLowerCase();
     const rowStatus = String(connection.status ?? "").toLowerCase();
     return rowPlatform === platformName && rowStatus === "active";
   });
 
-  if (!row) return null;
+  if (rows.length === 0) return null;
+  const sortedRows = [...rows].sort((a, b) => timestampValue(b.last_connected_at) - timestampValue(a.last_connected_at));
+  const row = sortedRows[0];
+  const id = readString(row, "id");
+  if (!id) return null;
   return {
+    id,
     displayName: readString(row, "provider_business_name") ?? readString(row, "connection_name") ?? readString(row, "provider_account_email"),
     lastConnectedAt: readString(row, "last_connected_at"),
+    activeCount: rows.length,
   };
 }
 
@@ -1229,7 +1432,19 @@ function isTabKey(value: string | null): value is TabKey {
 function isMetaOauthSuccessParam(value: string | null): boolean {
   if (!value) return false;
   const normalized = value.toLowerCase();
-  return normalized.includes("meta") && normalized.includes("success");
+  return normalized === "meta_success" || (normalized.includes("meta") && normalized.includes("success"));
+}
+
+function isMetaOauthErrorParam(value: string | null): boolean {
+  if (!value) return false;
+  const normalized = value.toLowerCase();
+  return normalized === "meta_error" || (normalized.includes("meta") && normalized.includes("error"));
+}
+
+function timestampValue(value: unknown): number {
+  if (!value) return 0;
+  const time = new Date(String(value)).getTime();
+  return Number.isNaN(time) ? 0 : time;
 }
 
 function rowMatchesPlatform(row: Row, platform: ConnectorKey) {
