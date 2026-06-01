@@ -14,7 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      user_preferences: {
+        Row: {
+          id: string
+          user_id: string
+          workspace_id: string | null
+          timezone_display_mode: string
+          timezone_name: string | null
+          metadata: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          workspace_id?: string | null
+          timezone_display_mode?: string
+          timezone_name?: string | null
+          metadata?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          workspace_id?: string | null
+          timezone_display_mode?: string
+          timezone_name?: string | null
+          metadata?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
