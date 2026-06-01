@@ -837,7 +837,7 @@ export default function AdsConnectors() {
   ) : null;
 
   return (
-    <DashboardLayout title={ui.pageTitle} subtitle={ui.pageSubtitle} actions={headerActions}>
+    <DashboardLayout title={ui.pageTitle} subtitle={ui.pageSubtitle} actions={headerActions} contentClassName="pt-2 lg:pt-3">
       {!session ? (
         <SectionCard title={ui.pageTitle} description={ui.authRequired}>
           <p className="text-sm text-muted-foreground">{ui.signedOut}</p>

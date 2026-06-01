@@ -9,6 +9,7 @@ import { LangSwitcher } from "@/components/header/LangSwitcher";
 import { ThemeSwitcher } from "@/components/header/ThemeSwitcher";
 import { UserMenu } from "@/components/header/UserMenu";
 import { useI18n } from "@/i18n/I18nProvider";
+import { cn } from "@/lib/utils";
 
 interface DashboardLayoutProps {
   title: string;
@@ -17,9 +18,10 @@ interface DashboardLayoutProps {
   /** Optional last-sync metadata shown as a freshness pill in the page header */
   sync?: { source?: string; lastSync: string; status?: "fresh" | "stale" | "failed" };
   children: ReactNode;
+  contentClassName?: string;
 }
 
-export function DashboardLayout({ title, subtitle, actions, sync, children }: DashboardLayoutProps) {
+export function DashboardLayout({ title, subtitle, actions, sync, children, contentClassName }: DashboardLayoutProps) {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -195,7 +197,7 @@ export function DashboardLayout({ title, subtitle, actions, sync, children }: Da
           </div>
 
           {/* Content */}
-          <main className="flex-1 overflow-x-hidden p-4 lg:p-6 animate-fade-in">{children}</main>
+          <main className={cn("flex-1 overflow-x-hidden p-4 lg:p-6 animate-fade-in", contentClassName)}>{children}</main>
         </div>
       </div>
     </SidebarProvider>
