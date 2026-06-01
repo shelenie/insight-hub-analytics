@@ -38,6 +38,9 @@ type ConnectorState = { loading: boolean; error: string | null };
 type TabKey = "overview" | "connections" | "ad-accounts" | "sync" | "facebook-lead-ads" | "diagnostics";
 type ActiveConnectionDetails = { id: string; displayName: string | null; lastConnectedAt: string | null; activeCount: number };
 type SyncRunState = { loading: boolean; error: string | null; success: string | null; details: Record<string, unknown> | null };
+
+const ADS_SUBNAV_TRIGGER_CLASS =
+  "h-10 whitespace-nowrap rounded-lg border border-transparent px-4 text-sm font-semibold transition-all hover:border-border/70 hover:bg-background/80 hover:text-foreground data-[state=active]:border-border data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm";
 type Tone = "success" | "warning" | "muted";
 type PlatformConnectionState = { label: string; currentState?: string; note?: string; tone: Tone; details?: string[]; activeConnection?: ActiveConnectionDetails | null };
 type DisconnectTarget = { id: string; name: string } | null;
@@ -723,14 +726,14 @@ export default function AdsConnectors() {
             </Button>
           </div>
           <Tabs value={activeTab} onValueChange={selectTab} className="space-y-4">
-            <div className="overflow-x-auto pb-1">
-              <TabsList className="inline-flex h-10 w-max min-w-full justify-start gap-1 rounded-lg bg-muted/50 p-1">
-                <TabsTrigger className="h-8 whitespace-nowrap px-3 text-xs" value="overview">{ui.tabs.overview}</TabsTrigger>
-                <TabsTrigger className="h-8 whitespace-nowrap px-3 text-xs" value="connections">{ui.tabs.connections}</TabsTrigger>
-                <TabsTrigger className="h-8 whitespace-nowrap px-3 text-xs" value="ad-accounts">{ui.tabs.adAccounts}</TabsTrigger>
-                <TabsTrigger className="h-8 whitespace-nowrap px-3 text-xs" value="sync">{ui.tabs.sync}</TabsTrigger>
-                <TabsTrigger className="h-8 whitespace-nowrap px-3 text-xs" value="facebook-lead-ads">{ui.tabs.facebookLeadAds}</TabsTrigger>
-                <TabsTrigger className="h-8 whitespace-nowrap px-3 text-xs" value="diagnostics">{ui.tabs.diagnostics}</TabsTrigger>
+            <div className="overflow-x-auto rounded-xl border border-border/70 bg-muted/30 p-1.5 shadow-sm">
+              <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-2 bg-transparent p-0 text-muted-foreground">
+                <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="overview">{ui.tabs.overview}</TabsTrigger>
+                <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="connections">{ui.tabs.connections}</TabsTrigger>
+                <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="ad-accounts">{ui.tabs.adAccounts}</TabsTrigger>
+                <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="sync">{ui.tabs.sync}</TabsTrigger>
+                <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="facebook-lead-ads">{ui.tabs.facebookLeadAds}</TabsTrigger>
+                <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="diagnostics">{ui.tabs.diagnostics}</TabsTrigger>
               </TabsList>
             </div>
 
