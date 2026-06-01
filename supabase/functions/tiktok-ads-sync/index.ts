@@ -143,11 +143,11 @@ function sanitizeTokenText(value: string): string {
     .replace(/(access[_-]?token=)[^&\s]+/gi, "$1[redacted]")
     .replace(/(refresh[_-]?token=)[^&\s]+/gi, "$1[redacted]")
     .replace(
-      /(access[_-]?token[\"']?\s*[:=]\s*[\"']?)[^\"'&,}\s]+/gi,
+      /(access[_-]?token["']?\s*[:=]\s*["']?)[^"'&,}\s]+/gi,
       "$1[redacted]",
     )
     .replace(
-      /(refresh[_-]?token[\"']?\s*[:=]\s*[\"']?)[^\"'&,}\s]+/gi,
+      /(refresh[_-]?token["']?\s*[:=]\s*["']?)[^"'&,}\s]+/gi,
       "$1[redacted]",
     );
 }
