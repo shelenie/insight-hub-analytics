@@ -81,7 +81,7 @@ const copy = {
     adAccountsKpi: "Готові акаунти",
     syncData: "Дані синхронізації",
     connectionStatusHelper: "Meta Ads і TikTok Ads підключені. Facebook Lead Ads працює через Meta Ads.",
-    adAccountsHelper: "Meta Ads готовий до роботи. TikTok підключено, але тестовий акаунт поки без даних. Google Ads очікує доступ API.",
+    adAccountsHelper: "Meta Ads готовий. TikTok підключено без даних. Google Ads очікує API.",
     syncVerifiedStatus: "Синхронізацію перевірено",
     syncVerifiedNoRows: "Конектори працюють, даних поки немає",
     needsAttention: "Потребує уваги",
@@ -133,7 +133,7 @@ const copy = {
     facebookLeadAvailableAfterMeta: "Facebook Lead Ads стане доступним після підключення Meta Ads.",
     oauthMayCreate: "Після підключення система створить реальний запис підключення.",
     facebookLeadSafetyNote: "Працює через Meta Ads. Окреме OAuth-підключення не потрібне.",
-    metaSyncVerifiedNote: "Синхронізація Meta Ads перевірена.",
+    metaSyncVerifiedNote: "Синхронізація Meta Ads перевірена. Даних за період поки немає.",
     tiktokSyncVerifiedNote: "Синхронізація TikTok Ads перевірена. Рекламний акаунт поки без даних.",
     googleAccessPendingNote: "Очікуємо доступ Google Ads API. Після підтвердження Basic Access синхронізація стане доступною.",
     facebookLeadVerifiedNote: "Lead Ads sync і webhook endpoint перевірені.",
@@ -339,7 +339,7 @@ const copy = {
     adAccountsKpi: "Ready accounts",
     syncData: "Sync data",
     connectionStatusHelper: "Meta Ads and TikTok Ads are connected. Facebook Lead Ads works through Meta Ads.",
-    adAccountsHelper: "Meta Ads is ready to use. TikTok is connected, but the test advertiser has no data yet. Google Ads is waiting for API access.",
+    adAccountsHelper: "Meta Ads is ready. TikTok is connected without data. Google Ads is waiting for API access.",
     syncVerifiedStatus: "Sync verified",
     syncVerifiedNoRows: "Connectors work; no data yet",
     needsAttention: "Needs attention",
@@ -391,7 +391,7 @@ const copy = {
     facebookLeadAvailableAfterMeta: "Facebook Lead Ads will become available after Meta Ads is connected.",
     oauthMayCreate: "After connection, the system will create a real connection record.",
     facebookLeadSafetyNote: "Works through Meta Ads. No separate OAuth connection is required.",
-    metaSyncVerifiedNote: "Meta Ads sync is verified.",
+    metaSyncVerifiedNote: "Meta Ads sync is verified. There is no data for the period yet.",
     tiktokSyncVerifiedNote: "TikTok Ads sync is verified. The ad account has no data yet.",
     googleAccessPendingNote: "Waiting for Google Ads API access. Sync will become available after Basic Access is approved.",
     facebookLeadVerifiedNote: "Lead Ads sync and webhook endpoint are verified.",
@@ -856,9 +856,9 @@ export default function AdsConnectors() {
               </div>
             </div>
           ) : null}
-          <Tabs value={activeTab} onValueChange={selectTab} className="-mt-3 space-y-1 lg:-mt-4">
-            <div className="overflow-x-auto rounded-xl border border-border/70 bg-muted/30 p-1 shadow-sm">
-              <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-1.5 bg-transparent p-0 text-muted-foreground">
+          <Tabs value={activeTab} onValueChange={selectTab} className="space-y-2">
+            <div className="overflow-x-auto rounded-xl border border-border/70 bg-muted/30 px-2 py-2 shadow-sm">
+              <TabsList className="inline-flex h-auto w-max min-w-full items-center justify-start gap-1.5 bg-transparent p-0 text-muted-foreground">
                 <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="overview">{ui.tabs.overview}</TabsTrigger>
                 <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="connections">{ui.tabs.connections}</TabsTrigger>
                 <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="ad-accounts">{ui.tabs.adAccounts}</TabsTrigger>
@@ -1269,8 +1269,8 @@ function AdAccountsTable({ data, ui }: { data: OptionalViewData | undefined; ui:
       </AdAccountSection>
 
       {testRows.length > 0 ? (
-        <AdAccountSection title={ui.testAccountsSection} helper={ui.adAccountsTestExplain} secondary>
-          {testRows.map((row, index) => <AdAccountCard key={`test-${index}-${String(row.external_account_id ?? row.id ?? "account")}`} row={row} ui={ui} />)}
+        <AdAccountSection title={ui.testAccountsSection} helper={ui.adAccountsTestExplain} secondary compact>
+          {testRows.map((row, index) => <AdAccountCard key={`test-${index}-${String(row.external_account_id ?? row.id ?? "account")}`} row={row} ui={ui} compact />)}
         </AdAccountSection>
       ) : null}
     </div>
@@ -1278,7 +1278,7 @@ function AdAccountsTable({ data, ui }: { data: OptionalViewData | undefined; ui:
 }
 
 
-function AdAccountSection({ title, helper, emptyText, secondary = false, children }: { title: string; helper?: string; emptyText?: string; secondary?: boolean; children: ReactNode }) {
+function AdAccountSection({ title, helper, emptyText, secondary = false, compact = false, children }: { title: string; helper?: string; emptyText?: string; secondary?: boolean; compact?: boolean; children: ReactNode }) {
   return (
     <section className={cn("space-y-3", secondary && "border-t border-border/70 pt-4")}>
       <div>
@@ -1286,12 +1286,12 @@ function AdAccountSection({ title, helper, emptyText, secondary = false, childre
         {helper ? <p className="mt-1 text-xs text-muted-foreground">{helper}</p> : null}
       </div>
       {emptyText ? <p className="rounded-lg border border-dashed border-border/70 bg-card/40 p-4 text-sm text-muted-foreground">{emptyText}</p> : null}
-      <div className="grid gap-3 xl:grid-cols-2">{children}</div>
+      <div className={cn("grid xl:grid-cols-2", compact ? "gap-2" : "gap-3")}>{children}</div>
     </section>
   );
 }
 
-function AdAccountCard({ row, ui }: { row: Row; ui: Copy }) {
+function AdAccountCard({ row, ui, compact = false }: { row: Row; ui: Copy; compact?: boolean }) {
   const testBinding = hasTestBindingMarker(row);
   const archived = isArchivedAccount(row);
   const testOrArchived = testBinding || archived;
@@ -1303,15 +1303,15 @@ function AdAccountCard({ row, ui }: { row: Row; ui: Copy }) {
 
   return (
     <article className={cn(
-      "flex h-full flex-col rounded-lg border bg-card/60 p-4 text-sm",
-      testOrArchived ? "border-amber-200 dark:border-amber-900/60" : "border-border/70",
+      "flex h-full flex-col rounded-lg border text-sm",
+      testOrArchived ? "border-border/60 bg-muted/15 p-3 shadow-none" : "border-border/70 bg-card/60 p-4",
     )}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className={cn("flex flex-wrap items-start justify-between", compact ? "gap-2" : "gap-3")}>
         <div className="min-w-0">
           <p className="text-xs font-semibold text-muted-foreground">{ui.accountSection}</p>
           <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{ui.columnLabels.platform}</p>
-          <p className="mt-1 text-base font-semibold text-foreground">{formatValue(row.platform, ui)}</p>
-          {testOrArchived ? <p className="mt-2 text-base font-semibold text-foreground">{ui.serviceTestBinding}</p> : null}
+          <p className={cn("mt-1 font-semibold text-foreground", compact ? "text-sm" : "text-base")}>{formatValue(row.platform, ui)}</p>
+          {testOrArchived ? <p className="mt-1.5 text-sm font-semibold text-foreground">{ui.serviceTestBinding}</p> : null}
         </div>
         <div className="flex flex-wrap justify-end gap-2">
           <StatusPill tone={testOrArchived ? "warning" : "success"}>{testOrArchived ? ui.testPlaceholder : ui.realAccount}</StatusPill>
@@ -1320,8 +1320,8 @@ function AdAccountCard({ row, ui }: { row: Row; ui: Copy }) {
       </div>
 
       <div className={cn(
-        "mt-4 rounded-md px-3 py-2",
-        testOrArchived ? "bg-muted/20" : "bg-muted/30",
+        compact ? "mt-3 rounded-md px-2.5 py-1.5" : "mt-4 rounded-md px-3 py-2",
+        testOrArchived ? "bg-background/55" : "bg-muted/30",
       )}>
         {testOrArchived ? (
           <p className="break-all font-mono text-xs text-muted-foreground">{ui.technicalId}: {formatValue(technicalAccountId, ui)}</p>
@@ -1333,37 +1333,37 @@ function AdAccountCard({ row, ui }: { row: Row; ui: Copy }) {
         )}
       </div>
 
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <div className={cn("grid lg:grid-cols-2", compact ? "mt-3 gap-3" : "mt-4 gap-4")}>
         <div>
           <p className="mb-2 text-xs font-semibold text-muted-foreground">{ui.bindingSection}</p>
-          <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
-            <AccountField label={ui.columnLabels.client_name} value={row.client_name} ui={ui} />
-            <AccountField label={ui.columnLabels.project_name} value={row.project_name} ui={ui} />
-            <AccountField label={ui.columnLabels.funnel_name} value={row.funnel_name} ui={ui} />
+          <div className={cn("grid sm:grid-cols-3 lg:grid-cols-1", compact ? "gap-1.5" : "gap-2")}>
+            <AccountField label={ui.columnLabels.client_name} value={row.client_name} ui={ui} compact={compact} />
+            <AccountField label={ui.columnLabels.project_name} value={row.project_name} ui={ui} compact={compact} />
+            <AccountField label={ui.columnLabels.funnel_name} value={row.funnel_name} ui={ui} compact={compact} />
           </div>
         </div>
         <div>
           <p className="mb-2 text-xs font-semibold text-muted-foreground">{ui.statusSection}</p>
-          <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
-            <AccountField label={ui.columnLabels.mapping_status} value={mappingStatus} ui={ui} />
-            <AccountField label={ui.columnLabels.binding_status} value={bindingStatus} ui={ui} />
-            <AccountField label={ui.columnLabels.confidence} value={row.confidence} ui={ui} />
+          <div className={cn("grid sm:grid-cols-3 lg:grid-cols-1", compact ? "gap-1.5" : "gap-2")}>
+            <AccountField label={ui.columnLabels.mapping_status} value={mappingStatus} ui={ui} compact={compact} />
+            <AccountField label={ui.columnLabels.binding_status} value={bindingStatus} ui={ui} compact={compact} />
+            <AccountField label={ui.columnLabels.confidence} value={row.confidence} ui={ui} compact={compact} />
           </div>
         </div>
       </div>
 
-      <div className="mt-auto pt-4">
+      <div className={cn("mt-auto", compact ? "pt-3" : "pt-4")}>
         {testOrArchived ? <WarningNotice>{accountNote}</WarningNotice> : <p className="text-xs text-muted-foreground">{accountNote}</p>}
       </div>
     </article>
   );
 }
 
-function AccountField({ label, value, ui }: { label: string; value: unknown; ui: Copy }) {
+function AccountField({ label, value, ui, compact = false }: { label: string; value: unknown; ui: Copy; compact?: boolean }) {
   return (
-    <div className="min-w-0 rounded-md bg-muted/30 px-3 py-2">
+    <div className={cn("min-w-0 rounded-md bg-muted/30", compact ? "px-2.5 py-1.5" : "px-3 py-2")}>
       <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-1 break-words text-sm text-foreground">{formatValue(value, ui)}</p>
+      <p className={cn("mt-1 break-words text-foreground", compact ? "text-xs" : "text-sm")}>{formatValue(value, ui)}</p>
     </div>
   );
 }
