@@ -43,6 +43,7 @@ const ADS_SUBNAV_TRIGGER_CLASS =
   "h-10 whitespace-nowrap rounded-lg border border-transparent px-4 text-sm font-semibold transition-all hover:border-primary/30 hover:bg-primary/10 hover:text-primary data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm";
 type Tone = "success" | "warning" | "muted";
 type PlatformConnectionState = { label: string; currentState?: string; note?: string; tone: Tone; details?: string[]; availableItems?: readonly string[]; todoItems?: readonly string[]; activeConnection?: ActiveConnectionDetails | null };
+type PlatformSyncInsight = { hasDataRows: boolean; hasVerifiedSync: boolean; latestFailure: string | null; hasRealAccount: boolean };
 type DisconnectTarget = { id: string; name: string } | null;
 type UiLang = "uk" | "en";
 type Copy = (typeof copy)[UiLang];
@@ -91,6 +92,7 @@ const copy = {
     googleNeedsAccess: "Google Ads: OAuth підключено, але синхронізація очікує доступ Google Ads API / Basic Access.",
     tiktokNoDataYetAttention: "TikTok Ads: синхронізація працює, але тестовий рекламний акаунт поки без даних.",
     facebookLeadFormsAttention: "Facebook Lead Ads: форми не знайдені. Sync і webhook перевірені, але реальні ліди з’являться після наявності форм/подій.",
+    noCriticalActions: "Критичних дій немає. Перевірки синхронізації пройшли без помилок.",
     adAccountsFoundButEmpty: "Акаунти знайдено, частина конекторів поки без рекламних даних.",
     syncCheckedNoRows: "Останні перевірки синхронізації завершилися без помилок; рядків поки немає через порожні акаунти.",
     readyAfterOauth: "Очікує підключення",
@@ -136,6 +138,12 @@ const copy = {
     metaSyncVerifiedNote: "Синхронізація Meta Ads перевірена. Даних за період поки немає.",
     tiktokSyncVerifiedNote: "Синхронізація TikTok Ads перевірена. Рекламний акаунт поки без даних.",
     googleAccessPendingNote: "Очікуємо доступ Google Ads API. Після підтвердження Basic Access синхронізація стане доступною.",
+    googleSyncVerifiedNote: "Синхронізація Google Ads перевірена.",
+    googleDataSyncingNote: "Дані Google Ads синхронізуються.",
+    metaDataSyncingNote: "Дані Meta Ads синхронізуються.",
+    tiktokDataSyncingNote: "Дані TikTok Ads синхронізуються.",
+    syncFailedNote: "Остання синхронізація завершилася з помилкою.",
+    syncFailedWithErrorNote: "Остання синхронізація завершилася з помилкою: {error}",
     facebookLeadVerifiedNote: "Lead Ads sync і webhook endpoint перевірені.",
     facebookLeadFormsMissingNote: "Форми поки не знайдені. Вони з’являться після наявності Facebook Lead Forms або доступу до сторінок.",
     googleOauthConnectedState: "OAuth підключено",
@@ -349,6 +357,7 @@ const copy = {
     googleNeedsAccess: "Google Ads: OAuth is connected, but sync is waiting for Google Ads API / Basic Access.",
     tiktokNoDataYetAttention: "TikTok Ads: sync works, but the test ad account has no data yet.",
     facebookLeadFormsAttention: "Facebook Lead Ads: no forms found. Sync and webhook are verified; real leads will appear after forms/events exist.",
+    noCriticalActions: "No critical actions. Sync checks completed without errors.",
     adAccountsFoundButEmpty: "Accounts are found; some connectors still have no ad data.",
     syncCheckedNoRows: "Recent sync checks completed without errors; rows are empty because the accounts have no data.",
     readyAfterOauth: "Waiting for connection",
@@ -394,6 +403,12 @@ const copy = {
     metaSyncVerifiedNote: "Meta Ads sync is verified. There is no data for the period yet.",
     tiktokSyncVerifiedNote: "TikTok Ads sync is verified. The ad account has no data yet.",
     googleAccessPendingNote: "Waiting for Google Ads API access. Sync will become available after Basic Access is approved.",
+    googleSyncVerifiedNote: "Google Ads sync is verified.",
+    googleDataSyncingNote: "Google Ads data is syncing.",
+    metaDataSyncingNote: "Meta Ads data is syncing.",
+    tiktokDataSyncingNote: "TikTok Ads data is syncing.",
+    syncFailedNote: "The latest sync failed.",
+    syncFailedWithErrorNote: "The latest sync failed: {error}",
     facebookLeadVerifiedNote: "Lead Ads sync and webhook endpoint are verified.",
     facebookLeadFormsMissingNote: "No forms found yet. They will appear after Facebook Lead Forms exist or page access is granted.",
     googleOauthConnectedState: "OAuth connected",
@@ -659,11 +674,19 @@ export default function AdsConnectors() {
     [query.data?.adPlatformConnections],
   );
 
+  const platformSyncInsights = useMemo(() => ({
+    meta: getPlatformSyncInsight("meta", query.data),
+    google: getPlatformSyncInsight("google", query.data),
+    tiktok: getPlatformSyncInsight("tiktok", query.data),
+  }), [query.data]);
+
   const platformConnectionStates = useMemo(() => ({
-    meta: getPlatformConnectionState("meta", query.data?.adBindings, query.data?.adPlatformConnections, ui, lang),
-    google: getPlatformConnectionState("google", query.data?.adBindings, query.data?.adPlatformConnections, ui, lang),
-    tiktok: getPlatformConnectionState("tiktok", query.data?.adBindings, query.data?.adPlatformConnections, ui, lang),
-  }), [lang, query.data?.adBindings, query.data?.adPlatformConnections, ui]);
+    meta: getPlatformConnectionState("meta", query.data?.adBindings, query.data?.adPlatformConnections, platformSyncInsights.meta, ui, lang),
+    google: getPlatformConnectionState("google", query.data?.adBindings, query.data?.adPlatformConnections, platformSyncInsights.google, ui, lang),
+    tiktok: getPlatformConnectionState("tiktok", query.data?.adBindings, query.data?.adPlatformConnections, platformSyncInsights.tiktok, ui, lang),
+  }), [lang, platformSyncInsights, query.data?.adBindings, query.data?.adPlatformConnections, ui]);
+
+  const attentionItems = useMemo(() => buildAttentionItems(platformSyncInsights, query.data, ui), [platformSyncInsights, query.data, ui]);
 
   const runFacebookLeadSync = async () => {
     if (!session?.access_token) return;
@@ -885,13 +908,20 @@ export default function AdsConnectors() {
                   </div>
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
-                  <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100">
+                  <div className={cn(
+                    "rounded-lg border p-4 text-sm",
+                    attentionItems.length > 0
+                      ? "border-amber-200 bg-amber-50/70 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100"
+                      : "border-emerald-200 bg-emerald-50/70 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-100",
+                  )}>
                     <p className="font-semibold">{ui.needsAttention}</p>
-                    <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5">
-                      <li>{ui.googleNeedsAccess}</li>
-                      <li>{ui.tiktokNoDataYetAttention}</li>
-                      <li>{ui.facebookLeadFormsAttention}</li>
-                    </ul>
+                    {attentionItems.length > 0 ? (
+                      <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5">
+                        {attentionItems.map((item) => <li key={item}>{item}</li>)}
+                      </ul>
+                    ) : (
+                      <p className="mt-2 text-xs leading-5">{ui.noCriticalActions}</p>
+                    )}
                   </div>
                   <div className="rounded-lg border border-border/70 bg-background/60 p-4 text-sm">
                     <p className="font-semibold">{ui.nextAction}</p>
@@ -1691,7 +1721,14 @@ function sortAdAccountsForDisplay(a: Row, b: Row) {
 }
 
 
-function getPlatformConnectionState(platform: ConnectorKey, bindings: OptionalViewData | undefined, connections: OptionalViewData | undefined, ui: Copy, _lang: UiLang): PlatformConnectionState {
+function getPlatformConnectionState(
+  platform: ConnectorKey,
+  bindings: OptionalViewData | undefined,
+  connections: OptionalViewData | undefined,
+  insight: PlatformSyncInsight,
+  ui: Copy,
+  _lang: UiLang,
+): PlatformConnectionState {
   const activeConnection = findActiveOAuthConnection(platform, connections);
   if (activeConnection) {
     const details: string[] = [];
@@ -1699,7 +1736,44 @@ function getPlatformConnectionState(platform: ConnectorKey, bindings: OptionalVi
     const accountName = activeConnection.displayName ?? fallbackAccount;
     if (accountName) details.push(`${ui.connectedAccount}: ${accountName}`);
 
+    if (insight.latestFailure) {
+      return {
+        label: platform === "google" ? ui.googleOauthConnectedState : ui.connectedState,
+        currentState: ui.oauthConnectedState,
+        note: formatSyncFailureNote(insight.latestFailure, ui),
+        tone: "warning",
+        details,
+        availableItems: platformAvailableItems(platform, ui),
+        todoItems: platform === "google" ? ui.googleTodoItems : undefined,
+        activeConnection,
+      };
+    }
+
     if (platform === "google") {
+      if (insight.hasDataRows) {
+        return {
+          label: ui.connectedState,
+          currentState: ui.oauthConnectedState,
+          note: ui.googleDataSyncingNote,
+          tone: "success",
+          details,
+          availableItems: ui.googleAvailableItems,
+          activeConnection,
+        };
+      }
+
+      if (insight.hasVerifiedSync || insight.hasRealAccount) {
+        return {
+          label: ui.connectedState,
+          currentState: ui.oauthConnectedState,
+          note: ui.googleSyncVerifiedNote,
+          tone: "success",
+          details,
+          availableItems: ui.googleAvailableItems,
+          activeConnection,
+        };
+      }
+
       return {
         label: ui.googleOauthConnectedState,
         currentState: ui.oauthConnectedState,
@@ -1716,7 +1790,7 @@ function getPlatformConnectionState(platform: ConnectorKey, bindings: OptionalVi
       return {
         label: ui.connectedState,
         currentState: ui.oauthConnectedState,
-        note: ui.tiktokSyncVerifiedNote,
+        note: insight.hasDataRows ? ui.tiktokDataSyncingNote : ui.tiktokSyncVerifiedNote,
         tone: "success",
         details,
         availableItems: ui.tiktokAvailableItems,
@@ -1727,7 +1801,7 @@ function getPlatformConnectionState(platform: ConnectorKey, bindings: OptionalVi
     return {
       label: ui.connectedState,
       currentState: ui.oauthConnectedState,
-      note: ui.metaSyncVerifiedNote,
+      note: insight.hasDataRows ? ui.metaDataSyncingNote : ui.metaSyncVerifiedNote,
       tone: "success",
       details,
       availableItems: ui.metaAvailableItems,
@@ -1738,10 +1812,104 @@ function getPlatformConnectionState(platform: ConnectorKey, bindings: OptionalVi
   if (!bindings || bindings.unavailableReason) return { label: ui.unknownConnectionState, tone: "muted" };
 
   const platformRows = bindings.rows.filter((row) => rowMatchesPlatform(row, platform));
-  if (platformRows.some((row) => !isPlaceholderAccount(row))) return { label: platform === "google" ? ui.googleAwaitingAccessState : ui.connectedState, currentState: ui.oauthConnectedState, tone: platform === "google" ? "warning" : "success" };
+  if (platformRows.some((row) => !isPlaceholderAccount(row))) {
+    const note = insight.latestFailure ? formatSyncFailureNote(insight.latestFailure, ui) : undefined;
+    return {
+      label: platform === "google" ? ui.googleAwaitingAccessState : ui.connectedState,
+      currentState: ui.oauthConnectedState,
+      note,
+      tone: platform === "google" || note ? "warning" : "success",
+    };
+  }
   if (platformRows.length > 0) return { label: ui.oauthNotCompletedState, note: ui.testBindingsNoRealOauth, tone: "warning" };
 
   return { label: ui.oauthNotCompletedState, tone: "warning" };
+}
+
+function platformAvailableItems(platform: ConnectorKey, ui: Copy): readonly string[] {
+  if (platform === "google") return ui.googleAvailableItems;
+  if (platform === "tiktok") return ui.tiktokAvailableItems;
+  return ui.metaAvailableItems;
+}
+
+function formatSyncFailureNote(error: string | null, ui: Copy): string {
+  return error ? ui.syncFailedWithErrorNote.replace("{error}", error) : ui.syncFailedNote;
+}
+
+function getPlatformSyncInsight(platform: ConnectorKey, data: { [k: string]: OptionalViewData } | undefined): PlatformSyncInsight {
+  const bindingRows = data?.adBindings.rows.filter((row) => rowMatchesPlatform(row, platform)) ?? [];
+  const hasRealAccount = bindingRows.some((row) => !isTestOrArchivedAccount(row));
+  const dataRows = [data?.adsSummary.rows, data?.adsDaily.rows, data?.adsAnomalies.rows].flatMap((rows) => rows ?? []);
+  const hasDataRows = dataRows.some((row) => rowMatchesPlatform(row, platform) && rowHasDataSignal(row));
+  const syncRows = [data?.syncDue.rows, data?.syncRules.rows].flatMap((rows) => rows ?? []).filter((row) => rowMatchesPlatform(row, platform));
+  const latestFailure = findLatestSyncFailure(syncRows);
+  const hasVerifiedSync = syncRows.some((row) => isSuccessfulSyncStatus(readLikelyStatus(row))) || hasRealAccount || hasDataRows;
+
+  return { hasDataRows, hasVerifiedSync, latestFailure, hasRealAccount };
+}
+
+function buildAttentionItems(insights: Record<ConnectorKey, PlatformSyncInsight>, data: { [k: string]: OptionalViewData } | undefined, ui: Copy): string[] {
+  const items: string[] = [];
+  if (insights.google.latestFailure) items.push(`Google Ads: ${formatSyncFailureNote(insights.google.latestFailure, ui)}`);
+  else if (!insights.google.hasVerifiedSync && !insights.google.hasDataRows) items.push(ui.googleNeedsAccess);
+
+  if (insights.tiktok.latestFailure) items.push(`TikTok Ads: ${formatSyncFailureNote(insights.tiktok.latestFailure, ui)}`);
+  else if (!insights.tiktok.hasDataRows) items.push(ui.tiktokNoDataYetAttention);
+
+  if (facebookLeadFormsOrLeadsMissing(data)) items.push(ui.facebookLeadFormsAttention);
+
+  return items;
+}
+
+function facebookLeadFormsOrLeadsMissing(data: { [k: string]: OptionalViewData } | undefined): boolean {
+  if (!data) return true;
+  if (data.fbForms.unavailableReason || data.fbLeads.unavailableReason) return true;
+  const hasForms = data.fbForms.rows.length > 0 || Number(findMetric(data.fbHealth.rows, ["active_forms", "forms_count", "total_forms"]) ?? 0) > 0;
+  const hasLeads = data.fbLeads.rows.length > 0 || Number(findMetric(data.fbHealth.rows, ["leads_last_24h", "leads_count", "total_leads"]) ?? 0) > 0;
+  return !hasForms && !hasLeads;
+}
+
+function findLatestSyncFailure(rows: Row[]): string | null {
+  const failedRows = rows
+    .filter((row) => isFailedSyncStatus(readLikelyStatus(row)))
+    .sort((a, b) => timestampValue(readLatestSyncTimestamp(b)) - timestampValue(readLatestSyncTimestamp(a)));
+  if (failedRows.length === 0) return null;
+  return readSyncError(failedRows[0]);
+}
+
+function readLatestSyncTimestamp(row: Row): string | null {
+  return readString(row, "last_run_at") ?? readString(row, "updated_at") ?? readString(row, "created_at") ?? readString(row, "next_run_at");
+}
+
+function readSyncError(row: Row): string | null {
+  return readString(row, "error_message") ?? readString(row, "last_error") ?? readString(row, "error") ?? readString(row, "details");
+}
+
+function isSuccessfulSyncStatus(status: string | null): boolean {
+  if (!status) return false;
+  const normalized = status.toLowerCase();
+  return ["success", "succeeded", "completed", "ok", "ready", "healthy", "active", "synced"].some((value) => normalized.includes(value));
+}
+
+function isFailedSyncStatus(status: string | null): boolean {
+  if (!status) return false;
+  const normalized = status.toLowerCase();
+  return ["failed", "error", "rejected"].some((value) => normalized.includes(value));
+}
+
+function rowHasDataSignal(row: Row): boolean {
+  const ignoredKeys = new Set(["workspace_id", "platform", "source", "source_name", "date", "day", "created_at", "updated_at"]);
+  return Object.entries(row).some(([key, value]) => {
+    if (ignoredKeys.has(key) || value === null || value === undefined || value === "") return false;
+    if (typeof value === "number") return value > 0;
+    if (typeof value === "string") {
+      const numericValue = Number(value);
+      return Number.isFinite(numericValue) ? numericValue > 0 : !["0", "false", "none", "null"].includes(value.toLowerCase());
+    }
+    if (typeof value === "boolean") return value;
+    if (Array.isArray(value)) return value.length > 0;
+    return Object.keys(value).length > 0;
+  });
 }
 
 
