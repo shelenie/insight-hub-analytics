@@ -30,6 +30,8 @@ import { toast } from "@/hooks/use-toast";
 import { DeveloperDetails } from "@/components/common/DeveloperDetails";
 import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
+import { useTimezonePreference } from "@/hooks/useTimezonePreference";
+import { formatOperationalTimestamp, type TimezoneDisplayMode } from "@/lib/timezonePreference";
 
 type Primitive = string | number | boolean | null;
 type Row = Record<string, Primitive | Primitive[] | Record<string, unknown>>;
@@ -47,7 +49,6 @@ type PlatformConnectionState = { label: string; currentState?: string; note?: st
 type PlatformSyncInsight = { hasDataRows: boolean; hasVerifiedSync: boolean; latestFailure: string | null; hasRealAccount: boolean };
 type DisconnectTarget = { id: string; name: string } | null;
 type UiLang = "uk" | "en";
-type TimezoneDisplayMode = "utc" | "local";
 type Copy = (typeof copy)[UiLang];
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
@@ -57,8 +58,6 @@ const CONNECTOR_FN: Record<ConnectorKey, string> = {
   tiktok: "tiktok-oauth-start",
 };
 const TAB_KEYS: TabKey[] = ["overview", "connections", "ad-accounts", "sync", "facebook-lead-ads", "diagnostics"];
-const TIMEZONE_DISPLAY_MODE_KEY = "insight-hub-timezone-display-mode";
-const TIMEZONE_NAME_KEY = "insight-hub-timezone-name";
 
 const copy = {
   uk: {
@@ -637,15 +636,7 @@ export default function AdsConnectors() {
     success: null,
     details: null,
   });
-  const [timezoneDisplayMode, setTimezoneDisplayMode] = useState<TimezoneDisplayMode>(() => readStoredTimezoneDisplayMode());
-  const [browserTimeZone, setBrowserTimeZone] = useState(() => resolveBrowserTimeZone());
-
-  useEffect(() => {
-    const timeZone = resolveBrowserTimeZone();
-    setBrowserTimeZone(timeZone);
-    localStorage.setItem(TIMEZONE_DISPLAY_MODE_KEY, timezoneDisplayMode);
-    localStorage.setItem(TIMEZONE_NAME_KEY, timeZone);
-  }, [timezoneDisplayMode]);
+  const { timezoneDisplayMode, timezoneName, setTimezoneDisplayMode } = useTimezonePreference();
 
   const query = useQuery({
     queryKey: ["ads-connectors-workspace", WORKSPACE_ID],
@@ -1045,7 +1036,7 @@ export default function AdsConnectors() {
                   <WarningNotice>{ui.scheduledWarning}</WarningNotice>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                     <label className="text-xs font-medium text-muted-foreground" htmlFor="ads-sync-timezone-mode">{ui.timezoneLabel}</label>
-                    <Select value={timezoneDisplayMode} onValueChange={(value: TimezoneDisplayMode) => setTimezoneDisplayMode(value)}>
+                    <Select value={timezoneDisplayMode} onValueChange={(value) => void setTimezoneDisplayMode(value as TimezoneDisplayMode)}>
                       <SelectTrigger id="ads-sync-timezone-mode" className="h-8 w-full text-xs sm:w-[150px]">
                         <SelectValue />
                       </SelectTrigger>
@@ -1056,8 +1047,8 @@ export default function AdsConnectors() {
                     </Select>
                   </div>
                   <div className="grid gap-4 lg:grid-cols-2">
-                    <CompactDataSection title={ui.syncRules} data={query.data?.syncRules} columns={["platform", "status", "last_run_at", "next_run_at"]} emptyText={ui.syncRulesEmpty} ui={ui} timestampDisplayMode={timezoneDisplayMode} browserTimeZone={browserTimeZone} />
-                    <CompactDataSection title={ui.syncDue} data={query.data?.syncDue} columns={["platform", "status", "last_run_at", "next_run_at"]} emptyText={ui.syncDueEmpty} ui={ui} timestampDisplayMode={timezoneDisplayMode} browserTimeZone={browserTimeZone} />
+                    <CompactDataSection title={ui.syncRules} data={query.data?.syncRules} columns={["platform", "status", "last_run_at", "next_run_at"]} emptyText={ui.syncRulesEmpty} ui={ui} timestampDisplayMode={timezoneDisplayMode} timezoneName={timezoneName ?? undefined} />
+                    <CompactDataSection title={ui.syncDue} data={query.data?.syncDue} columns={["platform", "status", "last_run_at", "next_run_at"]} emptyText={ui.syncDueEmpty} ui={ui} timestampDisplayMode={timezoneDisplayMode} timezoneName={timezoneName ?? undefined} />
                   </div>
                   <div className="rounded-lg border border-border/70 bg-card/50 p-4">
                     <p className="mb-3 text-sm font-semibold">{ui.manualSync}</p>
@@ -1429,32 +1420,32 @@ function AccountField({ label, value, ui, compact = false }: { label: string; va
   );
 }
 
-type TimezoneFormattingOptions = { timestampDisplayMode?: TimezoneDisplayMode; browserTimeZone?: string };
+type TimezoneFormattingOptions = { timestampDisplayMode?: TimezoneDisplayMode; timezoneName?: string };
 
-function CompactDataSection({ title, data, columns, emptyText, ui, maxRows, timestampDisplayMode, browserTimeZone }: { title: string; data: OptionalViewData | undefined; columns: string[]; emptyText: string; ui: Copy; maxRows?: number } & TimezoneFormattingOptions) {
+function CompactDataSection({ title, data, columns, emptyText, ui, maxRows, timestampDisplayMode, timezoneName }: { title: string; data: OptionalViewData | undefined; columns: string[]; emptyText: string; ui: Copy; maxRows?: number } & TimezoneFormattingOptions) {
   return (
     <div className="rounded-lg border border-border/70 bg-card/50 p-3">
       <p className="mb-2 text-sm font-semibold">{title}</p>
-      <OptionalKnownColumns data={data} columns={columns} emptyText={emptyText} ui={ui} maxRows={maxRows} timestampDisplayMode={timestampDisplayMode} browserTimeZone={browserTimeZone} />
+      <OptionalKnownColumns data={data} columns={columns} emptyText={emptyText} ui={ui} maxRows={maxRows} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
     </div>
   );
 }
 
-function OptionalKnownColumns({ data, columns, emptyText, ui, maxRows, timestampDisplayMode, browserTimeZone }: { data: OptionalViewData | undefined; columns: string[]; emptyText: string; ui: Copy; maxRows?: number } & TimezoneFormattingOptions) {
+function OptionalKnownColumns({ data, columns, emptyText, ui, maxRows, timestampDisplayMode, timezoneName }: { data: OptionalViewData | undefined; columns: string[]; emptyText: string; ui: Copy; maxRows?: number } & TimezoneFormattingOptions) {
   if (!data) return <p className="text-sm text-muted-foreground">{ui.dataUnavailable}</p>;
   if (data.unavailableReason) return <UnavailableMessage reason={data.unavailableReason} ui={ui} />;
   const filtered = columns.filter((column) => data.rows.some((row) => row[column] !== undefined));
-  return filtered.length === 0 ? <GenericTable rows={data.rows} emptyText={emptyText} ui={ui} maxRows={maxRows} timestampDisplayMode={timestampDisplayMode} browserTimeZone={browserTimeZone} /> : <GenericDataTable rows={data.rows} columns={filtered} ui={ui} maxRows={maxRows} timestampDisplayMode={timestampDisplayMode} browserTimeZone={browserTimeZone} />;
+  return filtered.length === 0 ? <GenericTable rows={data.rows} emptyText={emptyText} ui={ui} maxRows={maxRows} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} /> : <GenericDataTable rows={data.rows} columns={filtered} ui={ui} maxRows={maxRows} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />;
 }
 
-function GenericTable({ rows, emptyText, ui, maxRows, timestampDisplayMode, browserTimeZone }: { rows: Row[]; emptyText: string; ui: Copy; maxRows?: number } & TimezoneFormattingOptions) {
+function GenericTable({ rows, emptyText, ui, maxRows, timestampDisplayMode, timezoneName }: { rows: Row[]; emptyText: string; ui: Copy; maxRows?: number } & TimezoneFormattingOptions) {
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">{emptyText}</p>;
   const columns = Object.keys(rows[0] ?? {}).filter((column) => column !== "workspace_id");
   if (columns.length === 0) return <p className="text-sm text-muted-foreground">{ui.emptyFields}</p>;
-  return <GenericDataTable rows={rows} columns={columns} ui={ui} maxRows={maxRows} timestampDisplayMode={timestampDisplayMode} browserTimeZone={browserTimeZone} />;
+  return <GenericDataTable rows={rows} columns={columns} ui={ui} maxRows={maxRows} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />;
 }
 
-function GenericDataTable({ rows, columns, ui, markPlaceholders = false, maxRows, timestampDisplayMode, browserTimeZone }: { rows: Row[]; columns: string[]; ui: Copy; markPlaceholders?: boolean; maxRows?: number } & TimezoneFormattingOptions) {
+function GenericDataTable({ rows, columns, ui, markPlaceholders = false, maxRows, timestampDisplayMode, timezoneName }: { rows: Row[]; columns: string[]; ui: Copy; markPlaceholders?: boolean; maxRows?: number } & TimezoneFormattingOptions) {
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">{ui.noDataYet}</p>;
   const visibleRows = maxRows ? rows.slice(0, maxRows) : rows;
   const hiddenRows = rows.length - visibleRows.length;
@@ -1474,7 +1465,7 @@ function GenericDataTable({ rows, columns, ui, markPlaceholders = false, maxRows
               <tr key={`${index}-${String(row.id ?? "row")}`} className="border-b border-border/40 last:border-0">
                 {columns.map((column) => (
                   <td key={`${index}-${column}`} className="max-w-[180px] px-2 py-2 align-top text-foreground">
-                    <span className={cn(isTimestampColumn(column) && timestampDisplayMode ? "whitespace-nowrap" : "break-words")}>{formatTableValue(row[column], column, ui, timestampDisplayMode, browserTimeZone)}</span>
+                    <span className={cn(isTimestampColumn(column) && timestampDisplayMode ? "whitespace-nowrap" : "break-words")}>{formatTableValue(row[column], column, ui, timestampDisplayMode, timezoneName)}</span>
                     {placeholder && column === "external_account_id" ? (
                       <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
                         {ui.testPlaceholder}
@@ -1641,9 +1632,9 @@ function formatValue(value: unknown, ui: Copy): string {
   return String(value);
 }
 
-function formatTableValue(value: unknown, column: string, ui: Copy, timestampDisplayMode?: TimezoneDisplayMode, browserTimeZone?: string): string {
+function formatTableValue(value: unknown, column: string, ui: Copy, timestampDisplayMode?: TimezoneDisplayMode, timezoneName?: string): string {
   if (timestampDisplayMode && isTimestampColumn(column)) {
-    return formatOperationalTimestamp(value, timestampDisplayMode, browserTimeZone);
+    return formatOperationalTimestamp(value, timestampDisplayMode, timezoneName);
   }
 
   return formatValue(value, ui);
@@ -1651,43 +1642,6 @@ function formatTableValue(value: unknown, column: string, ui: Copy, timestampDis
 
 function isTimestampColumn(column: string): boolean {
   return column.endsWith("_at") || column.endsWith("_time") || column === "timestamp";
-}
-
-function formatOperationalTimestamp(value: unknown, mode: TimezoneDisplayMode, browserTimeZone = resolveBrowserTimeZone()): string {
-  if (value === null || value === undefined || value === "") return "—";
-  if (typeof value !== "string" && typeof value !== "number") return "—";
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-
-  if (mode === "local") {
-    const displayTimeZone = browserTimeZone || "Local";
-    const formatterTimeZone = displayTimeZone === "Local" ? undefined : displayTimeZone;
-    return `${formatDateTimeInZone(date, formatterTimeZone)} ${displayTimeZone}`;
-  }
-
-  return `${formatDateTimeInZone(date, "UTC")} UTC`;
-}
-
-function formatDateTimeInZone(date: Date, timeZone?: string): string {
-  return new Intl.DateTimeFormat("uk-UA", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone,
-  }).format(date).replace(",", "");
-}
-
-function readStoredTimezoneDisplayMode(): TimezoneDisplayMode {
-  if (typeof localStorage === "undefined") return "utc";
-  return localStorage.getItem(TIMEZONE_DISPLAY_MODE_KEY) === "local" ? "local" : "utc";
-}
-
-function resolveBrowserTimeZone(): string {
-  return Intl.DateTimeFormat().resolvedOptions().timeZone || "Local";
 }
 
 function friendlyStatus(value: unknown, ui: Copy): string {
