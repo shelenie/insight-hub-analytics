@@ -671,8 +671,15 @@ export default function AdsConnectors() {
     setSearchParams(nextParams, { replace: true });
   };
 
+  const headerActions = session && !query.isLoading && !query.error ? (
+    <Button type="button" size="sm" variant="outline" className="h-8 shrink-0 gap-1.5 text-xs" onClick={() => void refreshStatus()} disabled={query.isFetching}>
+      <RefreshCw className={cn("h-3.5 w-3.5", query.isFetching && "animate-spin")} />
+      {query.isFetching ? ui.refreshing : ui.refresh}
+    </Button>
+  ) : null;
+
   return (
-    <DashboardLayout title={ui.pageTitle} subtitle={ui.pageSubtitle}>
+    <DashboardLayout title={ui.pageTitle} subtitle={ui.pageSubtitle} actions={headerActions}>
       {!session ? (
         <SectionCard title={ui.pageTitle} description={ui.authRequired}>
           <p className="text-sm text-muted-foreground">{ui.signedOut}</p>
@@ -715,16 +722,6 @@ export default function AdsConnectors() {
               </div>
             </div>
           ) : null}
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{ui.pageTitle}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{ui.pageSubtitle}</p>
-            </div>
-            <Button type="button" size="sm" variant="outline" className="h-8 shrink-0 gap-1.5 text-xs" onClick={() => void refreshStatus()} disabled={query.isFetching}>
-              <RefreshCw className={cn("h-3.5 w-3.5", query.isFetching && "animate-spin")} />
-              {query.isFetching ? ui.refreshing : ui.refresh}
-            </Button>
-          </div>
           <Tabs value={activeTab} onValueChange={selectTab} className="space-y-4">
             <div className="overflow-x-auto rounded-xl border border-border/70 bg-muted/30 p-1.5 shadow-sm">
               <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-2 bg-transparent p-0 text-muted-foreground">
