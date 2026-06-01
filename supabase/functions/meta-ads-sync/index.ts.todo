@@ -1,0 +1,10 @@
+/*
+ TODO: Paste the currently deployed Supabase Edge Function source here.
+
+ Function: meta-ads-sync
+ Required final path: supabase/functions/meta-ads-sync/index.ts
+
+ Do not deploy this .todo file.
+ Do not rename to index.ts until the real deployed source is pasted.
+ Do not paste secrets directly into source code.
+*/
