@@ -178,6 +178,13 @@ const copy = {
     fbFormsEmpty: "Форми з’являться після підключення Meta Ads.",
     fbLeadsEmpty: "Ліди з’являться після отримання Facebook Lead Ads даних.",
     fbSyncRunsEmpty: "Запуски синхронізації з’являться після першої синхронізації.",
+    fbManualSync: "Ручна синхронізація лідів",
+    fbRunLeadSync: "Запустити синхронізацію лідів",
+    fbRunningLeadSync: "Синхронізуємо…",
+    fbSyncSubmitNote: "Запускає наявну Edge Function facebook-lead-ads-sync за останні 30 днів через поточну сесію користувача.",
+    fbSyncSuccessTitle: "Синхронізацію лідів виконано",
+    fbSyncFailedTitle: "Помилка синхронізації лідів",
+    fbSyncSuccess: "Синхронізацію лідів виконано.",
     diagnosticsTitle: "Діагностика",
     diagnosticsDescription: "Контекст реклами, кандидати на аномалії та поточні проблеми.",
     adsContext: "Контекст реклами",
@@ -390,6 +397,13 @@ const copy = {
     fbFormsEmpty: "Forms will appear after Meta Ads is connected.",
     fbLeadsEmpty: "Leads will appear after Facebook Lead Ads data is received.",
     fbSyncRunsEmpty: "Sync runs will appear after the first sync.",
+    fbManualSync: "Manual lead sync",
+    fbRunLeadSync: "Run lead sync",
+    fbRunningLeadSync: "Syncing…",
+    fbSyncSubmitNote: "Runs the existing facebook-lead-ads-sync Edge Function for the last 30 days with the current user session.",
+    fbSyncSuccessTitle: "Lead sync completed",
+    fbSyncFailedTitle: "Lead sync failed",
+    fbSyncSuccess: "Lead sync completed.",
     diagnosticsTitle: "Diagnostics",
     diagnosticsDescription: "Ads context, anomaly candidates, and current issues.",
     adsContext: "Ads context",
@@ -514,6 +528,12 @@ export default function AdsConnectors() {
     success: null,
     details: null,
   });
+  const [facebookLeadSyncState, setFacebookLeadSyncState] = useState<SyncRunState>({
+    loading: false,
+    error: null,
+    success: null,
+    details: null,
+  });
 
   const query = useQuery({
     queryKey: ["ads-connectors-workspace", WORKSPACE_ID],
@@ -566,6 +586,43 @@ export default function AdsConnectors() {
     google: getPlatformConnectionState("google", query.data?.adBindings, query.data?.adPlatformConnections, ui, lang),
     tiktok: getPlatformConnectionState("tiktok", query.data?.adBindings, query.data?.adPlatformConnections, ui, lang),
   }), [lang, query.data?.adBindings, query.data?.adPlatformConnections, ui]);
+
+  const runFacebookLeadSync = async () => {
+    if (!session?.access_token) return;
+
+    setFacebookLeadSyncState({ loading: true, error: null, success: null, details: null });
+
+    const { dateFrom, dateTo } = getLastThirtyDaysRange();
+    const { data, error } = await supabase.functions.invoke("facebook-lead-ads-sync", {
+      headers: { Authorization: `Bearer ${session.access_token}` },
+      body: {
+        workspace_id: WORKSPACE_ID,
+        sync_mode: "manual",
+        date_from: dateFrom,
+        date_to: dateTo,
+      },
+    });
+
+    if (error) {
+      const errorDetails = await readFunctionErrorDetails(error);
+      setFacebookLeadSyncState({ loading: false, error: errorDetails, success: null, details: null });
+      toast({ title: ui.fbSyncFailedTitle, description: errorDetails, variant: "destructive" });
+      return;
+    }
+
+    const details = toObject(data);
+    const message = buildFacebookLeadSyncSuccessMessage(details, ui);
+
+    setFacebookLeadSyncState({ loading: false, error: null, success: message, details });
+    toast({ title: ui.fbSyncSuccessTitle, description: message });
+
+    await Promise.all([
+      query.refetch(),
+      queryClient.invalidateQueries({ queryKey: ["ads-connectors-workspace", WORKSPACE_ID] }),
+      queryClient.invalidateQueries({ queryKey: ["facebook-lead-ads"] }),
+      queryClient.invalidateQueries({ queryKey: ["facebook-lead-sync-runs"] }),
+    ]);
+  };
 
   const runScheduledSync = async () => {
     setSyncRunState({ loading: true, error: null, success: null, details: null });
@@ -871,6 +928,17 @@ export default function AdsConnectors() {
                   <MetricCard label={ui.failedSyncsLast24h} value={formatMetric(findMetric(query.data?.fbHealth.rows, ["failed_syncs_last_24h", "failed_sync_runs_last_24h"]))} />
                 </div>
                 <p className="mt-3 rounded-md bg-muted/40 p-3 text-xs text-muted-foreground">{ui.fbOauthHelper}</p>
+                <div className="mt-4 rounded-lg border border-border/70 bg-card/50 p-4">
+                  <p className="mb-3 text-sm font-semibold">{ui.fbManualSync}</p>
+                  <Button type="button" onClick={() => void runFacebookLeadSync()} disabled={!session || !canManage || facebookLeadSyncState.loading}>
+                    {facebookLeadSyncState.loading ? ui.fbRunningLeadSync : ui.fbRunLeadSync}
+                  </Button>
+                  <p className="mt-2 text-xs text-muted-foreground">{ui.fbSyncSubmitNote}</p>
+                  {facebookLeadSyncState.success && <p className="mt-2 text-xs text-emerald-700">{facebookLeadSyncState.success}</p>}
+                  {facebookLeadSyncState.error && <p className="mt-2 text-xs text-destructive">{facebookLeadSyncState.error}</p>}
+                  {facebookLeadSyncState.details ? <p className="mt-2 text-xs text-muted-foreground">{ui.detailsDebug}</p> : null}
+                  <DeveloperDetails title={ui.technicalDetails}>{facebookLeadSyncState.details ? <pre className="mt-2 overflow-x-auto rounded bg-background p-2 text-xs text-muted-foreground">{JSON.stringify(facebookLeadSyncState.details, null, 2)}</pre> : null}</DeveloperDetails>
+                </div>
                 <div className="mt-4 space-y-4">
                   <CompactDataSection title={ui.formsTitle} data={query.data?.fbForms} columns={["form_name", "form_id", "status", "mapping_status", "leads_count", "updated_at"]} emptyText={ui.fbFormsEmpty} ui={ui} />
                   <CompactDataSection title={ui.leadsTitle} data={query.data?.fbLeads} columns={["created_at", "status", "form_name", "client_name", "project_name", "error_message"]} emptyText={ui.fbLeadsEmpty} ui={ui} />
@@ -1352,6 +1420,54 @@ function friendlyStatus(value: unknown, ui: Copy): string {
 
 function toObject(value: unknown): Record<string, unknown> { return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {}; }
 function readString(row: Row | Record<string, unknown> | undefined, key: string): string | null { const value = row?.[key]; return typeof value === "string" ? value : null; }
+
+function getLastThirtyDaysRange() {
+  const dateTo = new Date();
+  const dateFrom = new Date(dateTo);
+  dateFrom.setUTCDate(dateFrom.getUTCDate() - 30);
+
+  return {
+    dateFrom: dateFrom.toISOString().slice(0, 10),
+    dateTo: dateTo.toISOString().slice(0, 10),
+  };
+}
+
+function buildFacebookLeadSyncSuccessMessage(details: Record<string, unknown>, ui: Copy): string {
+  const metricKeys = ["forms_seen", "leads_received", "leads_inserted", "leads_failed"];
+  const metrics = metricKeys
+    .map((key) => {
+      const value = details[key];
+      return typeof value === "number" || typeof value === "string" ? `${key}: ${value}` : null;
+    })
+    .filter((value): value is string => Boolean(value));
+
+  return metrics.length > 0 ? `${ui.fbSyncSuccess} ${metrics.join(", ")}` : ui.fbSyncSuccess;
+}
+
+async function readFunctionErrorDetails(error: unknown): Promise<string> {
+  const fallback = error instanceof Error ? error.message : "Unknown Edge Function error";
+  const maybeContext = typeof error === "object" && error !== null && "context" in error
+    ? (error as { context?: unknown }).context
+    : null;
+
+  if (maybeContext instanceof Response) {
+    try {
+      const payload = await maybeContext.clone().json();
+      const payloadObject = toObject(payload);
+      const errorMessage = readString(payloadObject, "error");
+      const details = readString(payloadObject, "details");
+      if (errorMessage && details) return `${errorMessage} ${details}`;
+      if (errorMessage) return errorMessage;
+      if (details) return details;
+      if (Object.keys(payloadObject).length > 0) return JSON.stringify(payloadObject);
+    } catch {
+      const text = await maybeContext.clone().text();
+      if (text) return text;
+    }
+  }
+
+  return fallback;
+}
 
 function readLikelyStatus(row: Row | undefined): string | null {
   if (!row) return null;
