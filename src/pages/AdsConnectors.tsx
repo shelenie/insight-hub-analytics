@@ -1,10 +1,11 @@
-import { type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -46,6 +47,7 @@ type PlatformConnectionState = { label: string; currentState?: string; note?: st
 type PlatformSyncInsight = { hasDataRows: boolean; hasVerifiedSync: boolean; latestFailure: string | null; hasRealAccount: boolean };
 type DisconnectTarget = { id: string; name: string } | null;
 type UiLang = "uk" | "en";
+type TimezoneDisplayMode = "utc" | "local";
 type Copy = (typeof copy)[UiLang];
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
@@ -55,6 +57,8 @@ const CONNECTOR_FN: Record<ConnectorKey, string> = {
   tiktok: "tiktok-oauth-start",
 };
 const TAB_KEYS: TabKey[] = ["overview", "connections", "ad-accounts", "sync", "facebook-lead-ads", "diagnostics"];
+const TIMEZONE_DISPLAY_MODE_KEY = "insight-hub-timezone-display-mode";
+const TIMEZONE_NAME_KEY = "insight-hub-timezone-name";
 
 const copy = {
   uk: {
@@ -195,6 +199,9 @@ const copy = {
     scheduledTitle: "Синхронізація",
     scheduledDescription: "Правила синхронізації, поточна черга та ручний запуск.",
     scheduledWarning: "Не запускайте синхронізацію, доки реальне OAuth-підключення та рекламний акаунт не перевірені.",
+    timezoneLabel: "Час",
+    timezoneUtc: "UTC",
+    timezoneLocal: "Мій час",
     syncRules: "Правила синхронізації",
     syncDue: "Поточна черга",
     manualSync: "Ручна синхронізація",
@@ -460,11 +467,14 @@ const copy = {
     scheduledTitle: "Sync",
     scheduledDescription: "Sync rules, current queue, and manual run controls.",
     scheduledWarning: "Do not run sync until a real OAuth connection and ad account have been verified.",
+    timezoneLabel: "Time",
+    timezoneUtc: "UTC",
+    timezoneLocal: "Local time",
     syncRules: "Sync rules",
     syncDue: "Current queue",
     manualSync: "Manual sync",
     syncRulesEmpty: "No sync rules yet.",
-    syncDueEmpty: "There are no syncs in the queue right now.",
+    syncDueEmpty: "There are no sync jobs in the queue right now.",
     runSyncCheck: "Run manual sync",
     runningSync: "Running sync…",
     syncSubmitNote: "Clicking calls the existing secure sync function only when submitted manually.",
@@ -627,6 +637,15 @@ export default function AdsConnectors() {
     success: null,
     details: null,
   });
+  const [timezoneDisplayMode, setTimezoneDisplayMode] = useState<TimezoneDisplayMode>(() => readStoredTimezoneDisplayMode());
+  const [browserTimeZone, setBrowserTimeZone] = useState(() => resolveBrowserTimeZone());
+
+  useEffect(() => {
+    const timeZone = resolveBrowserTimeZone();
+    setBrowserTimeZone(timeZone);
+    localStorage.setItem(TIMEZONE_DISPLAY_MODE_KEY, timezoneDisplayMode);
+    localStorage.setItem(TIMEZONE_NAME_KEY, timeZone);
+  }, [timezoneDisplayMode]);
 
   const query = useQuery({
     queryKey: ["ads-connectors-workspace", WORKSPACE_ID],
@@ -837,7 +856,7 @@ export default function AdsConnectors() {
   ) : null;
 
   return (
-    <DashboardLayout title={ui.pageTitle} subtitle={ui.pageSubtitle} actions={headerActions} contentClassName="pt-2 lg:pt-3">
+    <DashboardLayout title={ui.pageTitle} subtitle={ui.pageSubtitle} actions={headerActions} contentClassName="pt-1 lg:pt-2">
       {!session ? (
         <SectionCard title={ui.pageTitle} description={ui.authRequired}>
           <p className="text-sm text-muted-foreground">{ui.signedOut}</p>
@@ -1024,9 +1043,21 @@ export default function AdsConnectors() {
               <SectionCard title={ui.scheduledTitle} description={ui.scheduledDescription}>
                 <div className="space-y-4">
                   <WarningNotice>{ui.scheduledWarning}</WarningNotice>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                    <label className="text-xs font-medium text-muted-foreground" htmlFor="ads-sync-timezone-mode">{ui.timezoneLabel}</label>
+                    <Select value={timezoneDisplayMode} onValueChange={(value: TimezoneDisplayMode) => setTimezoneDisplayMode(value)}>
+                      <SelectTrigger id="ads-sync-timezone-mode" className="h-8 w-full text-xs sm:w-[150px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="utc">{ui.timezoneUtc}</SelectItem>
+                        <SelectItem value="local">{ui.timezoneLocal}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="grid gap-4 lg:grid-cols-2">
-                    <CompactDataSection title={ui.syncRules} data={query.data?.syncRules} columns={["platform", "cadence", "schedule", "status", "last_run_at", "next_run_at", "updated_at"]} emptyText={ui.syncRulesEmpty} ui={ui} />
-                    <CompactDataSection title={ui.syncDue} data={query.data?.syncDue} columns={["platform", "status", "last_run_at", "next_run_at", "due_status", "is_due"]} emptyText={ui.syncDueEmpty} ui={ui} />
+                    <CompactDataSection title={ui.syncRules} data={query.data?.syncRules} columns={["platform", "status", "last_run_at", "next_run_at"]} emptyText={ui.syncRulesEmpty} ui={ui} timestampDisplayMode={timezoneDisplayMode} browserTimeZone={browserTimeZone} />
+                    <CompactDataSection title={ui.syncDue} data={query.data?.syncDue} columns={["platform", "status", "last_run_at", "next_run_at"]} emptyText={ui.syncDueEmpty} ui={ui} timestampDisplayMode={timezoneDisplayMode} browserTimeZone={browserTimeZone} />
                   </div>
                   <div className="rounded-lg border border-border/70 bg-card/50 p-4">
                     <p className="mb-3 text-sm font-semibold">{ui.manualSync}</p>
@@ -1398,30 +1429,32 @@ function AccountField({ label, value, ui, compact = false }: { label: string; va
   );
 }
 
-function CompactDataSection({ title, data, columns, emptyText, ui, maxRows }: { title: string; data: OptionalViewData | undefined; columns: string[]; emptyText: string; ui: Copy; maxRows?: number }) {
+type TimezoneFormattingOptions = { timestampDisplayMode?: TimezoneDisplayMode; browserTimeZone?: string };
+
+function CompactDataSection({ title, data, columns, emptyText, ui, maxRows, timestampDisplayMode, browserTimeZone }: { title: string; data: OptionalViewData | undefined; columns: string[]; emptyText: string; ui: Copy; maxRows?: number } & TimezoneFormattingOptions) {
   return (
     <div className="rounded-lg border border-border/70 bg-card/50 p-3">
       <p className="mb-2 text-sm font-semibold">{title}</p>
-      <OptionalKnownColumns data={data} columns={columns} emptyText={emptyText} ui={ui} maxRows={maxRows} />
+      <OptionalKnownColumns data={data} columns={columns} emptyText={emptyText} ui={ui} maxRows={maxRows} timestampDisplayMode={timestampDisplayMode} browserTimeZone={browserTimeZone} />
     </div>
   );
 }
 
-function OptionalKnownColumns({ data, columns, emptyText, ui, maxRows }: { data: OptionalViewData | undefined; columns: string[]; emptyText: string; ui: Copy; maxRows?: number }) {
+function OptionalKnownColumns({ data, columns, emptyText, ui, maxRows, timestampDisplayMode, browserTimeZone }: { data: OptionalViewData | undefined; columns: string[]; emptyText: string; ui: Copy; maxRows?: number } & TimezoneFormattingOptions) {
   if (!data) return <p className="text-sm text-muted-foreground">{ui.dataUnavailable}</p>;
   if (data.unavailableReason) return <UnavailableMessage reason={data.unavailableReason} ui={ui} />;
   const filtered = columns.filter((column) => data.rows.some((row) => row[column] !== undefined));
-  return filtered.length === 0 ? <GenericTable rows={data.rows} emptyText={emptyText} ui={ui} maxRows={maxRows} /> : <GenericDataTable rows={data.rows} columns={filtered} ui={ui} maxRows={maxRows} />;
+  return filtered.length === 0 ? <GenericTable rows={data.rows} emptyText={emptyText} ui={ui} maxRows={maxRows} timestampDisplayMode={timestampDisplayMode} browserTimeZone={browserTimeZone} /> : <GenericDataTable rows={data.rows} columns={filtered} ui={ui} maxRows={maxRows} timestampDisplayMode={timestampDisplayMode} browserTimeZone={browserTimeZone} />;
 }
 
-function GenericTable({ rows, emptyText, ui, maxRows }: { rows: Row[]; emptyText: string; ui: Copy; maxRows?: number }) {
+function GenericTable({ rows, emptyText, ui, maxRows, timestampDisplayMode, browserTimeZone }: { rows: Row[]; emptyText: string; ui: Copy; maxRows?: number } & TimezoneFormattingOptions) {
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">{emptyText}</p>;
   const columns = Object.keys(rows[0] ?? {}).filter((column) => column !== "workspace_id");
   if (columns.length === 0) return <p className="text-sm text-muted-foreground">{ui.emptyFields}</p>;
-  return <GenericDataTable rows={rows} columns={columns} ui={ui} maxRows={maxRows} />;
+  return <GenericDataTable rows={rows} columns={columns} ui={ui} maxRows={maxRows} timestampDisplayMode={timestampDisplayMode} browserTimeZone={browserTimeZone} />;
 }
 
-function GenericDataTable({ rows, columns, ui, markPlaceholders = false, maxRows }: { rows: Row[]; columns: string[]; ui: Copy; markPlaceholders?: boolean; maxRows?: number }) {
+function GenericDataTable({ rows, columns, ui, markPlaceholders = false, maxRows, timestampDisplayMode, browserTimeZone }: { rows: Row[]; columns: string[]; ui: Copy; markPlaceholders?: boolean; maxRows?: number } & TimezoneFormattingOptions) {
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">{ui.noDataYet}</p>;
   const visibleRows = maxRows ? rows.slice(0, maxRows) : rows;
   const hiddenRows = rows.length - visibleRows.length;
@@ -1441,7 +1474,7 @@ function GenericDataTable({ rows, columns, ui, markPlaceholders = false, maxRows
               <tr key={`${index}-${String(row.id ?? "row")}`} className="border-b border-border/40 last:border-0">
                 {columns.map((column) => (
                   <td key={`${index}-${column}`} className="max-w-[180px] px-2 py-2 align-top text-foreground">
-                    <span className="break-words">{formatValue(row[column], ui)}</span>
+                    <span className={cn(isTimestampColumn(column) && timestampDisplayMode ? "whitespace-nowrap" : "break-words")}>{formatTableValue(row[column], column, ui, timestampDisplayMode, browserTimeZone)}</span>
                     {placeholder && column === "external_account_id" ? (
                       <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
                         {ui.testPlaceholder}
@@ -1606,6 +1639,55 @@ function formatValue(value: unknown, ui: Copy): string {
   if (typeof value === "object") return JSON.stringify(value);
   if (typeof value === "string") return friendlyStatus(value, ui);
   return String(value);
+}
+
+function formatTableValue(value: unknown, column: string, ui: Copy, timestampDisplayMode?: TimezoneDisplayMode, browserTimeZone?: string): string {
+  if (timestampDisplayMode && isTimestampColumn(column)) {
+    return formatOperationalTimestamp(value, timestampDisplayMode, browserTimeZone);
+  }
+
+  return formatValue(value, ui);
+}
+
+function isTimestampColumn(column: string): boolean {
+  return column.endsWith("_at") || column.endsWith("_time") || column === "timestamp";
+}
+
+function formatOperationalTimestamp(value: unknown, mode: TimezoneDisplayMode, browserTimeZone = resolveBrowserTimeZone()): string {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value !== "string" && typeof value !== "number") return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+
+  if (mode === "local") {
+    const displayTimeZone = browserTimeZone || "Local";
+    const formatterTimeZone = displayTimeZone === "Local" ? undefined : displayTimeZone;
+    return `${formatDateTimeInZone(date, formatterTimeZone)} ${displayTimeZone}`;
+  }
+
+  return `${formatDateTimeInZone(date, "UTC")} UTC`;
+}
+
+function formatDateTimeInZone(date: Date, timeZone?: string): string {
+  return new Intl.DateTimeFormat("uk-UA", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone,
+  }).format(date).replace(",", "");
+}
+
+function readStoredTimezoneDisplayMode(): TimezoneDisplayMode {
+  if (typeof localStorage === "undefined") return "utc";
+  return localStorage.getItem(TIMEZONE_DISPLAY_MODE_KEY) === "local" ? "local" : "utc";
+}
+
+function resolveBrowserTimeZone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone || "Local";
 }
 
 function friendlyStatus(value: unknown, ui: Copy): string {
