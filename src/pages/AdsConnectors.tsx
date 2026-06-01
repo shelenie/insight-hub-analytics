@@ -837,7 +837,7 @@ export default function AdsConnectors() {
   ) : null;
 
   return (
-    <DashboardLayout title={ui.pageTitle} subtitle={ui.pageSubtitle} actions={headerActions}>
+    <DashboardLayout title={ui.pageTitle} subtitle={ui.pageSubtitle} actions={headerActions} contentClassName="pt-2 lg:pt-3">
       {!session ? (
         <SectionCard title={ui.pageTitle} description={ui.authRequired}>
           <p className="text-sm text-muted-foreground">{ui.signedOut}</p>
@@ -851,7 +851,7 @@ export default function AdsConnectors() {
           <p className="text-sm text-destructive">{ui.loadError} {query.error.message}</p>
         </SectionCard>
       ) : (
-        <div className="-mt-2 lg:-mt-3">
+        <>
           {!roleLoading && !canManage ? <p className="text-xs text-muted-foreground">{ui.noManageAccess}</p> : null}
           {!roleLoading && roleError ? <p className="text-xs text-muted-foreground">{ui.roleUnavailable}</p> : null}
           {isMetaOauthSuccess && !oauthSuccessDismissed ? (
@@ -1101,7 +1101,7 @@ export default function AdsConnectors() {
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        </div>
+        </>
       )}
     </DashboardLayout>
   );
