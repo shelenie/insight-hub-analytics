@@ -81,7 +81,7 @@ const copy = {
     adAccountsKpi: "Рекламні акаунти",
     syncData: "Дані синхронізації",
     connectionStatusHelper: "Meta Ads і TikTok Ads підключені. Facebook Lead Ads працює через Meta Ads.",
-    adAccountsHelper: "Підключені акаунти Meta / TikTok / Google.",
+    adAccountsHelper: "Акаунти, доступні для синхронізації.",
     syncVerifiedStatus: "Синхронізацію перевірено",
     syncVerifiedNoRows: "Конектори працюють, даних поки немає",
     needsAttention: "Потребує уваги",
@@ -135,7 +135,7 @@ const copy = {
     facebookLeadSafetyNote: "Працює через Meta Ads. Окреме OAuth-підключення не потрібне.",
     metaSyncVerifiedNote: "Синхронізація Meta Ads перевірена.",
     tiktokSyncVerifiedNote: "Синхронізація TikTok Ads перевірена. Рекламний акаунт поки без даних.",
-    googleAccessPendingNote: "Синхронізація очікує доступ Google Ads API / Basic Access.",
+    googleAccessPendingNote: "Очікуємо доступ Google Ads API. Після підтвердження Basic Access синхронізація стане доступною.",
     facebookLeadVerifiedNote: "Lead Ads sync і webhook endpoint перевірені.",
     facebookLeadFormsMissingNote: "Форми поки не знайдені. Вони з’являться після наявності Facebook Lead Forms або доступу до сторінок.",
     googleOauthConnectedState: "OAuth підключено",
@@ -165,11 +165,20 @@ const copy = {
     oauthUrlMissing: "Не вдалося отримати посилання для безпечного підключення.",
     adAccountsTitle: "Рекламні акаунти",
     adAccountsDescription: "Прив’язки акаунтів до клієнтів, проєктів і воронок.",
-    adAccountsExplain: "Це можуть бути тестові прив’язки. Реальні рекламні акаунти з’являться після OAuth і синхронізації акаунтів.",
+    adAccountsHiddenExplain: "Тестові та архівні прив’язки приховані за замовчуванням. Їх можна показати для перевірки.",
+    adAccountsNoRealExplain: "Реальні рекламні акаунти з’являться після OAuth-підключення та першої синхронізації акаунтів.",
+    adAccountsRealExplain: "Показані реальні активні рекламні акаунти. Тестові та архівні прив’язки приховані.",
+    showTestBindings: "Показати тестові прив’язки",
+    hideTestBindings: "Сховати тестові прив’язки",
+    hiddenTestBindings: "Приховано {count} тестових або архівних прив’язок.",
+    accountSection: "Акаунт",
+    bindingSection: "Прив’язка",
+    statusSection: "Статус",
+    archived: "Архівовано",
     testPlaceholder: "Тестова прив’язка",
     realAccount: "Реальний акаунт",
-    bindingScope: "Область прив’язки",
-    accountStatus: "Статус акаунта",
+    bindingScope: "Прив’язка",
+    accountStatus: "Статус",
     testAccountNote: "Це тестова прив’язка. Вона не підтверджує реальне підключення.",
     realAccountHelper: "Реальне підключення потрібно перевірити після авторизації.",
     adAccountsEmpty: "Рекламні акаунти ще не прив’язані.",
@@ -327,7 +336,7 @@ const copy = {
     adAccountsKpi: "Ad accounts",
     syncData: "Sync data",
     connectionStatusHelper: "Meta Ads and TikTok Ads are connected. Facebook Lead Ads works through Meta Ads.",
-    adAccountsHelper: "Connected Meta / TikTok / Google accounts.",
+    adAccountsHelper: "Accounts available for sync.",
     syncVerifiedStatus: "Sync verified",
     syncVerifiedNoRows: "Connectors work; no data yet",
     needsAttention: "Needs attention",
@@ -381,7 +390,7 @@ const copy = {
     facebookLeadSafetyNote: "Works through Meta Ads. No separate OAuth connection is required.",
     metaSyncVerifiedNote: "Meta Ads sync is verified.",
     tiktokSyncVerifiedNote: "TikTok Ads sync is verified. The ad account has no data yet.",
-    googleAccessPendingNote: "Sync is waiting for Google Ads API / Basic Access.",
+    googleAccessPendingNote: "Waiting for Google Ads API access. Sync will become available after Basic Access is approved.",
     facebookLeadVerifiedNote: "Lead Ads sync and webhook endpoint are verified.",
     facebookLeadFormsMissingNote: "No forms found yet. They will appear after Facebook Lead Forms exist or page access is granted.",
     googleOauthConnectedState: "OAuth connected",
@@ -411,11 +420,20 @@ const copy = {
     oauthUrlMissing: "A secure connection link was not returned.",
     adAccountsTitle: "Ad accounts",
     adAccountsDescription: "Account bindings to clients, projects, and funnels.",
-    adAccountsExplain: "These may be test bindings. Real ad accounts will appear after OAuth and account sync.",
+    adAccountsHiddenExplain: "Test and archived bindings are hidden by default. You can show them for review.",
+    adAccountsNoRealExplain: "Real ad accounts will appear after OAuth connection and the first account sync.",
+    adAccountsRealExplain: "Showing real active ad accounts. Test and archived bindings are hidden.",
+    showTestBindings: "Show test bindings",
+    hideTestBindings: "Hide test bindings",
+    hiddenTestBindings: "{count} test or archived bindings are hidden.",
+    accountSection: "Account",
+    bindingSection: "Binding",
+    statusSection: "Status",
+    archived: "Archived",
     testPlaceholder: "Test binding",
     realAccount: "Real account",
-    bindingScope: "Binding scope",
-    accountStatus: "Account status",
+    bindingScope: "Binding",
+    accountStatus: "Status",
     testAccountNote: "This is a test binding. It does not confirm a real connection.",
     realAccountHelper: "Real connection should be verified after authorization.",
     adAccountsEmpty: "Ad accounts are not bound yet.",
@@ -620,7 +638,7 @@ export default function AdsConnectors() {
   }), [query.data]);
 
   const realAccountRows = useMemo(
-    () => (query.data?.adBindings.rows ?? []).filter((row) => !isPlaceholderAccount(row)),
+    () => (query.data?.adBindings.rows ?? []).filter((row) => !isTestOrArchivedAccount(row)),
     [query.data?.adBindings.rows],
   );
 
@@ -832,9 +850,9 @@ export default function AdsConnectors() {
               </div>
             </div>
           ) : null}
-          <Tabs value={activeTab} onValueChange={selectTab} className="space-y-4">
-            <div className="overflow-x-auto rounded-xl border border-border/70 bg-muted/30 p-1.5 shadow-sm">
-              <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-2 bg-transparent p-0 text-muted-foreground">
+          <Tabs value={activeTab} onValueChange={selectTab} className="space-y-3">
+            <div className="overflow-x-auto rounded-xl border border-border/70 bg-muted/30 p-1 shadow-sm">
+              <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-1.5 bg-transparent p-0 text-muted-foreground">
                 <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="overview">{ui.tabs.overview}</TabsTrigger>
                 <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="connections">{ui.tabs.connections}</TabsTrigger>
                 <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="ad-accounts">{ui.tabs.adAccounts}</TabsTrigger>
@@ -962,9 +980,6 @@ export default function AdsConnectors() {
 
             <TabsContent value="ad-accounts">
               <SectionCard title={ui.adAccountsTitle} description={ui.adAccountsDescription}>
-                <div className="mb-4">
-                  <WarningNotice>{ui.adAccountsExplain}</WarningNotice>
-                </div>
                 <AdAccountsTable data={query.data?.adBindings} ui={ui} />
               </SectionCard>
             </TabsContent>
@@ -1228,40 +1243,73 @@ function ConnectorCard({
 }
 
 function AdAccountsTable({ data, ui }: { data: OptionalViewData | undefined; ui: Copy }) {
+  const [showTestBindings, setShowTestBindings] = useState(false);
+
   if (!data) return <p className="text-sm text-muted-foreground">{ui.dataUnavailable}</p>;
   if (data.unavailableReason) return <UnavailableMessage reason={data.unavailableReason} ui={ui} />;
   if (data.rows.length === 0) return <p className="text-sm text-muted-foreground">{ui.adAccountsEmpty}</p>;
 
+  const realRows = data.rows.filter((row) => !isTestOrArchivedAccount(row)).sort(sortAdAccountsForDisplay);
+  const testRows = data.rows.filter(isTestOrArchivedAccount).sort(sortAdAccountsForDisplay);
+  const visibleRows = showTestBindings ? [...realRows, ...testRows] : realRows;
+  const hiddenCount = showTestBindings ? 0 : testRows.length;
+  const explain = realRows.length > 0 ? ui.adAccountsRealExplain : hiddenCount > 0 ? ui.adAccountsHiddenExplain : ui.adAccountsNoRealExplain;
+
   return (
-    <div className="grid gap-3 xl:grid-cols-2">
-      {data.rows.map((row, index) => <AdAccountCard key={`${index}-${String(row.external_account_id ?? row.id ?? "account")}`} row={row} ui={ui} />)}
+    <div className="space-y-4">
+      <div className="rounded-lg border border-border/70 bg-muted/20 p-3 text-sm text-muted-foreground">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p>{explain}</p>
+            {hiddenCount > 0 ? <p className="mt-1 text-xs">{formatHiddenBindings(ui.hiddenTestBindings, hiddenCount)}</p> : null}
+          </div>
+          {testRows.length > 0 ? (
+            <Button type="button" size="sm" variant="secondary" className="h-8 shrink-0" onClick={() => setShowTestBindings((value) => !value)}>
+              {showTestBindings ? ui.hideTestBindings : ui.showTestBindings}
+            </Button>
+          ) : null}
+        </div>
+      </div>
+
+      {visibleRows.length === 0 ? <p className="text-sm text-muted-foreground">{ui.adAccountsNoRealExplain}</p> : null}
+      <div className="grid gap-3 xl:grid-cols-2">
+        {visibleRows.map((row, index) => <AdAccountCard key={`${index}-${String(row.external_account_id ?? row.id ?? "account")}`} row={row} ui={ui} />)}
+      </div>
     </div>
   );
 }
 
 function AdAccountCard({ row, ui }: { row: Row; ui: Copy }) {
-  const placeholder = isPlaceholderAccount(row);
+  const testOrArchived = isTestOrArchivedAccount(row);
+  const archived = isArchivedAccount(row);
   return (
     <article className={cn(
       "flex h-full flex-col rounded-lg border bg-card/60 p-4 text-sm",
-      placeholder ? "border-amber-200 dark:border-amber-900/60" : "border-border/70",
+      testOrArchived ? "border-amber-200 dark:border-amber-900/60" : "border-border/70",
     )}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{ui.columnLabels.platform}</p>
+          <p className="text-xs font-semibold text-muted-foreground">{ui.accountSection}</p>
+          <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{ui.columnLabels.platform}</p>
           <p className="mt-1 text-base font-semibold text-foreground">{formatValue(row.platform, ui)}</p>
         </div>
-        <StatusPill tone={placeholder ? "warning" : "success"}>{placeholder ? ui.testPlaceholder : ui.realAccount}</StatusPill>
+        <div className="flex flex-wrap justify-end gap-2">
+          <StatusPill tone={testOrArchived ? "warning" : "success"}>{testOrArchived ? ui.testPlaceholder : ui.realAccount}</StatusPill>
+          {archived ? <StatusPill tone="muted">{ui.archived}</StatusPill> : null}
+        </div>
       </div>
 
-      <div className="mt-4 rounded-md bg-muted/30 px-3 py-2">
+      <div className={cn(
+        "mt-4 rounded-md px-3 py-2",
+        testOrArchived ? "bg-amber-50 text-amber-950 dark:bg-amber-950/20 dark:text-amber-100" : "bg-muted/30",
+      )}>
         <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{ui.columnLabels.external_account_id}</p>
         <p className="mt-1 break-all font-mono text-sm text-foreground">{formatValue(row.external_account_id, ui)}</p>
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <div>
-          <p className="mb-2 text-xs font-semibold text-muted-foreground">{ui.bindingScope}</p>
+          <p className="mb-2 text-xs font-semibold text-muted-foreground">{ui.bindingSection}</p>
           <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
             <AccountField label={ui.columnLabels.client_name} value={row.client_name} ui={ui} />
             <AccountField label={ui.columnLabels.project_name} value={row.project_name} ui={ui} />
@@ -1269,17 +1317,17 @@ function AdAccountCard({ row, ui }: { row: Row; ui: Copy }) {
           </div>
         </div>
         <div>
-          <p className="mb-2 text-xs font-semibold text-muted-foreground">{ui.accountStatus}</p>
+          <p className="mb-2 text-xs font-semibold text-muted-foreground">{ui.statusSection}</p>
           <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-1">
             <AccountField label={ui.columnLabels.mapping_status} value={row.mapping_status} ui={ui} />
-            <AccountField label={ui.columnLabels.binding_status} value={row.binding_status} ui={ui} />
+            <AccountField label={ui.columnLabels.binding_status} value={archived ? ui.archived : row.binding_status} ui={ui} />
             <AccountField label={ui.columnLabels.confidence} value={row.confidence} ui={ui} />
           </div>
         </div>
       </div>
 
       <div className="mt-auto pt-4">
-        {placeholder ? <WarningNotice>{ui.testAccountNote}</WarningNotice> : <p className="text-xs text-muted-foreground">{ui.realAccountHelper}</p>}
+        {testOrArchived ? <WarningNotice>{ui.testAccountNote}</WarningNotice> : <p className="text-xs text-muted-foreground">{ui.realAccountHelper}</p>}
       </div>
     </article>
   );
@@ -1571,10 +1619,49 @@ function readLikelyStatus(row: Row | undefined): string | null {
 }
 
 function isPlaceholderAccount(row: Row) {
-  const values = [row.external_account_id, row.ad_account_name, row.source_name, row.platform]
+  return hasTestBindingMarker(row);
+}
+
+function isTestOrArchivedAccount(row: Row) {
+  return hasTestBindingMarker(row) || isArchivedAccount(row);
+}
+
+function isArchivedAccount(row: Row) {
+  return String(row.binding_status ?? row.status ?? "").toLowerCase() === "archived";
+}
+
+function hasTestBindingMarker(row: Row) {
+  const values = [
+    row.external_account_id,
+    row.ad_account_name,
+    row.source_name,
+    row.platform,
+    row.binding_status,
+    row.status,
+    row.binding_method,
+    row.mapping_status,
+  ]
     .filter((value) => value !== null && value !== undefined)
     .map((value) => String(value).toLowerCase());
-  return values.some((value) => value.includes("placeholder") || value.includes("test_") || value.includes("_test") || value.includes("northstar"));
+
+  return values.some((value) =>
+    value.includes("placeholder") ||
+    value.includes("mock") ||
+    value.includes("northstar") ||
+    value.includes("test") ||
+    value.includes("тестова прив"),
+  );
+}
+
+function sortAdAccountsForDisplay(a: Row, b: Row) {
+  const aActive = String(a.binding_status ?? "").toLowerCase() === "active" ? 0 : 1;
+  const bActive = String(b.binding_status ?? "").toLowerCase() === "active" ? 0 : 1;
+  if (aActive !== bActive) return aActive - bActive;
+  return String(a.platform ?? "").localeCompare(String(b.platform ?? ""));
+}
+
+function formatHiddenBindings(template: string, count: number) {
+  return template.replace("{count}", String(count));
 }
 
 function getPlatformConnectionState(platform: ConnectorKey, bindings: OptionalViewData | undefined, connections: OptionalViewData | undefined, ui: Copy, _lang: UiLang): PlatformConnectionState {
