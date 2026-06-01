@@ -21,6 +21,7 @@ type AlertsData = { telegramChats: OptionalViewData; telegramRoutes: OptionalVie
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 const SECURITY_NOTE = "Дії зі сповіщеннями перевіряються перед виконанням.";
+const DISPATCH_MAX_MESSAGES = 10;
 
 export default function Alerts() {
   const { session } = useAuth();
@@ -46,7 +47,9 @@ export default function Alerts() {
   const filteredActionRequestRows = useMemo(() => filterRows(query.data?.actionRequestsPending.rows ?? []), [query.data?.actionRequestsPending.rows]);
   const filteredAlertRows = useMemo(() => filterRows(query.data?.operationalAlertsRecent.rows ?? []), [query.data?.operationalAlertsRecent.rows]);
 
-  const firstOutbox = useMemo(() => filteredOutboxRows[0], [filteredOutboxRows]);
+  const queuedOutboxRows = useMemo(() => filteredOutboxRows.filter((row) => isOutboxStatus(row, "queued")), [filteredOutboxRows]);
+  const failedOutboxRows = useMemo(() => filteredOutboxRows.filter((row) => isOutboxStatus(row, "failed")), [filteredOutboxRows]);
+  const firstFailedOutbox = useMemo(() => failedOutboxRows[0], [failedOutboxRows]);
   const firstActionRequest = useMemo(() => filteredActionRequestRows[0], [filteredActionRequestRows]);
   const firstAlert = useMemo(() => filteredAlertRows[0], [filteredAlertRows]);
 
@@ -62,6 +65,50 @@ export default function Alerts() {
     setStatusMessage("Дію виконано."); toast({ title: "Готово", description: "Дію зі сповіщенням виконано." }); await refreshAlerts();
   };
 
+  const runDispatchQueue = async () => {
+    if (!session?.access_token) {
+      setStatusMessage("Потрібна активна сесія користувача для відправки черги.");
+      toast({ title: "Дію не виконано", description: "Потрібна активна сесія користувача.", variant: "destructive" });
+      return;
+    }
+
+    setPendingAction("dispatch-outbox");
+    setStatusMessage("");
+
+    try {
+      const { data, error } = await supabase.functions.invoke("telegram-dispatch", {
+        body: { workspace_id: WORKSPACE_ID, max_messages: DISPATCH_MAX_MESSAGES },
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+
+      if (error) {
+        const message = await getFunctionErrorMessage(error);
+        setStatusMessage(message);
+        toast({ title: "Чергу не відправлено", description: message, variant: "destructive" });
+        return;
+      }
+
+      const result = data as DispatchResult | null;
+      const message = formatDispatchResult(result);
+
+      if (result?.ok === false && !hasDispatchCounts(result)) {
+        setStatusMessage(message);
+        toast({ title: "Чергу не відправлено", description: message, variant: "destructive" });
+        return;
+      }
+
+      setStatusMessage(message);
+      toast({ title: "Чергу оброблено", description: message });
+      await refreshAlerts();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setStatusMessage(message);
+      toast({ title: "Чергу не відправлено", description: message, variant: "destructive" });
+    } finally {
+      setPendingAction("");
+    }
+  };
+
   return <DashboardLayout title="Telegram / Сповіщення" subtitle="Telegram-підтвердження, черга повідомлень і операційні сповіщення">
     <p className="mb-4 text-xs text-muted-foreground">{statusMessage}</p>{roleLoading ? <p className="mb-4 text-xs text-muted-foreground">Перевіряємо права доступу…</p> : null}{!roleLoading && !canManage ? <p className="mb-4 text-xs text-muted-foreground">У вас немає доступу до керування сповіщеннями Telegram.</p> : null}{!roleLoading && roleError ? <p className="mb-4 text-xs text-muted-foreground">Роль робочого простору тимчасово недоступна. Дії вимкнено з міркувань безпеки.</p> : null}
     {!session ? <SectionCard title="Telegram / Сповіщення" description="Authentication required"><p className="text-sm text-muted-foreground">Ви вийшли з системи. Увійдіть to access Telegram and operational alerts data.</p></SectionCard>
@@ -71,7 +118,7 @@ export default function Alerts() {
             <TabsContent value="overview"><SectionCard title="Огляд" description="High-level queue and health snapshot"><ul className="grid gap-2 text-sm md:grid-cols-2"><li>Telegram chats: <strong>{query.data?.telegramChats.rows.length ?? 0}</strong></li><li>Notification routes: <strong>{query.data?.telegramRoutes.rows.length ?? 0}</strong></li><li>Pending outbox messages: <strong>{query.data?.outboxPending.rows.length ?? 0}</strong></li><li>Pending action requests: <strong>{query.data?.actionRequestsPending.rows.length ?? 0}</strong></li><li>Recent operational alerts: <strong>{query.data?.operationalAlertsRecent.rows.length ?? 0}</strong></li><li>Telegram status: <strong>{query.data?.telegramChats.rows.length ? "Connected group(s) detected" : "No connected Telegram groups detected"}</strong></li></ul></SectionCard></TabsContent>
             <TabsContent value="chats"><SectionCard title="Telegram-чати" description="Connected chats"><KnownColumnsTable rows={filterRows(query.data?.telegramChats.rows ?? [])} columns={["chat_title", "chat_name", "title", "name", "chat_type", "type", "chat_id", "status", "created_at", "updated_at"]} emptyText="No Telegram chats found." /><UnavailableHint data={query.data?.telegramChats} /></SectionCard></TabsContent>
             <TabsContent value="routes"><SectionCard title="Маршрути сповіщень" description="Notification destinations"><KnownColumnsTable rows={filterRows(query.data?.telegramRoutes.rows ?? [])} columns={["route_name", "route_type", "route", "destination_chat", "destination_chat_id", "chat_id", "event_type", "enabled", "status"]} emptyText="No notification routes found." /><UnavailableHint data={query.data?.telegramRoutes} /></SectionCard></TabsContent>
-            <TabsContent value="outbox"><SectionCard title="Черга повідомлень" description="Messages waiting to send"><KnownColumnsTable rows={filteredOutboxRows} columns={["message_type", "status", "destination_chat", "destination_chat_id", "chat_id", "created_at", "error", "error_message"]} emptyText="No pending outbox messages found." /><div className="mt-4 rounded-md border border-dashed border-border/70 bg-muted/30 p-3"><div className="flex flex-wrap gap-2"><Button type="button" variant="outline" disabled={!session || !canManage || !getOutboxMessageId(firstOutbox) || pendingAction === "retry-outbox"} onClick={() => { const outboxId = getOutboxMessageId(firstOutbox); if (!outboxId) return setStatusMessage("Missing outbox_message_id on the selected row."); void runAction("retry-outbox", () => supabase.functions.invoke("telegram-outbox-retry", { body: { workspace_id: WORKSPACE_ID, outbox_message_id: outboxId } })); }}>{pendingAction === "retry-outbox" ? "Retrying…" : "Повторити відправку"}</Button></div></div><UnavailableHint data={query.data?.outboxPending} /></SectionCard></TabsContent>
+            <TabsContent value="outbox"><SectionCard title="Черга повідомлень" description="Messages waiting to send"><KnownColumnsTable rows={filteredOutboxRows} columns={["message_type", "status", "destination_chat", "destination_chat_id", "chat_id", "created_at", "error", "error_message"]} emptyText="No pending outbox messages found." /><div className="mt-4 rounded-md border border-dashed border-border/70 bg-muted/30 p-3"><div className="flex flex-wrap gap-2"><Button type="button" disabled={!session || !canManage || queuedOutboxRows.length === 0 || pendingAction !== ""} onClick={() => { void runDispatchQueue(); }}>{pendingAction === "dispatch-outbox" ? "Відправляємо…" : "Відправити чергу"}</Button>{failedOutboxRows.length > 0 ? <Button type="button" variant="outline" disabled={!session || !canManage || !getOutboxMessageId(firstFailedOutbox) || pendingAction !== ""} onClick={() => { const outboxId = getOutboxMessageId(firstFailedOutbox); if (!outboxId) return setStatusMessage("Missing outbox_message_id on the selected failed row."); void runAction("retry-outbox", () => supabase.functions.invoke("telegram-outbox-retry", { body: { workspace_id: WORKSPACE_ID, outbox_message_id: outboxId } })); }}>{pendingAction === "retry-outbox" ? "Retrying…" : "Повторити відправку"}</Button> : null}</div></div><UnavailableHint data={query.data?.outboxPending} /></SectionCard></TabsContent>
             <TabsContent value="action-requests"><SectionCard title="Запити на підтвердження" description="Requests pending review"><KnownColumnsTable rows={filteredActionRequestRows} columns={["action_type", "status", "requested_by", "requested_by_user", "created_at", "related_object", "related_object_id", "object_type"]} emptyText="No pending action requests found." /><div className="mt-4 rounded-md border border-dashed border-border/70 bg-muted/30 p-3"><div className="flex flex-wrap gap-2"><Button type="button" disabled={!session || !firstActionRequest || pendingAction === "open-action-request"} onClick={() => {
               if (!firstActionRequest) return setStatusMessage("No action request row available to open.");
               setPendingAction("open-action-request");
@@ -85,6 +132,13 @@ export default function Alerts() {
           </Tabs>}
   </DashboardLayout>;
 }
+type DispatchResult = { ok?: boolean; error?: string; details?: string; sent_count?: number; failed_count?: number; messages_seen?: number };
+type FunctionInvokeError = { message: string; context?: unknown };
+const isOutboxStatus = (row: Row, status: string) => String(row.status ?? "").toLowerCase() === status;
+const hasDispatchCounts = (result: DispatchResult) => typeof result.sent_count === "number" || typeof result.failed_count === "number";
+function formatDispatchResult(result: DispatchResult | null) { if (!result) return "Чергу оброблено."; const counts = hasDispatchCounts(result); if (counts) return `Чергу оброблено. Надіслано: ${result.sent_count ?? 0}, помилок: ${result.failed_count ?? 0}.`; if (result.error || result.details) return [result.error, result.details].filter(Boolean).join(" "); return "Чергу оброблено."; }
+async function getFunctionErrorMessage(error: FunctionInvokeError) { const details = await readFunctionErrorDetails(error.context); return details ? `${error.message}: ${details}` : error.message; }
+async function readFunctionErrorDetails(context: unknown) { if (!(context instanceof Response)) return ""; try { const payload = await context.clone().json() as { error?: unknown; details?: unknown; message?: unknown; reason?: unknown }; return [payload.error, payload.details, payload.message, payload.reason].filter((value) => value !== undefined && value !== null && value !== "").map(String).join(" "); } catch { try { return await context.clone().text(); } catch { return ""; } } }
 const getOutboxMessageId = (row: Row | undefined) => String(row?.outbox_message_id ?? row?.id ?? row?.message_id ?? "");
 const getAlertId = (row: Row | undefined) => String(row?.alert_id ?? row?.id ?? "");
 function UnavailableHint({ data }: { data: OptionalViewData | undefined }) { if (!data?.unavailableReason) return null; return <p className="mt-2 text-xs text-muted-foreground">Цей розділ поки недоступний.</p>; }
