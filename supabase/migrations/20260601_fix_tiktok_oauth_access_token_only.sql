@@ -28,21 +28,19 @@ create or replace function public.complete_tiktok_ads_oauth_connection(
   p_token_metadata jsonb default '{}'::jsonb
 )
 returns table (
-  ad_platform_connection_id uuid,
   workspace_id uuid,
-  platform text,
-  status text,
-  vault_secret_name text
+  ad_platform_connection_id uuid,
+  vault_secret_name text,
+  provider_account_email text,
+  advertiser_id text,
+  advertiser_name text
 )
 language plpgsql
 security definer
 set search_path = public, extensions
 as $$
 declare
-  v_state_table regclass;
-  v_state_row jsonb;
-  v_workspace_id uuid;
-  v_actor_user_id uuid;
+  v_state public.ad_oauth_states%rowtype;
   v_connection_id uuid;
   v_vault_secret_name text;
   v_vault_payload jsonb;
@@ -50,10 +48,6 @@ declare
   v_has_refresh_token boolean;
   v_token_mode text;
   v_connection_metadata jsonb;
-  v_state_table_text text;
-  v_state_provider text;
-  v_state_expires_at timestamptz;
-  v_state_used_at timestamptz;
 begin
   if nullif(trim(coalesce(p_state_token, '')), '') is null then
     raise exception 'state_token is required' using errcode = '22023';
@@ -63,6 +57,31 @@ begin
     raise exception 'TikTok access token is required' using errcode = '22023';
   end if;
 
+  select *
+    into v_state
+  from public.ad_oauth_states
+  where state_token = p_state_token
+    and platform = 'tiktok_ads'
+  limit 1;
+
+  if not found then
+    raise exception 'OAuth state was not found' using errcode = 'P0002';
+  end if;
+
+  if v_state.status <> 'pending' then
+    raise exception 'OAuth state is not pending' using errcode = '42501';
+  end if;
+
+  if v_state.expires_at <= now() then
+    update public.ad_oauth_states
+      set status = 'expired'
+    where state_token = p_state_token
+      and platform = 'tiktok_ads'
+      and status = 'pending';
+
+    raise exception 'OAuth state expired' using errcode = '42501';
+  end if;
+
   v_refresh_token := nullif(trim(coalesce(p_refresh_token, '')), '');
   v_has_refresh_token := v_refresh_token is not null;
   v_token_mode := case
@@ -70,90 +89,11 @@ begin
     else 'access_token_only'
   end;
 
-  select to_regclass(c.table_name)
-    into v_state_table
-  from (
-    values
-      ('public.oauth_states'),
-      ('public.ad_oauth_states'),
-      ('public.ad_platform_oauth_states'),
-      ('public.oauth_state_tokens'),
-      ('public.ad_connection_oauth_states')
-  ) as c(table_name)
-  where to_regclass(c.table_name) is not null
-    and exists (
-      select 1
-      from information_schema.columns
-      where table_schema = 'public'
-        and table_name = split_part(c.table_name, '.', 2)
-        and column_name = 'state_token'
-    )
-  limit 1;
-
-  if v_state_table is null then
-    raise exception 'OAuth state table was not found' using errcode = '42P01';
-  end if;
-
-  v_state_table_text := v_state_table::text;
-
-  execute format(
-    'select to_jsonb(s) from %s s where s.state_token = $1 order by coalesce((to_jsonb(s)->>''created_at'')::timestamptz, now()) desc limit 1',
-    v_state_table_text
-  )
-    into v_state_row
-    using p_state_token;
-
-  if v_state_row is null then
-    raise exception 'OAuth state was not found' using errcode = 'P0002';
-  end if;
-
-  v_state_provider := lower(coalesce(
-    v_state_row->>'platform',
-    v_state_row->>'provider',
-    v_state_row->>'connector',
-    'tiktok_ads'
-  ));
-
-  if v_state_provider not in ('tiktok_ads', 'tiktok', 'tiktok ads') then
-    raise exception 'OAuth state does not belong to TikTok Ads' using errcode = '42501';
-  end if;
-
-  v_workspace_id := nullif(v_state_row->>'workspace_id', '')::uuid;
-  if v_workspace_id is null then
-    raise exception 'OAuth state is missing workspace_id' using errcode = '22023';
-  end if;
-
-  v_actor_user_id := nullif(coalesce(
-    v_state_row->>'actor_user_id',
-    v_state_row->>'created_by',
-    v_state_row->>'created_by_user_id',
-    v_state_row->>'user_id'
-  ), '')::uuid;
-
-  v_state_expires_at := nullif(coalesce(
-    v_state_row->>'expires_at',
-    v_state_row->>'expires_at_utc'
-  ), '')::timestamptz;
-
-  if v_state_expires_at is not null and v_state_expires_at < now() then
-    raise exception 'OAuth state expired' using errcode = '42501';
-  end if;
-
-  v_state_used_at := nullif(coalesce(
-    v_state_row->>'used_at',
-    v_state_row->>'consumed_at',
-    v_state_row->>'completed_at'
-  ), '')::timestamptz;
-
-  if v_state_used_at is not null then
-    raise exception 'OAuth state has already been used' using errcode = '42501';
-  end if;
-
-  v_vault_secret_name := 'tiktok_ads_oauth_' || replace(v_workspace_id::text, '-', '_') || '_' || substr(md5(p_state_token), 1, 12);
+  v_vault_secret_name := 'tiktok_ads_oauth_' || replace(v_state.workspace_id::text, '-', '_') || '_' || substr(md5(p_state_token), 1, 12);
 
   v_vault_payload := jsonb_build_object(
     'provider', 'tiktok_ads',
-    'workspace_id', v_workspace_id,
+    'workspace_id', v_state.workspace_id,
     'provider_account_id', p_provider_account_id,
     'provider_account_email', p_provider_account_email,
     'advertiser_id', p_advertiser_id,
@@ -174,7 +114,7 @@ begin
   perform vault.create_secret(
     v_vault_payload::text,
     v_vault_secret_name,
-    'TikTok Ads OAuth token payload for workspace ' || v_workspace_id::text
+    'TikTok Ads OAuth token payload for workspace ' || v_state.workspace_id::text
   );
 
   v_connection_metadata := coalesce(p_token_metadata, '{}'::jsonb) || jsonb_build_object(
@@ -188,7 +128,7 @@ begin
   select c.id
     into v_connection_id
   from public.ad_platform_connections c
-  where c.workspace_id = v_workspace_id
+  where c.workspace_id = v_state.workspace_id
     and lower(c.platform::text) = 'tiktok_ads'
     and lower(coalesce(c.status::text, '')) = 'active'
   order by c.last_connected_at desc nulls last
@@ -210,7 +150,7 @@ begin
       last_connected_at,
       metadata
     ) values (
-      v_workspace_id,
+      v_state.workspace_id,
       'tiktok_ads',
       coalesce(p_advertiser_name, p_advertiser_id, p_provider_account_id, 'TikTok Ads'),
       'active',
@@ -242,25 +182,12 @@ begin
     where id = v_connection_id;
   end if;
 
-  if exists (
-    select 1
-    from information_schema.columns
-    where table_schema = 'public'
-      and table_name = split_part(v_state_table_text, '.', 2)
-      and column_name = 'used_at'
-  ) then
-    execute format('update %s set used_at = now() where state_token = $1', v_state_table_text)
-      using p_state_token;
-  elsif exists (
-    select 1
-    from information_schema.columns
-    where table_schema = 'public'
-      and table_name = split_part(v_state_table_text, '.', 2)
-      and column_name = 'consumed_at'
-  ) then
-    execute format('update %s set consumed_at = now() where state_token = $1', v_state_table_text)
-      using p_state_token;
-  end if;
+  update public.ad_oauth_states
+    set status = 'consumed',
+        consumed_at = now()
+  where state_token = p_state_token
+    and platform = 'tiktok_ads'
+    and status = 'pending';
 
   insert into public.audit_logs (
     workspace_id,
@@ -272,8 +199,8 @@ begin
     severity,
     metadata
   ) values (
-    v_workspace_id,
-    v_actor_user_id,
+    v_state.workspace_id,
+    null,
     null,
     'tiktok_ads_oauth_connection_completed',
     'ad_platform_connection',
@@ -293,11 +220,12 @@ begin
 
   return query
   select
-    c.id as ad_platform_connection_id,
     c.workspace_id,
-    c.platform::text,
-    c.status::text,
-    c.vault_secret_name::text
+    c.id as ad_platform_connection_id,
+    c.vault_secret_name::text,
+    c.provider_account_email::text,
+    c.provider_business_id::text as advertiser_id,
+    c.provider_business_name::text as advertiser_name
   from public.ad_platform_connections c
   where c.id = v_connection_id;
 end;
