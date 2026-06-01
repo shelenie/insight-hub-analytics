@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createDateChunks, type DateChunk } from "./dateChunks.ts";
 
 type RequestBody = {
   workspace_id?: string;
@@ -86,6 +87,7 @@ type TokenAuditMetadata = {
 const FUNCTION_NAME = "tiktok-ads-sync";
 const TIKTOK_RECONNECT_MESSAGE =
   "TikTok access token expired. Reconnect TikTok Ads.";
+const TIKTOK_REPORT_MAX_DAYS_PER_CHUNK = 30;
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -93,6 +95,26 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-backend-test-secret, x-test-actor-email",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+class TikTokReportChunkError extends Error {
+  chunk: DateChunk;
+  originalError: unknown;
+
+  constructor(chunk: DateChunk, originalError: unknown) {
+    const originalMessage =
+      originalError instanceof Error
+        ? originalError.message
+        : String(originalError);
+    super(
+      `TikTok report chunk failed for ${chunk.dateFrom} to ${chunk.dateTo}: ${sanitizeTokenText(
+        originalMessage,
+      )}`,
+    );
+    this.name = "TikTokReportChunkError";
+    this.chunk = chunk;
+    this.originalError = originalError;
+  }
+}
 
 class TikTokApiError extends Error {
   status: number;
@@ -114,6 +136,20 @@ function jsonResponse(status: number, body: Record<string, unknown>) {
       "Content-Type": "application/json",
     },
   });
+}
+
+function sanitizeTokenText(value: string): string {
+  return value
+    .replace(/(access[_-]?token=)[^&\s]+/gi, "$1[redacted]")
+    .replace(/(refresh[_-]?token=)[^&\s]+/gi, "$1[redacted]")
+    .replace(
+      /(access[_-]?token["']?\s*[:=]\s*["']?)[^"'&,}\s]+/gi,
+      "$1[redacted]",
+    )
+    .replace(
+      /(refresh[_-]?token["']?\s*[:=]\s*["']?)[^"'&,}\s]+/gi,
+      "$1[redacted]",
+    );
 }
 
 function requiredEnv(name: string): string {
@@ -265,6 +301,10 @@ function buildTokenAuditMetadata(params: {
 }
 
 function isTikTokUnauthorizedError(error: unknown) {
+  if (error instanceof TikTokReportChunkError) {
+    return isTikTokUnauthorizedError(error.originalError);
+  }
+
   if (error instanceof TikTokApiError) {
     const code = String(error.tiktokCode ?? "").toLowerCase();
     return (
@@ -293,7 +333,8 @@ function messageForTikTokError(
     return TIKTOK_RECONNECT_MESSAGE;
   }
 
-  return error instanceof Error ? error.message : String(error);
+  const message = error instanceof Error ? error.message : String(error);
+  return sanitizeTokenText(message);
 }
 
 async function writeAuditLog(params: {
@@ -660,7 +701,7 @@ function normalizeReportRow(params: {
   };
 }
 
-async function fetchTikTokIntegratedReport(params: {
+async function fetchTikTokIntegratedReportChunk(params: {
   apiVersion: string;
   accessToken: string;
   advertiserId: string;
@@ -704,6 +745,43 @@ async function fetchTikTokIntegratedReport(params: {
   const rows = data?.data?.list ?? [];
 
   return Array.isArray(rows) ? rows : [];
+}
+
+async function fetchTikTokIntegratedReport(params: {
+  apiVersion: string;
+  accessToken: string;
+  advertiserId: string;
+  chunks: DateChunk[];
+  level: "campaign" | "adgroup" | "ad";
+}) {
+  const rows: unknown[] = [];
+
+  for (const chunk of params.chunks) {
+    try {
+      const chunkRows = await fetchTikTokIntegratedReportChunk({
+        apiVersion: params.apiVersion,
+        accessToken: params.accessToken,
+        advertiserId: params.advertiserId,
+        dateFrom: chunk.dateFrom,
+        dateTo: chunk.dateTo,
+        level: params.level,
+      });
+
+      rows.push(...chunkRows);
+    } catch (error) {
+      console.error("TikTok report chunk failed", {
+        advertiser_id: params.advertiserId,
+        date_from: chunk.dateFrom,
+        date_to: chunk.dateTo,
+        error: error instanceof Error
+          ? sanitizeTokenText(error.message)
+          : sanitizeTokenText(String(error)),
+      });
+      throw new TikTokReportChunkError(chunk, error);
+    }
+  }
+
+  return rows;
 }
 
 async function runMockSync(params: {
@@ -978,6 +1056,27 @@ Deno.serve(async (req: Request) => {
   const syncMode = body.sync_mode ?? "manual";
   const fetchAdvertisers = body.fetch_advertisers ?? true;
   const fetchMetrics = body.fetch_metrics ?? true;
+  let reportDateChunks: DateChunk[];
+
+  try {
+    reportDateChunks = createDateChunks(
+      dateFrom,
+      dateTo,
+      TIKTOK_REPORT_MAX_DAYS_PER_CHUNK,
+    );
+  } catch (error) {
+    return jsonResponse(400, {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+  const chunkingMetadata = {
+    chunking_enabled: true,
+    chunks_count: reportDateChunks.length,
+    chunk_max_days: TIKTOK_REPORT_MAX_DAYS_PER_CHUNK,
+    requested_date_from: dateFrom,
+    requested_date_to: dateTo,
+  };
 
   const supabaseUrl = requiredEnv("SUPABASE_URL");
   const supabaseAnonKey = requiredEnv("SUPABASE_ANON_KEY");
@@ -1371,6 +1470,7 @@ Deno.serve(async (req: Request) => {
             external_account_id: account.external_account_id,
             level,
             api_version: tiktokApiVersion,
+            ...chunkingMetadata,
             ...tokenAuditMetadata,
           },
         },
@@ -1383,14 +1483,13 @@ Deno.serve(async (req: Request) => {
           apiVersion: tiktokApiVersion,
           accessToken,
           advertiserId,
-          dateFrom,
-          dateTo,
+          chunks: reportDateChunks,
           level,
         });
 
         const normalizedRows = reportRows.map((row) =>
           normalizeReportRow({
-            row,
+            row: asRecord(row),
             account,
             level,
           }),
@@ -1420,6 +1519,7 @@ Deno.serve(async (req: Request) => {
             level,
             date_from: dateFrom,
             date_to: dateTo,
+            ...chunkingMetadata,
             ...tokenAuditMetadata,
           },
         });
@@ -1431,6 +1531,7 @@ Deno.serve(async (req: Request) => {
           sync_run_log_id: syncRunId,
           rows_received: reportRows.length,
           rows_inserted: insertedRows ?? 0,
+          ...chunkingMetadata,
         });
       } catch (error) {
         const accountTokenAuditMetadata = {
@@ -1458,6 +1559,13 @@ Deno.serve(async (req: Request) => {
             level,
             date_from: dateFrom,
             date_to: dateTo,
+            ...chunkingMetadata,
+            ...(error instanceof TikTokReportChunkError
+              ? {
+                  failed_chunk_date_from: error.chunk.dateFrom,
+                  failed_chunk_date_to: error.chunk.dateTo,
+                }
+              : {}),
             ...accountTokenAuditMetadata,
           },
         });
@@ -1468,6 +1576,13 @@ Deno.serve(async (req: Request) => {
           status: "failed",
           sync_run_log_id: syncRunId,
           error: message,
+          ...chunkingMetadata,
+          ...(error instanceof TikTokReportChunkError
+            ? {
+                failed_chunk_date_from: error.chunk.dateFrom,
+                failed_chunk_date_to: error.chunk.dateTo,
+              }
+            : {}),
           reconnect_required:
             accountTokenAuditMetadata.reconnect_required ?? false,
         });
@@ -1506,6 +1621,7 @@ Deno.serve(async (req: Request) => {
         date_from: dateFrom,
         date_to: dateTo,
         level,
+        ...chunkingMetadata,
       },
     });
 
@@ -1523,6 +1639,7 @@ Deno.serve(async (req: Request) => {
       date_from: dateFrom,
       date_to: dateTo,
       level,
+      ...chunkingMetadata,
       advertisers_upserted: accountResults.length,
       account_results: accountResults,
       sync_results: syncResults,
