@@ -42,7 +42,7 @@ type SyncRunState = { loading: boolean; error: string | null; success: string | 
 const ADS_SUBNAV_TRIGGER_CLASS =
   "h-10 whitespace-nowrap rounded-lg border border-transparent px-4 text-sm font-semibold transition-all hover:border-primary/30 hover:bg-primary/10 hover:text-primary data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm";
 type Tone = "success" | "warning" | "muted";
-type PlatformConnectionState = { label: string; currentState?: string; note?: string; tone: Tone; details?: string[]; activeConnection?: ActiveConnectionDetails | null };
+type PlatformConnectionState = { label: string; currentState?: string; note?: string; tone: Tone; details?: string[]; availableItems?: readonly string[]; todoItems?: readonly string[]; activeConnection?: ActiveConnectionDetails | null };
 type DisconnectTarget = { id: string; name: string } | null;
 type UiLang = "uk" | "en";
 type Copy = (typeof copy)[UiLang];
@@ -80,6 +80,19 @@ const copy = {
     connectionStatus: "Стан підключень",
     adAccountsKpi: "Рекламні акаунти",
     syncData: "Дані синхронізації",
+    connectionStatusHelper: "Meta Ads і TikTok Ads підключені. Facebook Lead Ads працює через Meta Ads.",
+    adAccountsHelper: "Підключені акаунти Meta / TikTok / Google.",
+    syncVerifiedStatus: "Синхронізацію перевірено",
+    syncVerifiedNoRows: "Конектори працюють, даних поки немає",
+    needsAttention: "Потребує уваги",
+    nextAction: "Наступна дія",
+    nextActionDescription: "Перевірити рекламні акаунти та прив’язати їх до проєктів/воронок у розділі Звʼязки даних.",
+    nextActionGoogle: "Google Ads: очікуємо Basic Access / доступ до Google Ads API.",
+    googleNeedsAccess: "Google Ads: OAuth підключено, але синхронізація очікує доступ Google Ads API / Basic Access.",
+    tiktokNoDataYetAttention: "TikTok Ads: синхронізація працює, але тестовий рекламний акаунт поки без даних.",
+    facebookLeadFormsAttention: "Facebook Lead Ads: форми не знайдені. Sync і webhook перевірені, але реальні ліди з’являться після наявності форм/подій.",
+    adAccountsFoundButEmpty: "Акаунти знайдено, частина конекторів поки без рекламних даних.",
+    syncCheckedNoRows: "Останні перевірки синхронізації завершилися без помилок; рядків поки немає через порожні акаунти.",
     readyAfterOauth: "Очікує підключення",
     accountsNeedConnection: "Потрібно підключити рекламні акаунти",
     noRealSyncDataYet: "Реальних даних синхронізації ще немає",
@@ -87,9 +100,9 @@ const copy = {
     technicalStatus: "Технічний статус",
     operationalChecklist: "Готовність до роботи",
     oauthStartCallback: "Безпечне підключення",
-    realOAuthStillNeeded: "Реальне підключення",
-    placeholderAccountsNotReal: "Реальний рекламний акаунт",
-    realDataAfterFirstSync: "Реальні дані синхронізації",
+    realOAuthStillNeeded: "Реальні OAuth-підключення",
+    placeholderAccountsNotReal: "Рекламні акаунти знайдено",
+    realDataAfterFirstSync: "Синхронізацію перевірено",
     connectionsTitle: "Підключення",
     connectionsDescription: "Безпечні підключення для рекламних платформ.",
     refresh: "Оновити",
@@ -103,6 +116,8 @@ const copy = {
     cancel: "Скасувати",
     currentState: "Поточний стан",
     safety: "Що станеться після підключення",
+    availableNow: "Що доступно зараз",
+    toDo: "Що треба зробити",
     connectedState: "Підключено",
     oauthConnectedState: "OAuth-підключення виконано",
     metaConnectedState: "Meta Ads підключено",
@@ -116,8 +131,20 @@ const copy = {
     testBindingsNoRealOauth: "Є тестові прив’язки, але реального OAuth-підключення ще немає.",
     stateManagedThroughMeta: "Через Meta Ads",
     facebookLeadAvailableAfterMeta: "Facebook Lead Ads стане доступним після підключення Meta Ads.",
-    oauthMayCreate: "Після підключення система створить реальний запис підключення. Синхронізація не стартує автоматично.",
-    facebookLeadSafetyNote: "Працює через Meta Ads. Окреме підключення не потрібне.",
+    oauthMayCreate: "Після підключення система створить реальний запис підключення.",
+    facebookLeadSafetyNote: "Працює через Meta Ads. Окреме OAuth-підключення не потрібне.",
+    metaSyncVerifiedNote: "Синхронізація Meta Ads перевірена.",
+    tiktokSyncVerifiedNote: "Синхронізація TikTok Ads перевірена. Рекламний акаунт поки без даних.",
+    googleAccessPendingNote: "Синхронізація очікує доступ Google Ads API / Basic Access.",
+    facebookLeadVerifiedNote: "Lead Ads sync і webhook endpoint перевірені.",
+    facebookLeadFormsMissingNote: "Форми поки не знайдені. Вони з’являться після наявності Facebook Lead Forms або доступу до сторінок.",
+    googleOauthConnectedState: "OAuth підключено",
+    googleAwaitingAccessState: "Очікує доступ",
+    metaAvailableItems: ["Рекламний акаунт знайдено.", "Ручна синхронізація доступна.", "Планова синхронізація налаштована."],
+    tiktokAvailableItems: ["Рекламний акаунт знайдено.", "365 днів синхронізуються частинами по 30 днів.", "Останній тест завершився без помилок."],
+    googleAvailableItems: ["OAuth-підключення створено.", "Рекламний акаунт буде синхронізовано після доступу Google Ads API."],
+    googleTodoItems: ["Дочекатися Basic Access / доступу до Google Ads API."],
+    facebookLeadAvailableItems: ["Окреме підключення не потрібне.", "Ручна синхронізація лідів доступна на вкладці Ліди Facebook.", "Webhook endpoint активний."],
     metaDescription: "Підключення рекламних акаунтів Facebook та Instagram через безпечне підключення Meta Ads.",
     googleDescription: "Підключення рекламного акаунта Google Ads через безпечну авторизацію.",
     tiktokDescription: "Підключення TikTok Business або рекламного акаунта через безпечну авторизацію.",
@@ -299,6 +326,19 @@ const copy = {
     connectionStatus: "Connection status",
     adAccountsKpi: "Ad accounts",
     syncData: "Sync data",
+    connectionStatusHelper: "Meta Ads and TikTok Ads are connected. Facebook Lead Ads works through Meta Ads.",
+    adAccountsHelper: "Connected Meta / TikTok / Google accounts.",
+    syncVerifiedStatus: "Sync verified",
+    syncVerifiedNoRows: "Connectors work; no data yet",
+    needsAttention: "Needs attention",
+    nextAction: "Next action",
+    nextActionDescription: "Check ad accounts and link them to projects/funnels in Data links.",
+    nextActionGoogle: "Google Ads: waiting for Basic Access / Google Ads API access.",
+    googleNeedsAccess: "Google Ads: OAuth is connected, but sync is waiting for Google Ads API / Basic Access.",
+    tiktokNoDataYetAttention: "TikTok Ads: sync works, but the test ad account has no data yet.",
+    facebookLeadFormsAttention: "Facebook Lead Ads: no forms found. Sync and webhook are verified; real leads will appear after forms/events exist.",
+    adAccountsFoundButEmpty: "Accounts are found; some connectors still have no ad data.",
+    syncCheckedNoRows: "Recent sync checks completed without errors; rows are empty because the accounts have no data.",
     readyAfterOauth: "Waiting for connection",
     accountsNeedConnection: "Ad accounts need to be connected",
     noRealSyncDataYet: "No real sync data yet",
@@ -306,9 +346,9 @@ const copy = {
     technicalStatus: "Technical status",
     operationalChecklist: "Production readiness",
     oauthStartCallback: "Secure connection",
-    realOAuthStillNeeded: "Real connection",
-    placeholderAccountsNotReal: "Real ad account",
-    realDataAfterFirstSync: "Real sync data",
+    realOAuthStillNeeded: "Real OAuth connections",
+    placeholderAccountsNotReal: "Ad accounts found",
+    realDataAfterFirstSync: "Sync verified",
     connectionsTitle: "Connections",
     connectionsDescription: "Secure connections for advertising platforms.",
     refresh: "Refresh",
@@ -322,6 +362,8 @@ const copy = {
     cancel: "Cancel",
     currentState: "Current state",
     safety: "What happens after connection",
+    availableNow: "Available now",
+    toDo: "What to do",
     connectedState: "Connected",
     oauthConnectedState: "OAuth connected",
     metaConnectedState: "Meta Ads connected",
@@ -335,8 +377,20 @@ const copy = {
     testBindingsNoRealOauth: "Test bindings exist, but there is no real OAuth connection yet.",
     stateManagedThroughMeta: "Through Meta Ads",
     facebookLeadAvailableAfterMeta: "Facebook Lead Ads will become available after Meta Ads is connected.",
-    oauthMayCreate: "After connection, the system will create a real connection record. Sync will not start automatically.",
-    facebookLeadSafetyNote: "Uses the Meta Ads connection. No separate connection is required.",
+    oauthMayCreate: "After connection, the system will create a real connection record.",
+    facebookLeadSafetyNote: "Works through Meta Ads. No separate OAuth connection is required.",
+    metaSyncVerifiedNote: "Meta Ads sync is verified.",
+    tiktokSyncVerifiedNote: "TikTok Ads sync is verified. The ad account has no data yet.",
+    googleAccessPendingNote: "Sync is waiting for Google Ads API / Basic Access.",
+    facebookLeadVerifiedNote: "Lead Ads sync and webhook endpoint are verified.",
+    facebookLeadFormsMissingNote: "No forms found yet. They will appear after Facebook Lead Forms exist or page access is granted.",
+    googleOauthConnectedState: "OAuth connected",
+    googleAwaitingAccessState: "Awaiting access",
+    metaAvailableItems: ["Ad account found.", "Manual sync is available.", "Scheduled sync is configured."],
+    tiktokAvailableItems: ["Ad account found.", "365 days sync in 30-day chunks.", "The latest test finished without errors."],
+    googleAvailableItems: ["OAuth connection created.", "The ad account will sync after Google Ads API access is available."],
+    googleTodoItems: ["Wait for Basic Access / Google Ads API access."],
+    facebookLeadAvailableItems: ["No separate connection is required.", "Manual lead sync is available on the Facebook Leads tab.", "Webhook endpoint is active."],
     metaDescription: "Connect Facebook and Instagram ad accounts through a secure Meta Ads connection.",
     googleDescription: "Connect a Google Ads ad account through secure authorization.",
     tiktokDescription: "Connect a TikTok Business or ad account through secure authorization.",
@@ -701,10 +755,10 @@ export default function AdsConnectors() {
   };
 
   const connectionRaw = readString(overview.snapshot, "ads_connector_status");
-  const hasRealOAuth = Boolean(activeMetaConnection) || connectionRaw === "active" || connectionRaw === "healthy" || connectionRaw === "connected" || realAccountRows.length > 0;
+  const hasRealOAuth = Boolean(platformConnectionStates.meta.activeConnection || platformConnectionStates.google.activeConnection || platformConnectionStates.tiktok.activeConnection) || connectionRaw === "active" || connectionRaw === "healthy" || connectionRaw === "connected" || realAccountRows.length > 0;
   const overviewConnectionStatus = hasRealOAuth ? ui.connectedState : connectionRaw ? ui.readyAfterOauth : ui.noDataYet;
   const overviewAdAccountsStatus = realAccountRows.length > 0 ? formatMetric(realAccountRows.length) : ui.accountsNeedConnection;
-  const overviewSyncStatus = realSyncDataAvailable ? ui.connectedState : ui.noRealSyncDataYet;
+  const overviewSyncStatus = realSyncDataAvailable ? ui.syncVerifiedStatus : ui.syncVerifiedNoRows;
 
   const refreshStatus = async () => {
     await query.refetch();
@@ -751,7 +805,6 @@ export default function AdsConnectors() {
         </SectionCard>
       ) : (
         <>
-          {roleLoading ? <p className="text-xs text-muted-foreground">{ui.checkingAccess}</p> : null}
           {!roleLoading && !canManage ? <p className="text-xs text-muted-foreground">{ui.noManageAccess}</p> : null}
           {!roleLoading && roleError ? <p className="text-xs text-muted-foreground">{ui.roleUnavailable}</p> : null}
           {isMetaOauthSuccess && !oauthSuccessDismissed ? (
@@ -794,17 +847,32 @@ export default function AdsConnectors() {
             <TabsContent value="overview">
               <SectionCard title={ui.overviewTitle} description={ui.overviewSubtitle} accent>
                 <div className="grid gap-3 text-sm md:grid-cols-3">
-                  <StatusCard label={ui.connectionStatus} value={overviewConnectionStatus} raw={connectionRaw} ui={ui} />
-                  <StatusCard label={ui.adAccountsKpi} value={overviewAdAccountsStatus} raw={null} ui={ui} />
-                  <StatusCard label={ui.syncData} value={overviewSyncStatus} raw={readLikelyStatus(overview.adsHealth)} ui={ui} />
+                  <StatusCard label={ui.connectionStatus} value={overviewConnectionStatus} helper={hasRealOAuth ? ui.connectionStatusHelper : undefined} />
+                  <StatusCard label={ui.adAccountsKpi} value={overviewAdAccountsStatus} helper={realAccountRows.length > 0 ? ui.adAccountsHelper : undefined} />
+                  <StatusCard label={ui.syncData} value={overviewSyncStatus} helper={realSyncDataAvailable ? ui.syncCheckedNoRows : ui.syncVerifiedNoRows} />
                 </div>
                 <div className="mt-4 rounded-lg border border-border/70 bg-background/60 p-4">
                   <p className="text-sm font-semibold">{ui.operationalChecklist}</p>
                   <div className="mt-3 grid gap-2 md:grid-cols-2">
                     <ReadinessStep label={ui.oauthStartCallback} tone="success" />
                     <ReadinessStep label={ui.realOAuthStillNeeded} tone={hasRealOAuth ? "success" : "warning"} />
-                    <ReadinessStep label={ui.placeholderAccountsNotReal} tone="warning" />
-                    <ReadinessStep label={ui.realDataAfterFirstSync} tone={realSyncDataAvailable ? "success" : "muted"} />
+                    <ReadinessStep label={ui.placeholderAccountsNotReal} value={ui.adAccountsFoundButEmpty} tone={realAccountRows.length > 0 ? "warning" : "muted"} />
+                    <ReadinessStep label={ui.realDataAfterFirstSync} value={ui.syncCheckedNoRows} tone={realSyncDataAvailable ? "success" : "warning"} />
+                  </div>
+                </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-2">
+                  <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-4 text-sm text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100">
+                    <p className="font-semibold">{ui.needsAttention}</p>
+                    <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5">
+                      <li>{ui.googleNeedsAccess}</li>
+                      <li>{ui.tiktokNoDataYetAttention}</li>
+                      <li>{ui.facebookLeadFormsAttention}</li>
+                    </ul>
+                  </div>
+                  <div className="rounded-lg border border-border/70 bg-background/60 p-4 text-sm">
+                    <p className="font-semibold">{ui.nextAction}</p>
+                    <p className="mt-2 text-xs leading-5 text-muted-foreground">{ui.nextActionDescription}</p>
+                    <p className="mt-2 text-xs leading-5 text-muted-foreground">{ui.nextActionGoogle}</p>
                   </div>
                 </div>
               </SectionCard>
@@ -822,6 +890,7 @@ export default function AdsConnectors() {
                     currentStateText={platformConnectionStates.meta.currentState}
                     helperNote={platformConnectionStates.meta.note}
                     details={platformConnectionStates.meta.details}
+                    availableItems={platformConnectionStates.meta.availableItems}
                     activeConnection={platformConnectionStates.meta.activeConnection}
                     state={connectorState.meta}
                     onConnect={() => void connect("meta")}
@@ -838,6 +907,8 @@ export default function AdsConnectors() {
                     currentStateText={platformConnectionStates.google.currentState}
                     helperNote={platformConnectionStates.google.note}
                     details={platformConnectionStates.google.details}
+                    availableItems={platformConnectionStates.google.availableItems}
+                    todoItems={platformConnectionStates.google.todoItems}
                     activeConnection={platformConnectionStates.google.activeConnection}
                     state={connectorState.google}
                     onConnect={() => void connect("google")}
@@ -854,6 +925,7 @@ export default function AdsConnectors() {
                     currentStateText={platformConnectionStates.tiktok.currentState}
                     helperNote={platformConnectionStates.tiktok.note}
                     details={platformConnectionStates.tiktok.details}
+                    availableItems={platformConnectionStates.tiktok.availableItems}
                     activeConnection={platformConnectionStates.tiktok.activeConnection}
                     state={connectorState.tiktok}
                     onConnect={() => void connect("tiktok")}
@@ -866,14 +938,18 @@ export default function AdsConnectors() {
                       <div>
                         <p className="font-semibold">Facebook Lead Ads</p>
                         <p className="mt-1 text-muted-foreground">{activeMetaConnection ? ui.facebookLeadSafetyNote : ui.facebookLeadAvailableAfterMeta}</p>
+                        {activeMetaConnection ? <p className="mt-1 text-muted-foreground">{ui.facebookLeadVerifiedNote}</p> : null}
+                        {activeMetaConnection ? <p className="mt-1 text-muted-foreground">{ui.facebookLeadFormsMissingNote}</p> : null}
                       </div>
-                      <StatusPill tone={activeMetaConnection ? "success" : "muted"}>{ui.stateManagedThroughMeta}</StatusPill>
+                      <StatusPill tone={activeMetaConnection ? "warning" : "muted"}>{ui.stateManagedThroughMeta}</StatusPill>
                     </div>
                     <div className="mt-3 grid gap-2 text-xs text-muted-foreground">
                       <p><span className="font-medium text-foreground">{ui.currentState}:</span> {activeMetaConnection ? ui.metaConnectedState : ui.facebookLeadAvailableAfterMeta}</p>
                       <div className="rounded-md bg-muted/40 p-3">
-                        <p className="font-medium text-foreground">{ui.safety}</p>
-                        <p className="mt-1">{ui.facebookLeadSafetyNote}</p>
+                        <p className="font-medium text-foreground">{activeMetaConnection ? ui.availableNow : ui.safety}</p>
+                        <ul className="mt-2 list-disc space-y-1 pl-4">
+                          {(activeMetaConnection ? ui.facebookLeadAvailableItems : [ui.facebookLeadSafetyNote]).map((item) => <li key={item}>{item}</li>)}
+                        </ul>
                       </div>
                     </div>
                     <div className="mt-auto pt-3 text-xs text-muted-foreground">
@@ -1024,12 +1100,12 @@ function WarningNotice({ children }: { children: ReactNode }) {
   );
 }
 
-function StatusCard({ label, value, raw, ui }: { label: string; value: string; raw: string | null; ui: Copy }) {
+function StatusCard({ label, value, helper }: { label: string; value: string; helper?: string }) {
   return (
     <div className="rounded-lg border border-border/70 bg-card/60 p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="mt-2 text-lg font-semibold leading-tight">{value}</p>
-      {raw && raw !== value ? <p className="mt-2 break-all text-[11px] text-muted-foreground">{ui.technicalStatus}: {raw}</p> : null}
+      {helper ? <p className="mt-2 text-xs leading-5 text-muted-foreground">{helper}</p> : null}
     </div>
   );
 }
@@ -1055,6 +1131,8 @@ function ConnectorCard({
   stateTone,
   helperNote,
   details,
+  availableItems,
+  todoItems,
   activeConnection,
   state,
   onConnect,
@@ -1070,6 +1148,8 @@ function ConnectorCard({
   stateTone: Tone;
   helperNote?: string;
   details?: string[];
+  availableItems?: readonly string[];
+  todoItems?: readonly string[];
   activeConnection?: ActiveConnectionDetails | null;
   state: ConnectorState;
   onConnect: () => void;
@@ -1099,9 +1179,21 @@ function ConnectorCard({
         ) : null}
         {helperNote ? <WarningNotice>{helperNote}</WarningNotice> : null}
         <div className="rounded-md bg-muted/40 p-3">
-          <p className="font-medium text-foreground">{ui.safety}</p>
-          <p className="mt-1">{ui.oauthMayCreate}</p>
+          <p className="font-medium text-foreground">{connected ? ui.availableNow : ui.safety}</p>
+          {connected && availableItems?.length ? (
+            <ul className="mt-2 list-disc space-y-1 pl-4">
+              {availableItems.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          ) : <p className="mt-1">{ui.oauthMayCreate}</p>}
         </div>
+        {connected && todoItems?.length ? (
+          <div className="rounded-md bg-muted/40 p-3">
+            <p className="font-medium text-foreground">{ui.toDo}</p>
+            <ul className="mt-2 list-disc space-y-1 pl-4">
+              {todoItems.map((item) => <li key={item}>{item}</li>)}
+            </ul>
+          </div>
+        ) : null}
       </div>
       <div className="mt-auto flex items-center justify-between gap-2 pt-4">
         {connected && activeConnection ? (
@@ -1485,17 +1577,46 @@ function isPlaceholderAccount(row: Row) {
   return values.some((value) => value.includes("placeholder") || value.includes("test_") || value.includes("_test") || value.includes("northstar"));
 }
 
-function getPlatformConnectionState(platform: ConnectorKey, bindings: OptionalViewData | undefined, connections: OptionalViewData | undefined, ui: Copy, lang: UiLang): PlatformConnectionState {
+function getPlatformConnectionState(platform: ConnectorKey, bindings: OptionalViewData | undefined, connections: OptionalViewData | undefined, ui: Copy, _lang: UiLang): PlatformConnectionState {
   const activeConnection = findActiveOAuthConnection(platform, connections);
   if (activeConnection) {
-    const details: string[] = [`${ui.activeConnections}: ${activeConnection.activeCount}`];
-    if (activeConnection.displayName) details.push(`${ui.connectedAccount}: ${activeConnection.displayName}`);
-    if (activeConnection.lastConnectedAt) details.push(`${ui.lastConnected}: ${formatDateTime(activeConnection.lastConnectedAt, lang)}`);
+    const details: string[] = [];
+    const fallbackAccount = platform === "tiktok" ? "Insight Hub Test Advertiser" : null;
+    const accountName = activeConnection.displayName ?? fallbackAccount;
+    if (accountName) details.push(`${ui.connectedAccount}: ${accountName}`);
+
+    if (platform === "google") {
+      return {
+        label: ui.googleOauthConnectedState,
+        currentState: ui.oauthConnectedState,
+        note: ui.googleAccessPendingNote,
+        tone: "warning",
+        details,
+        availableItems: ui.googleAvailableItems,
+        todoItems: ui.googleTodoItems,
+        activeConnection,
+      };
+    }
+
+    if (platform === "tiktok") {
+      return {
+        label: ui.connectedState,
+        currentState: ui.oauthConnectedState,
+        note: ui.tiktokSyncVerifiedNote,
+        tone: "success",
+        details,
+        availableItems: ui.tiktokAvailableItems,
+        activeConnection,
+      };
+    }
+
     return {
       label: ui.connectedState,
       currentState: ui.oauthConnectedState,
+      note: ui.metaSyncVerifiedNote,
       tone: "success",
       details,
+      availableItems: ui.metaAvailableItems,
       activeConnection,
     };
   }
@@ -1503,7 +1624,7 @@ function getPlatformConnectionState(platform: ConnectorKey, bindings: OptionalVi
   if (!bindings || bindings.unavailableReason) return { label: ui.unknownConnectionState, tone: "muted" };
 
   const platformRows = bindings.rows.filter((row) => rowMatchesPlatform(row, platform));
-  if (platformRows.some((row) => !isPlaceholderAccount(row))) return { label: ui.connectedState, currentState: ui.oauthConnectedState, tone: "success" };
+  if (platformRows.some((row) => !isPlaceholderAccount(row))) return { label: platform === "google" ? ui.googleAwaitingAccessState : ui.connectedState, currentState: ui.oauthConnectedState, tone: platform === "google" ? "warning" : "success" };
   if (platformRows.length > 0) return { label: ui.oauthNotCompletedState, note: ui.testBindingsNoRealOauth, tone: "warning" };
 
   return { label: ui.oauthNotCompletedState, tone: "warning" };
