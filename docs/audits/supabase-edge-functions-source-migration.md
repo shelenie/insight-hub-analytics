@@ -4,63 +4,93 @@ Date: 2026-06-01
 
 ## Purpose
 
-The deployed Supabase project contains 37 Edge Functions under project ref `iaxqonjwgrqpgvbeydok`. This tracker records which deployed functions already have local source and which require manual source migration from Supabase.
+The deployed Supabase project contains 37 Edge Function folders under `supabase/functions`. This tracker was refreshed after the manual source migration that copied deployed function source into `supabase/functions/<function-name>/index.ts`.
 
-This PR intentionally creates only non-deployable manual migration files for functions missing `index.ts`:
+GitHub is now becoming the source of truth for Supabase Edge Function source. The Deploy Supabase Functions workflow is reported green, and CI / Publish site are reported green after excluding `supabase/functions` from frontend ESLint.
 
-- `SOURCE_REQUIRED.md`
-- `index.ts.todo`
-
-No empty `index.ts`, fake `index.ts`, executable stub, SQL/RLS change, frontend UI change, GitHub Actions workflow change, or Supabase config weakening is included.
+This audit update is documentation-only. It does not modify Edge Function logic, SQL/RLS, frontend UI, GitHub Actions, or `supabase/config.toml`.
 
 ## Project ref check
 
-> **Warning:** `supabase/config.toml` currently has `project_id = "zbonqzvqxotuwmsorwsf"`. config.toml project_id should be verified against actual Supabase project ref iaxqonjwgrqpgvbeydok. This document records the mismatch only; it does not change Supabase settings.
+> **Warning:** `supabase/config.toml` currently has `project_id = "zbonqzvqxotuwmsorwsf"`. config.toml project_id should be verified against actual Supabase project ref `iaxqonjwgrqpgvbeydok`. This document records the mismatch only; it does not change Supabase settings.
 
-## Deployment warning
+## Current migration state
 
-This PR does **not** make GitHub a complete deploy source for every function yet. Do not deploy incomplete source. Any function with status `source required` must have the currently deployed Supabase source copied into `supabase/functions/<function-name>/index.ts` before that function is safely deployable from GitHub.
+- Function folders inspected: 37
+- Functions with real `index.ts`: 37
+- Functions missing `index.ts`: 0
+- `index.ts.todo` files remaining: 0
+- `SOURCE_REQUIRED.md` files remaining: 24
 
-For functions referenced in `supabase/config.toml`, deploy safety still depends on adding the real deployed `index.ts` source while preserving the current Verify JWT setting.
+## Cleanup required
+
+No `index.ts.todo` files remain under `supabase/functions`.
+
+The following `SOURCE_REQUIRED.md` placeholders still exist even though each corresponding function folder now has a real `index.ts`:
+
+- `supabase/functions/ads-scheduled-sync-run/SOURCE_REQUIRED.md`
+- `supabase/functions/ai-helper-run/SOURCE_REQUIRED.md`
+- `supabase/functions/backup-export/SOURCE_REQUIRED.md`
+- `supabase/functions/facebook-lead-ads-sync/SOURCE_REQUIRED.md`
+- `supabase/functions/facebook-lead-webhook/SOURCE_REQUIRED.md`
+- `supabase/functions/file-upload-parser/SOURCE_REQUIRED.md`
+- `supabase/functions/google-ads-oauth-callback/SOURCE_REQUIRED.md`
+- `supabase/functions/google-ads-oauth-start/SOURCE_REQUIRED.md`
+- `supabase/functions/google-ads-sync/SOURCE_REQUIRED.md`
+- `supabase/functions/google-oauth-callback/SOURCE_REQUIRED.md`
+- `supabase/functions/google-oauth-start/SOURCE_REQUIRED.md`
+- `supabase/functions/google-sheet-register/SOURCE_REQUIRED.md`
+- `supabase/functions/google-sheets-sync/SOURCE_REQUIRED.md`
+- `supabase/functions/health-check/SOURCE_REQUIRED.md`
+- `supabase/functions/meta-ads-sync/SOURCE_REQUIRED.md`
+- `supabase/functions/meta-oauth-callback/SOURCE_REQUIRED.md`
+- `supabase/functions/meta-oauth-start/SOURCE_REQUIRED.md`
+- `supabase/functions/restore-backup/SOURCE_REQUIRED.md`
+- `supabase/functions/run-dev-action/SOURCE_REQUIRED.md`
+- `supabase/functions/telegram-dispatch/SOURCE_REQUIRED.md`
+- `supabase/functions/telegram-set-webhook/SOURCE_REQUIRED.md`
+- `supabase/functions/telegram-webhook/SOURCE_REQUIRED.md`
+- `supabase/functions/tiktok-oauth-start/SOURCE_REQUIRED.md`
+- `supabase/functions/whoami/SOURCE_REQUIRED.md`
 
 ## Function source status
 
-| Function name | Supabase URL | Local source status | Appears in `supabase/config.toml` | Notes |
-| --- | --- | --- | --- | --- |
-| `ads-scheduled-sync-run` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/ads-scheduled-sync-run | source required | yes | Safe non-deployable migration files only; real deployed source must be pasted manually. Preserve configured Verify JWT setting. |
-| `ai-helper-run` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/ai-helper-run | source required | yes | Safe non-deployable migration files only; real deployed source must be pasted manually. Preserve configured Verify JWT setting. |
-| `backup-export` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/backup-export | source required | no | Safe non-deployable migration files only; real deployed source must be pasted manually. No function-specific entry found in `supabase/config.toml`. |
-| `binding-archive` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/binding-archive | present real index.ts | no | Existing local `index.ts` was left unchanged. No function-specific entry found in `supabase/config.toml`. |
-| `binding-create-or-update` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/binding-create-or-update | present real index.ts | no | Existing local `index.ts` was left unchanged. No function-specific entry found in `supabase/config.toml`. |
-| `facebook-lead-ads-sync` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/facebook-lead-ads-sync | source required | yes | Safe non-deployable migration files only; real deployed source must be pasted manually. Preserve configured Verify JWT setting. |
-| `facebook-lead-webhook` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/facebook-lead-webhook | source required | yes | Safe non-deployable migration files only; real deployed source must be pasted manually. Preserve configured Verify JWT setting. |
-| `file-upload-parser` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/file-upload-parser | source required | no | Safe non-deployable migration files only; real deployed source must be pasted manually. No function-specific entry found in `supabase/config.toml`. |
-| `google-ads-oauth-callback` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/google-ads-oauth-callback | source required | yes | Safe non-deployable migration files only; real deployed source must be pasted manually. Preserve configured Verify JWT setting. |
-| `google-ads-oauth-start` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/google-ads-oauth-start | source required | yes | Safe non-deployable migration files only; real deployed source must be pasted manually. Preserve configured Verify JWT setting. |
-| `google-ads-sync` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/google-ads-sync | source required | yes | Safe non-deployable migration files only; real deployed source must be pasted manually. Preserve configured Verify JWT setting. |
-| `google-oauth-callback` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/google-oauth-callback | source required | no | Safe non-deployable migration files only; real deployed source must be pasted manually. No function-specific entry found in `supabase/config.toml`. |
-| `google-oauth-start` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/google-oauth-start | source required | no | Safe non-deployable migration files only; real deployed source must be pasted manually. No function-specific entry found in `supabase/config.toml`. |
-| `google-sheet-register` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/google-sheet-register | source required | no | Safe non-deployable migration files only; real deployed source must be pasted manually. No function-specific entry found in `supabase/config.toml`. |
-| `google-sheets-sync` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/google-sheets-sync | source required | no | Safe non-deployable migration files only; real deployed source must be pasted manually. No function-specific entry found in `supabase/config.toml`. |
-| `health-check` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/health-check | source required | no | Safe non-deployable migration files only; real deployed source must be pasted manually. No function-specific entry found in `supabase/config.toml`. |
-| `mapping-review-approve` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/mapping-review-approve | present real index.ts | no | Existing local `index.ts` was left unchanged. No function-specific entry found in `supabase/config.toml`. |
-| `mapping-review-reject` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/mapping-review-reject | present real index.ts | no | Existing local `index.ts` was left unchanged. No function-specific entry found in `supabase/config.toml`. |
-| `mapping-review-send-telegram` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/mapping-review-send-telegram | present real index.ts | no | Existing local `index.ts` was left unchanged. No function-specific entry found in `supabase/config.toml`. |
-| `meta-ads-sync` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/meta-ads-sync | source required | yes | Safe non-deployable migration files only; real deployed source must be pasted manually. Preserve configured Verify JWT setting. |
-| `meta-oauth-callback` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/meta-oauth-callback | source required | yes | Safe non-deployable migration files only; real deployed source must be pasted manually. Preserve configured Verify JWT setting. |
-| `meta-oauth-start` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/meta-oauth-start | source required | yes | Safe non-deployable migration files only; real deployed source must be pasted manually. Preserve configured Verify JWT setting. |
-| `onboarding-client-upsert` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/onboarding-client-upsert | present real index.ts | no | Existing local `index.ts` was left unchanged. No function-specific entry found in `supabase/config.toml`. |
-| `onboarding-funnel-upsert` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/onboarding-funnel-upsert | present real index.ts | no | Existing local `index.ts` was left unchanged. No function-specific entry found in `supabase/config.toml`. |
-| `onboarding-project-upsert` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/onboarding-project-upsert | present real index.ts | no | Existing local `index.ts` was left unchanged. No function-specific entry found in `supabase/config.toml`. |
-| `operational-alert-resolve` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/operational-alert-resolve | present real index.ts | no | Existing local `index.ts` was left unchanged. No function-specific entry found in `supabase/config.toml`. |
-| `restore-backup` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/restore-backup | source required | no | Safe non-deployable migration files only; real deployed source must be pasted manually. No function-specific entry found in `supabase/config.toml`. |
-| `run-dev-action` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/run-dev-action | source required | no | Safe non-deployable migration files only; real deployed source must be pasted manually. No function-specific entry found in `supabase/config.toml`. |
-| `telegram-dispatch` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/telegram-dispatch | source required | yes | Safe non-deployable migration files only; real deployed source must be pasted manually. Preserve configured Verify JWT setting. |
-| `telegram-outbox-retry` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/telegram-outbox-retry | present real index.ts | no | Existing local `index.ts` was left unchanged. No function-specific entry found in `supabase/config.toml`. |
-| `telegram-set-webhook` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/telegram-set-webhook | source required | no | Safe non-deployable migration files only; real deployed source must be pasted manually. No function-specific entry found in `supabase/config.toml`. |
-| `telegram-webhook` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/telegram-webhook | source required | yes | Safe non-deployable migration files only; real deployed source must be pasted manually. Preserve configured Verify JWT setting. |
-| `tiktok-ads-sync` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/tiktok-ads-sync | present real index.ts | yes | Existing local `index.ts` was left unchanged. Preserve configured Verify JWT setting. |
-| `tiktok-oauth-callback` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/tiktok-oauth-callback | present real index.ts | yes | Existing local `index.ts` was left unchanged. Preserve configured Verify JWT setting. |
-| `tiktok-oauth-start` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/tiktok-oauth-start | source required | yes | Safe non-deployable migration files only; real deployed source must be pasted manually. Preserve configured Verify JWT setting. |
-| `whoami` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/whoami | source required | no | Safe non-deployable migration files only; real deployed source must be pasted manually. No function-specific entry found in `supabase/config.toml`. |
-| `workspace-role-info` | https://iaxqonjwgrqpgvbeydok.supabase.co/functions/v1/workspace-role-info | present real index.ts | no | Existing local `index.ts` was left unchanged. No function-specific entry found in `supabase/config.toml`. |
+| Function name | Local source status | Appears in `supabase/config.toml` | Notes |
+| --- | --- | --- | --- |
+| `ads-scheduled-sync-run` | present real index.ts | yes | Function-specific entry is present in `supabase/config.toml`; preserve configured Verify JWT setting. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `ai-helper-run` | present real index.ts | yes | Function-specific entry is present in `supabase/config.toml`; preserve configured Verify JWT setting. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `backup-export` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `binding-archive` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. No migration placeholder files remain in this function folder. |
+| `binding-create-or-update` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. No migration placeholder files remain in this function folder. |
+| `facebook-lead-ads-sync` | present real index.ts | yes | Function-specific entry is present in `supabase/config.toml`; preserve configured Verify JWT setting. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `facebook-lead-webhook` | present real index.ts | yes | Function-specific entry is present in `supabase/config.toml`; preserve configured Verify JWT setting. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `file-upload-parser` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `google-ads-oauth-callback` | present real index.ts | yes | Function-specific entry is present in `supabase/config.toml`; preserve configured Verify JWT setting. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `google-ads-oauth-start` | present real index.ts | yes | Function-specific entry is present in `supabase/config.toml`; preserve configured Verify JWT setting. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `google-ads-sync` | present real index.ts | yes | Function-specific entry is present in `supabase/config.toml`; preserve configured Verify JWT setting. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `google-oauth-callback` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `google-oauth-start` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `google-sheet-register` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `google-sheets-sync` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `health-check` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `mapping-review-approve` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. No migration placeholder files remain in this function folder. |
+| `mapping-review-reject` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. No migration placeholder files remain in this function folder. |
+| `mapping-review-send-telegram` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. No migration placeholder files remain in this function folder. |
+| `meta-ads-sync` | present real index.ts | yes | Function-specific entry is present in `supabase/config.toml`; preserve configured Verify JWT setting. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `meta-oauth-callback` | present real index.ts | yes | Function-specific entry is present in `supabase/config.toml`; preserve configured Verify JWT setting. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `meta-oauth-start` | present real index.ts | yes | Function-specific entry is present in `supabase/config.toml`; preserve configured Verify JWT setting. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `onboarding-client-upsert` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. No migration placeholder files remain in this function folder. |
+| `onboarding-funnel-upsert` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. No migration placeholder files remain in this function folder. |
+| `onboarding-project-upsert` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. No migration placeholder files remain in this function folder. |
+| `operational-alert-resolve` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. No migration placeholder files remain in this function folder. |
+| `restore-backup` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `run-dev-action` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `telegram-dispatch` | present real index.ts | yes | Function-specific entry is present in `supabase/config.toml`; preserve configured Verify JWT setting. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `telegram-outbox-retry` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. No migration placeholder files remain in this function folder. |
+| `telegram-set-webhook` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `telegram-webhook` | present real index.ts | yes | Function-specific entry is present in `supabase/config.toml`; preserve configured Verify JWT setting. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `tiktok-ads-sync` | present real index.ts | yes | Function-specific entry is present in `supabase/config.toml`; preserve configured Verify JWT setting. No migration placeholder files remain in this function folder. |
+| `tiktok-oauth-callback` | present real index.ts | yes | Function-specific entry is present in `supabase/config.toml`; preserve configured Verify JWT setting. No migration placeholder files remain in this function folder. |
+| `tiktok-oauth-start` | present real index.ts | yes | Function-specific entry is present in `supabase/config.toml`; preserve configured Verify JWT setting. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `whoami` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. Cleanup required: `SOURCE_REQUIRED.md` remains even though real `index.ts` is present. |
+| `workspace-role-info` | present real index.ts | no | No function-specific entry found in `supabase/config.toml`. No migration placeholder files remain in this function folder. |
