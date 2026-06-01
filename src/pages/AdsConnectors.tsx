@@ -40,7 +40,7 @@ type ActiveConnectionDetails = { id: string; displayName: string | null; lastCon
 type SyncRunState = { loading: boolean; error: string | null; success: string | null; details: Record<string, unknown> | null };
 
 const ADS_SUBNAV_TRIGGER_CLASS =
-  "h-10 whitespace-nowrap rounded-lg border border-transparent px-4 text-sm font-semibold transition-all hover:border-border/70 hover:bg-background/80 hover:text-foreground data-[state=active]:border-border data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm";
+  "h-10 whitespace-nowrap rounded-lg border border-transparent px-4 text-sm font-semibold transition-all hover:border-primary/30 hover:bg-primary/10 hover:text-primary data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm";
 type Tone = "success" | "warning" | "muted";
 type PlatformConnectionState = { label: string; currentState?: string; note?: string; tone: Tone; details?: string[]; activeConnection?: ActiveConnectionDetails | null };
 type DisconnectTarget = { id: string; name: string } | null;
