@@ -1,4 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  buildDateRangeChunks,
+  type DateRangeChunk,
+  isIsoDate,
+  TIKTOK_REPORT_MAX_CHUNK_DAYS,
+} from "./date-range-chunks.ts";
 
 type RequestBody = {
   workspace_id?: string;
@@ -156,8 +162,18 @@ function daysAgoIsoDate(days: number) {
   return date.toISOString().slice(0, 10);
 }
 
-function isIsoDate(value: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value);
+function buildChunkingMetadata(
+  chunks: DateRangeChunk[],
+  dateFrom: string,
+  dateTo: string,
+) {
+  return {
+    chunking_enabled: true,
+    chunks_count: chunks.length,
+    chunk_max_days: TIKTOK_REPORT_MAX_CHUNK_DAYS,
+    requested_date_from: dateFrom,
+    requested_date_to: dateTo,
+  };
 }
 
 function normalizeLevel(input: unknown): "campaign" | "adgroup" | "ad" {
@@ -974,6 +990,23 @@ Deno.serve(async (req: Request) => {
     });
   }
 
+  let dateRangeChunks: DateRangeChunk[];
+
+  try {
+    dateRangeChunks = buildDateRangeChunks(dateFrom, dateTo);
+  } catch (error) {
+    return jsonResponse(400, {
+      ok: false,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  const chunkingMetadata = buildChunkingMetadata(
+    dateRangeChunks,
+    dateFrom,
+    dateTo,
+  );
+
   const level = normalizeLevel(body.level);
   const syncMode = body.sync_mode ?? "manual";
   const fetchAdvertisers = body.fetch_advertisers ?? true;
@@ -1061,6 +1094,7 @@ Deno.serve(async (req: Request) => {
       fetch_metrics: fetchMetrics,
       test_mode: body.test_mode ?? null,
       api_version: tiktokApiVersion,
+      ...chunkingMetadata,
     },
   });
 
@@ -1323,6 +1357,7 @@ Deno.serve(async (req: Request) => {
         severity: "info",
         metadata: {
           ...tokenAuditMetadata,
+          ...chunkingMetadata,
           advertisers_upserted: accountResults.length,
           metrics_synced: false,
         },
@@ -1342,6 +1377,7 @@ Deno.serve(async (req: Request) => {
         advertisers_upserted: accountResults.length,
         account_results: accountResults,
         metrics_synced: false,
+        chunking: chunkingMetadata,
       });
     }
 
@@ -1371,6 +1407,7 @@ Deno.serve(async (req: Request) => {
             external_account_id: account.external_account_id,
             level,
             api_version: tiktokApiVersion,
+            ...chunkingMetadata,
             ...tokenAuditMetadata,
           },
         },
@@ -1379,14 +1416,30 @@ Deno.serve(async (req: Request) => {
       if (runError) throw new Error(runError.message);
 
       try {
-        const reportRows = await fetchTikTokIntegratedReport({
-          apiVersion: tiktokApiVersion,
-          accessToken,
-          advertiserId,
-          dateFrom,
-          dateTo,
-          level,
-        });
+        const reportRows: JsonRecord[] = [];
+
+        for (const chunk of dateRangeChunks) {
+          try {
+            const chunkRows = await fetchTikTokIntegratedReport({
+              apiVersion: tiktokApiVersion,
+              accessToken,
+              advertiserId,
+              dateFrom: chunk.dateFrom,
+              dateTo: chunk.dateTo,
+              level,
+            });
+
+            reportRows.push(...chunkRows.map((row) => asRecord(row)));
+          } catch (error) {
+            const chunkMessage = error instanceof Error
+              ? error.message
+              : String(error);
+
+            throw new Error(
+              `TikTok report chunk failed for ${chunk.dateFrom} to ${chunk.dateTo}: ${chunkMessage}`,
+            );
+          }
+        }
 
         const normalizedRows = reportRows.map((row) =>
           normalizeReportRow({
@@ -1420,6 +1473,7 @@ Deno.serve(async (req: Request) => {
             level,
             date_from: dateFrom,
             date_to: dateTo,
+            ...chunkingMetadata,
             ...tokenAuditMetadata,
           },
         });
@@ -1431,6 +1485,7 @@ Deno.serve(async (req: Request) => {
           sync_run_log_id: syncRunId,
           rows_received: reportRows.length,
           rows_inserted: insertedRows ?? 0,
+          chunks_count: dateRangeChunks.length,
         });
       } catch (error) {
         const accountTokenAuditMetadata = {
@@ -1458,6 +1513,7 @@ Deno.serve(async (req: Request) => {
             level,
             date_from: dateFrom,
             date_to: dateTo,
+            ...chunkingMetadata,
             ...accountTokenAuditMetadata,
           },
         });
@@ -1468,6 +1524,7 @@ Deno.serve(async (req: Request) => {
           status: "failed",
           sync_run_log_id: syncRunId,
           error: message,
+          chunks_count: dateRangeChunks.length,
           reconnect_required:
             accountTokenAuditMetadata.reconnect_required ?? false,
         });
@@ -1506,6 +1563,7 @@ Deno.serve(async (req: Request) => {
         date_from: dateFrom,
         date_to: dateTo,
         level,
+        ...chunkingMetadata,
       },
     });
 
@@ -1523,6 +1581,7 @@ Deno.serve(async (req: Request) => {
       date_from: dateFrom,
       date_to: dateTo,
       level,
+      chunking: chunkingMetadata,
       advertisers_upserted: accountResults.length,
       account_results: accountResults,
       sync_results: syncResults,
@@ -1555,6 +1614,7 @@ Deno.serve(async (req: Request) => {
         date_from: dateFrom,
         date_to: dateTo,
         level,
+        ...chunkingMetadata,
       },
     });
 
