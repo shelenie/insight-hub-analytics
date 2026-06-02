@@ -11,10 +11,19 @@ export function resolveBrowserTimeZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || FALLBACK_TIMEZONE_NAME;
 }
 
+export function getTimezoneDisplayLabel(
+  mode: TimezoneDisplayMode = DEFAULT_TIMEZONE_DISPLAY_MODE,
+  timezoneName = resolveBrowserTimeZone(),
+): string {
+  if (mode === "utc") return "UTC";
+  return timezoneName || FALLBACK_TIMEZONE_NAME;
+}
+
 export function formatOperationalTimestamp(
   value: unknown,
   mode: TimezoneDisplayMode = DEFAULT_TIMEZONE_DISPLAY_MODE,
   timezoneName = resolveBrowserTimeZone(),
+  options: { includeTimezoneLabel?: boolean } = {},
 ): string {
   if (value === null || value === undefined || value === "") return "—";
   if (typeof value !== "string" && typeof value !== "number") return "—";
@@ -22,13 +31,17 @@ export function formatOperationalTimestamp(
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
 
+  const includeTimezoneLabel = options.includeTimezoneLabel ?? false;
+
   if (mode === "local") {
-    const displayTimeZone = timezoneName || FALLBACK_TIMEZONE_NAME;
+    const displayTimeZone = getTimezoneDisplayLabel(mode, timezoneName);
     const formatterTimeZone = displayTimeZone === FALLBACK_TIMEZONE_NAME ? undefined : displayTimeZone;
-    return `${formatDateTimeInZone(date, formatterTimeZone)} ${displayTimeZone}`;
+    const timestamp = formatDateTimeInZone(date, formatterTimeZone);
+    return includeTimezoneLabel ? `${timestamp} ${displayTimeZone}` : timestamp;
   }
 
-  return `${formatDateTimeInZone(date, "UTC")} UTC`;
+  const timestamp = formatDateTimeInZone(date, "UTC");
+  return includeTimezoneLabel ? `${timestamp} UTC` : timestamp;
 }
 
 function formatDateTimeInZone(date: Date, timeZone?: string): string {

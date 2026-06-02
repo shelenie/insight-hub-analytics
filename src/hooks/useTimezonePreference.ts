@@ -91,8 +91,7 @@ export function useTimezonePreference() {
         setError(saveError.message);
         toast({
           title: "Налаштування часу не збережено",
-          description: "Сторінка працює далі. Якщо налаштування не завантажиться, буде використано UTC.",
-          variant: "destructive",
+          description: "Час показано тимчасово для цієї сторінки. Після перезавантаження може знову використовуватись UTC.",
         });
       }
     },

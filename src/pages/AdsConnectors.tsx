@@ -31,7 +31,7 @@ import { DeveloperDetails } from "@/components/common/DeveloperDetails";
 import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 import { useTimezonePreference } from "@/hooks/useTimezonePreference";
-import { formatOperationalTimestamp, type TimezoneDisplayMode } from "@/lib/timezonePreference";
+import { formatOperationalTimestamp, getTimezoneDisplayLabel, type TimezoneDisplayMode } from "@/lib/timezonePreference";
 
 type Primitive = string | number | boolean | null;
 type Row = Record<string, Primitive | Primitive[] | Record<string, unknown>>;
@@ -201,6 +201,7 @@ const copy = {
     timezoneLabel: "Час",
     timezoneUtc: "UTC",
     timezoneLocal: "Мій час",
+    timezoneCurrentLabel: "Поточна таймзона",
     syncRules: "Правила синхронізації",
     syncDue: "Поточна черга",
     manualSync: "Ручна синхронізація",
@@ -469,6 +470,7 @@ const copy = {
     timezoneLabel: "Time",
     timezoneUtc: "UTC",
     timezoneLocal: "Local time",
+    timezoneCurrentLabel: "Current timezone",
     syncRules: "Sync rules",
     syncDue: "Current queue",
     manualSync: "Manual sync",
@@ -637,6 +639,7 @@ export default function AdsConnectors() {
     details: null,
   });
   const { timezoneDisplayMode, timezoneName, setTimezoneDisplayMode } = useTimezonePreference();
+  const timezoneDisplayLabel = getTimezoneDisplayLabel(timezoneDisplayMode, timezoneName ?? undefined);
 
   const query = useQuery({
     queryKey: ["ads-connectors-workspace", WORKSPACE_ID],
@@ -1034,17 +1037,22 @@ export default function AdsConnectors() {
               <SectionCard title={ui.scheduledTitle} description={ui.scheduledDescription}>
                 <div className="space-y-4">
                   <WarningNotice>{ui.scheduledWarning}</WarningNotice>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-                    <label className="text-xs font-medium text-muted-foreground" htmlFor="ads-sync-timezone-mode">{ui.timezoneLabel}</label>
-                    <Select value={timezoneDisplayMode} onValueChange={(value) => void setTimezoneDisplayMode(value as TimezoneDisplayMode)}>
-                      <SelectTrigger id="ads-sync-timezone-mode" className="h-8 w-full text-xs sm:w-[150px]">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="utc">{ui.timezoneUtc}</SelectItem>
-                        <SelectItem value="local">{ui.timezoneLocal}</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="flex flex-col gap-1 sm:items-end">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                      <label className="text-xs font-medium text-muted-foreground" htmlFor="ads-sync-timezone-mode">{ui.timezoneLabel}</label>
+                      <Select value={timezoneDisplayMode} onValueChange={(value) => void setTimezoneDisplayMode(value as TimezoneDisplayMode)}>
+                        <SelectTrigger id="ads-sync-timezone-mode" className="h-8 w-full text-xs sm:w-[150px]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="utc">{ui.timezoneUtc}</SelectItem>
+                          <SelectItem value="local">{ui.timezoneLocal}</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      {ui.timezoneCurrentLabel}: <span className="font-medium text-foreground">{timezoneDisplayLabel}</span>
+                    </p>
                   </div>
                   <div className="grid gap-4 lg:grid-cols-2">
                     <CompactDataSection title={ui.syncRules} data={query.data?.syncRules} columns={["platform", "status", "last_run_at", "next_run_at"]} emptyText={ui.syncRulesEmpty} ui={ui} timestampDisplayMode={timezoneDisplayMode} timezoneName={timezoneName ?? undefined} />
@@ -1452,10 +1460,17 @@ function GenericDataTable({ rows, columns, ui, markPlaceholders = false, maxRows
   return (
     <>
     <div className="overflow-x-auto rounded-md">
-      <table className="min-w-full table-fixed text-left text-sm">
+      <table className="min-w-full table-auto text-left text-sm">
         <thead>
           <tr className="border-b border-border/70 text-muted-foreground">
-            {columns.map((column) => <th key={column} className="px-2 py-2 font-medium">{friendlyLabel(column, ui)}</th>)}
+            {columns.map((column) => {
+              const timestampColumn = isTimestampColumn(column);
+              return (
+                <th key={column} className={cn("px-2 py-2 font-medium", timestampColumn && "min-w-[9rem] whitespace-nowrap")}>
+                  {friendlyLabel(column, ui)}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
@@ -1463,16 +1478,19 @@ function GenericDataTable({ rows, columns, ui, markPlaceholders = false, maxRows
             const placeholder = markPlaceholders && isPlaceholderAccount(row);
             return (
               <tr key={`${index}-${String(row.id ?? "row")}`} className="border-b border-border/40 last:border-0">
-                {columns.map((column) => (
-                  <td key={`${index}-${column}`} className="max-w-[180px] px-2 py-2 align-top text-foreground">
-                    <span className={cn(isTimestampColumn(column) && timestampDisplayMode ? "whitespace-nowrap" : "break-words")}>{formatTableValue(row[column], column, ui, timestampDisplayMode, timezoneName)}</span>
-                    {placeholder && column === "external_account_id" ? (
-                      <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
-                        {ui.testPlaceholder}
-                      </span>
-                    ) : null}
-                  </td>
-                ))}
+                {columns.map((column) => {
+                  const timestampColumn = isTimestampColumn(column);
+                  return (
+                    <td key={`${index}-${column}`} className={cn("px-2 py-2 align-top text-foreground", timestampColumn ? "min-w-[9rem] whitespace-nowrap" : "max-w-[180px]")}>
+                      <span className={cn(timestampColumn && timestampDisplayMode ? "whitespace-nowrap" : "break-words")}>{formatTableValue(row[column], column, ui, timestampDisplayMode, timezoneName)}</span>
+                      {placeholder && column === "external_account_id" ? (
+                        <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+                          {ui.testPlaceholder}
+                        </span>
+                      ) : null}
+                    </td>
+                  );
+                })}
               </tr>
             );
           })}
