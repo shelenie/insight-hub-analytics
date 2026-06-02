@@ -197,7 +197,8 @@ const copy = {
     adAccountsEmpty: "Рекламні акаунти ще не прив’язані.",
     scheduledTitle: "Синхронізація",
     scheduledDescription: "Правила синхронізації, поточна черга та ручний запуск.",
-    scheduledWarning: "Не запускайте синхронізацію, доки реальне OAuth-підключення та рекламний акаунт не перевірені.",
+    scheduledWarning: "Перед ручним запуском перевірте, що вибраний акаунт є реальним і прив’язаний до правильного проєкту/воронки.",
+    scheduledInfo: "Реальні акаунти перевірено. Перед ручним запуском переконайтеся, що вибраний акаунт прив’язаний до правильного проєкту/воронки.",
     timezoneLabel: "Час",
     timezoneUtc: "UTC",
     timezoneLocal: "Мій час",
@@ -217,7 +218,7 @@ const copy = {
     detailsDebug: "Додаткові технічні відомості доступні в блоці для розробника.",
     fbTitle: "Ліди Facebook",
     fbDescription: "Форми, ліди, webhook-події та запуски синхронізації Facebook Lead Ads.",
-    fbOauthHelper: "Facebook Lead Ads працює через підключення Meta Ads. Після підключення Meta Ads тут з’являться форми, ліди та webhook-події.",
+    fbOauthHelper: "Meta Ads підключено. Facebook Lead Forms поки не знайдені. Форми з’являться після доступу до Facebook Page з Lead Ads формами або після створення реальної форми.",
     healthStatus: "Стан",
     activeForms: "Активні форми",
     formsNeedMapping: "Форми без мапінгу",
@@ -228,8 +229,8 @@ const copy = {
     formsTitle: "Форми",
     leadsTitle: "Останні ліди",
     syncRunsTitle: "Останні запуски синхронізації",
-    fbFormsEmpty: "Форми з’являться після підключення Meta Ads.",
-    fbLeadsEmpty: "Ліди з’являться після отримання Facebook Lead Ads даних.",
+    fbFormsEmpty: "Форми ще не знайдені. Meta Ads підключено, але Facebook Lead Forms поки не знайдені.",
+    fbLeadsEmpty: "Дані Lead Ads ще не отримані.",
     fbSyncRunsEmpty: "Запуски синхронізації з’являться після першої синхронізації.",
     fbManualSync: "Ручна синхронізація лідів",
     fbRunLeadSync: "Запустити синхронізацію лідів",
@@ -238,20 +239,23 @@ const copy = {
     fbSyncSuccessTitle: "Синхронізацію лідів виконано",
     fbSyncFailedTitle: "Помилка синхронізації лідів",
     fbSyncSuccess: "Синхронізацію лідів виконано.",
+    fbSyncNoDataSuccess: "Синхронізація виконана. Форми та ліди не знайдені.",
     diagnosticsTitle: "Діагностика",
     diagnosticsDescription: "Контекст реклами, кандидати на аномалії та поточні проблеми.",
     adsContext: "Контекст реклами",
     dailyContext: "Щоденний контекст",
     anomalyCandidates: "Кандидати на аномалії",
     recentIssues: "Останні проблеми",
-    diagnosticsEmptyTitle: "Діагностика стане доступною після першої успішної синхронізації реклами.",
-    diagnosticsEmptyText: "Поки що реальних рекламних даних немає. Після синхронізації тут з’являться контекст реклами, щоденні показники та кандидати на аномалії.",
+    diagnosticsEmptyTitle: "Діагностика очікує перші рядки рекламної статистики.",
+    diagnosticsEmptyText: "OAuth і синхронізації можуть бути налаштовані, але аналіз аномалій з’явиться після появи spend/clicks/campaign data.",
     adsContextUnavailable: "Очікує першу синхронізацію",
     dailyContextAfterSync: "Очікує дані ефективності",
     anomaliesAfterPerformance: "З’являться після появи даних ефективності",
     noIssues: "Поточних проблем не знайдено.",
-    readinessTimeoutLabel: "Таймаут перевірки готовності",
-    readinessTimeoutDescription: "Один із запитів готовності перевищив ліміт часу. Це не означає, що підключення не працює, але потребує окремої оптимізації серверної частини.",
+    readinessTimeoutLabel: "Системна перевірка зайняла більше часу",
+    readinessTimeoutDescription: "Один із запитів готовності перевищив ліміт часу. Це не означає, що рекламні підключення не працюють.",
+    readinessTimeoutActionTitle: "Що зробити",
+    readinessTimeoutActions: ["Оновити сторінку.", "Повторити перевірку пізніше.", "Якщо повторюється — перевірити backend readiness timeout."],
     technicalDetails: "Технічні деталі",
     oauthIssue: "Помилка авторизації",
     sectionUnavailable: "Розділ тимчасово недоступний.",
@@ -285,13 +289,19 @@ const copy = {
       disabled: "Вимкнено",
       enabled: "Увімкнено",
       active: "Активно",
+      paused: "Призупинено",
       inactive: "Неактивно",
       ready: "Готово",
       ok: "Готово",
       connected: "Підключено",
       confirmed: "Підтверджено",
       success: "Успішно",
+      succeeded: "Успішно",
+      completed: "Успішно",
       pending: "Очікує",
+      queued: "У черзі",
+      running: "Виконується",
+      sending: "Виконується",
       rejected: "Відхилено",
       failed: "Помилка",
       error: "Помилка",
@@ -310,15 +320,20 @@ const copy = {
       cadence: "Періодичність",
       schedule: "Розклад",
       status: "Статус",
-      last_run_at: "Останній запуск",
-      next_run_at: "Наступний запуск",
+      last_run_at: "Останній",
+      next_run_at: "Наступний",
       updated_at: "Оновлено",
+      last_synced_at: "Остання синхронізація",
+      last_connected_at: "Останнє підключення",
+      connected_at: "Підключено",
       due_status: "Статус черги",
       is_due: "Потрібен запуск",
       form_name: "Форма",
       form_id: "ID форми",
       leads_count: "Ліди",
       created_at: "Створено",
+      started_at: "Почато",
+      finished_at: "Завершено",
       error_message: "Помилка",
       health_status: "Стан",
       active_forms: "Активні форми",
@@ -466,7 +481,8 @@ const copy = {
     adAccountsEmpty: "Ad accounts are not bound yet.",
     scheduledTitle: "Sync",
     scheduledDescription: "Sync rules, current queue, and manual run controls.",
-    scheduledWarning: "Do not run sync until a real OAuth connection and ad account have been verified.",
+    scheduledWarning: "Before a manual run, confirm the selected account is real and bound to the correct project/funnel.",
+    scheduledInfo: "Real accounts are verified. Before a manual run, confirm the selected account is bound to the correct project/funnel.",
     timezoneLabel: "Time",
     timezoneUtc: "UTC",
     timezoneLocal: "Local time",
@@ -486,7 +502,7 @@ const copy = {
     detailsDebug: "Additional technical information is available in developer details.",
     fbTitle: "Facebook Lead Ads",
     fbDescription: "Forms, leads, webhook events, and Facebook Lead Ads sync runs.",
-    fbOauthHelper: "Facebook Lead Ads uses the Meta Ads connection. After Meta Ads is connected, forms, leads, and webhook events will appear here.",
+    fbOauthHelper: "Meta Ads is connected. Facebook Lead Forms have not been found yet. Forms will appear after access to a Facebook Page with Lead Ads forms or after a real form is created.",
     healthStatus: "State",
     activeForms: "Active forms",
     formsNeedMapping: "Forms needing mapping",
@@ -497,8 +513,8 @@ const copy = {
     formsTitle: "Forms",
     leadsTitle: "Recent leads",
     syncRunsTitle: "Recent sync runs",
-    fbFormsEmpty: "Forms will appear after Meta Ads is connected.",
-    fbLeadsEmpty: "Leads will appear after Facebook Lead Ads data is received.",
+    fbFormsEmpty: "Forms have not been found yet. Meta Ads is connected, but Facebook Lead Forms are not available yet.",
+    fbLeadsEmpty: "Lead Ads data has not been received yet.",
     fbSyncRunsEmpty: "Sync runs will appear after the first sync.",
     fbManualSync: "Manual lead sync",
     fbRunLeadSync: "Run lead sync",
@@ -507,20 +523,23 @@ const copy = {
     fbSyncSuccessTitle: "Lead sync completed",
     fbSyncFailedTitle: "Lead sync failed",
     fbSyncSuccess: "Lead sync completed.",
+    fbSyncNoDataSuccess: "Sync completed. Forms and leads were not found.",
     diagnosticsTitle: "Diagnostics",
     diagnosticsDescription: "Ads context, anomaly candidates, and current issues.",
     adsContext: "Ads context",
     dailyContext: "Daily context",
     anomalyCandidates: "Anomaly candidates",
     recentIssues: "Recent issues",
-    diagnosticsEmptyTitle: "Diagnostics will become available after the first successful ads sync.",
-    diagnosticsEmptyText: "No real ads data is available yet. After sync, this page will show ads context, daily metrics, and anomaly candidates.",
+    diagnosticsEmptyTitle: "Diagnostics is waiting for the first ads statistics rows.",
+    diagnosticsEmptyText: "OAuth and syncs can be configured, but anomaly analysis will appear after spend/clicks/campaign data is available.",
     adsContextUnavailable: "Waiting for first sync",
     dailyContextAfterSync: "Waiting for performance data",
     anomaliesAfterPerformance: "Will appear after performance data is available",
     noIssues: "No current issues found.",
-    readinessTimeoutLabel: "Readiness query timeout",
-    readinessTimeoutDescription: "One readiness query exceeded the time limit. This does not mean the Ads connection is broken, but needs separate backend optimization.",
+    readinessTimeoutLabel: "System readiness check took longer",
+    readinessTimeoutDescription: "One readiness request exceeded the time limit. This does not mean ads connections are not working.",
+    readinessTimeoutActionTitle: "What to do",
+    readinessTimeoutActions: ["Refresh the page.", "Repeat the check later.", "If it repeats, check the backend readiness timeout."],
     technicalDetails: "Technical details",
     oauthIssue: "Authorization error",
     sectionUnavailable: "This section is temporarily unavailable.",
@@ -554,13 +573,19 @@ const copy = {
       disabled: "Disabled",
       enabled: "Enabled",
       active: "Active",
+      paused: "Paused",
       inactive: "Inactive",
       ready: "Ready",
       ok: "Ready",
       connected: "Connected",
       confirmed: "Confirmed",
       success: "Success",
+      succeeded: "Success",
+      completed: "Success",
       pending: "Pending",
+      queued: "Queued",
+      running: "Running",
+      sending: "Running",
       rejected: "Rejected",
       failed: "Failed",
       error: "Error",
@@ -582,12 +607,17 @@ const copy = {
       last_run_at: "Last run",
       next_run_at: "Next run",
       updated_at: "Updated",
+      last_synced_at: "Last synced",
+      last_connected_at: "Last connected",
+      connected_at: "Connected",
       due_status: "Queue status",
       is_due: "Due",
       form_name: "Form",
       form_id: "Form ID",
       leads_count: "Leads",
       created_at: "Created",
+      started_at: "Started",
+      finished_at: "Finished",
       error_message: "Error",
       health_status: "State",
       active_forms: "Active forms",
@@ -681,6 +711,7 @@ export default function AdsConnectors() {
     (query.data?.adsDaily.rows.length ?? 0) > 0 ||
     (query.data?.fbSyncRuns.rows.length ?? 0) > 0,
   );
+  const hasTestArchivedOrUnverifiedAccounts = (query.data?.adBindings.rows ?? []).some(isTestOrArchivedAccount) || realAccountRows.length === 0;
 
   const activeMetaConnection = useMemo(
     () => findActiveOAuthConnection("meta", query.data?.adPlatformConnections),
@@ -694,10 +725,10 @@ export default function AdsConnectors() {
   }), [query.data]);
 
   const platformConnectionStates = useMemo(() => ({
-    meta: getPlatformConnectionState("meta", query.data?.adBindings, query.data?.adPlatformConnections, platformSyncInsights.meta, ui, lang),
-    google: getPlatformConnectionState("google", query.data?.adBindings, query.data?.adPlatformConnections, platformSyncInsights.google, ui, lang),
-    tiktok: getPlatformConnectionState("tiktok", query.data?.adBindings, query.data?.adPlatformConnections, platformSyncInsights.tiktok, ui, lang),
-  }), [lang, platformSyncInsights, query.data?.adBindings, query.data?.adPlatformConnections, ui]);
+    meta: getPlatformConnectionState("meta", query.data?.adBindings, query.data?.adPlatformConnections, platformSyncInsights.meta, ui, timezoneDisplayMode, timezoneName ?? undefined),
+    google: getPlatformConnectionState("google", query.data?.adBindings, query.data?.adPlatformConnections, platformSyncInsights.google, ui, timezoneDisplayMode, timezoneName ?? undefined),
+    tiktok: getPlatformConnectionState("tiktok", query.data?.adBindings, query.data?.adPlatformConnections, platformSyncInsights.tiktok, ui, timezoneDisplayMode, timezoneName ?? undefined),
+  }), [platformSyncInsights, query.data?.adBindings, query.data?.adPlatformConnections, timezoneDisplayMode, timezoneName, ui]);
 
   const attentionItems = useMemo(() => buildAttentionItems(platformSyncInsights, query.data, ui), [platformSyncInsights, query.data, ui]);
 
@@ -1029,14 +1060,14 @@ export default function AdsConnectors() {
 
             <TabsContent value="ad-accounts" className="mt-1">
               <SectionCard title={ui.adAccountsTitle} description={ui.adAccountsDescription}>
-                <AdAccountsTable data={query.data?.adBindings} ui={ui} />
+                <AdAccountsTable data={query.data?.adBindings} ui={ui} timestampDisplayMode={timezoneDisplayMode} timezoneName={timezoneName ?? undefined} />
               </SectionCard>
             </TabsContent>
 
             <TabsContent value="sync" className="mt-1">
               <SectionCard title={ui.scheduledTitle} description={ui.scheduledDescription}>
                 <div className="space-y-4">
-                  <WarningNotice>{ui.scheduledWarning}</WarningNotice>
+                  {hasTestArchivedOrUnverifiedAccounts ? <WarningNotice>{ui.scheduledWarning}</WarningNotice> : <InfoNotice>{ui.scheduledInfo}</InfoNotice>}
                   <div className="flex flex-col gap-1 sm:items-end">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                       <label className="text-xs font-medium text-muted-foreground" htmlFor="ads-sync-timezone-mode">{ui.timezoneLabel}</label>
@@ -1064,10 +1095,10 @@ export default function AdsConnectors() {
                       {syncRunState.loading ? ui.runningSync : ui.runSyncCheck}
                     </Button>
                     <p className="mt-2 text-xs text-muted-foreground">{ui.syncSubmitNote}</p>
-                    {syncRunState.success && <p className="mt-2 text-xs text-emerald-700">{ui.syncSuccess}</p>}
+                    {syncRunState.success && <p className="mt-2 text-xs text-emerald-700">{syncRunState.success}</p>}
                     {syncRunState.error && <p className="mt-2 text-xs text-destructive">{ui.syncError} {syncRunState.error}</p>}
                     {syncRunState.details ? <p className="mt-2 text-xs text-muted-foreground">{ui.detailsDebug}</p> : null}
-                    <DeveloperDetails title={ui.technicalDetails}>{syncRunState.details ? <pre className="mt-2 overflow-x-auto rounded bg-background p-2 text-xs text-muted-foreground">{JSON.stringify(syncRunState.details, null, 2)}</pre> : null}</DeveloperDetails>
+                    <DeveloperDetails title={ui.technicalDetails}>{syncRunState.details ? <pre className="mt-2 overflow-x-auto rounded bg-background p-2 text-xs text-muted-foreground">{formatTechnicalDetails(syncRunState.details, timezoneDisplayMode, timezoneName ?? undefined)}</pre> : null}</DeveloperDetails>
                   </div>
                 </div>
               </SectionCard>
@@ -1076,7 +1107,7 @@ export default function AdsConnectors() {
             <TabsContent value="facebook-lead-ads" className="mt-1">
               <SectionCard title={ui.fbTitle} description={ui.fbDescription}>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <MetricCard label={ui.healthStatus} value={friendlyStatus(readLikelyStatus(query.data?.fbHealth.rows[0]), ui)} />
+                  <MetricCard label={ui.healthStatus} value={readLikelyStatus(query.data?.fbHealth.rows[0]) ? friendlyStatus(readLikelyStatus(query.data?.fbHealth.rows[0]), ui) : ui.fbLeadsEmpty} />
                   <MetricCard label={ui.activeForms} value={formatMetric(findMetric(query.data?.fbHealth.rows, ["active_forms", "active_forms_count", "forms_active"]))} />
                   <MetricCard label={ui.formsNeedMapping} value={formatMetric(findMetric(query.data?.fbHealth.rows, ["forms_needing_mapping", "forms_need_mapping", "unmapped_forms"]))} />
                   <MetricCard label={ui.leadsLast24h} value={formatMetric(findMetric(query.data?.fbHealth.rows, ["leads_last_24h", "leads_24h", "recent_leads_24h"]))} />
@@ -1094,19 +1125,19 @@ export default function AdsConnectors() {
                   {facebookLeadSyncState.success && <p className="mt-2 text-xs text-emerald-700">{facebookLeadSyncState.success}</p>}
                   {facebookLeadSyncState.error && <p className="mt-2 text-xs text-destructive">{facebookLeadSyncState.error}</p>}
                   {facebookLeadSyncState.details ? <p className="mt-2 text-xs text-muted-foreground">{ui.detailsDebug}</p> : null}
-                  <DeveloperDetails title={ui.technicalDetails}>{facebookLeadSyncState.details ? <pre className="mt-2 overflow-x-auto rounded bg-background p-2 text-xs text-muted-foreground">{JSON.stringify(facebookLeadSyncState.details, null, 2)}</pre> : null}</DeveloperDetails>
+                  <DeveloperDetails title={ui.technicalDetails}>{facebookLeadSyncState.details ? <pre className="mt-2 overflow-x-auto rounded bg-background p-2 text-xs text-muted-foreground">{formatTechnicalDetails(facebookLeadSyncState.details, timezoneDisplayMode, timezoneName ?? undefined)}</pre> : null}</DeveloperDetails>
                 </div>
                 <div className="mt-4 space-y-4">
-                  <CompactDataSection title={ui.formsTitle} data={query.data?.fbForms} columns={["form_name", "form_id", "status", "mapping_status", "leads_count", "updated_at"]} emptyText={ui.fbFormsEmpty} ui={ui} />
-                  <CompactDataSection title={ui.leadsTitle} data={query.data?.fbLeads} columns={["created_at", "status", "form_name", "client_name", "project_name", "error_message"]} emptyText={ui.fbLeadsEmpty} ui={ui} />
-                  <CompactDataSection title={ui.syncRunsTitle} data={query.data?.fbSyncRuns} columns={["created_at", "status", "last_run_at", "updated_at", "error_message"]} emptyText={ui.fbSyncRunsEmpty} ui={ui} />
+                  <CompactDataSection title={ui.formsTitle} data={query.data?.fbForms} columns={["form_name", "form_id", "status", "mapping_status", "leads_count", "updated_at"]} emptyText={ui.fbFormsEmpty} ui={ui} timestampDisplayMode={timezoneDisplayMode} timezoneName={timezoneName ?? undefined} />
+                  <CompactDataSection title={ui.leadsTitle} data={query.data?.fbLeads} columns={["created_at", "status", "form_name", "client_name", "project_name", "error_message"]} emptyText={ui.fbLeadsEmpty} ui={ui} timestampDisplayMode={timezoneDisplayMode} timezoneName={timezoneName ?? undefined} />
+                  <CompactDataSection title={ui.syncRunsTitle} data={query.data?.fbSyncRuns} columns={["created_at", "started_at", "finished_at", "status", "last_run_at", "updated_at", "error_message"]} emptyText={ui.fbSyncRunsEmpty} ui={ui} timestampDisplayMode={timezoneDisplayMode} timezoneName={timezoneName ?? undefined} />
                 </div>
               </SectionCard>
             </TabsContent>
 
             <TabsContent value="diagnostics" className="mt-1">
               <SectionCard title={ui.diagnosticsTitle} description={ui.diagnosticsDescription}>
-                <DiagnosticsPanel data={query.data} connectorState={connectorState} ui={ui} />
+                <DiagnosticsPanel data={query.data} connectorState={connectorState} ui={ui} timestampDisplayMode={timezoneDisplayMode} timezoneName={timezoneName ?? undefined} />
               </SectionCard>
             </TabsContent>
           </Tabs>
@@ -1176,6 +1207,14 @@ function StatusPill({ tone, children }: { tone: Tone; children: ReactNode }) {
 function WarningNotice({ children }: { children: ReactNode }) {
   return (
     <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+      {children}
+    </div>
+  );
+}
+
+function InfoNotice({ children }: { children: ReactNode }) {
+  return (
+    <div className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-200">
       {children}
     </div>
   );
@@ -1308,7 +1347,7 @@ function ConnectorCard({
   );
 }
 
-function AdAccountsTable({ data, ui }: { data: OptionalViewData | undefined; ui: Copy }) {
+function AdAccountsTable({ data, ui, timestampDisplayMode, timezoneName }: { data: OptionalViewData | undefined; ui: Copy } & TimezoneFormattingOptions) {
   if (!data) return <p className="text-sm text-muted-foreground">{ui.dataUnavailable}</p>;
   if (data.unavailableReason) return <UnavailableMessage reason={data.unavailableReason} ui={ui} />;
   if (data.rows.length === 0) return <p className="text-sm text-muted-foreground">{ui.adAccountsEmpty}</p>;
@@ -1325,12 +1364,12 @@ function AdAccountsTable({ data, ui }: { data: OptionalViewData | undefined; ui:
       </div>
 
       <AdAccountSection title={ui.realAccountsSection} emptyText={realRows.length === 0 ? ui.adAccountsNoRealExplain : undefined}>
-        {realRows.length > 0 ? realRows.map((row, index) => <AdAccountCard key={`real-${index}-${String(row.external_account_id ?? row.id ?? "account")}`} row={row} ui={ui} />) : null}
+        {realRows.length > 0 ? realRows.map((row, index) => <AdAccountCard key={`real-${index}-${String(row.external_account_id ?? row.id ?? "account")}`} row={row} ui={ui} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />) : null}
       </AdAccountSection>
 
       {testRows.length > 0 ? (
         <AdAccountSection title={ui.testAccountsSection} helper={ui.adAccountsTestExplain} secondary compact>
-          {testRows.map((row, index) => <AdAccountCard key={`test-${index}-${String(row.external_account_id ?? row.id ?? "account")}`} row={row} ui={ui} compact />)}
+          {testRows.map((row, index) => <AdAccountCard key={`test-${index}-${String(row.external_account_id ?? row.id ?? "account")}`} row={row} ui={ui} compact timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />)}
         </AdAccountSection>
       ) : null}
     </div>
@@ -1351,7 +1390,7 @@ function AdAccountSection({ title, helper, emptyText, secondary = false, compact
   );
 }
 
-function AdAccountCard({ row, ui, compact = false }: { row: Row; ui: Copy; compact?: boolean }) {
+function AdAccountCard({ row, ui, compact = false, timestampDisplayMode, timezoneName }: { row: Row; ui: Copy; compact?: boolean } & TimezoneFormattingOptions) {
   const testBinding = hasTestBindingMarker(row);
   const archived = isArchivedAccount(row);
   const testOrArchived = testBinding || archived;
@@ -1408,6 +1447,7 @@ function AdAccountCard({ row, ui, compact = false }: { row: Row; ui: Copy; compa
             <AccountField label={ui.columnLabels.mapping_status} value={mappingStatus} ui={ui} compact={compact} />
             <AccountField label={ui.columnLabels.binding_status} value={bindingStatus} ui={ui} compact={compact} />
             <AccountField label={ui.columnLabels.confidence} value={row.confidence} ui={ui} compact={compact} />
+            <AccountTimestampField row={row} keys={["last_synced_at", "last_connected_at", "connected_at", "updated_at"]} ui={ui} compact={compact} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
           </div>
         </div>
       </div>
@@ -1427,6 +1467,17 @@ function AccountField({ label, value, ui, compact = false }: { label: string; va
     </div>
   );
 }
+function AccountTimestampField({ row, keys, ui, compact = false, timestampDisplayMode, timezoneName }: { row: Row; keys: string[]; ui: Copy; compact?: boolean } & TimezoneFormattingOptions) {
+  const key = keys.find((candidate) => row[candidate] !== undefined && row[candidate] !== null && row[candidate] !== "");
+  if (!key) return null;
+  return (
+    <div className={cn("min-w-0 rounded-md bg-muted/30", compact ? "px-2.5 py-1.5" : "px-3 py-2")}>
+      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{friendlyLabel(key, ui)}</p>
+      <p className={cn("mt-1 whitespace-nowrap text-foreground", compact ? "text-xs" : "text-sm")}>{formatTableValue(row[key], key, ui, timestampDisplayMode, timezoneName)}</p>
+    </div>
+  );
+}
+
 
 type TimezoneFormattingOptions = { timestampDisplayMode?: TimezoneDisplayMode; timezoneName?: string };
 
@@ -1501,7 +1552,7 @@ function GenericDataTable({ rows, columns, ui, markPlaceholders = false, maxRows
       <div className="mt-2 text-xs text-muted-foreground">
         <p>{formatLimitedRows(ui.limitedRows, visibleRows.length, rows.length)}</p>
         <DeveloperDetails title={ui.technicalDetails}>
-          <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-muted/50 p-2 text-xs text-muted-foreground">{JSON.stringify(rows.slice(visibleRows.length), null, 2)}</pre>
+          <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-muted/50 p-2 text-xs text-muted-foreground">{formatTechnicalDetails(rows.slice(visibleRows.length), timestampDisplayMode, timezoneName)}</pre>
         </DeveloperDetails>
       </div>
     ) : null}
@@ -1510,7 +1561,7 @@ function GenericDataTable({ rows, columns, ui, markPlaceholders = false, maxRows
 }
 
 
-function DiagnosticsPanel({ data, connectorState, ui }: { data: { [k: string]: OptionalViewData } | undefined; connectorState: Record<ConnectorKey, ConnectorState>; ui: Copy }) {
+function DiagnosticsPanel({ data, connectorState, ui, timestampDisplayMode, timezoneName }: { data: { [k: string]: OptionalViewData } | undefined; connectorState: Record<ConnectorKey, ConnectorState>; ui: Copy } & TimezoneFormattingOptions) {
   const hasDiagnosticRows = Boolean(
     (data?.adsSummary.rows.length ?? 0) > 0 ||
     (data?.adsDaily.rows.length ?? 0) > 0 ||
@@ -1526,9 +1577,9 @@ function DiagnosticsPanel({ data, connectorState, ui }: { data: { [k: string]: O
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-3">
-          <CompactDataSection title={ui.adsContext} data={data?.adsSummary} columns={preferredColumns(data?.adsSummary?.rows)} emptyText={ui.adsContextUnavailable} ui={ui} maxRows={5} />
-          <CompactDataSection title={ui.dailyContext} data={data?.adsDaily} columns={preferredColumns(data?.adsDaily?.rows)} emptyText={ui.dailyContextAfterSync} ui={ui} maxRows={5} />
-          <CompactDataSection title={ui.anomalyCandidates} data={data?.adsAnomalies} columns={preferredColumns(data?.adsAnomalies?.rows)} emptyText={ui.anomaliesAfterPerformance} ui={ui} maxRows={5} />
+          <CompactDataSection title={ui.adsContext} data={data?.adsSummary} columns={preferredColumns(data?.adsSummary?.rows)} emptyText={ui.adsContextUnavailable} ui={ui} maxRows={5} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
+          <CompactDataSection title={ui.dailyContext} data={data?.adsDaily} columns={preferredColumns(data?.adsDaily?.rows)} emptyText={ui.dailyContextAfterSync} ui={ui} maxRows={5} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
+          <CompactDataSection title={ui.anomalyCandidates} data={data?.adsAnomalies} columns={preferredColumns(data?.adsAnomalies?.rows)} emptyText={ui.anomaliesAfterPerformance} ui={ui} maxRows={5} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
         </div>
       )}
 
@@ -1568,6 +1619,14 @@ function IssuesPanel({ data, connectorState, ui }: { data: { [k: string]: Option
             <div key={`${item.name}-${item.reason}`} className={cn("rounded-lg border p-3 text-sm", isTimeout ? "border-amber-200 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/20" : "border-border/70 bg-card/60")}>
               <p className="font-semibold">{isTimeout ? ui.readinessTimeoutLabel : friendlyIssueName(item.name, ui)}</p>
               <p className="mt-1 text-muted-foreground">{isTimeout ? ui.readinessTimeoutDescription : ui.sectionUnavailable}</p>
+              {isTimeout ? (
+                <div className="mt-3 rounded-md bg-background/70 p-3 text-xs text-muted-foreground">
+                  <p className="font-semibold text-foreground">{ui.readinessTimeoutActionTitle}</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-4">
+                    {ui.readinessTimeoutActions.map((action) => <li key={action}>{action}</li>)}
+                  </ul>
+                </div>
+              ) : null}
               <DeveloperDetails title={ui.technicalDetails}>
                 <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-muted/50 p-2 text-xs text-muted-foreground">{`${item.name}: ${item.reason}`}</pre>
               </DeveloperDetails>
@@ -1611,6 +1670,24 @@ function UnavailableMessage({ reason, ui }: { reason: string; ui: Copy }) {
   );
 }
 
+function formatTechnicalDetails(value: unknown, timestampDisplayMode?: TimezoneDisplayMode, timezoneName?: string): string {
+  return JSON.stringify(formatTechnicalDetailValue(value, timestampDisplayMode ?? "utc", timezoneName), null, 2);
+}
+
+function formatTechnicalDetailValue(value: unknown, timestampDisplayMode: TimezoneDisplayMode, timezoneName?: string, key?: string): unknown {
+  if (Array.isArray(value)) return value.map((item) => formatTechnicalDetailValue(item, timestampDisplayMode, timezoneName));
+  if (value && typeof value === "object") {
+    return Object.fromEntries(
+      Object.entries(value as Record<string, unknown>).map(([entryKey, entryValue]) => [
+        entryKey,
+        formatTechnicalDetailValue(entryValue, timestampDisplayMode, timezoneName, entryKey),
+      ]),
+    );
+  }
+  if (key && isTimestampColumn(key)) return formatOperationalTimestamp(value, timestampDisplayMode, timezoneName);
+  return value;
+}
+
 function formatDisconnectTitle(ui: Copy, target: DisconnectTarget): string {
   if (!target || target.name === "Meta Ads") return ui.disconnectMetaTitle;
   return ui.disconnectTitle.replace("{platform}", target.name);
@@ -1645,14 +1722,14 @@ function friendlyLabel(value: string, ui: Copy) {
 function formatValue(value: unknown, ui: Copy): string {
   if (value === null || value === undefined || value === "") return "—";
   if (typeof value === "boolean") return value ? ui.yes : ui.no;
-  if (typeof value === "object") return JSON.stringify(value);
+  if (typeof value === "object") return formatTechnicalDetails(value);
   if (typeof value === "string") return friendlyStatus(value, ui);
   return String(value);
 }
 
 function formatTableValue(value: unknown, column: string, ui: Copy, timestampDisplayMode?: TimezoneDisplayMode, timezoneName?: string): string {
-  if (timestampDisplayMode && isTimestampColumn(column)) {
-    return formatOperationalTimestamp(value, timestampDisplayMode, timezoneName);
+  if (isTimestampColumn(column)) {
+    return formatOperationalTimestamp(value, timestampDisplayMode ?? "utc", timezoneName);
   }
 
   return formatValue(value, ui);
@@ -1683,6 +1760,10 @@ function getLastThirtyDaysRange() {
 }
 
 function buildFacebookLeadSyncSuccessMessage(details: Record<string, unknown>, ui: Copy): string {
+  const formsSeen = readNumericMetric(details, "forms_seen");
+  const leadsReceived = readNumericMetric(details, "leads_received");
+  if (formsSeen === 0 && leadsReceived === 0) return ui.fbSyncNoDataSuccess;
+
   const metricKeys = ["forms_seen", "leads_received", "leads_inserted", "leads_failed"];
   const metrics = metricKeys
     .map((key) => {
@@ -1692,6 +1773,16 @@ function buildFacebookLeadSyncSuccessMessage(details: Record<string, unknown>, u
     .filter((value): value is string => Boolean(value));
 
   return metrics.length > 0 ? `${ui.fbSyncSuccess} ${metrics.join(", ")}` : ui.fbSyncSuccess;
+}
+
+function readNumericMetric(row: Record<string, unknown>, key: string): number | null {
+  const value = row[key];
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  }
+  return null;
 }
 
 async function readFunctionErrorDetails(error: unknown): Promise<string> {
@@ -1781,7 +1872,8 @@ function getPlatformConnectionState(
   connections: OptionalViewData | undefined,
   insight: PlatformSyncInsight,
   ui: Copy,
-  _lang: UiLang,
+  timestampDisplayMode: TimezoneDisplayMode,
+  timezoneName?: string,
 ): PlatformConnectionState {
   const activeConnection = findActiveOAuthConnection(platform, connections);
   if (activeConnection) {
@@ -1789,6 +1881,9 @@ function getPlatformConnectionState(
     const fallbackAccount = platform === "tiktok" ? "Insight Hub Test Advertiser" : null;
     const accountName = activeConnection.displayName ?? fallbackAccount;
     if (accountName) details.push(`${ui.connectedAccount}: ${accountName}`);
+    if (activeConnection.lastConnectedAt) {
+      details.push(`${ui.columnLabels.last_connected_at}: ${formatOperationalTimestamp(activeConnection.lastConnectedAt, timestampDisplayMode, timezoneName)}`);
+    }
 
     if (insight.latestFailure) {
       return {
@@ -1987,15 +2082,6 @@ function findActiveOAuthConnection(platform: ConnectorKey, data: OptionalViewDat
     lastConnectedAt: readString(row, "last_connected_at"),
     activeCount: rows.length,
   };
-}
-
-function formatDateTime(value: string, lang: UiLang): string {
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(lang === "uk" ? "uk-UA" : "en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
 }
 
 function isTabKey(value: string | null): value is TabKey {
