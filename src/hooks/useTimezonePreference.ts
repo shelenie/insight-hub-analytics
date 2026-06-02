@@ -90,8 +90,8 @@ export function useTimezonePreference() {
       if (saveError) {
         setError(saveError.message);
         toast({
-          title: "Timezone preference was not saved",
-          description: "The page is still usable and will keep UTC as the safe fallback if the preference cannot be loaded later.",
+          title: "Налаштування часу не збережено",
+          description: "Сторінка працює далі. Якщо налаштування не завантажиться, буде використано UTC.",
           variant: "destructive",
         });
       }
