@@ -36,6 +36,7 @@ import { formatOperationalTimestamp, getTimezoneDisplayLabel, type TimezoneDispl
 type Primitive = string | number | boolean | null;
 type Row = Record<string, Primitive | Primitive[] | Record<string, unknown>>;
 type OptionalViewData = { rows: Row[]; unavailableReason: string | null };
+type AdsConnectorsData = Record<string, OptionalViewData>;
 type ConnectorKey = "meta" | "google" | "tiktok";
 type ConnectorState = { loading: boolean; error: string | null };
 type TabKey = "overview" | "connections" | "ad-accounts" | "sync" | "facebook-lead-ads" | "diagnostics";
@@ -226,6 +227,7 @@ const copy = {
     failedLeads: "Помилки лідів",
     unprocessedWebhookEvents: "Необроблені webhook-події",
     failedSyncsLast24h: "Помилки синхронізації за 24 год",
+    fbNoDataKpi: "Lead Ads ще без даних",
     formsTitle: "Форми",
     leadsTitle: "Останні ліди",
     syncRunsTitle: "Останні запуски синхронізації",
@@ -510,6 +512,7 @@ const copy = {
     failedLeads: "Failed leads",
     unprocessedWebhookEvents: "Unprocessed webhook events",
     failedSyncsLast24h: "Failed syncs last 24h",
+    fbNoDataKpi: "Lead Ads has no data yet",
     formsTitle: "Forms",
     leadsTitle: "Recent leads",
     syncRunsTitle: "Recent sync runs",
@@ -1107,7 +1110,7 @@ export default function AdsConnectors() {
             <TabsContent value="facebook-lead-ads" className="mt-1">
               <SectionCard title={ui.fbTitle} description={ui.fbDescription}>
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <MetricCard label={ui.healthStatus} value={readLikelyStatus(query.data?.fbHealth.rows[0]) ? friendlyStatus(readLikelyStatus(query.data?.fbHealth.rows[0]), ui) : ui.fbLeadsEmpty} />
+                  <MetricCard label={ui.healthStatus} value={readLikelyStatus(query.data?.fbHealth.rows[0]) ? friendlyStatus(readLikelyStatus(query.data?.fbHealth.rows[0]), ui) : ui.fbNoDataKpi} />
                   <MetricCard label={ui.activeForms} value={formatMetric(findMetric(query.data?.fbHealth.rows, ["active_forms", "active_forms_count", "forms_active"]))} />
                   <MetricCard label={ui.formsNeedMapping} value={formatMetric(findMetric(query.data?.fbHealth.rows, ["forms_needing_mapping", "forms_need_mapping", "unmapped_forms"]))} />
                   <MetricCard label={ui.leadsLast24h} value={formatMetric(findMetric(query.data?.fbHealth.rows, ["leads_last_24h", "leads_24h", "recent_leads_24h"]))} />
@@ -1409,7 +1412,7 @@ function AdAccountCard({ row, ui, compact = false, timestampDisplayMode, timezon
         <div className="min-w-0">
           <p className="text-xs font-semibold text-muted-foreground">{ui.accountSection}</p>
           <p className="mt-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{ui.columnLabels.platform}</p>
-          <p className={cn("mt-1 font-semibold text-foreground", compact ? "text-sm" : "text-base")}>{formatValue(row.platform, ui)}</p>
+          <p className={cn("mt-1 font-semibold text-foreground", compact ? "text-sm" : "text-base")}>{formatValue(row.platform, ui, timestampDisplayMode ?? "utc", timezoneName)}</p>
           {testOrArchived ? <p className="mt-1.5 text-sm font-semibold text-foreground">{ui.serviceTestBinding}</p> : null}
         </div>
         <div className="flex flex-wrap justify-end gap-2">
@@ -1423,11 +1426,11 @@ function AdAccountCard({ row, ui, compact = false, timestampDisplayMode, timezon
         testOrArchived ? "bg-background/55" : "bg-muted/30",
       )}>
         {testOrArchived ? (
-          <p className="break-all font-mono text-xs text-muted-foreground">{ui.technicalId}: {formatValue(technicalAccountId, ui)}</p>
+          <p className="break-all font-mono text-xs text-muted-foreground">{ui.technicalId}: {formatValue(technicalAccountId, ui, timestampDisplayMode ?? "utc", timezoneName)}</p>
         ) : (
           <>
             <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{ui.columnLabels.external_account_id}</p>
-            <p className="mt-1 break-all font-mono text-sm text-foreground">{formatValue(row.external_account_id, ui)}</p>
+            <p className="mt-1 break-all font-mono text-sm text-foreground">{formatValue(row.external_account_id, ui, timestampDisplayMode ?? "utc", timezoneName)}</p>
           </>
         )}
       </div>
@@ -1436,17 +1439,17 @@ function AdAccountCard({ row, ui, compact = false, timestampDisplayMode, timezon
         <div>
           <p className="mb-2 text-xs font-semibold text-muted-foreground">{ui.bindingSection}</p>
           <div className={cn("grid sm:grid-cols-3 lg:grid-cols-1", compact ? "gap-1.5" : "gap-2")}>
-            <AccountField label={ui.columnLabels.client_name} value={row.client_name} ui={ui} compact={compact} />
-            <AccountField label={ui.columnLabels.project_name} value={row.project_name} ui={ui} compact={compact} />
-            <AccountField label={ui.columnLabels.funnel_name} value={row.funnel_name} ui={ui} compact={compact} />
+            <AccountField label={ui.columnLabels.client_name} value={row.client_name} ui={ui} compact={compact} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
+            <AccountField label={ui.columnLabels.project_name} value={row.project_name} ui={ui} compact={compact} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
+            <AccountField label={ui.columnLabels.funnel_name} value={row.funnel_name} ui={ui} compact={compact} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
           </div>
         </div>
         <div>
           <p className="mb-2 text-xs font-semibold text-muted-foreground">{ui.statusSection}</p>
           <div className={cn("grid sm:grid-cols-3 lg:grid-cols-1", compact ? "gap-1.5" : "gap-2")}>
-            <AccountField label={ui.columnLabels.mapping_status} value={mappingStatus} ui={ui} compact={compact} />
-            <AccountField label={ui.columnLabels.binding_status} value={bindingStatus} ui={ui} compact={compact} />
-            <AccountField label={ui.columnLabels.confidence} value={row.confidence} ui={ui} compact={compact} />
+            <AccountField label={ui.columnLabels.mapping_status} value={mappingStatus} ui={ui} compact={compact} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
+            <AccountField label={ui.columnLabels.binding_status} value={bindingStatus} ui={ui} compact={compact} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
+            <AccountField label={ui.columnLabels.confidence} value={row.confidence} ui={ui} compact={compact} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
             <AccountTimestampField row={row} keys={["last_synced_at", "last_connected_at", "connected_at", "updated_at"]} ui={ui} compact={compact} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
           </div>
         </div>
@@ -1459,11 +1462,11 @@ function AdAccountCard({ row, ui, compact = false, timestampDisplayMode, timezon
   );
 }
 
-function AccountField({ label, value, ui, compact = false }: { label: string; value: unknown; ui: Copy; compact?: boolean }) {
+function AccountField({ label, value, ui, compact = false, timestampDisplayMode, timezoneName }: { label: string; value: unknown; ui: Copy; compact?: boolean } & TimezoneFormattingOptions) {
   return (
     <div className={cn("min-w-0 rounded-md bg-muted/30", compact ? "px-2.5 py-1.5" : "px-3 py-2")}>
       <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={cn("mt-1 break-words text-foreground", compact ? "text-xs" : "text-sm")}>{formatValue(value, ui)}</p>
+      <p className={cn("mt-1 break-words text-foreground", compact ? "text-xs" : "text-sm")}>{formatValue(value, ui, timestampDisplayMode ?? "utc", timezoneName)}</p>
     </div>
   );
 }
@@ -1561,7 +1564,7 @@ function GenericDataTable({ rows, columns, ui, markPlaceholders = false, maxRows
 }
 
 
-function DiagnosticsPanel({ data, connectorState, ui, timestampDisplayMode, timezoneName }: { data: { [k: string]: OptionalViewData } | undefined; connectorState: Record<ConnectorKey, ConnectorState>; ui: Copy } & TimezoneFormattingOptions) {
+function DiagnosticsPanel({ data, connectorState, ui, timestampDisplayMode, timezoneName }: { data: AdsConnectorsData | undefined; connectorState: Record<ConnectorKey, ConnectorState>; ui: Copy } & TimezoneFormattingOptions) {
   const hasDiagnosticRows = Boolean(
     (data?.adsSummary.rows.length ?? 0) > 0 ||
     (data?.adsDaily.rows.length ?? 0) > 0 ||
@@ -1603,40 +1606,37 @@ function DiagnosticStatusCard({ title, text }: { title: string; text: string }) 
   );
 }
 
-function IssuesPanel({ data, connectorState, ui }: { data: { [k: string]: OptionalViewData } | undefined; connectorState: Record<ConnectorKey, ConnectorState>; ui: Copy }) {
-  const unavailable = collectUnavailableViews(data);
-  const connectorErrors = Object.entries(connectorState).filter(([, state]) => state.error);
-  const hasIssues = unavailable.length > 0 || connectorErrors.length > 0;
+function IssuesPanel({ data, connectorState, ui }: { data: AdsConnectorsData | undefined; connectorState: Record<ConnectorKey, ConnectorState>; ui: Copy }) {
+  const issues = dedupeDiagnosticIssues([
+    ...collectUnavailableViews(data).map((item) => buildUnavailableDiagnosticIssue(item, ui)),
+    ...Object.entries(connectorState)
+      .filter(([, state]) => state.error)
+      .map(([connector, state]) => buildConnectorDiagnosticIssue(connector as ConnectorKey, state.error ?? "", ui)),
+  ]);
+  const hasIssues = issues.length > 0;
 
   return (
     <div className="rounded-lg border border-border/70 bg-card/50 p-3">
       <p className="mb-2 text-sm font-semibold">{ui.recentIssues}</p>
       {!hasIssues ? <p className="text-sm text-muted-foreground">{ui.noIssues}</p> : null}
       <div className="space-y-3">
-        {unavailable.map((item) => {
-          const isTimeout = item.reason.toLowerCase().includes("statement timeout") || item.reason.toLowerCase().includes("readiness");
-          return (
-            <div key={`${item.name}-${item.reason}`} className={cn("rounded-lg border p-3 text-sm", isTimeout ? "border-amber-200 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/20" : "border-border/70 bg-card/60")}>
-              <p className="font-semibold">{isTimeout ? ui.readinessTimeoutLabel : friendlyIssueName(item.name, ui)}</p>
-              <p className="mt-1 text-muted-foreground">{isTimeout ? ui.readinessTimeoutDescription : ui.sectionUnavailable}</p>
-              {isTimeout ? (
-                <div className="mt-3 rounded-md bg-background/70 p-3 text-xs text-muted-foreground">
-                  <p className="font-semibold text-foreground">{ui.readinessTimeoutActionTitle}</p>
-                  <ul className="mt-2 list-disc space-y-1 pl-4">
-                    {ui.readinessTimeoutActions.map((action) => <li key={action}>{action}</li>)}
-                  </ul>
-                </div>
-              ) : null}
+        {issues.map((issue) => (
+          <div key={issue.dedupeKey} className={cn("rounded-lg border p-3 text-sm", issue.tone === "warning" ? "border-amber-200 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/20" : "border-border/70 bg-card/60")}>
+            <p className="font-semibold">{issue.title}</p>
+            <p className={cn("mt-1", issue.tone === "error" ? "text-destructive" : "text-muted-foreground")}>{issue.description}</p>
+            {issue.actions ? (
+              <div className="mt-3 rounded-md bg-background/70 p-3 text-xs text-muted-foreground">
+                <p className="font-semibold text-foreground">{ui.readinessTimeoutActionTitle}</p>
+                <ul className="mt-2 list-disc space-y-1 pl-4">
+                  {issue.actions.map((action) => <li key={action}>{action}</li>)}
+                </ul>
+              </div>
+            ) : null}
+            {issue.details ? (
               <DeveloperDetails title={ui.technicalDetails}>
-                <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-muted/50 p-2 text-xs text-muted-foreground">{`${item.name}: ${item.reason}`}</pre>
+                <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-muted/50 p-2 text-xs text-muted-foreground">{issue.details}</pre>
               </DeveloperDetails>
-            </div>
-          );
-        })}
-        {connectorErrors.map(([connector, state]) => (
-          <div key={connector} className="rounded-lg border border-border/70 bg-card/60 p-3 text-sm">
-            <p className="font-semibold">{ui.oauthIssue}: {connectorDisplayName(connector as ConnectorKey)}</p>
-            <p className="mt-1 text-destructive">{state.error}</p>
+            ) : null}
           </div>
         ))}
       </div>
@@ -1657,6 +1657,88 @@ function MetricCard({ label, value }: { label: string; value: string }) {
       <p className="mt-1 text-lg font-semibold">{value}</p>
     </div>
   );
+}
+
+
+type DiagnosticIssue = {
+  type: "unavailable_view" | "connector_error";
+  severity: "warning" | "error";
+  section: string;
+  title: string;
+  description: string;
+  details: string | null;
+  tone: "warning" | "error" | "default";
+  actions?: readonly string[];
+  dedupeKey: string;
+};
+
+function buildUnavailableDiagnosticIssue(item: { name: string; reason: string }, ui: Copy): DiagnosticIssue {
+  const isTimeout = isReadinessTimeoutReason(item.reason);
+  const section = isTimeout ? "readiness" : item.name;
+  const title = isTimeout ? ui.readinessTimeoutLabel : friendlyIssueName(item.name, ui);
+  const description = isTimeout ? ui.readinessTimeoutDescription : ui.sectionUnavailable;
+  const severity = "warning";
+
+  return {
+    type: "unavailable_view",
+    severity,
+    section,
+    title,
+    description,
+    details: `${item.name}: ${item.reason}`,
+    tone: isTimeout ? "warning" : "default",
+    actions: isTimeout ? ui.readinessTimeoutActions : undefined,
+    dedupeKey: buildDiagnosticIssueKey({
+      type: isTimeout ? "readiness_timeout" : "unavailable_view",
+      severity,
+      section,
+      title,
+      description,
+      reason: normalizeDiagnosticReason(item.reason),
+    }),
+  };
+}
+
+function buildConnectorDiagnosticIssue(connector: ConnectorKey, error: string, ui: Copy): DiagnosticIssue {
+  const title = `${ui.oauthIssue}: ${connectorDisplayName(connector)}`;
+  return {
+    type: "connector_error",
+    severity: "error",
+    section: connector,
+    title,
+    description: error,
+    details: null,
+    tone: "error",
+    dedupeKey: buildDiagnosticIssueKey({ type: "connector_error", severity: "error", section: connector, title, description: error }),
+  };
+}
+
+function dedupeDiagnosticIssues(issues: DiagnosticIssue[]): DiagnosticIssue[] {
+  const seen = new Set<string>();
+  return issues.filter((issue) => {
+    if (seen.has(issue.dedupeKey)) return false;
+    seen.add(issue.dedupeKey);
+    return true;
+  });
+}
+
+function buildDiagnosticIssueKey(parts: Record<string, unknown>): string {
+  return ["type", "severity", "section", "title", "description", "reason"]
+    .map((key) => `${key}:${normalizeDedupePart(parts[key])}`)
+    .join("|");
+}
+
+function normalizeDedupePart(value: unknown): string {
+  return String(value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function isReadinessTimeoutReason(reason: string): boolean {
+  const normalized = reason.toLowerCase();
+  return normalized.includes("statement timeout") || normalized.includes("readiness");
+}
+
+function normalizeDiagnosticReason(reason: string): string {
+  return isReadinessTimeoutReason(reason) ? "readiness_timeout" : reason;
 }
 
 function UnavailableMessage({ reason, ui }: { reason: string; ui: Copy }) {
@@ -1719,12 +1801,19 @@ function friendlyLabel(value: string, ui: Copy) {
   return ui.columnLabels[value as keyof typeof ui.columnLabels] ?? value.split("_").map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(" ");
 }
 
-function formatValue(value: unknown, ui: Copy): string {
+function formatValue(value: unknown, ui: Copy, timestampDisplayMode: TimezoneDisplayMode = "utc", timezoneName?: string): string {
   if (value === null || value === undefined || value === "") return "—";
   if (typeof value === "boolean") return value ? ui.yes : ui.no;
-  if (typeof value === "object") return formatTechnicalDetails(value);
+  if (isTimestampValue(value)) return formatOperationalTimestamp(value, timestampDisplayMode, timezoneName);
+  if (typeof value === "object") return formatTechnicalDetails(value, timestampDisplayMode, timezoneName);
   if (typeof value === "string") return friendlyStatus(value, ui);
   return String(value);
+}
+
+
+function isTimestampValue(value: unknown): boolean {
+  if (typeof value !== "string") return false;
+  return /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?$/.test(value.trim());
 }
 
 function formatTableValue(value: unknown, column: string, ui: Copy, timestampDisplayMode?: TimezoneDisplayMode, timezoneName?: string): string {
@@ -1732,7 +1821,7 @@ function formatTableValue(value: unknown, column: string, ui: Copy, timestampDis
     return formatOperationalTimestamp(value, timestampDisplayMode ?? "utc", timezoneName);
   }
 
-  return formatValue(value, ui);
+  return formatValue(value, ui, timestampDisplayMode ?? "utc", timezoneName);
 }
 
 function isTimestampColumn(column: string): boolean {
@@ -1985,7 +2074,7 @@ function formatSyncFailureNote(error: string | null, ui: Copy): string {
   return error ? ui.syncFailedWithErrorNote.replace("{error}", error) : ui.syncFailedNote;
 }
 
-function getPlatformSyncInsight(platform: ConnectorKey, data: { [k: string]: OptionalViewData } | undefined): PlatformSyncInsight {
+function getPlatformSyncInsight(platform: ConnectorKey, data: AdsConnectorsData | undefined): PlatformSyncInsight {
   const bindingRows = data?.adBindings.rows.filter((row) => rowMatchesPlatform(row, platform)) ?? [];
   const hasRealAccount = bindingRows.some((row) => !isTestOrArchivedAccount(row));
   const dataRows = [data?.adsSummary.rows, data?.adsDaily.rows, data?.adsAnomalies.rows].flatMap((rows) => rows ?? []);
@@ -1997,7 +2086,7 @@ function getPlatformSyncInsight(platform: ConnectorKey, data: { [k: string]: Opt
   return { hasDataRows, hasVerifiedSync, latestFailure, hasRealAccount };
 }
 
-function buildAttentionItems(insights: Record<ConnectorKey, PlatformSyncInsight>, data: { [k: string]: OptionalViewData } | undefined, ui: Copy): string[] {
+function buildAttentionItems(insights: Record<ConnectorKey, PlatformSyncInsight>, data: AdsConnectorsData | undefined, ui: Copy): string[] {
   const items: string[] = [];
   if (insights.google.latestFailure) items.push(`Google Ads: ${formatSyncFailureNote(insights.google.latestFailure, ui)}`);
   else if (!insights.google.hasVerifiedSync && !insights.google.hasDataRows) items.push(ui.googleNeedsAccess);
@@ -2010,7 +2099,7 @@ function buildAttentionItems(insights: Record<ConnectorKey, PlatformSyncInsight>
   return items;
 }
 
-function facebookLeadFormsOrLeadsMissing(data: { [k: string]: OptionalViewData } | undefined): boolean {
+function facebookLeadFormsOrLeadsMissing(data: AdsConnectorsData | undefined): boolean {
   if (!data) return true;
   if (data.fbForms.unavailableReason || data.fbLeads.unavailableReason) return true;
   const hasForms = data.fbForms.rows.length > 0 || Number(findMetric(data.fbHealth.rows, ["active_forms", "forms_count", "total_forms"]) ?? 0) > 0;
@@ -2137,7 +2226,7 @@ function preferredColumns(rows: Row[] | undefined): string[] {
   return Object.keys(rows[0]).filter((column) => column !== "workspace_id").slice(0, 8);
 }
 
-function collectUnavailableViews(data: { [k: string]: OptionalViewData } | undefined): Array<{ name: string; reason: string }> {
+function collectUnavailableViews(data: AdsConnectorsData | undefined): Array<{ name: string; reason: string }> {
   if (!data) return [];
   return Object.entries(data)
     .filter(([, value]) => value && typeof value === "object" && "unavailableReason" in value && value.unavailableReason)
