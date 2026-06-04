@@ -211,7 +211,7 @@ const copy = {
     syncDueEmpty: "Зараз у черзі немає синхронізацій.",
     runSyncCheck: "Запустити ручну синхронізацію",
     runningSync: "Запускаємо синхронізацію…",
-    syncSubmitNote: "Кнопка викликає наявну безпечну функцію синхронізації лише після ручного запуску.",
+    syncSubmitNote: "Ручний запуск стартує синхронізацію тільки після натискання кнопки.",
     syncSuccess: "Ручну синхронізацію надіслано.",
     syncFailedToastTitle: "Помилка синхронізації",
     syncSubmittedToastTitle: "Синхронізацію надіслано",
@@ -219,7 +219,7 @@ const copy = {
     detailsDebug: "Додаткові технічні відомості доступні в блоці для розробника.",
     fbTitle: "Ліди Facebook",
     fbDescription: "Форми, ліди, webhook-події та запуски синхронізації Facebook Lead Ads.",
-    fbOauthHelper: "Meta Ads підключено. Facebook Lead Forms поки не знайдені. Форми з’являться після доступу до Facebook Page з Lead Ads формами або після створення реальної форми.",
+    fbOauthHelper: "Meta Ads підключено. Форми Lead Ads поки не знайдені. Вони з’являться після доступу до Facebook Page з формами Lead Ads або після створення реальної форми.",
     healthStatus: "Стан",
     activeForms: "Активні форми",
     formsNeedMapping: "Форми без мапінгу",
@@ -227,11 +227,11 @@ const copy = {
     failedLeads: "Помилки лідів",
     unprocessedWebhookEvents: "Необроблені webhook-події",
     failedSyncsLast24h: "Помилки синхронізації за 24 год",
-    fbNoDataKpi: "Lead Ads ще без даних",
+    fbNoDataKpi: "Без даних",
     formsTitle: "Форми",
     leadsTitle: "Останні ліди",
     syncRunsTitle: "Останні запуски синхронізації",
-    fbFormsEmpty: "Форми ще не знайдені. Meta Ads підключено, але Facebook Lead Forms поки не знайдені.",
+    fbFormsEmpty: "Форми Lead Ads поки не знайдені.",
     fbLeadsEmpty: "Дані Lead Ads ще не отримані.",
     fbSyncRunsEmpty: "Запуски синхронізації з’являться після першої синхронізації.",
     fbManualSync: "Ручна синхронізація лідів",
@@ -496,7 +496,7 @@ const copy = {
     syncDueEmpty: "There are no sync jobs in the queue right now.",
     runSyncCheck: "Run manual sync",
     runningSync: "Running sync…",
-    syncSubmitNote: "Clicking calls the existing secure sync function only when submitted manually.",
+    syncSubmitNote: "Manual sync starts only after you click the button.",
     syncSuccess: "Manual sync submitted.",
     syncFailedToastTitle: "Sync failed",
     syncSubmittedToastTitle: "Sync submitted",
@@ -504,7 +504,7 @@ const copy = {
     detailsDebug: "Additional technical information is available in developer details.",
     fbTitle: "Facebook Lead Ads",
     fbDescription: "Forms, leads, webhook events, and Facebook Lead Ads sync runs.",
-    fbOauthHelper: "Meta Ads is connected. Facebook Lead Forms have not been found yet. Forms will appear after access to a Facebook Page with Lead Ads forms or after a real form is created.",
+    fbOauthHelper: "Meta Ads is connected. Lead Ads forms have not been found yet. They will appear after access to Facebook Page Lead Ads forms or after a real form exists.",
     healthStatus: "State",
     activeForms: "Active forms",
     formsNeedMapping: "Forms needing mapping",
@@ -512,11 +512,11 @@ const copy = {
     failedLeads: "Failed leads",
     unprocessedWebhookEvents: "Unprocessed webhook events",
     failedSyncsLast24h: "Failed syncs last 24h",
-    fbNoDataKpi: "Lead Ads has no data yet",
+    fbNoDataKpi: "No data",
     formsTitle: "Forms",
     leadsTitle: "Recent leads",
     syncRunsTitle: "Recent sync runs",
-    fbFormsEmpty: "Forms have not been found yet. Meta Ads is connected, but Facebook Lead Forms are not available yet.",
+    fbFormsEmpty: "Lead Ads forms have not been found yet.",
     fbLeadsEmpty: "Lead Ads data has not been received yet.",
     fbSyncRunsEmpty: "Sync runs will appear after the first sync.",
     fbManualSync: "Manual lead sync",
@@ -1608,7 +1608,7 @@ function DiagnosticStatusCard({ title, text }: { title: string; text: string }) 
 
 function IssuesPanel({ data, connectorState, ui }: { data: AdsConnectorsData | undefined; connectorState: Record<ConnectorKey, ConnectorState>; ui: Copy }) {
   const issues = dedupeDiagnosticIssues([
-    ...collectUnavailableViews(data).map((item) => buildUnavailableDiagnosticIssue(item, ui)),
+    ...collectActiveUnavailableViews(data).map((item) => buildUnavailableDiagnosticIssue(item, ui)),
     ...Object.entries(connectorState)
       .filter(([, state]) => state.error)
       .map(([connector, state]) => buildConnectorDiagnosticIssue(connector as ConnectorKey, state.error ?? "", ui)),
@@ -1766,7 +1766,9 @@ function formatTechnicalDetailValue(value: unknown, timestampDisplayMode: Timezo
       ]),
     );
   }
-  if (key && isTimestampColumn(key)) return formatOperationalTimestamp(value, timestampDisplayMode, timezoneName);
+  if (typeof value === "string" && (isTimestampValue(value) || (key && isTimestampColumn(key)))) {
+    return formatOperationalTimestamp(value, timestampDisplayMode, timezoneName);
+  }
   return value;
 }
 
@@ -2224,6 +2226,20 @@ function formatMetric(value: unknown): string {
 function preferredColumns(rows: Row[] | undefined): string[] {
   if (!rows?.length) return [];
   return Object.keys(rows[0]).filter((column) => column !== "workspace_id").slice(0, 8);
+}
+
+const READINESS_TIMEOUT_SOURCE_NAMES = new Set(["readiness", "adsSummary", "adsDaily", "adsAnomalies"]);
+
+function collectActiveUnavailableViews(data: AdsConnectorsData | undefined): Array<{ name: string; reason: string }> {
+  const unavailableViews = collectUnavailableViews(data);
+  const hasCurrentReadinessTimeout = unavailableViews.some(
+    (item) => READINESS_TIMEOUT_SOURCE_NAMES.has(item.name) && isReadinessTimeoutReason(item.reason),
+  );
+
+  return unavailableViews.filter((item) => {
+    if (!isReadinessTimeoutReason(item.reason)) return true;
+    return hasCurrentReadinessTimeout && READINESS_TIMEOUT_SOURCE_NAMES.has(item.name);
+  });
 }
 
 function collectUnavailableViews(data: AdsConnectorsData | undefined): Array<{ name: string; reason: string }> {
