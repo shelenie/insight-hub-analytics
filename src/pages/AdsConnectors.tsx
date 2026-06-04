@@ -939,7 +939,7 @@ export default function AdsConnectors() {
             </div>
 
             <TabsContent value="overview" className="mt-1">
-              <SectionCard title={ui.overviewTitle} description={ui.overviewSubtitle} accent>
+              <SectionCard title={ui.overviewTitle} description={ui.overviewSubtitle}>
                 <div className="grid gap-3 text-sm md:grid-cols-3">
                   <StatusCard label={ui.connectionStatus} value={overviewConnectionStatus} helper={hasRealOAuth ? ui.connectionStatusHelper : undefined} />
                   <StatusCard label={ui.adAccountsKpi} value={overviewAdAccountsStatus} helper={realAccountRows.length > 0 ? ui.adAccountsHelper : undefined} />
@@ -1069,7 +1069,7 @@ export default function AdsConnectors() {
 
             <TabsContent value="sync" className="mt-1">
               <SectionCard title={ui.scheduledTitle} description={ui.scheduledDescription}>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {hasTestArchivedOrUnverifiedAccounts ? <WarningNotice>{ui.scheduledWarning}</WarningNotice> : <InfoNotice>{ui.scheduledInfo}</InfoNotice>}
                   <div className="flex flex-col gap-1 sm:items-end">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">

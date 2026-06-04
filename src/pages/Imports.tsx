@@ -1395,7 +1395,6 @@ function MetricCard({
       className={cn(
         "group flex min-h-[82px] flex-col rounded-xl border border-border/70 bg-card px-3 py-2.5 shadow-card transition-all",
         href && "h-full hover:border-primary/40 hover:shadow-card-md",
-        tone === "success" && "ring-accent-top",
         tone === "warning" && "border-warning/30 bg-warning-soft/10",
         tone === "error" && "border-destructive/20 bg-destructive-soft/10",
       )}
