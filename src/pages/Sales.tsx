@@ -1,4 +1,4 @@
-import { useMemo, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useMemo, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { addDays, differenceInCalendarDays, format } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -63,27 +63,47 @@ export default function Sales() {
   const [buyersSearch, setBuyersSearch] = useState("");
   const [campaignSearch, setCampaignSearch] = useState("");
   const [dailySearch, setDailySearch] = useState("");
-  const fromIso = format(date.resolved.from, "yyyy-MM-dd");
-  const toIso = format(date.resolved.to, "yyyy-MM-dd");
+  const boundsQuery = useQuery({
+    queryKey: ["sales-bounds", WORKSPACE_ID],
+    enabled: Boolean(session),
+    queryFn: readSalesBounds,
+  });
+
+  const salesBounds = useMemo(() => {
+    if (!boundsQuery.data?.first || !boundsQuery.data.last) return null;
+    return { from: boundsQuery.data.first, to: boundsQuery.data.last };
+  }, [boundsQuery.data]);
+
+  useEffect(() => {
+    if (salesBounds) date.setDataBounds(salesBounds);
+  }, [salesBounds, date]);
+
+  const isAllTime = date.mode === "preset" && date.preset === "all";
+  const effectiveFrom = isAllTime && salesBounds ? salesBounds.from : date.resolved.from;
+  const effectiveTo = isAllTime && salesBounds ? salesBounds.to : date.resolved.to;
+  const fromIso = format(effectiveFrom, "yyyy-MM-dd");
+  const toIso = format(effectiveTo, "yyyy-MM-dd");
+  const queryFromIso = isAllTime ? null : fromIso;
+  const queryToIso = isAllTime ? null : toIso;
 
   const comparisonRange = useMemo(() => {
-    if (compareMode === "none") return null;
+    if (isAllTime || compareMode === "none") return null;
     if (compareMode === "yesterday" && date.mode !== "exact") return null;
-    const days = differenceInCalendarDays(date.resolved.to, date.resolved.from) + 1;
-    const comparisonToDate = addDays(date.resolved.from, -1);
+    const days = differenceInCalendarDays(effectiveTo, effectiveFrom) + 1;
+    const comparisonToDate = addDays(effectiveFrom, -1);
     const comparisonFromDate = addDays(comparisonToDate, -(days - 1));
     return { from: format(comparisonFromDate, "yyyy-MM-dd"), to: format(comparisonToDate, "yyyy-MM-dd") };
-  }, [compareMode, date.mode, date.resolved.from, date.resolved.to]);
+  }, [compareMode, date.mode, effectiveFrom, effectiveTo, isAllTime]);
 
   const query = useQuery({
-    queryKey: ["sales-page", WORKSPACE_ID, fromIso, toIso, date.mode, date.preset],
+    queryKey: ["sales-page", WORKSPACE_ID, queryFromIso, queryToIso, date.mode, date.preset],
     enabled: Boolean(session),
     queryFn: async () => {
       const [summary, daily, onboarding, buyers] = await Promise.all([
-        readSalesSummary(fromIso, toIso),
-        readSalesDaily(fromIso, toIso),
+        readSalesSummary(queryFromIso, queryToIso),
+        readSalesDaily(queryFromIso, queryToIso),
         readOnboarding(),
-        readSalesBuyers(fromIso, toIso),
+        readSalesBuyers(queryFromIso, queryToIso),
       ]);
       return { summary, daily, onboarding, buyers };
     },
@@ -91,7 +111,7 @@ export default function Sales() {
 
   const comparisonQuery = useQuery({
     queryKey: ["sales-page-comparison", WORKSPACE_ID, compareMode, comparisonRange?.from, comparisonRange?.to],
-    enabled: Boolean(session) && compareMode !== "none" && Boolean(comparisonRange),
+    enabled: Boolean(session) && !isAllTime && compareMode !== "none" && Boolean(comparisonRange),
     queryFn: async () => readSalesSummary(comparisonRange!.from, comparisonRange!.to),
   });
 
@@ -297,10 +317,14 @@ function KpiGroups({ groups }: { groups: KpiGroup[] }) {
 const Msg = ({ t }: { t: string }) => <p className="rounded border p-3 text-sm text-muted-foreground">{t}</p>;
 
 async function readOnboarding() { const res = await supabase.from("v_onboarding_hierarchy").select("*").eq("workspace_id", WORKSPACE_ID).limit(500); return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null }; }
-async function readSalesSummary(fromIso: string, toIso: string) { const res = await supabase.from("v_unified_sales_performance_summary").select("*").eq("workspace_id", WORKSPACE_ID).lte("first_date", toIso).gte("last_date", fromIso).limit(500); return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null }; }
-async function readSalesDaily(fromIso: string, toIso: string) { const res = await supabase.from("v_unified_sales_performance_daily").select("*").eq("workspace_id", WORKSPACE_ID).gte("sale_date", fromIso).lte("sale_date", toIso).limit(500); return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null }; }
-async function readSalesBuyers(fromIso: string, toIso: string) { const res = await supabase.from("v_unified_conversions_payment_records").select("*").eq("workspace_id", WORKSPACE_ID).gte("metric_date", fromIso).lte("metric_date", toIso).order("metric_date", { ascending: true }).limit(500); return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null }; }
+async function readSalesSummary(fromIso: string | null, toIso: string | null) { let query = supabase.from("v_unified_sales_performance_summary").select("*").eq("workspace_id", WORKSPACE_ID); if (fromIso && toIso) query = query.lte("first_date", toIso).gte("last_date", fromIso); const res = await query.limit(500); return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null }; }
+async function readSalesDaily(fromIso: string | null, toIso: string | null) { let query = supabase.from("v_unified_sales_performance_daily").select("*").eq("workspace_id", WORKSPACE_ID); if (fromIso && toIso) query = query.gte("sale_date", fromIso).lte("sale_date", toIso); const res = await query.limit(500); return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null }; }
+async function readSalesBuyers(fromIso: string | null, toIso: string | null) { let query = supabase.from("v_unified_conversions_payment_records").select("*").eq("workspace_id", WORKSPACE_ID); if (fromIso && toIso) query = query.gte("metric_date", fromIso).lte("metric_date", toIso); const res = await query.order("metric_date", { ascending: true }).limit(500); return { rows: (res.data ?? []) as Row[], unavailableReason: res.error?.message ?? null }; }
+async function readSalesBounds() { const [firstDaily, lastDaily, firstBuyer, lastBuyer] = await Promise.all([supabase.from("v_unified_sales_performance_daily").select("sale_date").eq("workspace_id", WORKSPACE_ID).order("sale_date", { ascending: true }).limit(1), supabase.from("v_unified_sales_performance_daily").select("sale_date").eq("workspace_id", WORKSPACE_ID).order("sale_date", { ascending: false }).limit(1), supabase.from("v_unified_conversions_payment_records").select("metric_date").eq("workspace_id", WORKSPACE_ID).order("metric_date", { ascending: true }).limit(1), supabase.from("v_unified_conversions_payment_records").select("metric_date").eq("workspace_id", WORKSPACE_ID).order("metric_date", { ascending: false }).limit(1)]); const first = earliestDate([readDateValue(firstDaily.data?.[0]?.sale_date), readDateValue(firstBuyer.data?.[0]?.metric_date)]); const last = latestBoundDate([readDateValue(lastDaily.data?.[0]?.sale_date), readDateValue(lastBuyer.data?.[0]?.metric_date)]); return { first, last }; }
 function FriendlyRows({ rows, columns }: { rows: Row[]; columns: { key: string; label: string }[] }) { return <div className="overflow-x-auto"><Table className="min-w-[560px]"><TableHeader><TableRow>{columns.map((c) => <TableHead className="whitespace-nowrap text-xs uppercase tracking-wide" key={c.key}>{c.label}</TableHead>)}</TableRow></TableHeader><TableBody>{rows.slice(0, 50).map((r, i) => <TableRow key={i}>{columns.map((c) => <TableCell className="text-sm" key={c.key}>{String(r[c.key] ?? "—")}</TableCell>)}</TableRow>)}</TableBody></Table></div>; }
+function readDateValue(value: unknown) { if (typeof value !== "string") return null; const parsed = new Date(`${value}T00:00:00`); return Number.isNaN(parsed.getTime()) ? null : parsed; }
+function earliestDate(values: (Date | null)[]) { return values.reduce<Date | null>((earliest, value) => !value ? earliest : !earliest || value < earliest ? value : earliest, null); }
+function latestBoundDate(values: (Date | null)[]) { return values.reduce<Date | null>((latest, value) => !value ? latest : !latest || value > latest ? value : latest, null); }
 function aggregateSalesTotals(rows: Row[]): SalesTotals { return rows.reduce((acc, row) => ({ sales_count: acc.sales_count + Number(row.sales_count ?? 0), first_payment_usd: acc.first_payment_usd + Number(row.first_payment_usd ?? 0), first_payment_uah: acc.first_payment_uah + Number(row.first_payment_uah ?? 0), second_payment_usd: acc.second_payment_usd + Number(row.second_payment_usd ?? 0), second_payment_uah: acc.second_payment_uah + Number(row.second_payment_uah ?? 0), total_payment_usd: acc.total_payment_usd + Number(row.total_payment_usd ?? 0), total_payment_uah: acc.total_payment_uah + Number(row.total_payment_uah ?? 0) }), emptySalesTotals()); }
 function emptySalesTotals(): SalesTotals { return { sales_count: 0, first_payment_usd: 0, first_payment_uah: 0, second_payment_usd: 0, second_payment_uah: 0, total_payment_usd: 0, total_payment_uah: 0 }; }
 function fmtUsd(value: number) { return `$${fmtNum(value)}`; }
