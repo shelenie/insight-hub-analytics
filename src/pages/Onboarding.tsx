@@ -291,27 +291,27 @@ export default function Onboarding() {
               </SectionCard></TabsContent>
 
               <TabsContent value="projects"><SectionCard title="Проєкти" description="Керування проєктами">
-                <UpsertPanel title="Проєкт" editModeLabel="Редагування проєкту" isEditing={Boolean(projectForm.project_id)} onCancel={resetProjectForm} form={projectForm} setForm={setProjectForm} isPending={projectMutation.isPending} error={projectError} signedIn={Boolean(session)} canSubmit={canEditOnboarding && Boolean(projectForm.name.trim() && projectForm.client_id.trim())} disabled={!canEditOnboarding || clientsMissingClientId || !projectForm.client_id.trim()} submitLabel={projectForm.project_id ? "Зберегти зміни" : "Створити проєкт"} pendingLabel="Зберігаємо проєкт…" onSubmit={() => {
+                <UpsertPanel title="Проєкт" editModeLabel="Редагування проєкту" isEditing={Boolean(projectForm.project_id)} onCancel={resetProjectForm} form={projectForm} setForm={setProjectForm} isPending={projectMutation.isPending} error={projectError} signedIn={Boolean(session)} canSubmit={canEditOnboarding && Boolean(projectForm.name.trim() && projectForm.client_id.trim())} disabled={!canEditOnboarding || clientsMissingClientId || !projectForm.client_id.trim()} submitLabel={projectForm.project_id ? "Зберегти зміни" : "Створити проєкт"} helperText={!projectForm.client_id.trim() ? "Спочатку оберіть клієнта, потім заповніть проєкт." : undefined} pendingLabel="Зберігаємо проєкт…" onSubmit={() => {
                   if (!projectForm.client_id.trim()) return setProjectError("Оберіть клієнта.");
                   if (!projectForm.name.trim()) return setProjectError("Вкажіть назву проєкту.");
                   setProjectError("");
                   projectMutation.mutate({ project_id: projectForm.project_id || undefined, client_id: projectForm.client_id.trim(), name: projectForm.name.trim(), code: projectForm.code || undefined, status: projectForm.status || undefined });
                 }}>
-                  <SelectField disabled={!canEditOnboarding || projectMutation.isPending || clientsMissingClientId} label="Клієнт" placeholder="Оберіть клієнта" value={projectForm.client_id} options={clientOptions} onChange={(value) => setProjectForm((current) => ({ ...current, client_id: value }))} />
+                  <SelectField disabled={!canEditOnboarding || projectMutation.isPending || clientsMissingClientId} label="Клієнт" placeholder="Оберіть клієнта" value={projectForm.client_id} options={clientOptions} emptyText="Клієнтів поки немає. Спочатку створіть клієнта." onChange={(value) => setProjectForm((current) => ({ ...current, client_id: value }))} />
                   <DeveloperDetails title="Технічні деталі"><p>ID проєкту: {projectForm.project_id || "створиться автоматично"}</p><p>ID клієнта: {projectForm.client_id || "не обрано"}</p>{clientsMissingClientId ? <p>v_clients не повертає client_id, тому створення/редагування проєктів вимкнене до виправлення джерела даних.</p> : null}</DeveloperDetails>
                 </UpsertPanel>
                 <EntityTable rows={projects} columns={["name", "client_name", "project_code", "status"]} countColumnTitle="Воронки" countForRow={(row) => funnelCountByProject.get(entityId(row, "project_id") || asText(row.name)) ?? 0} emptyText="Записів поки немає." canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "project_id"))} onEdit={(row) => setProjectForm({ project_id: entityId(row, "project_id"), client_id: referenceId(row, "client_id") || clientIdByName.get(asText(row.client_name)) || "", name: asText(row.name), code: asText(row.project_code), status: asText(row.status) || "active" })} />
               </SectionCard></TabsContent>
 
               <TabsContent value="funnels"><SectionCard title="Воронки" description="Керування воронками">
-                <UpsertPanel title="Воронка" editModeLabel="Редагування воронки" isEditing={Boolean(funnelForm.funnel_id)} onCancel={resetFunnelForm} form={funnelForm} setForm={setFunnelForm} isPending={funnelMutation.isPending} error={funnelError} signedIn={Boolean(session)} canSubmit={canEditOnboarding && Boolean(funnelForm.name.trim() && funnelForm.project_id.trim())} disabled={!canEditOnboarding || projectsMissingProjectId || !funnelForm.project_id.trim()} submitLabel={funnelForm.funnel_id ? "Зберегти зміни" : "Створити воронку"} pendingLabel="Зберігаємо воронку…" onSubmit={() => {
+                <UpsertPanel title="Воронка" editModeLabel="Редагування воронки" isEditing={Boolean(funnelForm.funnel_id)} onCancel={resetFunnelForm} form={funnelForm} setForm={setFunnelForm} isPending={funnelMutation.isPending} error={funnelError} signedIn={Boolean(session)} canSubmit={canEditOnboarding && Boolean(funnelForm.name.trim() && funnelForm.project_id.trim())} disabled={!canEditOnboarding || projectsMissingProjectId || !funnelForm.project_id.trim()} submitLabel={funnelForm.funnel_id ? "Зберегти зміни" : "Створити воронку"} helperText={!funnelForm.project_id.trim() ? "Спочатку оберіть клієнта і проєкт, потім заповніть воронку." : undefined} pendingLabel="Зберігаємо воронку…" onSubmit={() => {
                   if (!funnelForm.project_id.trim()) return setFunnelError("Оберіть проєкт.");
                   if (!funnelForm.name.trim()) return setFunnelError("Вкажіть назву воронки.");
                   setFunnelError("");
                   funnelMutation.mutate({ funnel_id: funnelForm.funnel_id || undefined, project_id: funnelForm.project_id.trim(), name: funnelForm.name.trim(), code: funnelForm.code || undefined, status: funnelForm.status || undefined });
                 }}>
-                  <SelectField disabled={!canEditOnboarding || funnelMutation.isPending} label="Клієнт" placeholder="Усі клієнти" value={funnelForm.client_id || "all"} options={[{ value: "all", label: "Усі клієнти" }, ...clientOptions]} onChange={(value) => setFunnelForm((current) => ({ ...current, client_id: value === "all" ? "" : value, project_id: "" }))} />
-                  <SelectField disabled={!canEditOnboarding || funnelMutation.isPending || projectsMissingProjectId} label="Проєкт" placeholder="Оберіть проєкт" value={funnelForm.project_id} options={filteredProjectOptions} onChange={(value) => setFunnelForm((current) => ({ ...current, project_id: value }))} emptyText={funnelForm.client_id ? "Для цього клієнта проєктів немає." : "Проєктів поки немає."} />
+                  <SelectField disabled={!canEditOnboarding || funnelMutation.isPending} label="Клієнт" placeholder="Усі клієнти" value={funnelForm.client_id || "all"} emptyText="Клієнтів поки немає. Спочатку створіть клієнта." options={clientOptions.length ? [{ value: "all", label: "Усі клієнти" }, ...clientOptions] : []} onChange={(value) => setFunnelForm((current) => ({ ...current, client_id: value === "all" ? "" : value, project_id: "" }))} />
+                  <SelectField disabled={!canEditOnboarding || funnelMutation.isPending || projectsMissingProjectId} label="Проєкт" placeholder="Оберіть проєкт" value={funnelForm.project_id} options={filteredProjectOptions} onChange={(value) => setFunnelForm((current) => ({ ...current, project_id: value }))} emptyText={funnelForm.client_id ? "У цього клієнта ще немає проєктів." : "Проєктів поки немає. Спочатку створіть проєкт."} />
                   <DeveloperDetails title="Технічні деталі"><p>ID воронки: {funnelForm.funnel_id || "створиться автоматично"}</p><p>ID проєкту: {funnelForm.project_id || "не обрано"}</p>{projectsMissingProjectId ? <p>v_projects не повертає project_id, тому створення/редагування воронок вимкнене до виправлення джерела даних.</p> : null}</DeveloperDetails>
                 </UpsertPanel>
                 <EntityTable rows={funnels} columns={["name", "client_name", "project_name", "funnel_code", "status"]} emptyText="Записів поки немає." canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "funnel_id"))} onEdit={(row) => {
@@ -330,11 +330,11 @@ export default function Onboarding() {
   </DashboardLayout>;
 }
 
-function UpsertPanel<T extends { name: string; code: string; status: string }>({ title, editModeLabel, isEditing, onCancel, form, setForm, isPending, error, signedIn, canSubmit, disabled, submitLabel, pendingLabel, onSubmit, children }: { title: string; editModeLabel: string; isEditing: boolean; onCancel: () => void; form: T; setForm: React.Dispatch<React.SetStateAction<T>>; isPending: boolean; error: string; signedIn: boolean; canSubmit: boolean; disabled?: boolean; submitLabel: string; pendingLabel: string; onSubmit: () => void; children?: React.ReactNode; }) {
+function UpsertPanel<T extends { name: string; code: string; status: string }>({ title, editModeLabel, isEditing, onCancel, form, setForm, isPending, error, signedIn, canSubmit, disabled, submitLabel, pendingLabel, helperText, onSubmit, children }: { title: string; editModeLabel: string; isEditing: boolean; onCancel: () => void; form: T; setForm: React.Dispatch<React.SetStateAction<T>>; isPending: boolean; error: string; signedIn: boolean; canSubmit: boolean; disabled?: boolean; submitLabel: string; pendingLabel: string; helperText?: string; onSubmit: () => void; children?: React.ReactNode; }) {
   return <div className="mb-4 rounded-md border border-border/70 bg-muted/20 p-3">
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
       <p className="text-xs text-muted-foreground">{isEditing ? editModeLabel : createModeLabel(title)}</p>
-      {isEditing ? <div className="flex items-center gap-2"><span className="text-xs font-medium text-foreground">{editModeLabel}</span><Button type="button" size="sm" variant="outline" onClick={onCancel}>Скасувати</Button></div> : null}
+      {isEditing ? <Button type="button" size="sm" variant="outline" onClick={onCancel}>Скасувати</Button> : null}
     </div>
     <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
       <Input disabled={disabled || isPending} value={form.name} onChange={(event) => setForm((current: T) => ({ ...current, name: event.target.value }))} placeholder={`Назва ${title.toLowerCase()}`} aria-label={`Назва ${title.toLowerCase()}`} />
@@ -342,6 +342,7 @@ function UpsertPanel<T extends { name: string; code: string; status: string }>({
       <SelectField disabled={disabled || isPending} label="Статус" placeholder="Оберіть статус" value={form.status || "active"} options={statusOptions} onChange={(value) => setForm((current: T) => ({ ...current, status: value }))} />
       {children}
     </div>
+    {helperText ? <p className="mt-2 text-xs text-muted-foreground">{helperText}</p> : null}
     {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}
     <div className="mt-3 flex gap-2"><Button type="button" onClick={onSubmit} disabled={!signedIn || !canSubmit || isPending}>{isPending ? pendingLabel : submitLabel}</Button></div>
   </div>;
@@ -353,12 +354,12 @@ function SelectField({ label, placeholder, value, options, onChange, emptyText =
 
 function EntityTable({ rows, columns, countColumnTitle, countForRow, emptyText, onEdit, canEdit = true, canEditRow }: { rows: OnboardingRow[]; columns: string[]; countColumnTitle?: string; countForRow?: (row: OnboardingRow) => number; emptyText: string; onEdit?: (row: OnboardingRow) => void; canEdit?: boolean; canEditRow?: (row: OnboardingRow) => boolean; }) {
   if (rows.length === 0) return <EmptyMessage>{emptyText}</EmptyMessage>;
-  return <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead><tr className="border-b border-border/70 text-muted-foreground">{columns.map((column) => <th key={column} className="px-2 py-2 font-medium">{columnLabels[column] ?? column}</th>)}{countColumnTitle ? <th className="px-2 py-2 font-medium">{countColumnTitle}</th> : null}{onEdit ? <th className="px-2 py-2 font-medium">Дії</th> : null}</tr></thead><tbody>{rows.map((row, index) => <tr key={rowKey(row, columns, index)} className="border-b border-border/40 last:border-0">{columns.map((column) => <td key={`${index}-${column}`} className="px-2 py-2 text-foreground">{formatCell(row[column], column)}</td>)}{countColumnTitle ? <td className="px-2 py-2 text-foreground">{countForRow ? countForRow(row) : "—"}</td> : null}{onEdit ? <td className="px-2 py-2"><Button type="button" size="sm" variant="outline" disabled={!canEdit || (canEditRow ? !canEditRow(row) : false)} onClick={() => onEdit(row)}>Редагувати</Button></td> : null}</tr>)}</tbody></table></div>;
+  return <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead><tr className="border-b border-border/70 text-muted-foreground">{columns.map((column) => <th key={column} className="px-2 py-2 font-medium">{columnLabels[column] ?? column}</th>)}{countColumnTitle ? <th className="px-2 py-2 font-medium">{countColumnTitle}</th> : null}{onEdit ? <th className="w-20 px-2 py-2 text-right font-medium">Дії</th> : null}</tr></thead><tbody>{rows.map((row, index) => <tr key={rowKey(row, columns, index)} className="border-b border-border/40 last:border-0">{columns.map((column) => <td key={`${index}-${column}`} className="px-2 py-2 text-foreground">{formatCell(row[column], column)}</td>)}{countColumnTitle ? <td className="px-2 py-2 text-foreground">{countForRow ? countForRow(row) : "—"}</td> : null}{onEdit ? <td className="w-20 whitespace-nowrap px-2 py-2 text-right"><Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" disabled={!canEdit || (canEditRow ? !canEditRow(row) : false)} onClick={() => onEdit(row)}>Редагувати</Button></td> : null}</tr>)}</tbody></table></div>;
 }
 
 function GenericTable({ rows, emptyText }: { rows: OnboardingRow[]; emptyText: string }) { if (rows.length === 0) return <EmptyMessage>{emptyText}</EmptyMessage>; const columns = Object.keys(rows[0] ?? {}); if (columns.length === 0) return <EmptyMessage>Дані є, але немає полів для показу.</EmptyMessage>; return <EntityTable rows={rows} columns={columns} emptyText={emptyText} />; }
 function EmptyMessage({ children }: { children: React.ReactNode }) { return <p className="text-sm text-muted-foreground">{children}</p>; }
-function DisplayName({ value }: { value: string }) { return value === UNNAMED_LABEL ? <span className="rounded-full bg-warning-soft px-2 py-0.5 text-xs font-medium text-warning-foreground">{UNNAMED_LABEL}</span> : <>{value}</>; }
+function DisplayName({ value }: { value: string }) { return value === UNNAMED_LABEL ? <span className="rounded-full border border-border/70 bg-muted/40 px-1.5 py-0.5 text-xs font-normal text-muted-foreground">{UNNAMED_LABEL}</span> : <>{value}</>; }
 function createModeLabel(title: string) { return title === "Воронка" ? "Нова воронка" : `Новий ${title.toLowerCase()}`; }
 function asText(value: string | number | boolean | null | undefined) { if (value === null || value === undefined) return ""; return String(value); }
 function entityId(row: OnboardingRow, preferredKey: "client_id" | "project_id" | "funnel_id") { return asText(row[preferredKey]); }
@@ -374,19 +375,22 @@ function formatFieldList(fields: string[]) { return fields.length ? fields.join(
 function isActive(row: OnboardingRow) { return asText(row.status) === "active"; }
 function rowsWithoutReference(rows: OnboardingRow[], key: string, nameKey: string) { return rows.filter((row) => !asText(row[key]) && !asText(row[nameKey])).length; }
 function metricFromHealth(rows: OnboardingRow[], keys: string[]) { for (const row of rows) for (const key of keys) { const value = row[key]; if (typeof value === "number") return value; const parsed = Number(value); if (value !== null && value !== undefined && value !== "" && Number.isFinite(parsed)) return parsed; } return null; }
+function textFromHealth(rows: OnboardingRow[], keys: string[]) { for (const row of rows) for (const key of keys) { const value = asText(row[key]); if (value) return value; } return ""; }
+function formatHealthStatus(value: string) { return ({ healthy: "Все гаразд", needs_onboarding: "Потрібен онбординг", setup_required: "Потрібне налаштування", warning: "Потрібна увага", error: "Помилка" } as Record<string, string>)[value] ?? (value || "Все гаразд"); }
 function buildHealthCards(healthRows: OnboardingRow[], clients: OnboardingRow[], projects: OnboardingRow[], funnels: OnboardingRow[]) {
   const activeClients = metricFromHealth(healthRows, ["active_clients", "clients_active", "client_count", "clients_count"]) ?? clients.filter(isActive).length;
   const activeProjects = metricFromHealth(healthRows, ["active_projects", "projects_active", "project_count", "projects_count"]) ?? projects.filter(isActive).length;
   const activeFunnels = metricFromHealth(healthRows, ["active_funnels", "funnels_active", "funnel_count", "funnels_count"]) ?? funnels.filter(isActive).length;
   const projectsWithoutClient = metricFromHealth(healthRows, ["projects_without_client", "orphan_projects"]) ?? rowsWithoutReference(projects, "client_id", "client_name");
   const funnelsWithoutProject = metricFromHealth(healthRows, ["funnels_without_project", "orphan_funnels"]) ?? rowsWithoutReference(funnels, "project_id", "project_name");
-  const onboardingStatus = projectsWithoutClient || funnelsWithoutProject ? "Потрібна увага" : "Готово";
+  const backendStatus = textFromHealth(healthRows, ["status", "health_status", "onboarding_status"]);
+  const onboardingStatus = projectsWithoutClient || funnelsWithoutProject ? "Потрібна увага" : formatHealthStatus(backendStatus);
   return [
     { title: "Активні клієнти", value: activeClients },
     { title: "Активні проєкти", value: activeProjects },
     { title: "Активні воронки", value: activeFunnels },
     { title: "Проєкти без клієнта", value: projectsWithoutClient, description: projectsWithoutClient ? "Перевірте привʼязку до клієнта." : "Критичних розривів не знайдено." },
     { title: "Воронки без проєкту", value: funnelsWithoutProject, description: funnelsWithoutProject ? "Перевірте привʼязку до проєкту." : "Критичних розривів не знайдено." },
-    { title: "Стан онбордингу", value: onboardingStatus, description: onboardingStatus === "Готово" ? "Основні звʼязки виглядають коректно." : "Є записи, які варто перевірити." },
+    { title: "Стан онбордингу", value: onboardingStatus, description: onboardingStatus === "Все гаразд" ? "Основні звʼязки виглядають коректно." : "Є записи, які варто перевірити." },
   ];
 }
