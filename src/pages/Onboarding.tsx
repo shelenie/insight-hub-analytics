@@ -57,7 +57,7 @@ const statusOptions = [
   { value: "archived", label: "Архівовано" },
 ];
 
-const ONBOARDING_SUBNAV_TRIGGER_CLASS =
+const ADS_SUBNAV_TRIGGER_CLASS =
   "h-10 whitespace-nowrap rounded-lg border border-transparent px-4 text-sm font-semibold transition-all hover:border-primary/30 hover:bg-primary/10 hover:text-primary data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm";
 
 const columnLabels: Record<string, string> = {
@@ -286,7 +286,11 @@ export default function Onboarding() {
               <Tabs defaultValue="overview" className="space-y-2">
               <div className="overflow-x-auto rounded-xl border border-border/70 bg-muted/30 px-2 py-2 shadow-sm">
                 <TabsList className="inline-flex h-auto w-max min-w-full items-center justify-start gap-1.5 bg-transparent p-0 text-muted-foreground">
-                  <TabsTrigger className={ONBOARDING_SUBNAV_TRIGGER_CLASS} value="overview">Структура</TabsTrigger><TabsTrigger className={ONBOARDING_SUBNAV_TRIGGER_CLASS} value="clients">Клієнти</TabsTrigger><TabsTrigger className={ONBOARDING_SUBNAV_TRIGGER_CLASS} value="projects">Проєкти</TabsTrigger><TabsTrigger className={ONBOARDING_SUBNAV_TRIGGER_CLASS} value="funnels">Воронки</TabsTrigger><TabsTrigger className={ONBOARDING_SUBNAV_TRIGGER_CLASS} value="health">Стан</TabsTrigger>
+                  <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="overview">Структура</TabsTrigger>
+                  <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="clients">Клієнти</TabsTrigger>
+                  <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="projects">Проєкти</TabsTrigger>
+                  <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="funnels">Воронки</TabsTrigger>
+                  <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="health">Стан</TabsTrigger>
                 </TabsList>
               </div>
 
