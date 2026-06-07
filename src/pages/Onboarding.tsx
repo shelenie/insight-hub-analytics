@@ -358,9 +358,21 @@ function UpsertPanel<T extends { name: string; code: string; status: string }>({
     <SelectField disabled={disabled || isPending} label="Статус" placeholder="Оберіть статус" value={form.status || "active"} options={statusOptions} onChange={(value) => setForm((current: T) => ({ ...current, status: value }))} />
   </>;
   return <div className={`${compact ? "mb-3 p-2.5" : "mb-4 p-3"} rounded-md border border-border/70 bg-muted/20`}>
-    <div className={`${compact ? "mb-2" : "mb-3"} flex flex-wrap items-center justify-between gap-2`}>
+    <div className={`${compact ? "mb-2" : "mb-3"} flex min-h-8 flex-wrap items-center justify-between gap-2`}>
       <p className="text-xs text-muted-foreground">{isEditing ? editModeLabel : createModeLabel(title)}</p>
-      {isEditing ? <Button type="button" size="sm" variant="outline" onClick={onCancel}>Скасувати</Button> : null}
+      <div className="shrink-0">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className={isEditing ? undefined : "invisible pointer-events-none"}
+          aria-hidden={!isEditing}
+          tabIndex={isEditing ? 0 : -1}
+          onClick={onCancel}
+        >
+          Скасувати
+        </Button>
+      </div>
     </div>
     <div className={`grid grid-cols-1 items-start ${compact ? "gap-2" : "gap-3"} md:grid-cols-2`}>
       {fieldsBeforeInputs ? children : null}
