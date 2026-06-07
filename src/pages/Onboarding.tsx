@@ -280,8 +280,7 @@ export default function Onboarding() {
         : onboardingQuery.isLoading ? <SectionCard title="Онбординг" description="Завантаження"><p className="text-sm text-muted-foreground">Завантажуємо онбординг…</p></SectionCard>
           : onboardingQuery.error ? <SectionCard title="Онбординг" description="Стан розділу"><p className="text-sm text-destructive">Не вдалося завантажити онбординг.</p><DeveloperDetails title="Technical details"><p className="mt-2 break-words">{onboardingQuery.error.message}</p></DeveloperDetails></SectionCard>
             : <>
-              {roleLoading ? <SectionCard title="Доступ" description="Перевірка доступу"><p className="text-sm text-muted-foreground">Перевіряємо доступ…</p></SectionCard> : null}
-              {!roleLoading && roleError ? <SectionCard title="Доступ" description="Стан доступу"><p className="text-sm text-muted-foreground">Доступ тимчасово не підтягнувся. Дії вимкнені.</p></SectionCard> : null}
+              {!roleLoading && roleError ? <NoticeBlock>Доступ тимчасово не підтягнувся. Дії вимкнені.</NoticeBlock> : null}
               {!roleLoading && !canManageOnboarding ? <SectionCard title="Доступ" description="Керування онбордингом"><p className="text-sm text-muted-foreground">У вас немає доступу до керування онбордингом.</p></SectionCard> : null}
               <Tabs defaultValue="overview" className="space-y-2">
               <div className="overflow-x-auto rounded-xl border border-border/70 bg-muted/30 px-2 py-2 shadow-sm">
@@ -308,7 +307,7 @@ export default function Onboarding() {
                 }}>
                   <DeveloperDetails title="Технічні деталі"><p>ID клієнта: {clientForm.client_id || "створиться автоматично"}</p></DeveloperDetails>
                 </UpsertPanel>
-                <EntityTable rows={clients} columns={["name", "client_code", "status", "created_at", "updated_at"]} countColumnTitle="Проєкти" countForRow={(row) => countForStrictMatch(projectCountByClient, strictClientMatch(row))} emptyText="Записів поки немає." canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "client_id"))} onEdit={(row) => setClientForm({ client_id: entityId(row, "client_id"), name: asText(row.name), code: asText(row.client_code), status: asText(row.status) || "active" })} />
+                <EntityTable rows={clients} columns={["name", "client_code", "status", "created_at", "updated_at"]} countColumnTitle="Проєкти" countForRow={(row) => countForStrictMatches(projectCountByClient, safeClientMatches(row))} emptyText="Записів поки немає." canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "client_id"))} onEdit={(row) => setClientForm({ client_id: entityId(row, "client_id"), name: asText(row.name), code: asText(row.client_code), status: asText(row.status) || "active" })} />
               </SectionCard></TabsContent>
 
               <TabsContent value="projects" className="mt-1"><SectionCard title="Проєкти" description="Керування проєктами">
@@ -320,7 +319,7 @@ export default function Onboarding() {
                 }}>
                   <SelectField disabled={!canEditOnboarding || projectMutation.isPending || clientsMissingClientId} label="Клієнт" placeholder="Оберіть клієнта" value={projectForm.client_id} options={clientOptions} emptyText="Клієнтів поки немає. Спочатку створіть клієнта." onChange={(value) => setProjectForm((current) => ({ ...current, client_id: value }))} />
                 </UpsertPanel>
-                <EntityTable rows={projects} columns={["name", "client_name", "project_code", "status"]} countColumnTitle="Воронки" countForRow={(row) => countForStrictMatch(funnelCountByProject, strictProjectMatch(row))} emptyText="Записів поки немає." canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "project_id"))} onEdit={(row) => setProjectForm({ project_id: entityId(row, "project_id"), client_id: referenceId(row, "client_id") || clientIdByName.get(asText(row.client_name)) || "", name: asText(row.name), code: asText(row.project_code), status: asText(row.status) || "active" })} />
+                <EntityTable rows={projects} columns={["name", "client_name", "project_code", "status"]} countColumnTitle="Воронки" countForRow={(row) => countForStrictMatches(funnelCountByProject, safeProjectMatches(row))} emptyText="Записів поки немає." canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "project_id"))} onEdit={(row) => setProjectForm({ project_id: entityId(row, "project_id"), client_id: referenceId(row, "client_id") || clientIdByName.get(asText(row.client_name)) || "", name: asText(row.name), code: asText(row.project_code), status: asText(row.status) || "active" })} />
               </SectionCard></TabsContent>
 
               <TabsContent value="funnels" className="mt-1"><SectionCard title="Воронки" description="Керування воронками">
@@ -414,48 +413,90 @@ function metricFromHealth(rows: OnboardingRow[], keys: string[]) { for (const ro
 function textFromHealth(rows: OnboardingRow[], keys: string[]) { for (const row of rows) for (const key of keys) { const value = asText(row[key]); if (value) return value; } return ""; }
 function formatHealthStatus(value: string) { return ({ healthy: "Все гаразд", needs_onboarding: "Потрібен онбординг", setup_required: "Потрібне налаштування", warning: "Потрібна увага", error: "Помилка" } as Record<string, string>)[value] ?? (value || "Все гаразд"); }
 
-type StrictMatch = { scope: string; value: string } | null;
+type StrictMatch = { scope: string; value: string };
 
-function strictClientMatch(row: OnboardingRow): StrictMatch {
-  return strictClientReferenceMatch(row, asText(row.name) || displayNameForEntity(row, "client"));
+type CountMap = Map<string, Set<string>>;
+
+function safeClientMatches(row: OnboardingRow): StrictMatch[] {
+  return uniqueMatches([
+    matchFromValue("client_id", row.client_id),
+    matchFromValue("client_id", row.id),
+    matchFromValue("client_code", row.client_code),
+    matchFromValue("client_name", row.client_name),
+    matchFromValue("client_name", asText(row.name)),
+  ]);
 }
-function strictClientReferenceMatch(row: OnboardingRow, fallbackName = ""): StrictMatch {
-  const id = entityId(row, "client_id");
-  if (id) return { scope: "client_id", value: id };
-  const code = asText(row.client_code);
-  if (code) return { scope: "client_code", value: code };
-  const name = asText(row.client_name) || fallbackName;
-  return name ? { scope: "client_name", value: name } : null;
+function safeClientReferenceMatches(row: OnboardingRow): StrictMatch[] {
+  return uniqueMatches([
+    matchFromValue("client_id", row.client_id),
+    matchFromValue("client_code", row.client_code),
+    matchFromValue("client_name", row.client_name),
+  ]);
 }
-function strictProjectMatch(row: OnboardingRow): StrictMatch {
-  return strictProjectReferenceMatch(row, asText(row.name) || displayNameForEntity(row, "project"));
+function safeProjectMatches(row: OnboardingRow): StrictMatch[] {
+  return uniqueMatches([
+    matchFromValue("project_id", row.project_id),
+    matchFromValue("project_id", row.id),
+    matchFromValue("project_code", row.project_code),
+    matchFromValue("project_name", row.project_name),
+    matchFromValue("project_name", asText(row.name)),
+  ]);
 }
-function strictProjectReferenceMatch(row: OnboardingRow, fallbackName = ""): StrictMatch {
-  const id = entityId(row, "project_id");
-  if (id) return { scope: "project_id", value: id };
-  const code = asText(row.project_code);
-  if (code) return { scope: "project_code", value: code };
-  const name = asText(row.project_name) || fallbackName;
-  return name ? { scope: "project_name", value: name } : null;
+function safeProjectReferenceMatches(row: OnboardingRow): StrictMatch[] {
+  return uniqueMatches([
+    matchFromValue("project_id", row.project_id),
+    matchFromValue("project_code", row.project_code),
+    matchFromValue("project_name", row.project_name),
+  ]);
 }
-function countKey(match: StrictMatch) { return match ? `${match.scope}:${match.value}` : ""; }
-function countForStrictMatch(counts: Map<string, Set<string>>, match: StrictMatch) { return counts.get(countKey(match))?.size ?? 0; }
-function addStrictCount(counts: Map<string, Set<string>>, match: StrictMatch, childKey: string) { const key = countKey(match); if (!key || !childKey) return; if (!counts.has(key)) counts.set(key, new Set()); counts.get(key)?.add(childKey); }
-function addStrictFallbackCount(counts: Map<string, Set<string>>, primaryScopes: Set<string>, match: StrictMatch, childKey: string) { if (primaryScopes.has(countKey(match))) return; addStrictCount(counts, match, childKey); }
-function projectKey(row: OnboardingRow) { return entityId(row, "project_id") || asText(row.project_code) || asText(row.project_name) || asText(row.name); }
-function funnelKey(row: OnboardingRow) { return entityId(row, "funnel_id") || asText(row.funnel_code) || asText(row.funnel_name) || asText(row.name); }
+function matchFromValue(scope: string, value: string | number | boolean | null | undefined): StrictMatch | null {
+  const text = asText(value);
+  return text ? { scope, value: text } : null;
+}
+function uniqueMatches(matches: (StrictMatch | null)[]) {
+  const seen = new Set<string>();
+  return matches.filter((match): match is StrictMatch => {
+    const key = countKey(match);
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+function countKey(match: StrictMatch | null) { return match ? `${match.scope}:${match.value}` : ""; }
+function countForStrictMatches(counts: CountMap, matches: StrictMatch[]) {
+  for (const match of matches) {
+    const count = counts.get(countKey(match))?.size;
+    if (count !== undefined) return count;
+  }
+  return 0;
+}
+function addStrictCount(counts: CountMap, matches: StrictMatch[], childKey: string) {
+  if (!childKey || matches.length === 0) return;
+  for (const match of matches) {
+    const key = countKey(match);
+    if (!key) continue;
+    if (!counts.has(key)) counts.set(key, new Set());
+    counts.get(key)?.add(childKey);
+  }
+}
+function addStrictFallbackCount(counts: CountMap, primaryScopes: Set<string>, matches: StrictMatch[], childKey: string) {
+  const fallbackMatches = matches.filter((match) => !primaryScopes.has(countKey(match)));
+  addStrictCount(counts, fallbackMatches, childKey);
+}
+function projectKey(row: OnboardingRow) { return asText(row.project_id) || asText(row.id) || asText(row.project_code) || asText(row.project_name) || asText(row.name); }
+function funnelKey(row: OnboardingRow) { return asText(row.funnel_id) || asText(row.id) || asText(row.funnel_code) || asText(row.funnel_name) || asText(row.name); }
 function buildProjectCountByClient(projects: OnboardingRow[], hierarchyRows: OnboardingRow[]) {
-  const counts = new Map<string, Set<string>>();
-  projects.filter(isActive).forEach((project) => addStrictCount(counts, strictClientReferenceMatch(project), projectKey(project)));
+  const counts: CountMap = new Map();
+  projects.filter(isActive).forEach((project) => addStrictCount(counts, safeClientReferenceMatches(project), projectKey(project)));
   const primaryScopes = new Set(counts.keys());
-  hierarchyRows.filter((row) => isActive(row) && hasProjectReference(row)).forEach((row) => addStrictFallbackCount(counts, primaryScopes, strictClientReferenceMatch(row), projectKey(row)));
+  hierarchyRows.filter((row) => isActive(row) && hasProjectReference(row)).forEach((row) => addStrictFallbackCount(counts, primaryScopes, safeClientReferenceMatches(row), projectKey(row)));
   return counts;
 }
 function buildFunnelCountByProject(funnels: OnboardingRow[], hierarchyRows: OnboardingRow[]) {
-  const counts = new Map<string, Set<string>>();
-  funnels.filter(isActive).forEach((funnel) => addStrictCount(counts, strictProjectReferenceMatch(funnel), funnelKey(funnel)));
+  const counts: CountMap = new Map();
+  funnels.filter(isActive).forEach((funnel) => addStrictCount(counts, safeProjectReferenceMatches(funnel), funnelKey(funnel)));
   const primaryScopes = new Set(counts.keys());
-  hierarchyRows.filter((row) => isActive(row) && hasFunnelReference(row)).forEach((row) => addStrictFallbackCount(counts, primaryScopes, strictProjectReferenceMatch(row), funnelKey(row)));
+  hierarchyRows.filter((row) => isActive(row) && hasFunnelReference(row)).forEach((row) => addStrictFallbackCount(counts, primaryScopes, safeProjectReferenceMatches(row), funnelKey(row)));
   return counts;
 }
 
