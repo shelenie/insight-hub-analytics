@@ -33,7 +33,7 @@ type ClientForm = { client_id: string; name: string; code: string; status: strin
 type ProjectForm = { project_id: string; client_id: string; name: string; code: string; status: string };
 type FunnelForm = { funnel_id: string; client_id: string; project_id: string; name: string; code: string; status: string };
 
-type SelectOption = { value: string; label: string; clientId?: string; clientName?: string };
+type SelectOption = { value: string; label: string; clientId?: string; clientName?: string; projectId?: string; projectName?: string; code?: string };
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 const UNNAMED_LABELS = {
@@ -123,22 +123,22 @@ export default function Onboarding() {
     const value = entityId(row, "client_id");
     const name = displayNameForEntity(row, "client");
     const code = asText(row.client_code);
-    return value ? { value, label: code ? `${name} · ${code}` : name } : null;
+    return value ? { value, label: code ? `${name} (${code})` : name, clientId: value, clientName: name, code } : null;
   }).filter(Boolean) as SelectOption[], [clients]);
 
-  const clientNameById = useMemo(() => new Map(clientOptions.map((option) => [option.value, option.label.split(" · ")[0]])), [clientOptions]);
-  const clientIdByName = useMemo(() => new Map(clientOptions.map((option) => [option.label.split(" · ")[0], option.value])), [clientOptions]);
+  const clientNameById = useMemo(() => new Map(clientOptions.map((option) => [option.value, option.clientName ?? option.label])), [clientOptions]);
+  const clientIdByName = useMemo(() => new Map(clientOptions.map((option) => [option.clientName ?? option.label, option.value])), [clientOptions]);
   const projectOptions = useMemo<SelectOption[]>(() => projects.map((row) => {
     const value = entityId(row, "project_id");
     const clientId = referenceId(row, "client_id");
     const clientName = asText(row.client_name) || clientNameById.get(clientId) || UNNAMED_LABELS.client;
     const name = displayNameForEntity(row, "project");
     const code = asText(row.project_code);
-    const label = `${clientName} → ${code ? `${name} · ${code}` : name}`;
-    return value ? { value, label, clientId, clientName } : null;
+    const label = `${clientName} → ${code ? `${name} (${code})` : name}`;
+    return value ? { value, label, clientId, clientName, projectId: value, projectName: name, code } : null;
   }).filter(Boolean) as SelectOption[], [clientNameById, projects]);
 
-  const projectIdByName = useMemo(() => new Map(projectOptions.map((option) => [option.label.split(" → ").at(-1)?.split(" · ")[0] ?? option.label, option.value])), [projectOptions]);
+  const projectIdByName = useMemo(() => new Map(projectOptions.map((option) => [option.projectName ?? option.label, option.value])), [projectOptions]);
 
   const filteredProjectOptions = useMemo(() => {
     if (!funnelForm.client_id) return projectOptions;
@@ -353,8 +353,8 @@ export default function Onboarding() {
 function UpsertPanel<T extends { name: string; code: string; status: string }>({ title, editModeLabel, isEditing, onCancel, form, setForm, isPending, error, signedIn, canSubmit, disabled, submitLabel, pendingLabel, helperText, onSubmit, children, fieldsBeforeInputs = false, details, compact = false }: { title: string; editModeLabel: string; isEditing: boolean; onCancel: () => void; form: T; setForm: React.Dispatch<React.SetStateAction<T>>; isPending: boolean; error: string; signedIn: boolean; canSubmit: boolean; disabled?: boolean; submitLabel: string; pendingLabel: string; helperText?: string; onSubmit: () => void; children?: React.ReactNode; fieldsBeforeInputs?: boolean; details?: React.ReactNode; compact?: boolean; }) {
   const labels = formLabels(title);
   const inputs = <>
-    <Input disabled={disabled || isPending} value={form.name} onChange={(event) => setForm((current: T) => ({ ...current, name: event.target.value }))} placeholder={labels.name} aria-label={labels.name} />
-    <Input disabled={disabled || isPending} value={form.code} onChange={(event) => setForm((current: T) => ({ ...current, code: event.target.value }))} placeholder={labels.code} aria-label={labels.code} />
+    <FormInputField disabled={disabled || isPending} label={labels.name} value={form.name} onChange={(value) => setForm((current: T) => ({ ...current, name: value }))} />
+    <FormInputField disabled={disabled || isPending} label={labels.code} value={form.code} onChange={(value) => setForm((current: T) => ({ ...current, code: value }))} />
     <SelectField disabled={disabled || isPending} label="Статус" placeholder="Оберіть статус" value={form.status || "active"} options={statusOptions} onChange={(value) => setForm((current: T) => ({ ...current, status: value }))} />
   </>;
   return <div className={`${compact ? "mb-3 p-2.5" : "mb-4 p-3"} rounded-md border border-border/70 bg-muted/20`}>
@@ -362,11 +362,11 @@ function UpsertPanel<T extends { name: string; code: string; status: string }>({
       <p className="text-xs text-muted-foreground">{isEditing ? editModeLabel : createModeLabel(title)}</p>
       {isEditing ? <Button type="button" size="sm" variant="outline" onClick={onCancel}>Скасувати</Button> : null}
     </div>
-    <div className={`grid grid-cols-1 ${compact ? "gap-1.5" : "gap-2"} md:grid-cols-2`}>
+    <div className={`grid grid-cols-1 items-start ${compact ? "gap-2" : "gap-3"} md:grid-cols-2`}>
       {fieldsBeforeInputs ? children : null}
       {inputs}
       {fieldsBeforeInputs ? null : children}
-      {details}
+      {details ? <div className="md:col-span-2">{details}</div> : null}
     </div>
     {helperText ? <p className="mt-2 text-xs text-muted-foreground">{helperText}</p> : null}
     {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}
@@ -374,8 +374,12 @@ function UpsertPanel<T extends { name: string; code: string; status: string }>({
   </div>;
 }
 
+function FormInputField({ label, value, onChange, disabled = false }: { label: string; value: string; onChange: (value: string) => void; disabled?: boolean }) {
+  return <label className="space-y-1"><span className="text-xs font-medium text-muted-foreground">{label}</span><Input className="h-10" disabled={disabled} value={value} onChange={(event) => onChange(event.target.value)} placeholder={label} aria-label={label} /></label>;
+}
+
 function SelectField({ label, placeholder, value, options, onChange, emptyText = "Список порожній.", disabled = false }: { label: string; placeholder: string; value: string; options: SelectOption[]; onChange: (value: string) => void; emptyText?: string; disabled?: boolean }) {
-  return <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground">{label}</span><Select value={value} onValueChange={onChange} disabled={disabled || options.length === 0}><SelectTrigger aria-label={label}><SelectValue placeholder={placeholder} /></SelectTrigger><SelectContent>{options.length === 0 ? <SelectItem value="__empty" disabled>{emptyText}</SelectItem> : options.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></div>;
+  return <div className="space-y-1"><span className="text-xs font-medium text-muted-foreground">{label}</span><Select value={value} onValueChange={onChange} disabled={disabled || options.length === 0}><SelectTrigger className="h-10" aria-label={label}><SelectValue placeholder={placeholder} /></SelectTrigger><SelectContent>{options.length === 0 ? <SelectItem value="__empty" disabled>{emptyText}</SelectItem> : options.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent></Select></div>;
 }
 
 function EntityTable({ rows, columns, countColumnTitle, countForRow, emptyText, onEdit, canEdit = true, canEditRow }: { rows: OnboardingRow[]; columns: string[]; countColumnTitle?: string; countForRow?: (row: OnboardingRow) => number; emptyText: string; onEdit?: (row: OnboardingRow) => void; canEdit?: boolean; canEditRow?: (row: OnboardingRow) => boolean; }) {
