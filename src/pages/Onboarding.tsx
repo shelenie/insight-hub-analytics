@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "@/hooks/use-toast";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { DeveloperDetails } from "@/components/common/DeveloperDetails";
+import { RefreshCw } from "lucide-react";
 
 type OnboardingRow = Record<string, string | number | boolean | null>;
 
@@ -271,14 +272,21 @@ export default function Onboarding() {
               {roleLoading ? <SectionCard title="Доступ" description="Перевірка доступу"><p className="text-sm text-muted-foreground">Перевіряємо доступ…</p></SectionCard> : null}
               {!roleLoading && roleError ? <SectionCard title="Доступ" description="Стан доступу"><p className="text-sm text-muted-foreground">Доступ тимчасово не підтягнувся. Дії вимкнені.</p></SectionCard> : null}
               {!roleLoading && !canManageOnboarding ? <SectionCard title="Доступ" description="Керування онбордингом"><p className="text-sm text-muted-foreground">У вас немає доступу до керування онбордингом.</p></SectionCard> : null}
-              <div className="flex flex-wrap items-center justify-end gap-3">
-                {lastRefreshedAt ? <p className="text-xs text-muted-foreground">Оновлено: {formatDateTime(lastRefreshedAt.toISOString())}</p> : null}
-                <Button type="button" size="sm" variant="outline" onClick={handleRefresh} disabled={isRefreshing}>{refreshLabel}</Button>
+              <Tabs defaultValue="overview" className="space-y-3">
+              <div className="rounded-xl border border-border/70 bg-card p-2 shadow-card-md">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <TabsList className="max-w-full justify-start overflow-x-auto">
+                    <TabsTrigger value="overview">Структура</TabsTrigger><TabsTrigger value="clients">Клієнти</TabsTrigger><TabsTrigger value="projects">Проєкти</TabsTrigger><TabsTrigger value="funnels">Воронки</TabsTrigger><TabsTrigger value="health">Стан</TabsTrigger>
+                  </TabsList>
+                  <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+                    {lastRefreshedAt ? <p className="text-xs text-muted-foreground">Оновлено: {formatDateTime(lastRefreshedAt.toISOString())}</p> : null}
+                    <Button type="button" size="sm" variant="outline" className="h-8 shrink-0 gap-1.5 text-xs" onClick={handleRefresh} disabled={isRefreshing}>
+                      <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+                      {refreshLabel}
+                    </Button>
+                  </div>
+                </div>
               </div>
-              <Tabs defaultValue="overview" className="space-y-4">
-              <TabsList className="w-full justify-start overflow-x-auto">
-                <TabsTrigger value="overview">Структура</TabsTrigger><TabsTrigger value="clients">Клієнти</TabsTrigger><TabsTrigger value="projects">Проєкти</TabsTrigger><TabsTrigger value="funnels">Воронки</TabsTrigger><TabsTrigger value="health">Стан</TabsTrigger>
-              </TabsList>
 
               <TabsContent value="overview"><SectionCard title="Клієнт → Проєкт → Воронка" description="Структура клієнтів, проєктів і воронок">
                 {unnamedHierarchySummary.hasUnnamed ? <NoticeBlock>{unnamedHierarchySummary.message} Перевірте джерело даних.</NoticeBlock> : null}
@@ -294,11 +302,11 @@ export default function Onboarding() {
                 }}>
                   <DeveloperDetails title="Технічні деталі"><p>ID клієнта: {clientForm.client_id || "створиться автоматично"}</p></DeveloperDetails>
                 </UpsertPanel>
-                <EntityTable rows={clients} columns={["name", "client_code", "status", "created_at", "updated_at"]} countColumnTitle="Проєкти" countForRow={(row) => countForAliases(projectCountByClient, aliasesForClient(row))} emptyText="Записів поки немає." canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "client_id"))} onEdit={(row) => setClientForm({ client_id: entityId(row, "client_id"), name: asText(row.name), code: asText(row.client_code), status: asText(row.status) || "active" })} />
+                <EntityTable rows={clients} columns={["name", "client_code", "status", "created_at", "updated_at"]} countColumnTitle="Проєкти" countForRow={(row) => countForStrictMatch(projectCountByClient, strictClientMatch(row))} emptyText="Записів поки немає." canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "client_id"))} onEdit={(row) => setClientForm({ client_id: entityId(row, "client_id"), name: asText(row.name), code: asText(row.client_code), status: asText(row.status) || "active" })} />
               </SectionCard></TabsContent>
 
               <TabsContent value="projects"><SectionCard title="Проєкти" description="Керування проєктами">
-                <UpsertPanel title="Проєкт" fieldsBeforeInputs editModeLabel="Редагування проєкту" isEditing={Boolean(projectForm.project_id)} onCancel={resetProjectForm} form={projectForm} setForm={setProjectForm} isPending={projectMutation.isPending} error={projectError} signedIn={Boolean(session)} canSubmit={canEditOnboarding && Boolean(projectForm.name.trim() && projectForm.client_id.trim())} disabled={!canEditOnboarding || clientsMissingClientId || !projectForm.client_id.trim()} submitLabel={projectForm.project_id ? "Зберегти зміни" : "Створити проєкт"} helperText={!projectForm.client_id.trim() ? "Спочатку оберіть клієнта, потім заповніть проєкт." : undefined} pendingLabel="Зберігаємо проєкт…" details={ <DeveloperDetails title="Технічні деталі"><p>ID проєкту: {projectForm.project_id || "створиться автоматично"}</p><p>ID клієнта: {projectForm.client_id || "не обрано"}</p>{clientsMissingClientId ? <p>v_clients не повертає client_id, тому створення/редагування проєктів вимкнене до виправлення джерела даних.</p> : null}</DeveloperDetails> } onSubmit={() => {
+                <UpsertPanel title="Проєкт" compact fieldsBeforeInputs editModeLabel="Редагування проєкту" isEditing={Boolean(projectForm.project_id)} onCancel={resetProjectForm} form={projectForm} setForm={setProjectForm} isPending={projectMutation.isPending} error={projectError} signedIn={Boolean(session)} canSubmit={canEditOnboarding && Boolean(projectForm.name.trim() && projectForm.client_id.trim())} disabled={!canEditOnboarding || clientsMissingClientId || !projectForm.client_id.trim()} submitLabel={projectForm.project_id ? "Зберегти зміни" : "Створити проєкт"} helperText={!projectForm.client_id.trim() ? "Спочатку оберіть клієнта, потім заповніть проєкт." : undefined} pendingLabel="Зберігаємо проєкт…" details={ <DeveloperDetails title="Технічні деталі"><p>ID проєкту: {projectForm.project_id || "створиться автоматично"}</p><p>ID клієнта: {projectForm.client_id || "не обрано"}</p>{clientsMissingClientId ? <p>v_clients не повертає client_id, тому створення/редагування проєктів вимкнене до виправлення джерела даних.</p> : null}</DeveloperDetails> } onSubmit={() => {
                   if (!projectForm.client_id.trim()) return setProjectError("Оберіть клієнта.");
                   if (!projectForm.name.trim()) return setProjectError("Вкажіть назву проєкту.");
                   setProjectError("");
@@ -306,11 +314,11 @@ export default function Onboarding() {
                 }}>
                   <SelectField disabled={!canEditOnboarding || projectMutation.isPending || clientsMissingClientId} label="Клієнт" placeholder="Оберіть клієнта" value={projectForm.client_id} options={clientOptions} emptyText="Клієнтів поки немає. Спочатку створіть клієнта." onChange={(value) => setProjectForm((current) => ({ ...current, client_id: value }))} />
                 </UpsertPanel>
-                <EntityTable rows={projects} columns={["name", "client_name", "project_code", "status"]} countColumnTitle="Воронки" countForRow={(row) => countForAliases(funnelCountByProject, aliasesForProject(row))} emptyText="Записів поки немає." canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "project_id"))} onEdit={(row) => setProjectForm({ project_id: entityId(row, "project_id"), client_id: referenceId(row, "client_id") || clientIdByName.get(asText(row.client_name)) || "", name: asText(row.name), code: asText(row.project_code), status: asText(row.status) || "active" })} />
+                <EntityTable rows={projects} columns={["name", "client_name", "project_code", "status"]} countColumnTitle="Воронки" countForRow={(row) => countForStrictMatch(funnelCountByProject, strictProjectMatch(row))} emptyText="Записів поки немає." canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "project_id"))} onEdit={(row) => setProjectForm({ project_id: entityId(row, "project_id"), client_id: referenceId(row, "client_id") || clientIdByName.get(asText(row.client_name)) || "", name: asText(row.name), code: asText(row.project_code), status: asText(row.status) || "active" })} />
               </SectionCard></TabsContent>
 
               <TabsContent value="funnels"><SectionCard title="Воронки" description="Керування воронками">
-                <UpsertPanel title="Воронка" fieldsBeforeInputs editModeLabel="Редагування воронки" isEditing={Boolean(funnelForm.funnel_id)} onCancel={resetFunnelForm} form={funnelForm} setForm={setFunnelForm} isPending={funnelMutation.isPending} error={funnelError} signedIn={Boolean(session)} canSubmit={canEditOnboarding && Boolean(funnelForm.name.trim() && funnelForm.project_id.trim())} disabled={!canEditOnboarding || projectsMissingProjectId || !funnelForm.project_id.trim()} submitLabel={funnelForm.funnel_id ? "Зберегти зміни" : "Створити воронку"} helperText={!funnelForm.project_id.trim() ? "Спочатку оберіть клієнта і проєкт, потім заповніть воронку." : undefined} pendingLabel="Зберігаємо воронку…" details={ <DeveloperDetails title="Технічні деталі"><p>ID воронки: {funnelForm.funnel_id || "створиться автоматично"}</p><p>ID проєкту: {funnelForm.project_id || "не обрано"}</p>{projectsMissingProjectId ? <p>v_projects не повертає project_id, тому створення/редагування воронок вимкнене до виправлення джерела даних.</p> : null}</DeveloperDetails> } onSubmit={() => {
+                <UpsertPanel title="Воронка" compact fieldsBeforeInputs editModeLabel="Редагування воронки" isEditing={Boolean(funnelForm.funnel_id)} onCancel={resetFunnelForm} form={funnelForm} setForm={setFunnelForm} isPending={funnelMutation.isPending} error={funnelError} signedIn={Boolean(session)} canSubmit={canEditOnboarding && Boolean(funnelForm.name.trim() && funnelForm.project_id.trim())} disabled={!canEditOnboarding || projectsMissingProjectId || !funnelForm.project_id.trim()} submitLabel={funnelForm.funnel_id ? "Зберегти зміни" : "Створити воронку"} helperText={!funnelForm.project_id.trim() ? "Спочатку оберіть клієнта і проєкт, потім заповніть воронку." : undefined} pendingLabel="Зберігаємо воронку…" details={ <DeveloperDetails title="Технічні деталі"><p>ID воронки: {funnelForm.funnel_id || "створиться автоматично"}</p><p>ID проєкту: {funnelForm.project_id || "не обрано"}</p>{projectsMissingProjectId ? <p>v_projects не повертає project_id, тому створення/редагування воронок вимкнене до виправлення джерела даних.</p> : null}</DeveloperDetails> } onSubmit={() => {
                   if (!funnelForm.project_id.trim()) return setFunnelError("Оберіть проєкт.");
                   if (!funnelForm.name.trim()) return setFunnelError("Вкажіть назву воронки.");
                   setFunnelError("");
@@ -336,19 +344,19 @@ export default function Onboarding() {
   </DashboardLayout>;
 }
 
-function UpsertPanel<T extends { name: string; code: string; status: string }>({ title, editModeLabel, isEditing, onCancel, form, setForm, isPending, error, signedIn, canSubmit, disabled, submitLabel, pendingLabel, helperText, onSubmit, children, fieldsBeforeInputs = false, details }: { title: string; editModeLabel: string; isEditing: boolean; onCancel: () => void; form: T; setForm: React.Dispatch<React.SetStateAction<T>>; isPending: boolean; error: string; signedIn: boolean; canSubmit: boolean; disabled?: boolean; submitLabel: string; pendingLabel: string; helperText?: string; onSubmit: () => void; children?: React.ReactNode; fieldsBeforeInputs?: boolean; details?: React.ReactNode; }) {
+function UpsertPanel<T extends { name: string; code: string; status: string }>({ title, editModeLabel, isEditing, onCancel, form, setForm, isPending, error, signedIn, canSubmit, disabled, submitLabel, pendingLabel, helperText, onSubmit, children, fieldsBeforeInputs = false, details, compact = false }: { title: string; editModeLabel: string; isEditing: boolean; onCancel: () => void; form: T; setForm: React.Dispatch<React.SetStateAction<T>>; isPending: boolean; error: string; signedIn: boolean; canSubmit: boolean; disabled?: boolean; submitLabel: string; pendingLabel: string; helperText?: string; onSubmit: () => void; children?: React.ReactNode; fieldsBeforeInputs?: boolean; details?: React.ReactNode; compact?: boolean; }) {
   const labels = formLabels(title);
   const inputs = <>
     <Input disabled={disabled || isPending} value={form.name} onChange={(event) => setForm((current: T) => ({ ...current, name: event.target.value }))} placeholder={labels.name} aria-label={labels.name} />
     <Input disabled={disabled || isPending} value={form.code} onChange={(event) => setForm((current: T) => ({ ...current, code: event.target.value }))} placeholder={labels.code} aria-label={labels.code} />
     <SelectField disabled={disabled || isPending} label="Статус" placeholder="Оберіть статус" value={form.status || "active"} options={statusOptions} onChange={(value) => setForm((current: T) => ({ ...current, status: value }))} />
   </>;
-  return <div className="mb-4 rounded-md border border-border/70 bg-muted/20 p-3">
-    <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+  return <div className={`${compact ? "mb-3 p-2.5" : "mb-4 p-3"} rounded-md border border-border/70 bg-muted/20`}>
+    <div className={`${compact ? "mb-2" : "mb-3"} flex flex-wrap items-center justify-between gap-2`}>
       <p className="text-xs text-muted-foreground">{isEditing ? editModeLabel : createModeLabel(title)}</p>
       {isEditing ? <Button type="button" size="sm" variant="outline" onClick={onCancel}>Скасувати</Button> : null}
     </div>
-    <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+    <div className={`grid grid-cols-1 ${compact ? "gap-1.5" : "gap-2"} md:grid-cols-2`}>
       {fieldsBeforeInputs ? children : null}
       {inputs}
       {fieldsBeforeInputs ? null : children}
@@ -356,7 +364,7 @@ function UpsertPanel<T extends { name: string; code: string; status: string }>({
     </div>
     {helperText ? <p className="mt-2 text-xs text-muted-foreground">{helperText}</p> : null}
     {error ? <p className="mt-2 text-xs text-destructive">{error}</p> : null}
-    <div className="mt-3 flex gap-2"><Button type="button" onClick={onSubmit} disabled={!signedIn || !canSubmit || isPending}>{isPending ? pendingLabel : submitLabel}</Button></div>
+    <div className={`${compact ? "mt-2" : "mt-3"} flex gap-2`}><Button type="button" onClick={onSubmit} disabled={!signedIn || !canSubmit || isPending}>{isPending ? pendingLabel : submitLabel}</Button></div>
   </div>;
 }
 
@@ -400,25 +408,48 @@ function metricFromHealth(rows: OnboardingRow[], keys: string[]) { for (const ro
 function textFromHealth(rows: OnboardingRow[], keys: string[]) { for (const row of rows) for (const key of keys) { const value = asText(row[key]); if (value) return value; } return ""; }
 function formatHealthStatus(value: string) { return ({ healthy: "Все гаразд", needs_onboarding: "Потрібен онбординг", setup_required: "Потрібне налаштування", warning: "Потрібна увага", error: "Помилка" } as Record<string, string>)[value] ?? (value || "Все гаразд"); }
 
-function addAlias(aliases: Set<string>, value: string | number | boolean | null | undefined) { const text = asText(value); if (text) aliases.add(text); }
-function aliasesForClient(row: OnboardingRow) { const aliases = aliasesForClientReference(row); addAlias(aliases, row.name); return aliases; }
-function aliasesForClientReference(row: OnboardingRow) { const aliases = new Set<string>(); addAlias(aliases, row.client_id); addAlias(aliases, row.client_name); addAlias(aliases, row.client_code); return aliases; }
-function aliasesForProject(row: OnboardingRow) { const aliases = aliasesForProjectReference(row); addAlias(aliases, row.name); return aliases; }
-function aliasesForProjectReference(row: OnboardingRow) { const aliases = new Set<string>(); addAlias(aliases, row.project_id); addAlias(aliases, row.project_name); addAlias(aliases, row.project_code); return aliases; }
-function countForAliases(counts: Map<string, Set<string>>, aliases: Set<string>) { const ids = new Set<string>(); aliases.forEach((alias) => counts.get(alias)?.forEach((id) => ids.add(id))); return ids.size; }
-function addCount(counts: Map<string, Set<string>>, aliases: Set<string>, childKey: string) { if (!childKey) return; aliases.forEach((alias) => { if (!counts.has(alias)) counts.set(alias, new Set()); counts.get(alias)?.add(childKey); }); }
+type StrictMatch = { scope: string; value: string } | null;
+
+function strictClientMatch(row: OnboardingRow): StrictMatch {
+  return strictClientReferenceMatch(row, asText(row.name) || displayNameForEntity(row, "client"));
+}
+function strictClientReferenceMatch(row: OnboardingRow, fallbackName = ""): StrictMatch {
+  const id = entityId(row, "client_id");
+  if (id) return { scope: "client_id", value: id };
+  const code = asText(row.client_code);
+  if (code) return { scope: "client_code", value: code };
+  const name = asText(row.client_name) || fallbackName;
+  return name ? { scope: "client_name", value: name } : null;
+}
+function strictProjectMatch(row: OnboardingRow): StrictMatch {
+  return strictProjectReferenceMatch(row, asText(row.name) || displayNameForEntity(row, "project"));
+}
+function strictProjectReferenceMatch(row: OnboardingRow, fallbackName = ""): StrictMatch {
+  const id = entityId(row, "project_id");
+  if (id) return { scope: "project_id", value: id };
+  const code = asText(row.project_code);
+  if (code) return { scope: "project_code", value: code };
+  const name = asText(row.project_name) || fallbackName;
+  return name ? { scope: "project_name", value: name } : null;
+}
+function countKey(match: StrictMatch) { return match ? `${match.scope}:${match.value}` : ""; }
+function countForStrictMatch(counts: Map<string, Set<string>>, match: StrictMatch) { return counts.get(countKey(match))?.size ?? 0; }
+function addStrictCount(counts: Map<string, Set<string>>, match: StrictMatch, childKey: string) { const key = countKey(match); if (!key || !childKey) return; if (!counts.has(key)) counts.set(key, new Set()); counts.get(key)?.add(childKey); }
+function addStrictFallbackCount(counts: Map<string, Set<string>>, primaryScopes: Set<string>, match: StrictMatch, childKey: string) { if (primaryScopes.has(countKey(match))) return; addStrictCount(counts, match, childKey); }
 function projectKey(row: OnboardingRow) { return entityId(row, "project_id") || asText(row.project_code) || asText(row.project_name) || asText(row.name); }
 function funnelKey(row: OnboardingRow) { return entityId(row, "funnel_id") || asText(row.funnel_code) || asText(row.funnel_name) || asText(row.name); }
 function buildProjectCountByClient(projects: OnboardingRow[], hierarchyRows: OnboardingRow[]) {
   const counts = new Map<string, Set<string>>();
-  projects.forEach((project) => addCount(counts, aliasesForClientReference(project), projectKey(project)));
-  hierarchyRows.filter(hasProjectReference).forEach((row) => addCount(counts, aliasesForClient(row), projectKey(row)));
+  projects.filter(isActive).forEach((project) => addStrictCount(counts, strictClientReferenceMatch(project), projectKey(project)));
+  const primaryScopes = new Set(counts.keys());
+  hierarchyRows.filter((row) => isActive(row) && hasProjectReference(row)).forEach((row) => addStrictFallbackCount(counts, primaryScopes, strictClientReferenceMatch(row), projectKey(row)));
   return counts;
 }
 function buildFunnelCountByProject(funnels: OnboardingRow[], hierarchyRows: OnboardingRow[]) {
   const counts = new Map<string, Set<string>>();
-  funnels.forEach((funnel) => addCount(counts, aliasesForProjectReference(funnel), funnelKey(funnel)));
-  hierarchyRows.filter(hasFunnelReference).forEach((row) => addCount(counts, aliasesForProject(row), funnelKey(row)));
+  funnels.filter(isActive).forEach((funnel) => addStrictCount(counts, strictProjectReferenceMatch(funnel), funnelKey(funnel)));
+  const primaryScopes = new Set(counts.keys());
+  hierarchyRows.filter((row) => isActive(row) && hasFunnelReference(row)).forEach((row) => addStrictFallbackCount(counts, primaryScopes, strictProjectReferenceMatch(row), funnelKey(row)));
   return counts;
 }
 
