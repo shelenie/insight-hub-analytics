@@ -57,6 +57,9 @@ const statusOptions = [
   { value: "archived", label: "Архівовано" },
 ];
 
+const ONBOARDING_SUBNAV_TRIGGER_CLASS =
+  "h-10 whitespace-nowrap rounded-lg border border-transparent px-4 text-sm font-semibold transition-all hover:border-primary/30 hover:bg-primary/10 hover:text-primary data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm";
+
 const columnLabels: Record<string, string> = {
   name: "Назва",
   client_code: "Код клієнта",
@@ -263,7 +266,15 @@ export default function Onboarding() {
     setLastRefreshedAt(new Date());
   };
 
-  return <DashboardLayout title="Онбординг" subtitle="Клієнти, проєкти, воронки та структура робочого простору">
+  const headerActions = session && !onboardingQuery.isLoading && !onboardingQuery.error ? <div className="flex flex-wrap items-center justify-end gap-2">
+    {lastRefreshedAt ? <p className="text-xs text-muted-foreground">Оновлено: {formatDateTime(lastRefreshedAt.toISOString())}</p> : null}
+    <Button type="button" size="sm" variant="outline" className="h-8 shrink-0 gap-1.5 text-xs" onClick={handleRefresh} disabled={isRefreshing}>
+      <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
+      {refreshLabel}
+    </Button>
+  </div> : null;
+
+  return <DashboardLayout title="Онбординг" subtitle="Клієнти, проєкти, воронки та структура робочого простору" actions={headerActions} contentClassName="pt-1 lg:pt-2">
     <div className="space-y-4">
       {!session ? <SectionCard title="Онбординг" description="Потрібен вхід"><p className="text-sm text-muted-foreground">Увійдіть, щоб керувати онбордингом.</p></SectionCard>
         : onboardingQuery.isLoading ? <SectionCard title="Онбординг" description="Завантаження"><p className="text-sm text-muted-foreground">Завантажуємо онбординг…</p></SectionCard>
@@ -272,29 +283,20 @@ export default function Onboarding() {
               {roleLoading ? <SectionCard title="Доступ" description="Перевірка доступу"><p className="text-sm text-muted-foreground">Перевіряємо доступ…</p></SectionCard> : null}
               {!roleLoading && roleError ? <SectionCard title="Доступ" description="Стан доступу"><p className="text-sm text-muted-foreground">Доступ тимчасово не підтягнувся. Дії вимкнені.</p></SectionCard> : null}
               {!roleLoading && !canManageOnboarding ? <SectionCard title="Доступ" description="Керування онбордингом"><p className="text-sm text-muted-foreground">У вас немає доступу до керування онбордингом.</p></SectionCard> : null}
-              <Tabs defaultValue="overview" className="space-y-3">
-              <div className="rounded-xl border border-border/70 bg-card p-2 shadow-card-md">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <TabsList className="max-w-full justify-start overflow-x-auto">
-                    <TabsTrigger value="overview">Структура</TabsTrigger><TabsTrigger value="clients">Клієнти</TabsTrigger><TabsTrigger value="projects">Проєкти</TabsTrigger><TabsTrigger value="funnels">Воронки</TabsTrigger><TabsTrigger value="health">Стан</TabsTrigger>
-                  </TabsList>
-                  <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-                    {lastRefreshedAt ? <p className="text-xs text-muted-foreground">Оновлено: {formatDateTime(lastRefreshedAt.toISOString())}</p> : null}
-                    <Button type="button" size="sm" variant="outline" className="h-8 shrink-0 gap-1.5 text-xs" onClick={handleRefresh} disabled={isRefreshing}>
-                      <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
-                      {refreshLabel}
-                    </Button>
-                  </div>
-                </div>
+              <Tabs defaultValue="overview" className="space-y-2">
+              <div className="overflow-x-auto rounded-xl border border-border/70 bg-muted/30 px-2 py-2 shadow-sm">
+                <TabsList className="inline-flex h-auto w-max min-w-full items-center justify-start gap-1.5 bg-transparent p-0 text-muted-foreground">
+                  <TabsTrigger className={ONBOARDING_SUBNAV_TRIGGER_CLASS} value="overview">Структура</TabsTrigger><TabsTrigger className={ONBOARDING_SUBNAV_TRIGGER_CLASS} value="clients">Клієнти</TabsTrigger><TabsTrigger className={ONBOARDING_SUBNAV_TRIGGER_CLASS} value="projects">Проєкти</TabsTrigger><TabsTrigger className={ONBOARDING_SUBNAV_TRIGGER_CLASS} value="funnels">Воронки</TabsTrigger><TabsTrigger className={ONBOARDING_SUBNAV_TRIGGER_CLASS} value="health">Стан</TabsTrigger>
+                </TabsList>
               </div>
 
-              <TabsContent value="overview"><SectionCard title="Клієнт → Проєкт → Воронка" description="Структура клієнтів, проєктів і воронок">
+              <TabsContent value="overview" className="mt-1"><SectionCard title="Клієнт → Проєкт → Воронка" description="Структура клієнтів, проєктів і воронок">
                 {unnamedHierarchySummary.hasUnnamed ? <NoticeBlock>{unnamedHierarchySummary.message} Перевірте джерело даних.</NoticeBlock> : null}
                 {unnamedHierarchySummary.hasUnnamed ? <DeveloperDetails title="Ідентифікатори записів без назви"><UnnamedRowsDetails rows={unnamedHierarchySummary.rows} /></DeveloperDetails> : null}
                 {groupedHierarchy.length === 0 ? <EmptyMessage>Дані ще не підключені.</EmptyMessage> : <div className="space-y-3">{groupedHierarchy.map((client) => <div key={client.clientKey} className="rounded-md border border-border/70 bg-card/60 p-3"><p className="text-sm font-semibold text-foreground"><DisplayName value={client.clientName} /></p><div className="mt-2 space-y-2">{Array.from(client.projects.entries()).map(([projectKey, project]) => <div key={`${client.clientKey}-${projectKey}`} className="rounded-md bg-muted/40 p-2"><p className="text-sm font-medium"><DisplayName value={project.projectName} /></p>{project.funnels.size === 0 ? <p className="mt-1 text-xs text-muted-foreground">Воронок поки немає.</p> : <ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground">{Array.from(project.funnels).map((funnelName) => <li key={`${client.clientKey}-${projectKey}-${funnelName}`}><DisplayName value={funnelName} /></li>)}</ul>}</div>)}</div></div>)}</div>}
               </SectionCard></TabsContent>
 
-              <TabsContent value="clients"><SectionCard title="Клієнти" description="Керування клієнтами">
+              <TabsContent value="clients" className="mt-1"><SectionCard title="Клієнти" description="Керування клієнтами">
                 <UpsertPanel title="Клієнт" editModeLabel="Редагування клієнта" isEditing={Boolean(clientForm.client_id)} onCancel={resetClientForm} form={clientForm} setForm={setClientForm} isPending={clientMutation.isPending} error={clientError} signedIn={Boolean(session)} canSubmit={canEditOnboarding && Boolean(clientForm.name.trim())} disabled={!canEditOnboarding} submitLabel={clientForm.client_id ? "Зберегти зміни" : "Створити клієнта"} pendingLabel="Зберігаємо клієнта…" onSubmit={() => {
                   if (!clientForm.name.trim()) return setClientError("Вкажіть назву клієнта.");
                   setClientError("");
@@ -305,7 +307,7 @@ export default function Onboarding() {
                 <EntityTable rows={clients} columns={["name", "client_code", "status", "created_at", "updated_at"]} countColumnTitle="Проєкти" countForRow={(row) => countForStrictMatch(projectCountByClient, strictClientMatch(row))} emptyText="Записів поки немає." canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "client_id"))} onEdit={(row) => setClientForm({ client_id: entityId(row, "client_id"), name: asText(row.name), code: asText(row.client_code), status: asText(row.status) || "active" })} />
               </SectionCard></TabsContent>
 
-              <TabsContent value="projects"><SectionCard title="Проєкти" description="Керування проєктами">
+              <TabsContent value="projects" className="mt-1"><SectionCard title="Проєкти" description="Керування проєктами">
                 <UpsertPanel title="Проєкт" compact fieldsBeforeInputs editModeLabel="Редагування проєкту" isEditing={Boolean(projectForm.project_id)} onCancel={resetProjectForm} form={projectForm} setForm={setProjectForm} isPending={projectMutation.isPending} error={projectError} signedIn={Boolean(session)} canSubmit={canEditOnboarding && Boolean(projectForm.name.trim() && projectForm.client_id.trim())} disabled={!canEditOnboarding || clientsMissingClientId || !projectForm.client_id.trim()} submitLabel={projectForm.project_id ? "Зберегти зміни" : "Створити проєкт"} helperText={!projectForm.client_id.trim() ? "Спочатку оберіть клієнта, потім заповніть проєкт." : undefined} pendingLabel="Зберігаємо проєкт…" details={ <DeveloperDetails title="Технічні деталі"><p>ID проєкту: {projectForm.project_id || "створиться автоматично"}</p><p>ID клієнта: {projectForm.client_id || "не обрано"}</p>{clientsMissingClientId ? <p>v_clients не повертає client_id, тому створення/редагування проєктів вимкнене до виправлення джерела даних.</p> : null}</DeveloperDetails> } onSubmit={() => {
                   if (!projectForm.client_id.trim()) return setProjectError("Оберіть клієнта.");
                   if (!projectForm.name.trim()) return setProjectError("Вкажіть назву проєкту.");
@@ -317,7 +319,7 @@ export default function Onboarding() {
                 <EntityTable rows={projects} columns={["name", "client_name", "project_code", "status"]} countColumnTitle="Воронки" countForRow={(row) => countForStrictMatch(funnelCountByProject, strictProjectMatch(row))} emptyText="Записів поки немає." canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "project_id"))} onEdit={(row) => setProjectForm({ project_id: entityId(row, "project_id"), client_id: referenceId(row, "client_id") || clientIdByName.get(asText(row.client_name)) || "", name: asText(row.name), code: asText(row.project_code), status: asText(row.status) || "active" })} />
               </SectionCard></TabsContent>
 
-              <TabsContent value="funnels"><SectionCard title="Воронки" description="Керування воронками">
+              <TabsContent value="funnels" className="mt-1"><SectionCard title="Воронки" description="Керування воронками">
                 <UpsertPanel title="Воронка" compact fieldsBeforeInputs editModeLabel="Редагування воронки" isEditing={Boolean(funnelForm.funnel_id)} onCancel={resetFunnelForm} form={funnelForm} setForm={setFunnelForm} isPending={funnelMutation.isPending} error={funnelError} signedIn={Boolean(session)} canSubmit={canEditOnboarding && Boolean(funnelForm.name.trim() && funnelForm.project_id.trim())} disabled={!canEditOnboarding || projectsMissingProjectId || !funnelForm.project_id.trim()} submitLabel={funnelForm.funnel_id ? "Зберегти зміни" : "Створити воронку"} helperText={!funnelForm.project_id.trim() ? "Спочатку оберіть клієнта і проєкт, потім заповніть воронку." : undefined} pendingLabel="Зберігаємо воронку…" details={ <DeveloperDetails title="Технічні деталі"><p>ID воронки: {funnelForm.funnel_id || "створиться автоматично"}</p><p>ID проєкту: {funnelForm.project_id || "не обрано"}</p>{projectsMissingProjectId ? <p>v_projects не повертає project_id, тому створення/редагування воронок вимкнене до виправлення джерела даних.</p> : null}</DeveloperDetails> } onSubmit={() => {
                   if (!funnelForm.project_id.trim()) return setFunnelError("Оберіть проєкт.");
                   if (!funnelForm.name.trim()) return setFunnelError("Вкажіть назву воронки.");
@@ -334,7 +336,7 @@ export default function Onboarding() {
                 }} />
               </SectionCard></TabsContent>
 
-              <TabsContent value="health"><SectionCard title="Стан онбордингу" description="Короткий стан онбордингу">
+              <TabsContent value="health" className="mt-1"><SectionCard title="Стан онбордингу" description="Короткий стан онбордингу">
                 {healthDiagnostics.messages.length ? <NoticeBlock>{healthDiagnostics.messages.join(" ")}</NoticeBlock> : null}
                 {healthRows.length === 0 && clients.length === 0 && projects.length === 0 && funnels.length === 0 ? <EmptyMessage>Даних про стан онбордингу поки немає.</EmptyMessage> : <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">{healthCards.map((card) => <div key={card.title} className="rounded-md border border-border/70 bg-card/60 p-4"><p className="text-sm text-muted-foreground">{card.title}</p><p className="mt-2 text-2xl font-semibold text-foreground">{card.value}</p>{card.description ? <p className="mt-1 text-xs text-muted-foreground">{card.description}</p> : null}</div>)}</div>}
                 <DeveloperDetails title="Технічні деталі"><p>workspace_id: {WORKSPACE_ID}</p><p>Видимі активні клієнти / проєкти / воронки: {healthDiagnostics.visible.activeClients} / {healthDiagnostics.visible.activeProjects} / {healthDiagnostics.visible.activeFunnels}</p><p>Health активні клієнти / проєкти / воронки: {healthDiagnostics.backend.activeClients ?? "немає"} / {healthDiagnostics.backend.activeProjects ?? "немає"} / {healthDiagnostics.backend.activeFunnels ?? "немає"}</p><p>Поля v_clients: {formatFieldList(dataShapeDiagnostics.clients)}</p><p>Поля v_projects: {formatFieldList(dataShapeDiagnostics.projects)}</p><p>Поля v_funnels: {formatFieldList(dataShapeDiagnostics.funnels)}</p><p>Поля v_onboarding_hierarchy: {formatFieldList(dataShapeDiagnostics.hierarchy)}</p><p>Поля v_onboarding_health: {formatFieldList(dataShapeDiagnostics.health)}</p><p>Якщо ID відсутні у view, лічильники використовують назви/коди та v_onboarding_hierarchy як fallback.</p><GenericTable rows={healthRows} emptyText="Технічні дані відсутні." /></DeveloperDetails>
