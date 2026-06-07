@@ -128,7 +128,6 @@ export default function Onboarding() {
 
   const clientNameById = useMemo(() => new Map(clientOptions.map((option) => [option.value, option.label.split(" · ")[0]])), [clientOptions]);
   const clientIdByName = useMemo(() => new Map(clientOptions.map((option) => [option.label.split(" · ")[0], option.value])), [clientOptions]);
-
   const projectOptions = useMemo<SelectOption[]>(() => projects.map((row) => {
     const value = entityId(row, "project_id");
     const clientId = referenceId(row, "client_id");
@@ -138,6 +137,8 @@ export default function Onboarding() {
     const label = `${clientName} → ${code ? `${name} · ${code}` : name}`;
     return value ? { value, label, clientId, clientName } : null;
   }).filter(Boolean) as SelectOption[], [clientNameById, projects]);
+
+  const projectIdByName = useMemo(() => new Map(projectOptions.map((option) => [option.label.split(" → ").at(-1)?.split(" · ")[0] ?? option.label, option.value])), [projectOptions]);
 
   const filteredProjectOptions = useMemo(() => {
     if (!funnelForm.client_id) return projectOptions;
@@ -307,7 +308,7 @@ export default function Onboarding() {
                 }}>
                   <DeveloperDetails title="Технічні деталі"><p>ID клієнта: {clientForm.client_id || "створиться автоматично"}</p></DeveloperDetails>
                 </UpsertPanel>
-                <EntityTable rows={clients} columns={["name", "client_code", "status", "created_at", "updated_at"]} countColumnTitle="Проєкти" countForRow={(row) => countForStrictMatches(projectCountByClient, safeClientMatches(row))} emptyText="Записів поки немає." canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "client_id"))} onEdit={(row) => setClientForm({ client_id: entityId(row, "client_id"), name: asText(row.name), code: asText(row.client_code), status: asText(row.status) || "active" })} />
+                <EntityTable rows={clients} columns={["name", "client_code", "status", "created_at", "updated_at"]} countColumnTitle="Проєкти" countForRow={(row) => countForStrictMatches(projectCountByClient, safeClientMatches(row))} emptyText="Записів поки немає." canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "client_id"))} onEdit={(row) => setClientForm({ client_id: entityId(row, "client_id"), name: preferredName(row, "client"), code: asText(row.client_code), status: asText(row.status) || "active" })} />
               </SectionCard></TabsContent>
 
               <TabsContent value="projects" className="mt-1"><SectionCard title="Проєкти" description="Керування проєктами">
@@ -319,7 +320,7 @@ export default function Onboarding() {
                 }}>
                   <SelectField disabled={!canEditOnboarding || projectMutation.isPending || clientsMissingClientId} label="Клієнт" placeholder="Оберіть клієнта" value={projectForm.client_id} options={clientOptions} emptyText="Клієнтів поки немає. Спочатку створіть клієнта." onChange={(value) => setProjectForm((current) => ({ ...current, client_id: value }))} />
                 </UpsertPanel>
-                <EntityTable rows={projects} columns={["name", "client_name", "project_code", "status"]} countColumnTitle="Воронки" countForRow={(row) => countForStrictMatches(funnelCountByProject, safeProjectMatches(row))} emptyText="Записів поки немає." canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "project_id"))} onEdit={(row) => setProjectForm({ project_id: entityId(row, "project_id"), client_id: referenceId(row, "client_id") || clientIdByName.get(asText(row.client_name)) || "", name: asText(row.name), code: asText(row.project_code), status: asText(row.status) || "active" })} />
+                <EntityTable rows={projects} columns={["name", "client_name", "project_code", "status"]} countColumnTitle="Воронки" countForRow={(row) => countForStrictMatches(funnelCountByProject, safeProjectMatches(row))} emptyText="Записів поки немає." canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "project_id"))} onEdit={(row) => setProjectForm({ project_id: entityId(row, "project_id"), client_id: referenceId(row, "client_id") || clientIdByName.get(asText(row.client_name)) || "", name: preferredName(row, "project"), code: asText(row.project_code), status: asText(row.status) || "active" })} />
               </SectionCard></TabsContent>
 
               <TabsContent value="funnels" className="mt-1"><SectionCard title="Воронки" description="Керування воронками">
@@ -333,9 +334,9 @@ export default function Onboarding() {
                   <SelectField disabled={!canEditOnboarding || funnelMutation.isPending || projectsMissingProjectId} label="Проєкт" placeholder="Оберіть проєкт" value={funnelForm.project_id} options={filteredProjectOptions} onChange={(value) => setFunnelForm((current) => ({ ...current, project_id: value }))} emptyText={funnelForm.client_id ? "У цього клієнта ще немає проєктів." : "Проєктів поки немає. Спочатку створіть проєкт."} />
                 </UpsertPanel>
                 <EntityTable rows={funnels} columns={["name", "client_name", "project_name", "funnel_code", "status"]} emptyText="Записів поки немає." canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "funnel_id"))} onEdit={(row) => {
-                  const projectId = referenceId(row, "project_id");
+                  const projectId = referenceId(row, "project_id") || projectIdByName.get(asText(row.project_name)) || "";
                   const projectOption = projectOptions.find((option) => option.value === projectId);
-                  setFunnelForm({ funnel_id: entityId(row, "funnel_id"), client_id: projectOption?.clientId ?? (referenceId(row, "client_id") || clientIdByName.get(asText(row.client_name)) || ""), project_id: projectId, name: asText(row.name), code: asText(row.funnel_code), status: asText(row.status) || "active" });
+                  setFunnelForm({ funnel_id: entityId(row, "funnel_id"), client_id: projectOption?.clientId ?? (referenceId(row, "client_id") || clientIdByName.get(asText(row.client_name)) || ""), project_id: projectId, name: preferredName(row, "funnel"), code: asText(row.funnel_code), status: asText(row.status) || "active" });
                 }} />
               </SectionCard></TabsContent>
 
@@ -379,7 +380,7 @@ function SelectField({ label, placeholder, value, options, onChange, emptyText =
 
 function EntityTable({ rows, columns, countColumnTitle, countForRow, emptyText, onEdit, canEdit = true, canEditRow }: { rows: OnboardingRow[]; columns: string[]; countColumnTitle?: string; countForRow?: (row: OnboardingRow) => number; emptyText: string; onEdit?: (row: OnboardingRow) => void; canEdit?: boolean; canEditRow?: (row: OnboardingRow) => boolean; }) {
   if (rows.length === 0) return <EmptyMessage>{emptyText}</EmptyMessage>;
-  return <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead><tr className="border-b border-border/70 text-muted-foreground">{columns.map((column) => <th key={column} className="px-2 py-2 font-medium">{columnLabels[column] ?? column}</th>)}{countColumnTitle ? <th className="px-2 py-2 font-medium">{countColumnTitle}</th> : null}{onEdit ? <th className="w-20 px-2 py-2 text-right font-medium">Дії</th> : null}</tr></thead><tbody>{rows.map((row, index) => <tr key={rowKey(row, columns, index)} className="border-b border-border/40 last:border-0">{columns.map((column) => <td key={`${index}-${column}`} className="px-2 py-2 text-foreground">{formatDisplayCell(row, column)}</td>)}{countColumnTitle ? <td className="px-2 py-2 text-foreground">{countForRow ? countForRow(row) : "—"}</td> : null}{onEdit ? <td className="w-20 whitespace-nowrap px-2 py-2 text-right"><Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" disabled={!canEdit || (canEditRow ? !canEditRow(row) : false)} onClick={() => onEdit(row)}>Редагувати</Button></td> : null}</tr>)}</tbody></table></div>;
+  return <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead><tr className="border-b border-border/70 text-muted-foreground">{columns.map((column) => <th key={column} className="px-2 py-2 font-medium">{columnLabels[column] ?? column}</th>)}{countColumnTitle ? <th className="w-24 px-2 py-2 text-center font-medium">{countColumnTitle}</th> : null}{onEdit ? <th className="w-28 px-2 py-2 text-center font-medium">Дії</th> : null}</tr></thead><tbody>{rows.map((row, index) => <tr key={rowKey(row, columns, index)} className="border-b border-border/40 last:border-0">{columns.map((column) => <td key={`${index}-${column}`} className="px-2 py-2 text-foreground">{formatDisplayCell(row, column)}</td>)}{countColumnTitle ? <td className="w-24 px-2 py-2 text-center tabular-nums text-foreground">{countForRow ? countForRow(row) : "—"}</td> : null}{onEdit ? <td className="w-28 whitespace-nowrap px-2 py-2 text-center"><Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" disabled={!canEdit || (canEditRow ? !canEditRow(row) : false)} onClick={() => onEdit(row)}>Редагувати</Button></td> : null}</tr>)}</tbody></table></div>;
 }
 
 function GenericTable({ rows, emptyText }: { rows: OnboardingRow[]; emptyText: string }) { if (rows.length === 0) return <EmptyMessage>{emptyText}</EmptyMessage>; const columns = Object.keys(rows[0] ?? {}); if (columns.length === 0) return <EmptyMessage>Дані є, але немає полів для показу.</EmptyMessage>; return <EntityTable rows={rows} columns={columns} emptyText={emptyText} />; }
@@ -389,7 +390,7 @@ function DisplayName({ value }: { value: string }) { return UNNAMED_LABEL_VALUES
 function createModeLabel(title: string) { return title === "Воронка" ? "Нова воронка" : `Новий ${title.toLowerCase()}`; }
 function formLabels(title: string) { return ({ Клієнт: { name: "Назва клієнта", code: "Код клієнта (необовʼязково)" }, Проєкт: { name: "Назва проєкту", code: "Код проєкту (необовʼязково)" }, Воронка: { name: "Назва воронки", code: "Код воронки (необовʼязково)" } } as Record<string, { name: string; code: string }>)[title] ?? { name: `Назва ${title.toLowerCase()}`, code: `Код ${title.toLowerCase()} (необовʼязково)` }; }
 function asText(value: string | number | boolean | null | undefined) { if (value === null || value === undefined) return ""; return String(value).trim(); }
-function entityId(row: OnboardingRow, preferredKey: "client_id" | "project_id" | "funnel_id") { return asText(row[preferredKey]); }
+function entityId(row: OnboardingRow, preferredKey: "client_id" | "project_id" | "funnel_id") { return asText(row[preferredKey]) || asText(row.id); }
 function referenceId(row: OnboardingRow, key: string) { return asText(row[key]); }
 function preferredName(row: OnboardingRow, entity: "client" | "project" | "funnel") { return asText(row.name ?? row[`${entity}_name`] ?? row[`${entity}_code`]); }
 function displayNameForEntity(row: OnboardingRow, entity: "client" | "project" | "funnel") { return preferredName(row, entity) || UNNAMED_LABELS[entity]; }
@@ -404,7 +405,7 @@ function inferEntity(row: OnboardingRow): "client" | "project" | "funnel" { if (
 function formatCell(value: string | number | boolean | null | undefined, column: string) { if (value === null || value === undefined || value === "") return "—"; if (column === "status") return formatStatus(asText(value)); if (column.endsWith("_at") || column.includes("date")) return formatDateTime(value); return String(value); }
 function formatStatus(value: string) { return ({ active: "Активно", archived: "Архівовано", inactive: "Неактивно" } as Record<string, string>)[value] ?? value; }
 function formatDateTime(value: string | number | boolean) { const date = new Date(String(value)); if (Number.isNaN(date.getTime())) return String(value); return new Intl.DateTimeFormat("uk-UA", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(date); }
-function rowKey(row: OnboardingRow, columns: string[], index: number) { return `${asText(row.client_id ?? row.project_id ?? row.funnel_id ?? row.client_code ?? row.project_code ?? row.funnel_code ?? row.name ?? columns.map((column) => row[column]).join("-")) || "row"}-${index}`; }
+function rowKey(row: OnboardingRow, columns: string[], index: number) { return `${asText(row.client_id ?? row.project_id ?? row.funnel_id ?? row.id ?? row.client_code ?? row.project_code ?? row.funnel_code ?? row.name ?? columns.map((column) => row[column]).join("-")) || "row"}-${index}`; }
 function fieldNames(rows: OnboardingRow[]) { return Array.from(rows.reduce((fields, row) => { Object.keys(row).forEach((field) => fields.add(field)); return fields; }, new Set<string>())).sort(); }
 function formatFieldList(fields: string[]) { return fields.length ? fields.join(", ") : "немає даних"; }
 function isActive(row: OnboardingRow) { const status = asText(row.status); return !status || status === "active"; }
