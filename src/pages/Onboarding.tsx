@@ -266,13 +266,13 @@ export default function Onboarding() {
     setLastRefreshedAt(new Date());
   };
 
-  const headerActions = session && !onboardingQuery.isLoading && !onboardingQuery.error ? <div className="flex flex-wrap items-center justify-end gap-2">
+  const headerActions = session && !onboardingQuery.isLoading && !onboardingQuery.error ? <>
     {lastRefreshedAt ? <p className="text-xs text-muted-foreground">Оновлено: {formatDateTime(lastRefreshedAt.toISOString())}</p> : null}
     <Button type="button" size="sm" variant="outline" className="h-8 shrink-0 gap-1.5 text-xs" onClick={handleRefresh} disabled={isRefreshing}>
       <RefreshCw className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} />
       {refreshLabel}
     </Button>
-  </div> : null;
+  </> : null;
 
   return <DashboardLayout title="Онбординг" subtitle="Клієнти, проєкти, воронки та структура робочого простору" actions={headerActions} contentClassName="pt-1 lg:pt-2">
     <div className="space-y-4">
