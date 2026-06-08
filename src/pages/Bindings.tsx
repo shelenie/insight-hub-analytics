@@ -32,7 +32,7 @@ type BindingType = "source" | "ad_account";
 const FRIENDLY_COLUMN_LABELS: Record<string, string> = {
   ad_account_name: "Рекламний акаунт",
   binding_method: "Метод",
-  binding_status: "Статус звʼязку",
+  binding_status: "Статус",
   binding_type: "Тип звʼязку",
   campaign: "Кампанія",
   client: "Клієнт",
@@ -48,7 +48,7 @@ const FRIENDLY_COLUMN_LABELS: Record<string, string> = {
   funnel_name: "Воронка",
   health_status: "Стан звʼязків",
   impressions: "Покази",
-  mapping_status: "Статус мапінгу",
+  mapping_status: "Мапінг",
   platform: "Платформа",
   project: "Проєкт",
   project_name: "Проєкт",
@@ -76,6 +76,13 @@ const FRIENDLY_VALUE_LABELS: Record<string, string> = {
   source: "Джерело даних",
 };
 
+const FRIENDLY_PLATFORM_LABELS: Record<string, string> = {
+  facebook_lead_ads: "Facebook Lead Ads",
+  google_ads: "Google Ads",
+  meta_ads: "Meta Ads",
+  tiktok_ads: "TikTok Ads",
+};
+
 const STATUS_COLUMNS = new Set(["binding_method", "binding_status", "binding_type", "health_status", "mapping_status", "status"]);
 const PLACEHOLDER_PATTERNS = ["test agency", "test client", "northstar digital clinic", "evergreen growth program", "main webinar funnel", "placeholder", "demo", "mock", "test_upload", "backend_test"];
 
@@ -93,7 +100,7 @@ export default function Bindings() {
   const queryClient = useQueryClient();
   const { capabilities, isLoading: roleLoading, error: roleError } = useWorkspaceRole(WORKSPACE_ID);
   const canManage = !roleLoading && (capabilities.can_manage_bindings || capabilities.can_manage_mapping_review);
-  const [message, setMessage] = useState<string>("Дії перевіряються перед виконанням.");
+  const [message, setMessage] = useState<string>("");
   const [pending, setPending] = useState<string>("");
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const [sourceForm, setSourceForm] = useState({ source_id: "", client_id: "", project_id: "", funnel_id: "" });
@@ -178,12 +185,12 @@ export default function Bindings() {
     mappingReviewQueue: filteredMappingReviewQueue.length,
   };
   const overviewCards = [
-    { title: "Джерела даних", value: visibleBindingCounts.sourceBindings },
-    { title: "Рекламні акаунти", value: visibleBindingCounts.adAccountBindings },
-    { title: "Звʼязки з проєктами", value: visibleBindingCounts.projectDataBindings },
-    { title: "Мапінг на перевірку", value: visibleBindingCounts.mappingReviewQueue },
+    { title: "Привʼязані джерела", value: visibleBindingCounts.sourceBindings },
+    { title: "Привʼязані рекламні акаунти", value: visibleBindingCounts.adAccountBindings },
+    { title: "Активні звʼязки з проєктами", value: visibleBindingCounts.projectDataBindings },
+    { title: "На перевірці", value: visibleBindingCounts.mappingReviewQueue },
   ];
-  const healthCards = buildHealthCards(query.data, visibleBindingCounts);
+  const connectionStatusCards = buildConnectionStatusCards(query.data, visibleBindingCounts);
   const isRefreshing = query.isFetching;
   const refreshLabel = isRefreshing ? "Оновлюємо…" : "Оновити";
   const headerActions = session && !query.isLoading && !query.error ? (
@@ -224,11 +231,13 @@ export default function Bindings() {
               </TabsList>
             </div>
 
-            <div className="space-y-1">
-              <p className="text-xs text-muted-foreground">{message}</p>
-              {!roleLoading && !canManage ? <p className="text-xs text-muted-foreground">У вас немає доступу до керування цим розділом.</p> : null}
-              {!roleLoading && roleError ? <p className="text-xs text-muted-foreground">Доступ тимчасово не підтягнувся. Дії вимкнені.</p> : null}
-            </div>
+            {message || (!roleLoading && (!canManage || roleError)) ? (
+              <div className="space-y-1">
+                {message ? <p className="text-xs text-muted-foreground">{message}</p> : null}
+                {!roleLoading && !canManage ? <p className="text-xs text-muted-foreground">У вас немає доступу до керування цим розділом.</p> : null}
+                {!roleLoading && roleError ? <p className="text-xs text-muted-foreground">Доступ тимчасово не підтягнувся. Дії вимкнені.</p> : null}
+              </div>
+            ) : null}
 
             <TabsContent value="overview" className="mt-1">
               <SectionCard title="Огляд звʼязків" description="Короткий стан підключень">
@@ -242,15 +251,15 @@ export default function Bindings() {
 
             <TabsContent value="source" className="mt-1">
               <SectionCard title="Джерела даних" description="Підключені джерела даних">
-                <AdminBindingForm type="source" canManage={canManage} session={Boolean(session)} pending={pending} form={sourceForm} setForm={setSourceForm} onSubmit={() => runAction("create-source", () => supabase.functions.invoke("binding-create-or-update", { body: { workspace_id: WORKSPACE_ID, binding_type: "source", ...sourceForm } }))} />
                 <KnownColumnsTable rows={filteredSourceBindings} columns={["source_name", "source_kind", "platform", "client_name", "project_name", "funnel_name", "mapping_status", "binding_status", "confidence", "binding_method", "created_at", "updated_at"]} emptyText="Джерела даних ще не привʼязані." />
+                <AdminBindingForm type="source" canManage={canManage} session={Boolean(session)} pending={pending} form={sourceForm} setForm={setSourceForm} onSubmit={() => runAction("create-source", () => supabase.functions.invoke("binding-create-or-update", { body: { workspace_id: WORKSPACE_ID, binding_type: "source", ...sourceForm } }))} />
               </SectionCard>
             </TabsContent>
 
             <TabsContent value="ad-account" className="mt-1">
               <SectionCard title="Рекламні акаунти" description="Підключені рекламні акаунти">
+                <KnownColumnsTable rows={filteredAdAccountBindings} columns={["external_account_id", "platform", "client_name", "project_name", "funnel_name", "mapping_status", "binding_status", "updated_at"]} emptyText="Рекламні акаунти ще не привʼязані." />
                 <AdminBindingForm type="ad_account" canManage={canManage} session={Boolean(session)} pending={pending} form={adForm} setForm={setAdForm} onSubmit={() => runAction("create-ad", () => supabase.functions.invoke("binding-create-or-update", { body: { workspace_id: WORKSPACE_ID, binding_type: "ad_account", ...adForm } }))} />
-                <KnownColumnsTable rows={filteredAdAccountBindings} columns={["ad_account_name", "external_account_id", "platform", "client_name", "project_name", "funnel_name", "mapping_status", "binding_status", "confidence", "binding_method", "created_at", "updated_at"]} emptyText="Рекламні акаунти ще не привʼязані." />
               </SectionCard>
             </TabsContent>
 
@@ -280,17 +289,28 @@ export default function Bindings() {
             </TabsContent>
 
             <TabsContent value="health" className="mt-1">
-              <SectionCard title="Стан підключень" description="Стан звʼязків без технічних ID у головному вигляді">
-                <KpiGrid cards={healthCards} />
+              <SectionCard title="Стан підключень" description="Виробничий стан мапінгу та Telegram-підтверджень">
+                <div className="space-y-5">
+                  <div>
+                    <h3 className="mb-3 text-sm font-semibold text-foreground">Мапінг</h3>
+                    <KpiGrid cards={connectionStatusCards.mapping} />
+                  </div>
+                  <div>
+                    <h3 className="mb-3 text-sm font-semibold text-foreground">Telegram HITL</h3>
+                    <KpiGrid cards={connectionStatusCards.telegram} />
+                  </div>
+                </div>
                 <DeveloperDetails title="Технічні деталі">
-                  <p>workspace_id: {WORKSPACE_ID}</p>
+                  <p>Дії перевіряються перед виконанням.</p>
                   <p>Поля v_binding_health: {formatFieldList(query.data?.bindingHealth ?? [])}</p>
-                  <GenericTable rows={query.data?.bindingHealth ?? []} emptyText="Технічні дані про стан звʼязків відсутні." />
+                  <p>Поля v_mapping_review_health: {formatFieldList(query.data?.mappingReviewHealth.rows ?? [])}</p>
+                  <p>Поля v_mapping_review_actions_recent: {formatFieldList(query.data?.mappingReviewActionsRecent.rows ?? [])}</p>
+                  <p>Поля v_telegram_hitl_production_health: {formatFieldList(query.data?.telegramHitlHealth.rows ?? [])}</p>
+                  {query.data?.mappingReviewHealth.unavailableReason ? <p>v_mapping_review_health: {query.data.mappingReviewHealth.unavailableReason}</p> : null}
+                  {query.data?.mappingReviewActionsRecent.unavailableReason ? <p>v_mapping_review_actions_recent: {query.data.mappingReviewActionsRecent.unavailableReason}</p> : null}
+                  {query.data?.telegramHitlHealth.unavailableReason ? <p>v_telegram_hitl_production_health: {query.data.telegramHitlHealth.unavailableReason}</p> : null}
                 </DeveloperDetails>
               </SectionCard>
-              <OptionalViewCard title="Стан перевірки мапінгу" viewName="v_mapping_review_health" data={query.data?.mappingReviewHealth} />
-              <OptionalViewCard title="Останні дії з мапінгом" viewName="v_mapping_review_actions_recent" data={query.data?.mappingReviewActionsRecent} />
-              <OptionalViewCard title="Стан Telegram-підтверджень" viewName="v_telegram_hitl_production_health" data={query.data?.telegramHitlHealth} />
             </TabsContent>
           </Tabs>
         )}
@@ -313,8 +333,8 @@ function AdminBindingForm({ type, canManage, session, pending, form, setForm, on
   const pendingKey = type === "source" ? "create-source" : "create-ad";
   const submitLabel = type === "source" ? "Зберегти звʼязок джерела" : "Зберегти звʼязок рекламного акаунта";
   return (
-    <details className="mb-3 rounded-md border border-border/70 bg-muted/20 p-3">
-      <summary className="cursor-pointer font-medium">Розширене налаштування</summary>
+    <details className="mt-4 rounded-md border border-border/70 bg-muted/20 p-3">
+      <summary className="cursor-pointer font-medium">Технічне налаштування через ID</summary>
       <p className="mt-2 text-xs text-muted-foreground">Для адміністратора. Використовуйте тільки якщо маєте точні ID.</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {[idField, "client_id", "project_id", "funnel_id"].map((field) => (
@@ -323,18 +343,6 @@ function AdminBindingForm({ type, canManage, session, pending, form, setForm, on
         <Button disabled={!session || !canManage || !form[idField] || pending === pendingKey} onClick={onSubmit}>{pending === pendingKey ? "Зберігаємо…" : submitLabel}</Button>
       </div>
     </details>
-  );
-}
-
-function OptionalViewCard({ title, viewName, data }: { title: string; viewName: string; data: OptionalViewData | undefined }) {
-  return (
-    <SectionCard title={title} description="Деталі">
-      {data?.unavailableReason ? <p className="text-sm text-muted-foreground">Цей розділ поки недоступний.</p> : <GenericTable rows={data?.rows ?? []} emptyText="Записів поки немає." />}
-      <DeveloperDetails title="Технічні деталі">
-        <p>{viewName}</p>
-        {data?.unavailableReason ? <p>{data.unavailableReason}</p> : null}
-      </DeveloperDetails>
-    </SectionCard>
   );
 }
 
@@ -354,8 +362,8 @@ function GenericTable({ rows, emptyText }: { rows: Row[]; emptyText: string }) {
 
 function GenericDataTable({ rows, columns }: { rows: Row[]; columns: string[] }) {
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full text-left text-sm">
+    <div className="overflow-x-auto rounded-md border border-border/60">
+      <table className="min-w-full table-auto text-left text-sm">
         <thead>
           <tr className="border-b border-border/70 text-muted-foreground">
             {columns.map((column) => (
@@ -409,24 +417,39 @@ function FormattedValue({ value, column }: { value: string | number | boolean | 
   return <span>{formatted}</span>;
 }
 
-function buildHealthCards(data: BindingsData | undefined, visibleCounts: { sourceBindings: number; adAccountBindings: number; mappingReviewQueue: number }) {
+function buildConnectionStatusCards(data: BindingsData | undefined, visibleCounts: { sourceBindings: number; adAccountBindings: number; mappingReviewQueue: number }) {
   const healthRows = data?.bindingHealth ?? [];
   const mappingRows = data?.mappingReviewHealth.rows ?? [];
   const telegramRows = data?.telegramHitlHealth.rows ?? [];
-  const cards = [
-    { title: "Активні звʼязки джерел", value: metricFromRows(healthRows, ["active_source_bindings", "source_bindings", "sources_active"]) ?? visibleCounts.sourceBindings },
-    { title: "Активні звʼязки рекламних акаунтів", value: metricFromRows(healthRows, ["active_ad_account_bindings", "ad_account_bindings", "ad_accounts_active"]) ?? visibleCounts.adAccountBindings },
-    { title: "На перевірці", value: metricFromRows(healthRows, ["mapping_review_items", "pending_mapping_reviews", "pending_reviews"]) ?? visibleCounts.mappingReviewQueue },
-    { title: "Стан звʼязків", value: formatStatus(textFromRows(healthRows, ["binding_health_status", "health_status", "status"]) || "healthy"), description: "Основний стан активних звʼязків." },
-  ];
+  const pendingMappingReviews = metricFromRows(mappingRows, ["pending_mapping_reviews", "mapping_review_items", "pending_reviews"])
+    ?? metricFromRows(healthRows, ["mapping_review_items", "pending_mapping_reviews", "pending_reviews"])
+    ?? visibleCounts.mappingReviewQueue;
+  const pendingTelegramActions = metricFromRows(mappingRows, ["pending_telegram_mapping_actions", "pending_telegram", "pending_telegram_actions", "pending_actions"])
+    ?? metricFromRows(telegramRows, ["pending_telegram_mapping_actions", "pending_telegram", "pending_telegram_actions", "pending_actions"])
+    ?? 0;
+  const mappingStatus = textFromRows(mappingRows, ["mapping_review_health_status", "health_status", "status"])
+    || textFromRows(healthRows, ["mapping_review_health_status", "binding_health_status", "health_status", "status"])
+    || "healthy";
+  const telegramStatus = textFromRows(telegramRows, ["telegram_hitl_production_status", "telegram_hitl_health_status", "health_status", "status"]) || "healthy";
+  const activeApprovers = metricFromRows(telegramRows, ["active_approvers", "approvers_active", "active_telegram_approvers"]);
 
-  if (mappingRows.length > 0) {
-    cards.push({ title: "Мапінг", value: metricFromRows(mappingRows, ["pending_mapping_reviews", "mapping_review_items", "pending_reviews"]) ?? mappingRows.length, description: "Очікують перевірки." });
-  }
-  if (telegramRows.length > 0) {
-    cards.push({ title: "Telegram HITL", value: metricFromRows(telegramRows, ["pending_telegram_mapping_actions", "pending_telegram", "pending_actions"]) ?? telegramRows.length, description: "Очікують Telegram." });
-  }
-  return cards;
+  return {
+    mapping: [
+      { title: "Мапінг на перевірці", value: pendingMappingReviews, description: "Звʼязки, які потребують ручного підтвердження." },
+      { title: "Очікують Telegram", value: pendingTelegramActions, description: "Надіслані запити, які ще не оброблені." },
+      { title: "Підтверджено, не застосовано", value: metricFromRows(mappingRows, ["resolved_not_applied", "confirmed_not_applied", "resolved_pending_apply"]) ?? 0, description: "Підтверджені рішення, які ще очікують застосування." },
+      { title: "Стан мапінгу", value: formatStatus(mappingStatus), description: "Загальний стан перевірки мапінгу." },
+    ],
+    telegram: [
+      { title: "Активні Telegram-чати", value: metricFromRows(telegramRows, ["active_chats", "telegram_active_chats", "active_telegram_chats"]) ?? 0 },
+      { title: "Активні маршрути", value: metricFromRows(telegramRows, ["active_routes", "telegram_active_routes", "routes_active"]) ?? 0 },
+      { title: "Повідомлень у черзі", value: metricFromRows(telegramRows, ["queued_messages", "messages_queued", "queue_messages"]) ?? 0 },
+      { title: "Помилок за 24 год", value: metricFromRows(telegramRows, ["failed_messages_last_24h", "failed_messages_24h", "errors_last_24h"]) ?? 0 },
+      { title: "Запитів на дію", value: metricFromRows(telegramRows, ["pending_action_requests", "action_requests_pending", "pending_requests"]) ?? pendingTelegramActions },
+      { title: "Підтверджувачі", value: activeApprovers ?? 0, description: activeApprovers === 1 ? "Активний підтверджувач." : "Активні підтверджувачі." },
+      { title: "Стан Telegram HITL", value: formatStatus(telegramStatus), description: "Telegram-підтвердження доступні." },
+    ],
+  };
 }
 
 function metricFromRows(rows: Row[], keys: string[]) {
@@ -462,6 +485,7 @@ function friendlyLabel(value: string) {
 function formatValue(value: string | number | boolean | null | undefined, column: string) {
   if (value === null || value === undefined || value === "") return "—";
   if (column.endsWith("_at") || column.includes("date")) return formatDateTime(value);
+  if (column === "platform") return formatPlatform(String(value));
   if (STATUS_COLUMNS.has(column)) return formatStatus(String(value));
   if (column === "confidence") {
     const numeric = typeof value === "number" ? value : Number(value);
@@ -472,6 +496,11 @@ function formatValue(value: string | number | boolean | null | undefined, column
 
 function formatStatus(value: string) {
   return FRIENDLY_VALUE_LABELS[value.toLowerCase()] ?? value.replaceAll("_", " ");
+}
+
+function formatPlatform(value: string) {
+  const normalized = value.toLowerCase();
+  return FRIENDLY_PLATFORM_LABELS[normalized] ?? value;
 }
 
 function formatDateTime(value: string | number | boolean) {
