@@ -171,13 +171,19 @@ export default function Bindings() {
   const filteredProjectDataBindings = useMemo(() => filterRows(query.data?.projectDataBindings ?? []), [query.data?.projectDataBindings]);
   const filteredMappingReviewQueue = useMemo(() => filterRows(query.data?.mappingReviewQueue ?? []), [query.data?.mappingReviewQueue]);
   const firstQueue = filteredMappingReviewQueue[0];
+  const visibleBindingCounts = {
+    sourceBindings: filteredSourceBindings.length,
+    adAccountBindings: filteredAdAccountBindings.length,
+    projectDataBindings: filteredProjectDataBindings.length,
+    mappingReviewQueue: filteredMappingReviewQueue.length,
+  };
   const overviewCards = [
-    { title: "Джерела даних", value: filteredSourceBindings.length },
-    { title: "Рекламні акаунти", value: filteredAdAccountBindings.length },
-    { title: "Звʼязки з проєктами", value: filteredProjectDataBindings.length },
-    { title: "Мапінг на перевірку", value: filteredMappingReviewQueue.length },
+    { title: "Джерела даних", value: visibleBindingCounts.sourceBindings },
+    { title: "Рекламні акаунти", value: visibleBindingCounts.adAccountBindings },
+    { title: "Звʼязки з проєктами", value: visibleBindingCounts.projectDataBindings },
+    { title: "Мапінг на перевірку", value: visibleBindingCounts.mappingReviewQueue },
   ];
-  const healthCards = buildHealthCards(query.data, { sourceBindings: filteredSourceBindings.length, adAccountBindings: filteredAdAccountBindings.length, mappingReviewQueue: filteredMappingReviewQueue.length });
+  const healthCards = buildHealthCards(query.data, visibleBindingCounts);
   const isRefreshing = query.isFetching;
   const refreshLabel = isRefreshing ? "Оновлюємо…" : "Оновити";
   const headerActions = session && !query.isLoading && !query.error ? (
