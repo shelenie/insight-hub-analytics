@@ -76,7 +76,7 @@ const FRIENDLY_VALUE_LABELS: Record<string, string> = {
   source: "Джерело даних",
 };
 
-const STATUS_COLUMNS = new Set(["binding_method", "binding_status", "binding_type", "health_status", "mapping_status", "platform", "status"]);
+const STATUS_COLUMNS = new Set(["binding_method", "binding_status", "binding_type", "health_status", "mapping_status", "status"]);
 const PLACEHOLDER_PATTERNS = ["test agency", "test client", "northstar digital clinic", "evergreen growth program", "main webinar funnel", "placeholder", "demo", "mock", "test_upload", "backend_test"];
 
 function isPlaceholderRow(row: Row) {
@@ -92,7 +92,7 @@ export default function Bindings() {
   const { session } = useAuth();
   const queryClient = useQueryClient();
   const { capabilities, isLoading: roleLoading, error: roleError } = useWorkspaceRole(WORKSPACE_ID);
-  const canManage = capabilities.can_manage_bindings || capabilities.can_manage_mapping_review;
+  const canManage = !roleLoading && (capabilities.can_manage_bindings || capabilities.can_manage_mapping_review);
   const [message, setMessage] = useState<string>("Дії перевіряються перед виконанням.");
   const [pending, setPending] = useState<string>("");
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
@@ -166,15 +166,18 @@ export default function Bindings() {
     setLastRefreshedAt(new Date());
   };
 
+  const filteredSourceBindings = useMemo(() => filterRows(query.data?.sourceBindings ?? []), [query.data?.sourceBindings]);
+  const filteredAdAccountBindings = useMemo(() => filterRows(query.data?.adAccountBindings ?? []), [query.data?.adAccountBindings]);
+  const filteredProjectDataBindings = useMemo(() => filterRows(query.data?.projectDataBindings ?? []), [query.data?.projectDataBindings]);
   const filteredMappingReviewQueue = useMemo(() => filterRows(query.data?.mappingReviewQueue ?? []), [query.data?.mappingReviewQueue]);
   const firstQueue = filteredMappingReviewQueue[0];
   const overviewCards = [
-    { title: "Джерела даних", value: query.data?.sourceBindings.length ?? 0 },
-    { title: "Рекламні акаунти", value: query.data?.adAccountBindings.length ?? 0 },
-    { title: "Звʼязки з проєктами", value: query.data?.projectDataBindings.length ?? 0 },
-    { title: "Мапінг на перевірку", value: query.data?.mappingReviewQueue.length ?? 0 },
+    { title: "Джерела даних", value: filteredSourceBindings.length },
+    { title: "Рекламні акаунти", value: filteredAdAccountBindings.length },
+    { title: "Звʼязки з проєктами", value: filteredProjectDataBindings.length },
+    { title: "Мапінг на перевірку", value: filteredMappingReviewQueue.length },
   ];
-  const healthCards = buildHealthCards(query.data);
+  const healthCards = buildHealthCards(query.data, { sourceBindings: filteredSourceBindings.length, adAccountBindings: filteredAdAccountBindings.length, mappingReviewQueue: filteredMappingReviewQueue.length });
   const isRefreshing = query.isFetching;
   const refreshLabel = isRefreshing ? "Оновлюємо…" : "Оновити";
   const headerActions = session && !query.isLoading && !query.error ? (
@@ -217,7 +220,6 @@ export default function Bindings() {
 
             <div className="space-y-1">
               <p className="text-xs text-muted-foreground">{message}</p>
-              {roleLoading ? <p className="text-xs text-muted-foreground">Перевіряємо доступ…</p> : null}
               {!roleLoading && !canManage ? <p className="text-xs text-muted-foreground">У вас немає доступу до керування цим розділом.</p> : null}
               {!roleLoading && roleError ? <p className="text-xs text-muted-foreground">Доступ тимчасово не підтягнувся. Дії вимкнені.</p> : null}
             </div>
@@ -226,7 +228,7 @@ export default function Bindings() {
               <SectionCard title="Огляд звʼязків" description="Короткий стан підключень">
                 <KpiGrid cards={overviewCards} />
                 <div className="mt-4 space-y-1 rounded-md border border-border/70 bg-muted/25 p-3 text-sm text-muted-foreground">
-                  {(query.data?.mappingReviewQueue.length ?? 0) === 0 ? <p>Немає звʼязків на перевірці.</p> : null}
+                  {filteredMappingReviewQueue.length === 0 ? <p>Немає звʼязків на перевірці.</p> : null}
                   {isHealthy(query.data?.bindingHealth ?? []) ? <p>Основні звʼязки виглядають коректно.</p> : null}
                 </div>
               </SectionCard>
@@ -235,20 +237,20 @@ export default function Bindings() {
             <TabsContent value="source" className="mt-1">
               <SectionCard title="Джерела даних" description="Підключені джерела даних">
                 <AdminBindingForm type="source" canManage={canManage} session={Boolean(session)} pending={pending} form={sourceForm} setForm={setSourceForm} onSubmit={() => runAction("create-source", () => supabase.functions.invoke("binding-create-or-update", { body: { workspace_id: WORKSPACE_ID, binding_type: "source", ...sourceForm } }))} />
-                <KnownColumnsTable rows={filterRows(query.data?.sourceBindings ?? [])} columns={["source_name", "source_kind", "platform", "client_name", "project_name", "funnel_name", "mapping_status", "binding_status", "confidence", "binding_method", "created_at", "updated_at"]} emptyText="Джерела даних ще не привʼязані." />
+                <KnownColumnsTable rows={filteredSourceBindings} columns={["source_name", "source_kind", "platform", "client_name", "project_name", "funnel_name", "mapping_status", "binding_status", "confidence", "binding_method", "created_at", "updated_at"]} emptyText="Джерела даних ще не привʼязані." />
               </SectionCard>
             </TabsContent>
 
             <TabsContent value="ad-account" className="mt-1">
               <SectionCard title="Рекламні акаунти" description="Підключені рекламні акаунти">
                 <AdminBindingForm type="ad_account" canManage={canManage} session={Boolean(session)} pending={pending} form={adForm} setForm={setAdForm} onSubmit={() => runAction("create-ad", () => supabase.functions.invoke("binding-create-or-update", { body: { workspace_id: WORKSPACE_ID, binding_type: "ad_account", ...adForm } }))} />
-                <KnownColumnsTable rows={filterRows(query.data?.adAccountBindings ?? [])} columns={["ad_account_name", "external_account_id", "platform", "client_name", "project_name", "funnel_name", "mapping_status", "binding_status", "confidence", "binding_method", "created_at", "updated_at"]} emptyText="Рекламні акаунти ще не привʼязані." />
+                <KnownColumnsTable rows={filteredAdAccountBindings} columns={["ad_account_name", "external_account_id", "platform", "client_name", "project_name", "funnel_name", "mapping_status", "binding_status", "confidence", "binding_method", "created_at", "updated_at"]} emptyText="Рекламні акаунти ще не привʼязані." />
               </SectionCard>
             </TabsContent>
 
             <TabsContent value="project-data" className="mt-1">
               <SectionCard title="Звʼязки з проєктами" description="Звʼязки даних із проєктами">
-                <KnownColumnsTable rows={filterRows(query.data?.projectDataBindings ?? [])} columns={["client_name", "project_name", "funnel_name", "source_name", "ad_account_name", "platform", "source_kind", "binding_type", "mapping_status", "health_status", "binding_status"]} emptyText="Звʼязків із проєктами поки немає." />
+                <KnownColumnsTable rows={filteredProjectDataBindings} columns={["client_name", "project_name", "funnel_name", "source_name", "ad_account_name", "platform", "source_kind", "binding_type", "mapping_status", "health_status", "binding_status"]} emptyText="Звʼязків із проєктами поки немає." />
               </SectionCard>
             </TabsContent>
 
@@ -401,14 +403,14 @@ function FormattedValue({ value, column }: { value: string | number | boolean | 
   return <span>{formatted}</span>;
 }
 
-function buildHealthCards(data: BindingsData | undefined) {
+function buildHealthCards(data: BindingsData | undefined, visibleCounts: { sourceBindings: number; adAccountBindings: number; mappingReviewQueue: number }) {
   const healthRows = data?.bindingHealth ?? [];
   const mappingRows = data?.mappingReviewHealth.rows ?? [];
   const telegramRows = data?.telegramHitlHealth.rows ?? [];
   const cards = [
-    { title: "Активні звʼязки джерел", value: metricFromRows(healthRows, ["active_source_bindings", "source_bindings", "sources_active"]) ?? data?.sourceBindings.length ?? 0 },
-    { title: "Активні звʼязки рекламних акаунтів", value: metricFromRows(healthRows, ["active_ad_account_bindings", "ad_account_bindings", "ad_accounts_active"]) ?? data?.adAccountBindings.length ?? 0 },
-    { title: "На перевірці", value: metricFromRows(healthRows, ["mapping_review_items", "pending_mapping_reviews", "pending_reviews"]) ?? data?.mappingReviewQueue.length ?? 0 },
+    { title: "Активні звʼязки джерел", value: metricFromRows(healthRows, ["active_source_bindings", "source_bindings", "sources_active"]) ?? visibleCounts.sourceBindings },
+    { title: "Активні звʼязки рекламних акаунтів", value: metricFromRows(healthRows, ["active_ad_account_bindings", "ad_account_bindings", "ad_accounts_active"]) ?? visibleCounts.adAccountBindings },
+    { title: "На перевірці", value: metricFromRows(healthRows, ["mapping_review_items", "pending_mapping_reviews", "pending_reviews"]) ?? visibleCounts.mappingReviewQueue },
     { title: "Стан звʼязків", value: formatStatus(textFromRows(healthRows, ["binding_health_status", "health_status", "status"]) || "healthy"), description: "Основний стан активних звʼязків." },
   ];
 
@@ -476,7 +478,6 @@ function badgeVariant(value: string, column: string) {
   const normalized = value.toLowerCase();
   if (normalized === "healthy" || normalized === "active" || normalized === "confirmed") return "secondary";
   if (normalized === "rejected" || normalized === "error" || normalized === "failed") return "destructive";
-  if (column === "platform") return "outline";
   return "outline";
 }
 
