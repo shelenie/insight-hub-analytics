@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { DeveloperDetails, FriendlyError } from "@/components/common/DeveloperDetails";
+import { FriendlyError } from "@/components/common/DeveloperDetails";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
@@ -185,7 +185,7 @@ export default function Bindings() {
     mappingReviewQueue: filteredMappingReviewQueue.length,
   };
   const overviewCards = [
-    { title: "Привʼязані джерела", value: visibleBindingCounts.sourceBindings },
+    { title: "Джерела файлів / таблиць", value: visibleBindingCounts.sourceBindings, description: "Google Sheets, імпорти або інші нерекламні джерела." },
     { title: "Привʼязані рекламні акаунти", value: visibleBindingCounts.adAccountBindings },
     { title: "Активні звʼязки з проєктами", value: visibleBindingCounts.projectDataBindings },
     { title: "На перевірці", value: visibleBindingCounts.mappingReviewQueue },
@@ -243,6 +243,7 @@ export default function Bindings() {
               <SectionCard title="Огляд звʼязків" description="Короткий стан підключень">
                 <KpiGrid cards={overviewCards} />
                 <div className="mt-4 space-y-1 rounded-md border border-border/70 bg-muted/25 p-3 text-sm text-muted-foreground">
+                  <p>Рекламні акаунти рахуються окремо від джерел файлів і таблиць.</p>
                   {filteredMappingReviewQueue.length === 0 ? <p>Немає звʼязків на перевірці.</p> : null}
                   {isHealthy(query.data?.bindingHealth ?? []) ? <p>Основні звʼязки виглядають коректно.</p> : null}
                 </div>
@@ -291,27 +292,16 @@ export default function Bindings() {
             <TabsContent value="health" className="mt-1">
               <SectionCard title="Стан мапінгу та підтверджень" description="Виробничий стан мапінгу та Telegram-підтверджень">
                 <KpiGrid cards={connectionStatusCards.production} />
-                <DeveloperDetails title="Технічні деталі Telegram та мапінгу">
-                  <p>Дії перевіряються перед виконанням.</p>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-                    {connectionStatusCards.technical.map((card) => (
-                      <div key={card.title} className="rounded border border-border/60 bg-background/60 p-2">
-                        <p className="font-medium text-foreground">{card.title}</p>
-                        <p className="mt-1 text-sm">{card.value}</p>
-                        {card.description ? <p className="mt-1">{card.description}</p> : null}
-                      </div>
-                    ))}
-                  </div>
-                  <div className="mt-3 space-y-1">
-                    <p>Поля v_binding_health: {formatFieldList(query.data?.bindingHealth ?? [])}</p>
-                    <p>Поля v_mapping_review_health: {formatFieldList(query.data?.mappingReviewHealth.rows ?? [])}</p>
-                    <p>Поля v_mapping_review_actions_recent: {formatFieldList(query.data?.mappingReviewActionsRecent.rows ?? [])}</p>
-                    <p>Поля v_telegram_hitl_production_health: {formatFieldList(query.data?.telegramHitlHealth.rows ?? [])}</p>
-                    {query.data?.mappingReviewHealth.unavailableReason ? <p>v_mapping_review_health: {query.data.mappingReviewHealth.unavailableReason}</p> : null}
-                    {query.data?.mappingReviewActionsRecent.unavailableReason ? <p>v_mapping_review_actions_recent: {query.data.mappingReviewActionsRecent.unavailableReason}</p> : null}
-                    {query.data?.telegramHitlHealth.unavailableReason ? <p>v_telegram_hitl_production_health: {query.data.telegramHitlHealth.unavailableReason}</p> : null}
-                  </div>
-                </DeveloperDetails>
+                <details className="mt-4 rounded-md border border-border/70 bg-muted/20 p-3 text-sm">
+                  <summary className="cursor-pointer font-medium text-foreground">Деталі Telegram HITL</summary>
+                  <p className="mt-2 text-xs text-muted-foreground">Компактна діагностика Telegram-підтверджень без технічних ID.</p>
+                  <CompactDiagnosticsGrid cards={connectionStatusCards.telegramHitlDetails} />
+                  {connectionStatusCards.unavailableNotes.length ? (
+                    <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                      {connectionStatusCards.unavailableNotes.map((note) => <p key={note}>{note}</p>)}
+                    </div>
+                  ) : null}
+                </details>
               </SectionCard>
             </TabsContent>
           </Tabs>
@@ -337,7 +327,7 @@ function AdminBindingForm({ type, canManage, session, pending, form, setForm, on
   return (
     <details className="mt-4 rounded-md border border-border/70 bg-muted/20 p-3">
       <summary className="cursor-pointer font-medium">Технічне налаштування через ID</summary>
-      <p className="mt-2 text-xs text-muted-foreground">Для адміністратора. Використовуйте тільки якщо маєте точні ID.</p>
+      <p className="mt-2 text-xs text-muted-foreground">Для адміністратора. Використовуйте тільки для ручної привʼязки, коли точно знаєте ID.</p>
       <div className="mt-3 flex flex-wrap gap-2">
         {[idField, "client_id", "project_id", "funnel_id"].map((field) => (
           <input key={field} className="rounded border border-border/70 bg-background px-2 py-1 text-sm" placeholder={field} value={form[field] ?? ""} onChange={(event) => setForm((current) => ({ ...current, [field]: event.target.value }))} />
@@ -403,6 +393,22 @@ function KpiGrid({ cards }: { cards: { title: string; value: string | number; de
   );
 }
 
+function CompactDiagnosticsGrid({ cards }: { cards: { title: string; value: string | number; description?: string }[] }) {
+  return (
+    <div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+      {cards.map((card) => (
+        <div key={card.title} className="rounded border border-border/60 bg-background/60 p-2">
+          <div className="flex items-start justify-between gap-3">
+            <p className="text-xs font-medium text-muted-foreground">{card.title}</p>
+            <p className="text-sm font-semibold text-foreground">{card.value}</p>
+          </div>
+          {card.description ? <p className="mt-1 text-xs text-muted-foreground">{card.description}</p> : null}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function EmptyMappingReviewState() {
   return (
     <div className="rounded-md border border-dashed border-border/70 bg-muted/25 p-6 text-center">
@@ -443,8 +449,7 @@ function buildConnectionStatusCards(data: BindingsData | undefined, visibleCount
       { title: "Помилок за 24 год", value: metricFromRows(telegramRows, ["failed_messages_last_24h", "failed_messages_24h", "errors_last_24h"]) ?? 0, description: "Помилки Telegram-повідомлень за останню добу." },
       { title: "Стан", value: formatStatus(mappingStatus), description: telegramStatus.toLowerCase() === "healthy" ? "Мапінг і Telegram-підтвердження працюють." : `Telegram: ${formatStatus(telegramStatus)}` },
     ],
-    technical: [
-      { title: "Не застосовано", value: metricFromRows(mappingRows, ["resolved_not_applied", "confirmed_not_applied", "resolved_pending_apply"]) ?? 0, description: "Підтверджені рішення, які ще не застосовані." },
+    telegramHitlDetails: [
       { title: "Активні Telegram-чати", value: metricFromRows(telegramRows, ["active_chats", "telegram_active_chats", "active_telegram_chats"]) ?? 0 },
       { title: "Активні маршрути", value: metricFromRows(telegramRows, ["active_routes", "telegram_active_routes", "routes_active"]) ?? 0 },
       { title: "Повідомлень у черзі", value: metricFromRows(telegramRows, ["queued_messages", "messages_queued", "queue_messages"]) ?? 0 },
@@ -452,6 +457,11 @@ function buildConnectionStatusCards(data: BindingsData | undefined, visibleCount
       { title: "Підтверджувачі", value: activeApprovers ?? 0, description: activeApprovers === 1 ? "Активний підтверджувач." : "Активні підтверджувачі." },
       { title: "Стан Telegram HITL", value: formatStatus(telegramStatus), description: "Telegram-підтвердження доступні." },
     ],
+    unavailableNotes: [
+      data?.mappingReviewHealth.unavailableReason ? "Дані стану мапінгу тимчасово недоступні." : null,
+      data?.mappingReviewActionsRecent.unavailableReason ? "Останні дії мапінгу тимчасово недоступні." : null,
+      data?.telegramHitlHealth.unavailableReason ? "Дані Telegram HITL тимчасово недоступні." : null,
+    ].filter((note): note is string => Boolean(note)),
   };
 }
 
@@ -521,9 +531,4 @@ function badgeVariant(value: string, column: string) {
 
 function isCompactColumn(column: string) {
   return STATUS_COLUMNS.has(column) || column === "confidence";
-}
-
-function formatFieldList(rows: Row[]) {
-  const fields = Array.from(new Set(rows.flatMap((row) => Object.keys(row))));
-  return fields.length ? fields.join(", ") : "—";
 }
