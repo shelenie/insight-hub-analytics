@@ -72,7 +72,7 @@ const FRIENDLY_VALUE_LABELS: Record<string, string> = {
   manual: "Вручну",
   pending: "Очікує",
   rejected: "Відхилено",
-  resolved_not_applied: "Підтверджено, не застосовано",
+  resolved_not_applied: "Не застосовано",
   source: "Джерело даних",
 };
 
@@ -289,26 +289,28 @@ export default function Bindings() {
             </TabsContent>
 
             <TabsContent value="health" className="mt-1">
-              <SectionCard title="Стан підключень" description="Виробничий стан мапінгу та Telegram-підтверджень">
-                <div className="space-y-5">
-                  <div>
-                    <h3 className="mb-3 text-sm font-semibold text-foreground">Мапінг</h3>
-                    <KpiGrid cards={connectionStatusCards.mapping} />
-                  </div>
-                  <div>
-                    <h3 className="mb-3 text-sm font-semibold text-foreground">Telegram HITL</h3>
-                    <KpiGrid cards={connectionStatusCards.telegram} />
-                  </div>
-                </div>
-                <DeveloperDetails title="Технічні деталі">
+              <SectionCard title="Стан мапінгу та підтверджень" description="Виробничий стан мапінгу та Telegram-підтверджень">
+                <KpiGrid cards={connectionStatusCards.production} />
+                <DeveloperDetails title="Технічні деталі Telegram та мапінгу">
                   <p>Дії перевіряються перед виконанням.</p>
-                  <p>Поля v_binding_health: {formatFieldList(query.data?.bindingHealth ?? [])}</p>
-                  <p>Поля v_mapping_review_health: {formatFieldList(query.data?.mappingReviewHealth.rows ?? [])}</p>
-                  <p>Поля v_mapping_review_actions_recent: {formatFieldList(query.data?.mappingReviewActionsRecent.rows ?? [])}</p>
-                  <p>Поля v_telegram_hitl_production_health: {formatFieldList(query.data?.telegramHitlHealth.rows ?? [])}</p>
-                  {query.data?.mappingReviewHealth.unavailableReason ? <p>v_mapping_review_health: {query.data.mappingReviewHealth.unavailableReason}</p> : null}
-                  {query.data?.mappingReviewActionsRecent.unavailableReason ? <p>v_mapping_review_actions_recent: {query.data.mappingReviewActionsRecent.unavailableReason}</p> : null}
-                  {query.data?.telegramHitlHealth.unavailableReason ? <p>v_telegram_hitl_production_health: {query.data.telegramHitlHealth.unavailableReason}</p> : null}
+                  <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                    {connectionStatusCards.technical.map((card) => (
+                      <div key={card.title} className="rounded border border-border/60 bg-background/60 p-2">
+                        <p className="font-medium text-foreground">{card.title}</p>
+                        <p className="mt-1 text-sm">{card.value}</p>
+                        {card.description ? <p className="mt-1">{card.description}</p> : null}
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 space-y-1">
+                    <p>Поля v_binding_health: {formatFieldList(query.data?.bindingHealth ?? [])}</p>
+                    <p>Поля v_mapping_review_health: {formatFieldList(query.data?.mappingReviewHealth.rows ?? [])}</p>
+                    <p>Поля v_mapping_review_actions_recent: {formatFieldList(query.data?.mappingReviewActionsRecent.rows ?? [])}</p>
+                    <p>Поля v_telegram_hitl_production_health: {formatFieldList(query.data?.telegramHitlHealth.rows ?? [])}</p>
+                    {query.data?.mappingReviewHealth.unavailableReason ? <p>v_mapping_review_health: {query.data.mappingReviewHealth.unavailableReason}</p> : null}
+                    {query.data?.mappingReviewActionsRecent.unavailableReason ? <p>v_mapping_review_actions_recent: {query.data.mappingReviewActionsRecent.unavailableReason}</p> : null}
+                    {query.data?.telegramHitlHealth.unavailableReason ? <p>v_telegram_hitl_production_health: {query.data.telegramHitlHealth.unavailableReason}</p> : null}
+                  </div>
                 </DeveloperDetails>
               </SectionCard>
             </TabsContent>
@@ -414,6 +416,7 @@ function FormattedValue({ value, column }: { value: string | number | boolean | 
   const formatted = formatValue(value, column);
   if (formatted === "—") return <span className="text-muted-foreground">—</span>;
   if (STATUS_COLUMNS.has(column)) return <Badge variant={badgeVariant(String(value), column)}>{formatted}</Badge>;
+  if (column === "external_account_id") return <span className="block max-w-[16rem] truncate font-mono text-xs text-muted-foreground" title={formatted}>{formatted}</span>;
   return <span>{formatted}</span>;
 }
 
@@ -434,17 +437,17 @@ function buildConnectionStatusCards(data: BindingsData | undefined, visibleCount
   const activeApprovers = metricFromRows(telegramRows, ["active_approvers", "approvers_active", "active_telegram_approvers"]);
 
   return {
-    mapping: [
+    production: [
       { title: "Мапінг на перевірці", value: pendingMappingReviews, description: "Звʼязки, які потребують ручного підтвердження." },
-      { title: "Очікують Telegram", value: pendingTelegramActions, description: "Надіслані запити, які ще не оброблені." },
-      { title: "Підтверджено, не застосовано", value: metricFromRows(mappingRows, ["resolved_not_applied", "confirmed_not_applied", "resolved_pending_apply"]) ?? 0, description: "Підтверджені рішення, які ще очікують застосування." },
-      { title: "Стан мапінгу", value: formatStatus(mappingStatus), description: "Загальний стан перевірки мапінгу." },
+      { title: "Очікують відповіді в Telegram", value: pendingTelegramActions, description: "Надіслані запити, які ще не оброблені." },
+      { title: "Помилок за 24 год", value: metricFromRows(telegramRows, ["failed_messages_last_24h", "failed_messages_24h", "errors_last_24h"]) ?? 0, description: "Помилки Telegram-повідомлень за останню добу." },
+      { title: "Стан", value: formatStatus(mappingStatus), description: telegramStatus.toLowerCase() === "healthy" ? "Мапінг і Telegram-підтвердження працюють." : `Telegram: ${formatStatus(telegramStatus)}` },
     ],
-    telegram: [
+    technical: [
+      { title: "Не застосовано", value: metricFromRows(mappingRows, ["resolved_not_applied", "confirmed_not_applied", "resolved_pending_apply"]) ?? 0, description: "Підтверджені рішення, які ще не застосовані." },
       { title: "Активні Telegram-чати", value: metricFromRows(telegramRows, ["active_chats", "telegram_active_chats", "active_telegram_chats"]) ?? 0 },
       { title: "Активні маршрути", value: metricFromRows(telegramRows, ["active_routes", "telegram_active_routes", "routes_active"]) ?? 0 },
       { title: "Повідомлень у черзі", value: metricFromRows(telegramRows, ["queued_messages", "messages_queued", "queue_messages"]) ?? 0 },
-      { title: "Помилок за 24 год", value: metricFromRows(telegramRows, ["failed_messages_last_24h", "failed_messages_24h", "errors_last_24h"]) ?? 0 },
       { title: "Запитів на дію", value: metricFromRows(telegramRows, ["pending_action_requests", "action_requests_pending", "pending_requests"]) ?? pendingTelegramActions },
       { title: "Підтверджувачі", value: activeApprovers ?? 0, description: activeApprovers === 1 ? "Активний підтверджувач." : "Активні підтверджувачі." },
       { title: "Стан Telegram HITL", value: formatStatus(telegramStatus), description: "Telegram-підтвердження доступні." },
