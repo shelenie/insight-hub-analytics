@@ -28,6 +28,13 @@ type RequestBody = {
   metadata?: Record<string, unknown> | null;
 };
 type AccessPayload = Record<string, unknown>;
+type AccessResult = {
+  role: string;
+  allowed: boolean | null;
+  reason: string | null;
+  keys: string[];
+  signature: "function-aware" | "legacy";
+};
 type TargetCheck = { ok: boolean; status: number; error: string; code: string; details?: Record<string, unknown> };
 
 function json(payload: unknown, status = 200) {
@@ -64,25 +71,58 @@ function pickBoolean(data: AccessPayload | null, keys: string[]): boolean | null
   return null;
 }
 
+function normalizeAccess(data: unknown, signature: AccessResult["signature"]): AccessResult {
+  const normalized = toObject(data);
+  return {
+    role: (pickString(normalized, ["role", "actor_role", "result_role", "result_actor_role", "workspace_role", "resolved_role"]) ?? "").toLowerCase(),
+    allowed: pickBoolean(normalized, ["allowed", "result_allowed", "is_allowed"]),
+    reason: pickString(normalized, ["reason", "result_reason", "error", "message"]),
+    keys: normalized ? Object.keys(normalized) : [],
+    signature,
+  };
+}
+
+function isMissingRpcSignatureError(error: { code?: string; message?: string; details?: string; hint?: string } | null | undefined) {
+  if (!error) return false;
+  const text = [error.code, error.message, error.details, error.hint].filter(Boolean).join(" ").toLowerCase();
+  return (
+    text.includes("pgrst202") ||
+    (text.includes("could not find") && text.includes("check_edge_function_access_by_email")) ||
+    (text.includes("function") && text.includes("check_edge_function_access_by_email") && text.includes("does not exist")) ||
+    (text.includes("function") && text.includes("check_edge_function_access_by_email") && text.includes("not found"))
+  );
+}
+
 async function resolveAccess(adminClient: any, workspaceId: string, actorEmail: string | undefined) {
-  const { data, error } = await adminClient.rpc("check_edge_function_access_by_email", {
+  const functionAwareResult = await adminClient.rpc("check_edge_function_access_by_email", {
     p_workspace_id: workspaceId,
     p_function_name: FUNCTION_NAME,
     p_actor_email: actorEmail,
   });
 
-  if (error) return { access: null, error };
+  if (!functionAwareResult.error) {
+    return { access: normalizeAccess(functionAwareResult.data, "function-aware"), error: null };
+  }
 
-  const normalized = toObject(data);
-  return {
-    access: {
-      role: (pickString(normalized, ["role", "actor_role", "result_role", "result_actor_role", "workspace_role", "resolved_role"]) ?? "").toLowerCase(),
-      allowed: pickBoolean(normalized, ["allowed", "result_allowed", "is_allowed"]),
-      reason: pickString(normalized, ["reason", "result_reason", "error", "message"]),
-      keys: normalized ? Object.keys(normalized) : [],
-    },
-    error: null,
-  };
+  if (!isMissingRpcSignatureError(functionAwareResult.error)) {
+    return { access: null, error: functionAwareResult.error, attemptedFallback: false };
+  }
+
+  const legacyResult = await adminClient.rpc("check_edge_function_access_by_email", {
+    p_user_email: actorEmail,
+    p_workspace_id: workspaceId,
+  });
+
+  if (legacyResult.error) {
+    return {
+      access: null,
+      error: legacyResult.error,
+      attemptedFallback: true,
+      firstError: functionAwareResult.error,
+    };
+  }
+
+  return { access: normalizeAccess(legacyResult.data, "legacy"), error: null, attemptedFallback: true };
 }
 
 function cleanId(value: string | null | undefined) {
@@ -173,9 +213,9 @@ Deno.serve(async (req) => {
     return json({ ok: false, error: "workspace_id and binding_type are required", code: "invalid_payload" }, 400);
   }
 
-  const { access, error: accessError } = await resolveAccess(adminClient, workspace_id, authData.user.email);
+  const { access, error: accessError, attemptedFallback } = await resolveAccess(adminClient, workspace_id, authData.user.email);
   if (accessError) {
-    return json({ ok: false, error: accessError.message, code: "access_check_failed" }, 403);
+    return json({ ok: false, error: accessError.message, code: "access_check_failed", attempted_legacy_fallback: attemptedFallback === true }, 403);
   }
 
   if (access?.allowed === false) {
