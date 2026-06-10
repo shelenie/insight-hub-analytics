@@ -8,7 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { FriendlyError } from "@/components/common/DeveloperDetails";
+import { DeveloperDetails, FriendlyError } from "@/components/common/DeveloperDetails";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
@@ -292,16 +292,15 @@ export default function Bindings() {
             <TabsContent value="health" className="mt-1">
               <SectionCard title="Стан мапінгу та підтверджень" description="Виробничий стан мапінгу та Telegram-підтверджень">
                 <KpiGrid cards={connectionStatusCards.production} />
-                <details className="mt-4 rounded-md border border-border/70 bg-muted/20 p-3 text-sm">
-                  <summary className="cursor-pointer font-medium text-foreground">Деталі Telegram HITL</summary>
-                  <p className="mt-2 text-xs text-muted-foreground">Компактна діагностика Telegram-підтверджень без технічних ID.</p>
+                <DeveloperDetails title="Деталі Telegram HITL">
+                  <p>Компактна діагностика Telegram-підтверджень без технічних ID.</p>
                   <CompactDiagnosticsGrid cards={connectionStatusCards.telegramHitlDetails} />
                   {connectionStatusCards.unavailableNotes.length ? (
-                    <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                    <div className="mt-3 space-y-1">
                       {connectionStatusCards.unavailableNotes.map((note) => <p key={note}>{note}</p>)}
                     </div>
                   ) : null}
-                </details>
+                </DeveloperDetails>
               </SectionCard>
             </TabsContent>
           </Tabs>
