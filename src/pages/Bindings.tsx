@@ -142,19 +142,22 @@ export default function Bindings() {
     },
   });
 
-  const runAction = async (key: string, fn: () => Promise<{ data: unknown; error: { message: string } | null }>) => {
+  const runAction = async (key: string, fn: () => Promise<{ data: unknown; error: InvokeError | null }>) => {
     setPending(key);
     setMessage("");
     const { data, error } = await fn();
     setPending("");
     if (error) {
-      setMessage("Цей розділ поки недоступний.");
+      setMessage(await getFriendlyBindingActionError(error));
       return;
     }
-    if ((data as { ok?: boolean; error?: string } | null)?.ok === false) {
-      setMessage((data as { error?: string }).error ?? "Не вдалося виконати дію.");
+
+    const response = data as BindingActionResponse | null;
+    if (response?.ok === false) {
+      setMessage(getFriendlyBindingActionMessage(response));
       return;
     }
+
     setMessage("Дію успішно виконано.");
     await refreshBindings();
   };
@@ -308,6 +311,51 @@ export default function Bindings() {
       </div>
     </DashboardLayout>
   );
+}
+
+
+type BindingActionResponse = {
+  ok?: boolean;
+  error?: string;
+  code?: string;
+};
+type InvokeError = {
+  message?: string;
+  context?: unknown;
+};
+
+async function getFriendlyBindingActionError(error: InvokeError) {
+  const payload = await readFunctionErrorPayload(error);
+  return getFriendlyBindingActionMessage({
+    ok: false,
+    error: payload?.error ?? error.message,
+    code: payload?.code,
+  });
+}
+
+async function readFunctionErrorPayload(error: InvokeError): Promise<BindingActionResponse | null> {
+  const response = error.context;
+  if (!response || typeof response !== "object" || !("json" in response)) return null;
+  const jsonReader = (response as { json?: () => Promise<unknown> }).json;
+  if (typeof jsonReader !== "function") return null;
+  const payload = await jsonReader.call(response).catch(() => null);
+  return payload && typeof payload === "object" ? (payload as BindingActionResponse) : null;
+}
+
+function getFriendlyBindingActionMessage(response: BindingActionResponse) {
+  if (response.code === "permission_denied" || response.code === "insufficient_role" || response.error?.toLowerCase().includes("insufficient")) {
+    return "Недостатньо прав для ручної прив’язки. Перевірте роль користувача або права робочого простору.";
+  }
+
+  if (response.code === "archived_target" || response.error?.toLowerCase().includes("archiv")) {
+    return "Не можна створити зв’язок для архівного клієнта, проєкту або воронки.";
+  }
+
+  if (response.code === "invalid_payload" || response.code === "target_not_found" || response.code === "target_workspace_mismatch" || response.code === "target_lookup_failed") {
+    return "Перевірте ID рекламного акаунта, клієнта, проєкту і воронки.";
+  }
+
+  return response.error || "Не вдалося виконати дію.";
 }
 
 const getBindingId = (row: Row) => String(row.binding_id ?? row.id ?? "");
