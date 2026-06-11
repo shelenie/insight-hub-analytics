@@ -48,6 +48,14 @@ type AdAccountRow = {
   external_account_name: string | null;
 };
 
+type SourceEntity = {
+  source_kind: string;
+  source_table: string | null;
+  source_id: string;
+  source_external_id: string | null;
+  source_name: string | null;
+};
+
 function json(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), {
     status,
@@ -202,6 +210,127 @@ async function validateTargets(adminClient: any, body: RequestBody, workspaceId:
   return checks.find(Boolean) ?? null;
 }
 
+function isInactiveStatus(status: unknown) {
+  const normalized = String(status ?? "").trim().toLowerCase();
+  return ["archived", "deleted", "disabled", "inactive"].includes(normalized);
+}
+
+function sourceLookupError(code: string, sourceId: string, status = 400, message = VALIDATION_ERROR_MESSAGE, details: Record<string, unknown> = { id: sourceId }): TargetCheck {
+  return {
+    ok: false,
+    status,
+    error: message,
+    code,
+    details,
+  };
+}
+
+async function lookupGoogleSheetTabSource(adminClient: any, sourceId: string, workspaceId: string): Promise<{ source: SourceEntity | null; error: TargetCheck | null }> {
+  const { data, error } = await adminClient
+    .from("google_sheet_tabs")
+    .select("id, workspace_id, status, source_type, target_raw_table, tab_name, source_id")
+    .eq("id", sourceId)
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (error || !data) return { source: null, error: null };
+  if (data.workspace_id && data.workspace_id !== workspaceId) return { source: null, error: sourceLookupError("source_workspace_mismatch", sourceId) };
+  if (isInactiveStatus(data.status)) {
+    return { source: null, error: sourceLookupError("inactive_source", sourceId, 409, "Cannot create a binding for an inactive or archived source", { id: sourceId, status: data.status }) };
+  }
+
+  let parentSheet: { spreadsheet_id?: string | null; spreadsheet_name?: string | null } | null = null;
+  if (data.source_id) {
+    const { data: sheet } = await adminClient
+      .from("google_sheet_sources")
+      .select("id, spreadsheet_id, spreadsheet_name")
+      .eq("id", data.source_id)
+      .eq("workspace_id", workspaceId)
+      .maybeSingle();
+    parentSheet = sheet ?? null;
+  }
+
+  const spreadsheetName = parentSheet?.spreadsheet_name ?? null;
+  const tabName = data.tab_name ?? null;
+
+  return {
+    source: {
+      source_kind: data.source_type ?? "google_sheet",
+      source_table: data.target_raw_table ?? "google_sheet_tabs",
+      source_id: data.id,
+      source_external_id: parentSheet?.spreadsheet_id && tabName ? `${parentSheet.spreadsheet_id}:${tabName}` : (parentSheet?.spreadsheet_id ?? data.source_id ?? null),
+      source_name: spreadsheetName && tabName ? `google_sheet:${spreadsheetName}:${tabName}` : (tabName ?? spreadsheetName),
+    },
+    error: null,
+  };
+}
+
+async function lookupRawExternalDatasetSource(adminClient: any, sourceId: string, workspaceId: string): Promise<{ source: SourceEntity | null; error: TargetCheck | null }> {
+  const { data, error } = await adminClient
+    .from("raw_external_datasets")
+    .select("id, workspace_id, status, source_type, target_raw_table, dataset_name, sheet_name, file_asset_id, parser_type")
+    .eq("id", sourceId)
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (error || !data) return { source: null, error: null };
+  if (data.workspace_id && data.workspace_id !== workspaceId) return { source: null, error: sourceLookupError("source_workspace_mismatch", sourceId) };
+  if (isInactiveStatus(data.status)) {
+    return { source: null, error: sourceLookupError("inactive_source", sourceId, 409, "Cannot create a binding for an inactive or archived source", { id: sourceId, status: data.status }) };
+  }
+
+  const datasetName = data.dataset_name ?? null;
+  const sheetName = data.sheet_name ?? null;
+
+  return {
+    source: {
+      source_kind: data.source_type ?? data.parser_type ?? "manual_file_upload",
+      source_table: data.target_raw_table ?? "raw_external_datasets",
+      source_id: data.id,
+      source_external_id: data.file_asset_id ?? data.id,
+      source_name: datasetName && sheetName ? `file_upload:${datasetName}:${sheetName}` : (datasetName ?? sheetName),
+    },
+    error: null,
+  };
+}
+
+async function lookupGoogleSheetSource(adminClient: any, sourceId: string, workspaceId: string): Promise<{ source: SourceEntity | null; error: TargetCheck | null }> {
+  const { data, error } = await adminClient
+    .from("google_sheet_sources")
+    .select("id, workspace_id, status, spreadsheet_id, spreadsheet_name")
+    .eq("id", sourceId)
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (error || !data) return { source: null, error: null };
+  if (data.workspace_id && data.workspace_id !== workspaceId) return { source: null, error: sourceLookupError("source_workspace_mismatch", sourceId) };
+  if (isInactiveStatus(data.status)) {
+    return { source: null, error: sourceLookupError("inactive_source", sourceId, 409, "Cannot create a binding for an inactive or archived source", { id: sourceId, status: data.status }) };
+  }
+
+  return {
+    source: {
+      source_kind: "google_sheet",
+      source_table: "google_sheet_sources",
+      source_id: data.id,
+      source_external_id: data.spreadsheet_id ?? null,
+      source_name: data.spreadsheet_name ?? null,
+    },
+    error: null,
+  };
+}
+
+async function getActiveSourceEntity(adminClient: any, sourceId: string, workspaceId: string): Promise<{ source: SourceEntity | null; error: TargetCheck | null }> {
+  const lookups = [lookupGoogleSheetTabSource, lookupRawExternalDatasetSource, lookupGoogleSheetSource];
+
+  for (const lookup of lookups) {
+    const result = await lookup(adminClient, sourceId, workspaceId);
+    if (result.error || result.source) return result;
+  }
+
+  return { source: null, error: sourceLookupError("source_not_found", sourceId) };
+}
+
 async function getActiveAdAccount(adminClient: any, adAccountId: string, workspaceId: string): Promise<{ adAccount: AdAccountRow | null; error: TargetCheck | null }> {
   const { data, error } = await adminClient
     .from("ad_accounts")
@@ -342,12 +471,23 @@ Deno.serve(async (req) => {
 
   const sharedPayload = sharedBindingRpcPayload(body, workspace_id, authData.user.id, authData.user.email);
   let rpcName = "bind_source_entity_to_scope";
-  let rpcPayload: Record<string, unknown> = {
-    ...sharedPayload,
-    p_source_id: cleanId(body.source_id),
-  };
+  let rpcPayload: Record<string, unknown>;
 
-  if (binding_type === "ad_account") {
+  if (binding_type === "source") {
+    const sourceId = cleanId(body.source_id);
+    const { source, error: sourceError } = await getActiveSourceEntity(adminClient, sourceId!, workspace_id);
+    if (sourceError) return json({ ok: false, error: sourceError.error, code: sourceError.code, details: sourceError.details }, sourceError.status);
+
+    rpcPayload = {
+      ...sharedPayload,
+      p_source_kind: source!.source_kind,
+      p_source_table: source!.source_table,
+      p_source_id: source!.source_id,
+      p_source_external_id: source!.source_external_id,
+      p_source_name: source!.source_name,
+      p_is_primary: typeof body.is_primary === "boolean" ? body.is_primary : false,
+    };
+  } else {
     const adAccountId = cleanId(body.ad_account_id);
     const { adAccount, error: adAccountError } = await getActiveAdAccount(adminClient, adAccountId!, workspace_id);
     if (adAccountError) return json({ ok: false, error: adAccountError.error, code: adAccountError.code, details: adAccountError.details }, adAccountError.status);
