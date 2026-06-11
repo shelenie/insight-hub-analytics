@@ -26,6 +26,7 @@ type RequestBody = {
   binding_method?: string | null;
   notes?: string | null;
   metadata?: Record<string, unknown> | null;
+  is_primary?: boolean | null;
 };
 type AccessPayload = Record<string, unknown>;
 type AccessResult = {
@@ -36,6 +37,16 @@ type AccessResult = {
   signature: "function-aware" | "legacy";
 };
 type TargetCheck = { ok: boolean; status: number; error: string; code: string; details?: Record<string, unknown> };
+
+type AdAccountRow = {
+  id: string;
+  workspace_id: string | null;
+  status: string | null;
+  platform: string | null;
+  ad_platform_connection_id: string | null;
+  external_account_id: string | null;
+  external_account_name: string | null;
+};
 
 function json(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), {
@@ -191,6 +202,99 @@ async function validateTargets(adminClient: any, body: RequestBody, workspaceId:
   return checks.find(Boolean) ?? null;
 }
 
+async function getActiveAdAccount(adminClient: any, adAccountId: string, workspaceId: string): Promise<{ adAccount: AdAccountRow | null; error: TargetCheck | null }> {
+  const { data, error } = await adminClient
+    .from("ad_accounts")
+    .select("id, workspace_id, status, platform, ad_platform_connection_id, external_account_id, external_account_name")
+    .eq("id", adAccountId)
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+
+  if (error) {
+    return {
+      adAccount: null,
+      error: {
+        ok: false,
+        status: 400,
+        error: VALIDATION_ERROR_MESSAGE,
+        code: "ad_account_lookup_failed",
+        details: { id: adAccountId, message: error.message },
+      },
+    };
+  }
+
+  if (!data) {
+    return {
+      adAccount: null,
+      error: {
+        ok: false,
+        status: 400,
+        error: VALIDATION_ERROR_MESSAGE,
+        code: "ad_account_not_found",
+        details: { id: adAccountId },
+      },
+    };
+  }
+
+  const adAccount = data as AdAccountRow;
+  if (adAccount.workspace_id && adAccount.workspace_id !== workspaceId) {
+    return {
+      adAccount: null,
+      error: {
+        ok: false,
+        status: 400,
+        error: VALIDATION_ERROR_MESSAGE,
+        code: "ad_account_workspace_mismatch",
+        details: { id: adAccountId },
+      },
+    };
+  }
+
+  if (String(adAccount.status ?? "").toLowerCase() !== "active") {
+    return {
+      adAccount: null,
+      error: {
+        ok: false,
+        status: 409,
+        error: "Cannot create a binding for an inactive ad account",
+        code: "inactive_ad_account",
+        details: { id: adAccountId, status: adAccount.status },
+      },
+    };
+  }
+
+  if (!adAccount.platform) {
+    return {
+      adAccount: null,
+      error: {
+        ok: false,
+        status: 400,
+        error: VALIDATION_ERROR_MESSAGE,
+        code: "ad_account_platform_missing",
+        details: { id: adAccountId },
+      },
+    };
+  }
+
+  return { adAccount, error: null };
+}
+
+function sharedBindingRpcPayload(body: RequestBody, workspaceId: string, createdBy: string, createdByEmail: string | null | undefined) {
+  return {
+    p_workspace_id: workspaceId,
+    p_client_id: cleanId(body.client_id),
+    p_project_id: cleanId(body.project_id),
+    p_funnel_id: cleanId(body.funnel_id),
+    p_mapping_status: body.mapping_status ?? "confirmed",
+    p_binding_method: body.binding_method ?? "manual",
+    p_confidence: body.confidence ?? 1.0,
+    p_notes: body.notes ?? null,
+    p_created_by: createdBy,
+    p_created_by_email: createdByEmail ?? null,
+    p_metadata: body.metadata ?? {},
+  };
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -236,22 +340,31 @@ Deno.serve(async (req) => {
   const targetError = await validateTargets(adminClient, body, workspace_id);
   if (targetError) return json({ ok: false, error: targetError.error, code: targetError.code, details: targetError.details }, targetError.status);
 
-  const rpcName = binding_type === "source" ? "bind_source_entity_to_scope" : "bind_ad_account_to_scope";
-  const { data, error } = await adminClient.rpc(rpcName, {
-    p_workspace_id: workspace_id,
-    p_binding_id: body.binding_id ?? null,
+  const sharedPayload = sharedBindingRpcPayload(body, workspace_id, authData.user.id, authData.user.email);
+  let rpcName = "bind_source_entity_to_scope";
+  let rpcPayload: Record<string, unknown> = {
+    ...sharedPayload,
     p_source_id: cleanId(body.source_id),
-    p_ad_account_id: cleanId(body.ad_account_id),
-    p_client_id: cleanId(body.client_id),
-    p_project_id: cleanId(body.project_id),
-    p_funnel_id: cleanId(body.funnel_id),
-    p_mapping_status: body.mapping_status ?? null,
-    p_binding_status: body.binding_status ?? null,
-    p_confidence: body.confidence ?? null,
-    p_binding_method: body.binding_method ?? null,
-    p_notes: body.notes ?? null,
-    p_metadata: body.metadata ?? null,
-  });
+  };
+
+  if (binding_type === "ad_account") {
+    const adAccountId = cleanId(body.ad_account_id);
+    const { adAccount, error: adAccountError } = await getActiveAdAccount(adminClient, adAccountId!, workspace_id);
+    if (adAccountError) return json({ ok: false, error: adAccountError.error, code: adAccountError.code, details: adAccountError.details }, adAccountError.status);
+
+    rpcName = "bind_ad_account_to_scope";
+    rpcPayload = {
+      ...sharedPayload,
+      p_platform: adAccount!.platform,
+      p_ad_platform_connection_id: adAccount!.ad_platform_connection_id,
+      p_ad_account_id: adAccount!.id,
+      p_external_account_id: adAccount!.external_account_id,
+      p_external_account_name: adAccount!.external_account_name,
+      p_is_primary: typeof body.is_primary === "boolean" ? body.is_primary : false,
+    };
+  }
+
+  const { data, error } = await adminClient.rpc(rpcName, rpcPayload);
 
   if (error) {
     const details = error.message.toLowerCase();
