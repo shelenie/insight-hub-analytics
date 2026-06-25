@@ -10,14 +10,14 @@ New ChatGPT/Codex/Claude/Cursor sessions should read this file first.
 
 ## Project
 
-Name: Internal Analytics Workspace  
-Status: active / in progress  
-Approval: awaiting client approval  
-Current stack: Codex + Supabase + GitHub  
-Source of truth for code: GitHub  
-Backend/data layer: Supabase  
-Last updated: 2026-06-24  
-Confidence: medium; must be verified against current repo  
+Name: Internal Analytics Workspace
+Status: active / in progress
+Approval: awaiting client approval
+Current stack: Codex + Supabase + GitHub
+Source of truth for code: GitHub
+Backend/data layer: Supabase
+Last updated: 2026-06-25
+Confidence: medium-high for inspected repo facts; remote Supabase/production state still needs verification
 
 ---
 
@@ -128,6 +128,173 @@ Rules:
 3. Ask Codex to inspect repo state.
 4. Update this file with verified facts.
 5. Then continue implementation.
+
+---
+
+## Verified Repo Facts — 2026-06-25
+
+Inspection only. No application code was changed.
+
+### Repository Structure
+
+Verified top-level repo areas include:
+
+- `src/` frontend application code
+- `supabase/` Supabase config, migrations, and Edge Functions
+- `docs/` project docs and audits
+- `docs/ai-context/` durable AI context files
+- `.github/workflows/` GitHub Actions workflows
+- `public/` static assets
+
+Verified root config/files include:
+
+- `package.json`
+- `package-lock.json`
+- `bun.lockb`
+- `vite.config.ts`
+- `vitest.config.ts`
+- `tailwind.config.ts`
+- `tsconfig.json`
+- `tsconfig.app.json`
+- `tsconfig.node.json`
+- `eslint.config.js`
+- `.env.example`
+
+Package manager is needs verification because both `package-lock.json` and `bun.lockb` exist.
+
+### Frontend
+
+Verified frontend stack from repo files:
+
+- Vite
+- React
+- TypeScript
+- React Router
+- TanStack Query
+- Tailwind CSS / shadcn-style component structure
+- Supabase JS client
+- Vitest
+
+Main app routing is in `src/App.tsx`.
+
+Verified protected page routes include:
+
+- `/` Overview
+- `/conversions`
+- `/campaigns`
+- `/sales`
+- `/imports`
+- `/assistant`
+- `/onboarding`
+- `/bindings`
+- `/alerts`
+- `/ads-connectors`
+
+### Supabase
+
+Verified Supabase repo structure:
+
+- `supabase/config.toml`
+- `supabase/migrations/`
+- `supabase/functions/`
+
+Verified local migrations include workspace membership RLS repair, unified reporting views, placement performance, import health summary RPC, campaign diagnostics RPC, disconnect ad platform connection RPC, timezone preferences, TikTok OAuth/token changes, onboarding hierarchy fix, and binding Edge Function registration.
+
+Verified Edge Function source folders include:
+
+- ads scheduled sync
+- AI helper
+- backup export / restore backup
+- binding create/update/archive
+- Facebook lead ads sync and webhook
+- file upload parser
+- Google OAuth / Ads OAuth / Sheets sync flows
+- health check
+- mapping review actions
+- Meta OAuth / ads sync
+- onboarding client/project/funnel upserts
+- operational alert resolve
+- Telegram dispatch/outbox/webhook helpers
+- TikTok OAuth / ads sync
+- `whoami`
+- `workspace-role-info`
+
+Remote Supabase deployment state is needs verification.
+
+### Auth and User Access
+
+Verified frontend auth/access files include:
+
+- `src/auth/AuthProvider.tsx`
+- `src/auth/ProtectedRoute.tsx`
+- `src/hooks/useWorkspaceRole.ts`
+- `src/integrations/supabase/client.ts`
+
+Verified current behavior from repo files:
+
+- Supabase client uses `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` or `VITE_SUPABASE_PUBLISHABLE_KEY`.
+- Auth provider handles Supabase sessions and magic-link sign-in.
+- Magic-link sign-in sets `shouldCreateUser: false`.
+- `ProtectedRoute` checks for an authenticated session before rendering protected routes.
+- Workspace role/capability lookup is handled separately through `workspace-role-info`.
+- Locally visible role union is `member | admin | superadmin`.
+
+Needs verification:
+
+- profile table
+- complete workspace membership table contract
+- invitations model
+- audit-log coverage
+- first superadmin setup
+- inactive/removed member behavior
+- complete permissions model
+- full RLS behavior in remote Supabase
+
+### Dashboard, Imports, and Data
+
+Verified app pages include Overview, Conversions, Campaigns, Sales, Imports, Assistant, Onboarding, Bindings, Alerts, Ads Connectors, Login, and Not Found.
+
+Verified data/dashboard-related files include:
+
+- `src/pages/Overview.tsx`
+- `src/pages/Conversions.tsx`
+- `src/pages/Campaigns.tsx`
+- `src/pages/Sales.tsx`
+- `src/pages/Imports.tsx`
+- `src/pages/Assistant.tsx`
+- `src/pages/Bindings.tsx`
+- `src/pages/Alerts.tsx`
+- `src/pages/AdsConnectors.tsx`
+- `src/data/mock.ts`
+- `src/filters/DateContext.tsx`
+- `src/preferences/PreferencesProvider.tsx`
+- `src/preferences/SavedViewsProvider.tsx`
+
+Existing audits include:
+
+- `docs/overview-audit.md`
+- `docs/imports-data-health-audit.md`
+- `docs/audits/ads-connectors-audit.md`
+- `docs/audits/ads-connectors-production-status.md`
+- `docs/audits/missing-supabase-functions-source-report.md`
+- `docs/audits/supabase-edge-functions-source-migration.md`
+
+Dashboard metric definitions still need verification before dashboard expansion or UI polish.
+
+### Repo-defined Commands
+
+Verified package scripts:
+
+- `npm run dev` / package-manager equivalent: `vite`
+- `npm run build`: `vite build`
+- `npm run build:dev`: `vite build --mode development`
+- `npm run lint`: `eslint .`
+- `npm run preview`: `vite preview`
+- `npm run test`: `vitest run`
+- `npm run test:watch`: `vitest`
+- `npm run typecheck`: `tsc --noEmit`
+
+Use repo-defined scripts for checks. Package manager choice remains needs verification.
 
 ---
 

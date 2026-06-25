@@ -8,14 +8,14 @@ Current next actions for Internal Analytics Workspace.
 
 ## Current Priority
 
-Verify repo state and install durable context files.
+Continue verification of user management, Supabase security, and dashboard metric definitions before feature expansion.
 
 ---
 
 ## Task: Add Project Context Files
 
-Priority: high  
-Status: next  
+Priority: high
+Status: completed from local repo inspection on 2026-06-25
 
 Add:
 
@@ -42,8 +42,8 @@ Acceptance criteria:
 
 ## Task: Inspect Current Repo State
 
-Priority: high  
-Status: next after context files  
+Priority: high
+Status: completed from local repo inspection on 2026-06-25
 
 Codex should inspect:
 
@@ -61,12 +61,37 @@ Codex should inspect:
 
 Then update `PROJECT_STATE.md`.
 
+2026-06-25 update: local repo structure, frontend stack, Supabase folders, auth files, dashboard/import files, and package scripts were inspected and recorded in `PROJECT_STATE.md`. Remote Supabase production state and package-manager choice still need verification.
+
+---
+
+## Task: Verify Package Manager
+
+Priority: medium
+Status: upcoming
+
+The repository contains both `package-lock.json` and `bun.lockb`.
+
+Verify which package manager is canonical before changing dependencies or documenting install commands.
+
+---
+
+## Task: Verify Remote Supabase Contracts
+
+Priority: high
+Status: upcoming
+
+Compare local migrations/types with remote Supabase objects used by the frontend, especially views and RPCs referenced by dashboard/import pages.
+
+Do not assume remote objects exist only because frontend code references them.
+
+
 ---
 
 ## Task: Verify and Define User Management Model
 
-Priority: high  
-Status: upcoming  
+Priority: high
+Status: upcoming
 
 Read:
 
@@ -94,8 +119,8 @@ Do not implement user UI before access model is clear.
 
 ## Task: Define Dashboard Metrics
 
-Priority: high  
-Status: upcoming  
+Priority: high
+Status: upcoming
 
 For each metric define:
 
@@ -115,8 +140,8 @@ Do not build UI before metric logic is clear.
 
 ## Task: Review Supabase Security State
 
-Priority: high  
-Status: upcoming  
+Priority: high
+Status: upcoming
 
 Review:
 
