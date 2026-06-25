@@ -250,6 +250,38 @@ Needs verification:
 - complete permissions model
 - full RLS behavior in remote Supabase
 
+
+### Verified User Management / Access — 2026-06-25
+
+Inspection only. No application code, Supabase migrations, RLS policies, package files, or workflows were changed.
+
+Verified local evidence confirms:
+
+- Supabase Auth is the current auth provider used by the frontend.
+- `src/auth/AuthProvider.tsx` manages Supabase session state, redirect session exchange, sign-out, and magic-link sign-in.
+- Magic-link sign-in is configured with `shouldCreateUser: false`, so local frontend email-link flow is invite-only at the Auth-user creation level.
+- `src/pages/Login.tsx` also supports Google OAuth sign-in; whether Google OAuth can create new Auth users still needs remote Supabase Auth configuration verification.
+- `src/auth/ProtectedRoute.tsx` currently checks only for an authenticated Supabase session before rendering protected routes.
+- `src/hooks/useWorkspaceRole.ts` calls the `workspace-role-info` Edge Function to resolve workspace role/capabilities separately from route authentication.
+- The local verified role values are `member`, `admin`, and `superadmin`.
+- `supabase/functions/workspace-role-info/index.ts` validates a bearer token, resolves the authenticated user, calls backend access RPC logic with service role server-side, and maps roles to capabilities.
+- `supabase/migrations/20260520_task19_fix_workspace_members_rls_recursion.sql` defines local role ranking for `member`, `admin`, and `superadmin`, plus RLS policies for `workspace_members`.
+
+Needs verification before user-management implementation:
+
+- `profiles` base table/model, columns, lifecycle, and RLS.
+- `workspace_members` base DDL, full column contract, constraints, indexes, and remote policies.
+- Invitation model and invitation flow.
+- `audit_logs` base schema, RLS, and user-management audit coverage.
+- Inactive/removed member behavior and whether access helpers filter only active memberships.
+- First superadmin setup/bootstrap process.
+- Complete permissions/capabilities contract, including remote definitions for access RPCs/views.
+- Remote Supabase schema, deployed Edge Functions, and actual RLS/backend enforcement state.
+
+Risk to preserve in future work:
+
+- `ProtectedRoute` is currently session-only. Until a stronger app-level access contract is defined, workspace access enforcement must rely on backend/RLS/views/RPC/Edge Functions. Do not treat an Auth session as workspace access.
+
 ### Dashboard, Imports, and Data
 
 Verified app pages include Overview, Conversions, Campaigns, Sales, Imports, Assistant, Onboarding, Bindings, Alerts, Ads Connectors, Login, and Not Found.
