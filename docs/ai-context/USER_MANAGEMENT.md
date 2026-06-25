@@ -65,6 +65,44 @@ Do not invent table names. Verify repo first.
 
 ---
 
+
+## Verified Local State — 2026-06-25
+
+Local repository inspection only. Remote Supabase production/deployment state still needs verification. No application code, Supabase migrations, or RLS policies were changed during this verification.
+
+### Verified Facts
+
+- Supabase Auth is the current local frontend auth provider.
+- `src/auth/AuthProvider.tsx` manages session state, redirect session exchange, sign-out, and magic-link sign-in.
+- Magic-link sign-in sets `shouldCreateUser: false`, which prevents email magic-link Auth-user creation from the local frontend flow.
+- `src/pages/Login.tsx` supports Google OAuth sign-in; Google OAuth Auth-user creation behavior depends on remote Supabase Auth configuration and still needs verification.
+- `src/auth/ProtectedRoute.tsx` is currently session-only: it checks for an authenticated Supabase session before rendering protected routes.
+- `src/hooks/useWorkspaceRole.ts` resolves workspace role/capabilities through the `workspace-role-info` Edge Function.
+- `supabase/functions/workspace-role-info/index.ts` validates the bearer token, resolves the authenticated user, uses server-side service role access to call backend access RPC logic, and returns role/capabilities.
+- The verified local role values are `member`, `admin`, and `superadmin`.
+- Local role capability mapping grants broader management capabilities to `admin`/`superadmin`, and reserves backup/restore and dev-action capabilities for `superadmin`.
+- `supabase/migrations/20260520_task19_fix_workspace_members_rls_recursion.sql` references `workspace_members`, ranks `member`/`admin`/`superadmin`, and defines RLS policies for select/insert/update/delete on `workspace_members`.
+- Several Edge Functions perform backend role checks through access RPCs before privileged actions.
+- `audit_logs` is referenced by operational Edge Functions, but user-management-specific audit coverage is not verified.
+
+### Needs Verification
+
+- `profiles` base table/model, columns, lifecycle, and RLS.
+- `workspace_members` base DDL, full columns, constraints, indexes, and remote RLS policies.
+- Whether `workspace_members` has a status field and whether helpers/policies enforce only active memberships.
+- Invitation table/model and invitation acceptance/revocation flow.
+- `audit_logs` base schema, RLS, and coverage for user-management actions such as invite, accept, role change, deactivate, remove, and reactivate.
+- First superadmin setup/bootstrap process.
+- Remote definitions and deployed behavior for access RPCs/views such as current-user permissions and Edge Function access checks.
+- Whether Google OAuth self-signup can create Auth users in the remote Supabase project.
+- Full remote Supabase RLS/backend enforcement state.
+
+### Current Access Risk
+
+`ProtectedRoute` currently proves only that a user has an authenticated session. It does not prove workspace access. Until a stronger app-level access contract is defined, workspace access must be enforced by backend/RLS/views/RPC/Edge Functions. Do not grant or assume workspace access from Supabase Auth alone.
+
+---
+
 ## Auth User
 
 Identity-level account, possibly in `auth.users`.
@@ -176,15 +214,18 @@ Do not expose public superadmin creation.
 
 ## Roles
 
-Possible roles:
+Verified current local roles:
 
 - superadmin
 - admin
 - member
+
+Possible guidance-only roles not verified in the current local implementation:
+
 - viewer
 - client
 
-Actual roles must be verified.
+Remote roles and constraints still need verification before implementation.
 
 ### Superadmin
 

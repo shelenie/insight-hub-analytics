@@ -14,10 +14,21 @@ Meaningful changes for Internal Analytics Workspace.
 - Confirmed required project context files are present and readable in the local repository.
 - Confirmed `Add Project Context Files` is tracked as completed in `NEXT_ACTIONS.md`.
 
+
+### User Management Verification
+
+- Completed local user-management/access verification from repository files only.
+- Confirmed Supabase Auth, `AuthProvider`, session-only `ProtectedRoute`, `useWorkspaceRole`, and `workspace-role-info` are the current local auth/access pieces.
+- Confirmed locally visible workspace roles are `member`, `admin`, and `superadmin`.
+- Confirmed no verified local invitation flow was found.
+- Confirmed no verified inactive/removed member behavior was found in local access helpers/policies.
+- Confirmed remote Supabase schema/RLS verification is still required for `profiles`, `workspace_members`, invitations, `audit_logs`, access RPCs/views, first superadmin setup, and deployed policy behavior.
+- No application code, Supabase migrations, RLS policies, package files, workflows, or environment files were changed.
+
 ### Notes
 
 - No application code, Supabase files, package files, workflows, or environment files were changed.
-- User management model, Supabase security state, dashboard metrics, package manager choice, and remote Supabase contracts remain upcoming verification items.
+- Supabase security state, dashboard metrics, package manager choice, remote Supabase contracts, and remote user-management schema/RLS remain upcoming verification items.
 
 ## 2026-06-24
 
