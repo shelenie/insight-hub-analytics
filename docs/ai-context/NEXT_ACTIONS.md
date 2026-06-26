@@ -138,19 +138,31 @@ Acceptance criteria:
 
 ---
 
-
 ## Task: Deploy and Verify Phase 1 User Access Hardening
 
 Priority: high
-Status: upcoming
+Status: completed on 2026-06-26
 
-Apply and verify `supabase/migrations/20260626_phase1_active_membership_access_hardening.sql` against remote Supabase. Confirm:
+`supabase/migrations/20260626_phase1_active_membership_access_hardening.sql` was merged, manually applied to remote Supabase, and verified.
+
+Verified:
 
 - existing `workspace_members` rows are `active`
-- inactive/removed memberships cannot access workspace data through helpers/views/RLS
-- Edge Function access checks deny inactive/removed memberships
-- `v_workspace_members_with_permissions` does not expose all members to ordinary authenticated users
-- last active `superadmin` cannot be demoted/deactivated/removed/deleted
+- central role/access helpers are active-only through `workspace_members.status = 'active'`
+- direct `workspace_members` INSERT/UPDATE/DELETE policies are superadmin-only
+- `enforce_workspace_member_management_rules` trigger exists for INSERT/UPDATE
+- `prevent_last_active_superadmin_change` trigger exists for UPDATE/DELETE
+- `set_workspace_members_updated_at` trigger exists for UPDATE
+- `v_current_user_permissions` is active-aware and `security_invoker=true`
+- `v_workspace_members_with_permissions` is active-aware and `security_invoker=true`
+- `v_workspace_members_with_permissions` has no direct `SELECT` grant for `anon` or `authenticated`
+
+Remaining follow-up:
+
+- verify Edge Function access behavior for inactive/removed memberships when test users/fixtures are available
+- define invitation/user-management RPC contract before UI work
+
+---
 
 ## Task: Define Target Invitation / Status / User-Management Contract
 
