@@ -93,11 +93,11 @@ Do not assume remote objects exist only because frontend code references them.
 ## Task: Verify and Define User Management Model
 
 Priority: high
-Status: locally inspected / partially complete on 2026-06-25
+Status: Phase 1 backend/RLS patch prepared locally on 2026-06-26
 
 2026-06-25 local verification completed from repository files only. Verified local evidence confirms Supabase Auth, `AuthProvider`, session-only `ProtectedRoute`, `useWorkspaceRole`, `workspace-role-info`, and role values `member`, `admin`, and `superadmin`.
 
-Still needs verification before implementation:
+Still needs verification after Phase 1 deployment:
 
 - remote Supabase schema and RLS for user-management tables/views/RPCs
 - `profiles` base model and RLS
@@ -137,6 +137,20 @@ Acceptance criteria:
 - no secrets are read or exposed
 
 ---
+
+
+## Task: Deploy and Verify Phase 1 User Access Hardening
+
+Priority: high
+Status: upcoming
+
+Apply and verify `supabase/migrations/20260626_phase1_active_membership_access_hardening.sql` against remote Supabase. Confirm:
+
+- existing `workspace_members` rows are `active`
+- inactive/removed memberships cannot access workspace data through helpers/views/RLS
+- Edge Function access checks deny inactive/removed memberships
+- `v_workspace_members_with_permissions` does not expose all members to ordinary authenticated users
+- last active `superadmin` cannot be demoted/deactivated/removed/deleted
 
 ## Task: Define Target Invitation / Status / User-Management Contract
 

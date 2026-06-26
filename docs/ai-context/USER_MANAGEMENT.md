@@ -103,6 +103,26 @@ Local repository inspection only. Remote Supabase production/deployment state st
 
 ---
 
+## Phase 1 Backend/RLS Contract — 2026-06-26
+
+Implemented locally as a Supabase migration; remote application still requires deployment/verification.
+
+- `workspace_members.status` supports `active`, `inactive`, and `removed`.
+- Existing memberships are backfilled to `active` by the migration.
+- Central role/access helpers only return/grant roles for active memberships.
+- Direct `workspace_members` RLS admin checks depend on active membership through `get_current_user_workspace_role`.
+- The last active `superadmin` membership in a workspace cannot be demoted, deactivated, marked removed, moved to another workspace, or deleted.
+- `v_current_user_permissions` is hardened with `security_invoker=true` when present.
+- `v_workspace_members_with_permissions` is hardened with `security_invoker=true` and direct `anon`/`authenticated` grants are revoked when present.
+
+Deferred to later phases:
+
+- `workspace_invitations` table and invitation RPCs.
+- User-management action RPCs for invite, accept, revoke, deactivate, reactivate, remove, and role change.
+- User-management-specific audit events.
+- First-superadmin bootstrap contract.
+- Remote Supabase verification after deployment.
+
 ## Auth User
 
 Identity-level account, possibly in `auth.users`.

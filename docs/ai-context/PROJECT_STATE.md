@@ -16,7 +16,7 @@ Approval: awaiting client approval
 Current stack: Codex + Supabase + GitHub
 Source of truth for code: GitHub
 Backend/data layer: Supabase
-Last updated: 2026-06-25
+Last updated: 2026-06-26
 Confidence: medium-high for inspected repo facts; remote Supabase/production state still needs verification
 
 ---
@@ -351,3 +351,9 @@ At the start of a new session:
 5. Read `USER_MANAGEMENT.md` if access/users are involved.
 6. Inspect repo files.
 7. Mark unknowns as `needs verification`.
+
+## User Management Phase 1 Patch — 2026-06-26
+
+A local Supabase migration was added for the first safe backend/RLS patch. It adds active/inactive/removed membership lifecycle status, backfills existing memberships as active, hardens role/access helper functions to require active membership, updates direct `workspace_members` RLS policies to use the hardened helper, hardens known permission/member views when present, and adds trigger protection for the last active `superadmin`.
+
+Deferred items remain: invitations, user-management RPCs, first-superadmin bootstrap, user-management audit events, and remote deployment verification.

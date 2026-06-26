@@ -1,0 +1,294 @@
+-- Phase 1 user-management/access hardening.
+-- Adds an additive workspace_members lifecycle status, makes the central
+-- workspace role helper active-membership-only, hardens direct membership RLS,
+-- hardens known permission/member views, and protects the last active superadmin.
+
+begin;
+
+alter table public.workspace_members
+  add column if not exists status text not null default 'active',
+  add column if not exists updated_at timestamptz not null default now();
+
+update public.workspace_members
+set status = 'active'
+where status is null;
+
+alter table public.workspace_members
+  drop constraint if exists workspace_members_status_check;
+
+alter table public.workspace_members
+  add constraint workspace_members_status_check
+  check (status in ('active', 'inactive', 'removed'));
+
+create index if not exists workspace_members_active_lookup_idx
+  on public.workspace_members (workspace_id, user_id)
+  where status = 'active';
+
+create or replace function public.set_workspace_members_updated_at()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists set_workspace_members_updated_at on public.workspace_members;
+create trigger set_workspace_members_updated_at
+before update on public.workspace_members
+for each row
+execute function public.set_workspace_members_updated_at();
+
+create or replace function public.workspace_role_rank(p_role text)
+returns integer
+language sql
+immutable
+as $$
+  select case lower(coalesce(p_role, ''))
+    when 'superadmin' then 3
+    when 'admin' then 2
+    when 'member' then 1
+    else 0
+  end;
+$$;
+
+create or replace function public.get_current_user_workspace_role(p_workspace_id uuid)
+returns text
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+declare
+  v_role text;
+begin
+  if auth.uid() is null or p_workspace_id is null then
+    return null;
+  end if;
+
+  select wm.role
+    into v_role
+  from public.workspace_members wm
+  where wm.workspace_id = p_workspace_id
+    and wm.user_id = auth.uid()
+    and wm.status = 'active'
+  order by public.workspace_role_rank(wm.role) desc
+  limit 1;
+
+  return lower(v_role);
+end;
+$$;
+
+revoke all on function public.get_current_user_workspace_role(uuid) from public;
+grant execute on function public.get_current_user_workspace_role(uuid) to authenticated;
+
+create or replace function public.get_workspace_role(p_user_id uuid, p_workspace_id uuid)
+returns text
+language plpgsql
+security definer
+stable
+set search_path = public
+as $$
+declare
+  v_role text;
+begin
+  if p_user_id is null or p_workspace_id is null then
+    return null;
+  end if;
+
+  select wm.role
+    into v_role
+  from public.workspace_members wm
+  where wm.workspace_id = p_workspace_id
+    and wm.user_id = p_user_id
+    and wm.status = 'active'
+  order by public.workspace_role_rank(wm.role) desc
+  limit 1;
+
+  return lower(v_role);
+end;
+$$;
+
+revoke all on function public.get_workspace_role(uuid, uuid) from public;
+grant execute on function public.get_workspace_role(uuid, uuid) to authenticated;
+
+create or replace function public.is_workspace_member(p_workspace_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.workspace_role_rank(public.get_current_user_workspace_role(p_workspace_id)) >= 1;
+$$;
+
+create or replace function public.is_workspace_admin(p_workspace_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.workspace_role_rank(public.get_current_user_workspace_role(p_workspace_id)) >= 2;
+$$;
+
+create or replace function public.is_workspace_admin_or_superadmin(p_workspace_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.workspace_role_rank(public.get_current_user_workspace_role(p_workspace_id)) >= 2;
+$$;
+
+create or replace function public.is_workspace_superadmin(p_workspace_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.workspace_role_rank(public.get_current_user_workspace_role(p_workspace_id)) >= 3;
+$$;
+
+create or replace function public.can_view_workspace_data(p_workspace_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.workspace_role_rank(public.get_current_user_workspace_role(p_workspace_id)) >= 1;
+$$;
+
+revoke all on function public.is_workspace_member(uuid) from public;
+revoke all on function public.is_workspace_admin(uuid) from public;
+revoke all on function public.is_workspace_admin_or_superadmin(uuid) from public;
+revoke all on function public.is_workspace_superadmin(uuid) from public;
+revoke all on function public.can_view_workspace_data(uuid) from public;
+grant execute on function public.is_workspace_member(uuid) to authenticated;
+grant execute on function public.is_workspace_admin(uuid) to authenticated;
+grant execute on function public.is_workspace_admin_or_superadmin(uuid) to authenticated;
+grant execute on function public.is_workspace_superadmin(uuid) to authenticated;
+grant execute on function public.can_view_workspace_data(uuid) to authenticated;
+
+-- Recreate workspace_members policies so every admin check depends on an active membership.
+drop policy if exists workspace_members_select_access on public.workspace_members;
+create policy workspace_members_select_access
+on public.workspace_members
+for select
+to authenticated
+using (
+  user_id = auth.uid()
+  or public.workspace_role_rank(public.get_current_user_workspace_role(workspace_id)) >= 2
+);
+
+drop policy if exists workspace_members_insert_admin on public.workspace_members;
+create policy workspace_members_insert_admin
+on public.workspace_members
+for insert
+to authenticated
+with check (
+  status = 'active'
+  and public.workspace_role_rank(public.get_current_user_workspace_role(workspace_id)) >= 2
+);
+
+drop policy if exists workspace_members_update_admin on public.workspace_members;
+create policy workspace_members_update_admin
+on public.workspace_members
+for update
+to authenticated
+using (
+  public.workspace_role_rank(public.get_current_user_workspace_role(workspace_id)) >= 2
+)
+with check (
+  public.workspace_role_rank(public.get_current_user_workspace_role(workspace_id)) >= 2
+);
+
+drop policy if exists workspace_members_delete_superadmin on public.workspace_members;
+create policy workspace_members_delete_superadmin
+on public.workspace_members
+for delete
+to authenticated
+using (
+  public.workspace_role_rank(public.get_current_user_workspace_role(workspace_id)) >= 3
+);
+
+alter table public.workspace_members enable row level security;
+
+create or replace function public.prevent_last_active_superadmin_change()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_remaining integer;
+  v_workspace_id uuid;
+begin
+  if tg_op = 'DELETE' then
+    v_workspace_id := old.workspace_id;
+
+    if old.role = 'superadmin' and old.status = 'active' then
+      select count(*)
+        into v_remaining
+      from public.workspace_members wm
+      where wm.workspace_id = old.workspace_id
+        and wm.role = 'superadmin'
+        and wm.status = 'active'
+        and wm.id <> old.id;
+
+      if v_remaining = 0 then
+        raise exception 'Cannot delete the last active superadmin membership';
+      end if;
+    end if;
+
+    return old;
+  end if;
+
+  v_workspace_id := new.workspace_id;
+
+  if old.role = 'superadmin'
+     and old.status = 'active'
+     and (new.role <> 'superadmin' or new.status <> 'active' or new.workspace_id <> old.workspace_id) then
+    select count(*)
+      into v_remaining
+    from public.workspace_members wm
+    where wm.workspace_id = old.workspace_id
+      and wm.role = 'superadmin'
+      and wm.status = 'active'
+      and wm.id <> old.id;
+
+    if v_remaining = 0 then
+      raise exception 'Cannot demote, deactivate, remove, or move the last active superadmin membership';
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
+drop trigger if exists prevent_last_active_superadmin_change on public.workspace_members;
+create trigger prevent_last_active_superadmin_change
+before update or delete on public.workspace_members
+for each row
+execute function public.prevent_last_active_superadmin_change();
+
+-- Harden known views when present. v_current_user_permissions still relies on RLS
+-- and is additionally constrained to active rows if it has a status column in its definition.
+do $$
+begin
+  if to_regclass('public.v_current_user_permissions') is not null then
+    execute 'alter view public.v_current_user_permissions set (security_invoker = true)';
+  end if;
+
+  if to_regclass('public.v_workspace_members_with_permissions') is not null then
+    execute 'alter view public.v_workspace_members_with_permissions set (security_invoker = true)';
+    execute 'revoke all on public.v_workspace_members_with_permissions from anon, authenticated';
+  end if;
+end $$;
+
+commit;
