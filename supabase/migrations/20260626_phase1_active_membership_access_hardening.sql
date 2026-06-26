@@ -265,16 +265,7 @@ for insert
 to authenticated
 with check (
   status = 'active'
-  and (
-    (
-      lower(role) in ('member', 'admin')
-      and public.workspace_role_rank(public.get_current_user_workspace_role(workspace_id)) >= 2
-    )
-    or (
-      lower(role) = 'superadmin'
-      and public.workspace_role_rank(public.get_current_user_workspace_role(workspace_id)) >= 3
-    )
-  )
+  and public.workspace_role_rank(public.get_current_user_workspace_role(workspace_id)) >= 3
 );
 
 drop policy if exists workspace_members_update_admin on public.workspace_members;
@@ -283,10 +274,10 @@ on public.workspace_members
 for update
 to authenticated
 using (
-  public.workspace_role_rank(public.get_current_user_workspace_role(workspace_id)) >= 2
+  public.workspace_role_rank(public.get_current_user_workspace_role(workspace_id)) >= 3
 )
 with check (
-  public.workspace_role_rank(public.get_current_user_workspace_role(workspace_id)) >= 2
+  public.workspace_role_rank(public.get_current_user_workspace_role(workspace_id)) >= 3
 );
 
 drop policy if exists workspace_members_delete_superadmin on public.workspace_members;
@@ -309,8 +300,6 @@ as $$
 declare
   v_actor_old_rank integer;
   v_actor_new_rank integer;
-  v_new_role text;
-  v_old_role text;
 begin
   -- Allow service-role/maintenance contexts without an end-user JWT; RLS still
   -- governs authenticated client access and service_role bypasses RLS by design.
@@ -318,35 +307,21 @@ begin
     return new;
   end if;
 
-  v_new_role := lower(coalesce(new.role, ''));
-
   if tg_op = 'INSERT' then
     v_actor_new_rank := public.workspace_role_rank(public.get_current_user_workspace_role(new.workspace_id));
 
-    if v_new_role in ('member', 'admin') and v_actor_new_rank >= 2 then
-      return new;
+    if v_actor_new_rank < 3 then
+      raise exception 'Only an active superadmin can insert workspace memberships';
     end if;
 
-    if v_new_role = 'superadmin' and v_actor_new_rank >= 3 then
-      return new;
-    end if;
-
-    raise exception 'Insufficient workspace role to insert workspace membership with role %', new.role;
+    return new;
   end if;
 
-  v_old_role := lower(coalesce(old.role, ''));
+  v_actor_old_rank := public.workspace_role_rank(public.get_current_user_workspace_role(old.workspace_id));
+  v_actor_new_rank := public.workspace_role_rank(public.get_current_user_workspace_role(new.workspace_id));
 
-  if old.user_id is distinct from new.user_id
-     or old.workspace_id is distinct from new.workspace_id
-     or v_old_role is distinct from v_new_role
-     or v_old_role = 'superadmin'
-     or v_new_role = 'superadmin' then
-    v_actor_old_rank := public.workspace_role_rank(public.get_current_user_workspace_role(old.workspace_id));
-    v_actor_new_rank := public.workspace_role_rank(public.get_current_user_workspace_role(new.workspace_id));
-
-    if v_actor_old_rank < 3 or v_actor_new_rank < 3 then
-      raise exception 'Only an active superadmin can change membership identity, workspace, role, or superadmin status';
-    end if;
+  if v_actor_old_rank < 3 or v_actor_new_rank < 3 then
+    raise exception 'Only an active superadmin can update workspace memberships';
   end if;
 
   return new;
@@ -443,10 +418,30 @@ where wm.user_id = auth.uid()
 
 alter view public.v_current_user_permissions set (security_invoker = true);
 
--- Harden the admin/member listing view when present.
+-- Harden the admin/member listing view when present while preserving its output columns.
 do $$
+declare
+  v_workspace_members_sql text;
 begin
   if to_regclass('public.v_workspace_members_with_permissions') is not null then
+    select pg_get_viewdef('public.v_workspace_members_with_permissions'::regclass, true)
+      into v_workspace_members_sql;
+
+    if v_workspace_members_sql !~* 'wm\.status\s*=\s*''active''' then
+      if v_workspace_members_sql ~* '\mwhere\M' then
+        v_workspace_members_sql := regexp_replace(
+          v_workspace_members_sql,
+          '\mwhere\M',
+          'where wm.status = ''active'' and',
+          'i'
+        );
+      else
+        v_workspace_members_sql := v_workspace_members_sql || E'
+where wm.status = ''active''';
+      end if;
+    end if;
+
+    execute 'create or replace view public.v_workspace_members_with_permissions as ' || v_workspace_members_sql;
     execute 'alter view public.v_workspace_members_with_permissions set (security_invoker = true)';
     execute 'revoke all on public.v_workspace_members_with_permissions from anon, authenticated';
   end if;
