@@ -84,7 +84,10 @@ $$;
 revoke all on function public.get_current_user_workspace_role(uuid) from public;
 grant execute on function public.get_current_user_workspace_role(uuid) to authenticated;
 
-create or replace function public.get_workspace_role(p_user_id uuid, p_workspace_id uuid)
+create or replace function public.get_workspace_role(
+  p_workspace_id uuid,
+  p_user_id uuid default auth.uid()
+)
 returns text
 language plpgsql
 security definer
@@ -94,7 +97,7 @@ as $$
 declare
   v_role text;
 begin
-  if p_user_id is null or p_workspace_id is null then
+  if p_workspace_id is null or p_user_id is null then
     return null;
   end if;
 
@@ -114,6 +117,27 @@ $$;
 revoke all on function public.get_workspace_role(uuid, uuid) from public;
 grant execute on function public.get_workspace_role(uuid, uuid) to authenticated;
 
+-- Preserve and harden a separate one-argument overload only if the remote schema already has it.
+do $$
+begin
+  if to_regprocedure('public.get_workspace_role(uuid)') is not null then
+    execute $function$
+      create or replace function public.get_workspace_role(p_workspace_id uuid)
+      returns text
+      language sql
+      security definer
+      stable
+      set search_path = public
+      as $sql$
+        select public.get_workspace_role(p_workspace_id, auth.uid())
+      $sql$;
+    $function$;
+
+    execute 'revoke all on function public.get_workspace_role(uuid) from public';
+    execute 'grant execute on function public.get_workspace_role(uuid) to authenticated';
+  end if;
+end $$;
+
 create or replace function public.is_workspace_member(p_workspace_id uuid)
 returns boolean
 language sql
@@ -121,7 +145,17 @@ stable
 security definer
 set search_path = public
 as $$
-  select public.workspace_role_rank(public.get_current_user_workspace_role(p_workspace_id)) >= 1;
+  select public.workspace_role_rank(public.get_workspace_role(p_workspace_id, auth.uid())) >= 1;
+$$;
+
+create or replace function public.is_workspace_member(p_workspace_id uuid, p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.workspace_role_rank(public.get_workspace_role(p_workspace_id, p_user_id)) >= 1;
 $$;
 
 create or replace function public.is_workspace_admin(p_workspace_id uuid)
@@ -131,7 +165,17 @@ stable
 security definer
 set search_path = public
 as $$
-  select public.workspace_role_rank(public.get_current_user_workspace_role(p_workspace_id)) >= 2;
+  select public.workspace_role_rank(public.get_workspace_role(p_workspace_id, auth.uid())) >= 2;
+$$;
+
+create or replace function public.is_workspace_admin(p_workspace_id uuid, p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.workspace_role_rank(public.get_workspace_role(p_workspace_id, p_user_id)) >= 2;
 $$;
 
 create or replace function public.is_workspace_admin_or_superadmin(p_workspace_id uuid)
@@ -141,7 +185,7 @@ stable
 security definer
 set search_path = public
 as $$
-  select public.workspace_role_rank(public.get_current_user_workspace_role(p_workspace_id)) >= 2;
+  select public.workspace_role_rank(public.get_workspace_role(p_workspace_id, auth.uid())) >= 2;
 $$;
 
 create or replace function public.is_workspace_superadmin(p_workspace_id uuid)
@@ -151,7 +195,17 @@ stable
 security definer
 set search_path = public
 as $$
-  select public.workspace_role_rank(public.get_current_user_workspace_role(p_workspace_id)) >= 3;
+  select public.workspace_role_rank(public.get_workspace_role(p_workspace_id, auth.uid())) >= 3;
+$$;
+
+create or replace function public.is_workspace_superadmin(p_workspace_id uuid, p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.workspace_role_rank(public.get_workspace_role(p_workspace_id, p_user_id)) >= 3;
 $$;
 
 create or replace function public.can_view_workspace_data(p_workspace_id uuid)
@@ -161,19 +215,37 @@ stable
 security definer
 set search_path = public
 as $$
-  select public.workspace_role_rank(public.get_current_user_workspace_role(p_workspace_id)) >= 1;
+  select public.workspace_role_rank(public.get_workspace_role(p_workspace_id, auth.uid())) >= 1;
+$$;
+
+create or replace function public.can_view_workspace_data(p_workspace_id uuid, p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select public.workspace_role_rank(public.get_workspace_role(p_workspace_id, p_user_id)) >= 1;
 $$;
 
 revoke all on function public.is_workspace_member(uuid) from public;
+revoke all on function public.is_workspace_member(uuid, uuid) from public;
 revoke all on function public.is_workspace_admin(uuid) from public;
+revoke all on function public.is_workspace_admin(uuid, uuid) from public;
 revoke all on function public.is_workspace_admin_or_superadmin(uuid) from public;
 revoke all on function public.is_workspace_superadmin(uuid) from public;
+revoke all on function public.is_workspace_superadmin(uuid, uuid) from public;
 revoke all on function public.can_view_workspace_data(uuid) from public;
+revoke all on function public.can_view_workspace_data(uuid, uuid) from public;
 grant execute on function public.is_workspace_member(uuid) to authenticated;
+grant execute on function public.is_workspace_member(uuid, uuid) to authenticated;
 grant execute on function public.is_workspace_admin(uuid) to authenticated;
+grant execute on function public.is_workspace_admin(uuid, uuid) to authenticated;
 grant execute on function public.is_workspace_admin_or_superadmin(uuid) to authenticated;
 grant execute on function public.is_workspace_superadmin(uuid) to authenticated;
+grant execute on function public.is_workspace_superadmin(uuid, uuid) to authenticated;
 grant execute on function public.can_view_workspace_data(uuid) to authenticated;
+grant execute on function public.can_view_workspace_data(uuid, uuid) to authenticated;
 
 -- Recreate workspace_members policies so every admin check depends on an active membership.
 drop policy if exists workspace_members_select_access on public.workspace_members;
@@ -227,11 +299,8 @@ set search_path = public
 as $$
 declare
   v_remaining integer;
-  v_workspace_id uuid;
 begin
   if tg_op = 'DELETE' then
-    v_workspace_id := old.workspace_id;
-
     if old.role = 'superadmin' and old.status = 'active' then
       select count(*)
         into v_remaining
@@ -248,8 +317,6 @@ begin
 
     return old;
   end if;
-
-  v_workspace_id := new.workspace_id;
 
   if old.role = 'superadmin'
      and old.status = 'active'
@@ -277,11 +344,29 @@ before update or delete on public.workspace_members
 for each row
 execute function public.prevent_last_active_superadmin_change();
 
--- Harden known views when present. v_current_user_permissions still relies on RLS
--- and is additionally constrained to active rows if it has a status column in its definition.
+-- Harden known views when present.
 do $$
+declare
+  v_current_permissions_sql text;
 begin
   if to_regclass('public.v_current_user_permissions') is not null then
+    select pg_get_viewdef('public.v_current_user_permissions'::regclass, true)
+      into v_current_permissions_sql;
+
+    if v_current_permissions_sql !~* 'wm\.status\s*=\s*''active''' then
+      if v_current_permissions_sql ~* 'where\s+wm\.user_id\s*=\s*auth\.uid\s*\(\s*\)' then
+        v_current_permissions_sql := regexp_replace(
+          v_current_permissions_sql,
+          'where\s+wm\.user_id\s*=\s*auth\.uid\s*\(\s*\)',
+          'where wm.user_id = auth.uid() and wm.status = ''active''',
+          'i'
+        );
+      else
+        raise exception 'Could not safely add active membership filter to public.v_current_user_permissions; unexpected view definition';
+      end if;
+    end if;
+
+    execute 'create or replace view public.v_current_user_permissions as ' || v_current_permissions_sql;
     execute 'alter view public.v_current_user_permissions set (security_invoker = true)';
   end if;
 
