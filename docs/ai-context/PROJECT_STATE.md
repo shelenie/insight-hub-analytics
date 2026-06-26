@@ -17,7 +17,7 @@ Current stack: Codex + Supabase + GitHub
 Source of truth for code: GitHub
 Backend/data layer: Supabase
 Last updated: 2026-06-26
-Confidence: medium-high for inspected repo facts; remote Supabase/production state still needs verification
+Confidence: high for Phase 1 user-access hardening after manual remote Supabase verification; medium-high for broader repo facts
 
 ---
 
@@ -72,6 +72,33 @@ Do not assume data is clean.
 - Codex = implementation assistant
 
 Do not add unrelated tools unless Olena explicitly confirms them.
+
+---
+
+## Verified Remote Supabase State — 2026-06-26
+
+Phase 1 user-access hardening was manually applied and verified against remote Supabase.
+
+Verified:
+
+- `workspace_members.status` and `workspace_members.updated_at` exist.
+- Existing `workspace_members` rows are `active`.
+- `get_current_user_workspace_role` and `get_workspace_role` enforce `wm.status = 'active'`.
+- Workspace helper functions route through active-only role checks.
+- Direct `workspace_members` INSERT, UPDATE, and DELETE policies require active `superadmin` rank.
+- Triggers exist for `updated_at`, workspace member management enforcement, and last active `superadmin` protection.
+- `v_current_user_permissions` filters by `auth.uid()` and `wm.status = 'active'`.
+- `v_workspace_members_with_permissions` is active-aware.
+- Both permission/member views use `security_invoker=true`.
+- `v_workspace_members_with_permissions` has no direct `SELECT` grant for `anon` or `authenticated`.
+
+Still not completed:
+
+- invitation model/RPCs
+- user-management action RPCs
+- user-management-specific audit events
+- first-superadmin bootstrap contract
+- frontend user-management UI
 
 ---
 
