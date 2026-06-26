@@ -344,32 +344,40 @@ before update or delete on public.workspace_members
 for each row
 execute function public.prevent_last_active_superadmin_change();
 
--- Harden known views when present.
+-- Recreate the known current-user permissions view explicitly so inactive/removed
+-- memberships cannot appear through the user's own workspace_members SELECT policy.
+create or replace view public.v_current_user_permissions as
+select
+  wm.workspace_id,
+  w.name as workspace_name,
+  lower(wm.role) as role,
+  public.workspace_role_rank(wm.role) >= 1 as can_view_dashboard,
+  public.workspace_role_rank(wm.role) >= 1 as can_view_sales,
+  public.workspace_role_rank(wm.role) >= 1 as can_view_campaigns,
+  public.workspace_role_rank(wm.role) >= 1 as can_view_imports,
+  public.workspace_role_rank(wm.role) >= 1 as can_upload_files,
+  public.workspace_role_rank(wm.role) >= 2 as can_manage_imports,
+  public.workspace_role_rank(wm.role) >= 2 as can_manage_mappings,
+  public.workspace_role_rank(wm.role) >= 1 as can_request_data_corrections,
+  public.workspace_role_rank(wm.role) >= 2 as can_approve_data_corrections,
+  public.workspace_role_rank(wm.role) >= 2 as can_edit_data_without_approval,
+  public.workspace_role_rank(wm.role) >= 2 as can_manage_users,
+  public.workspace_role_rank(wm.role) >= 3 as can_manage_roles,
+  public.workspace_role_rank(wm.role) >= 2 as can_manage_source_connections,
+  public.workspace_role_rank(wm.role) >= 3 as can_run_rebuild_facts,
+  public.workspace_role_rank(wm.role) >= 3 as can_backup_restore,
+  public.workspace_role_rank(wm.role) >= 3 as can_access_dev_tools,
+  public.workspace_role_rank(wm.role) >= 3 as can_run_sql_tools
+from public.workspace_members wm
+join public.workspaces w on w.id = wm.workspace_id
+where wm.user_id = auth.uid()
+  and wm.status = 'active';
+
+alter view public.v_current_user_permissions set (security_invoker = true);
+
+-- Harden the admin/member listing view when present.
 do $$
-declare
-  v_current_permissions_sql text;
 begin
-  if to_regclass('public.v_current_user_permissions') is not null then
-    select pg_get_viewdef('public.v_current_user_permissions'::regclass, true)
-      into v_current_permissions_sql;
-
-    if v_current_permissions_sql !~* 'wm\.status\s*=\s*''active''' then
-      if v_current_permissions_sql ~* 'where\s+wm\.user_id\s*=\s*auth\.uid\s*\(\s*\)' then
-        v_current_permissions_sql := regexp_replace(
-          v_current_permissions_sql,
-          'where\s+wm\.user_id\s*=\s*auth\.uid\s*\(\s*\)',
-          'where wm.user_id = auth.uid() and wm.status = ''active''',
-          'i'
-        );
-      else
-        raise exception 'Could not safely add active membership filter to public.v_current_user_permissions; unexpected view definition';
-      end if;
-    end if;
-
-    execute 'create or replace view public.v_current_user_permissions as ' || v_current_permissions_sql;
-    execute 'alter view public.v_current_user_permissions set (security_invoker = true)';
-  end if;
-
   if to_regclass('public.v_workspace_members_with_permissions') is not null then
     execute 'alter view public.v_workspace_members_with_permissions set (security_invoker = true)';
     execute 'revoke all on public.v_workspace_members_with_permissions from anon, authenticated';

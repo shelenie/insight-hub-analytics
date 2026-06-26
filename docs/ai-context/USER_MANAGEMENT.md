@@ -112,7 +112,7 @@ Implemented locally as a Supabase migration; remote application still requires d
 - Central role/access helpers and verified overloads only return/grant roles for active memberships, preserving `get_workspace_role(p_workspace_id uuid, p_user_id uuid DEFAULT auth.uid())` argument order.
 - Direct `workspace_members` RLS admin checks depend on active membership through `get_current_user_workspace_role`.
 - The last active `superadmin` membership in a workspace cannot be demoted, deactivated, marked removed, moved to another workspace, or deleted.
-- `v_current_user_permissions` explicitly filters `wm.status = 'active'` and is hardened with `security_invoker=true` when present.
+- `v_current_user_permissions` is explicitly recreated with `wm.status = 'active'` and hardened with `security_invoker=true`.
 - `v_workspace_members_with_permissions` is hardened with `security_invoker=true` and direct `anon`/`authenticated` grants are revoked when present.
 
 Deferred to later phases:
