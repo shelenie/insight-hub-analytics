@@ -81,7 +81,7 @@ Verify which package manager is canonical before changing dependencies or docume
 ## Task: Verify Remote Supabase Contracts
 
 Priority: high
-Status: upcoming
+Status: partially completed for Phase 1 user-access hardening on 2026-06-26; broader remote contract verification still upcoming
 
 Compare local migrations/types with remote Supabase objects used by the frontend, especially views and RPCs referenced by dashboard/import pages.
 
@@ -93,21 +93,17 @@ Do not assume remote objects exist only because frontend code references them.
 ## Task: Verify and Define User Management Model
 
 Priority: high
-Status: Phase 1 backend/RLS patch prepared locally on 2026-06-26
+Status: Phase 1 backend/RLS hardening applied and verified on 2026-06-26
 
-2026-06-25 local verification completed from repository files only. Verified local evidence confirms Supabase Auth, `AuthProvider`, session-only `ProtectedRoute`, `useWorkspaceRole`, `workspace-role-info`, and role values `member`, `admin`, and `superadmin`.
+2026-06-26 update: Phase 1 active-membership backend/RLS hardening was merged, manually applied to remote Supabase, and verified.
 
-Still needs verification after Phase 1 deployment:
+Still needs definition/implementation in later phases:
 
-- remote Supabase schema and RLS for user-management tables/views/RPCs
-- `profiles` base model and RLS
-- `workspace_members` base DDL and full contract
 - invitation model and flow
+- `profiles` lifecycle details beyond the base model
 - `audit_logs` schema and user-management audit coverage
-- inactive/removed member behavior
-- first superadmin setup
-
-Do not implement user UI before access model is clear.
+- first superadmin setup/bootstrap contract
+- user-management RPCs for invite, accept, revoke, deactivate, reactivate, remove, and role change
 
 ---
 
