@@ -105,7 +105,7 @@ Local repository inspection only. Remote Supabase production/deployment state st
 
 ## Phase 1 Backend/RLS Contract — 2026-06-26
 
-Implemented locally as a Supabase migration; remote application still requires deployment/verification.
+Implemented as a Supabase migration, manually applied to remote Supabase, and verified on 2026-06-26.
 
 - `workspace_members.status` supports `active`, `inactive`, and `removed`.
 - Existing memberships are backfilled to `active` by the migration.
@@ -116,13 +116,21 @@ Implemented locally as a Supabase migration; remote application still requires d
 - `v_current_user_permissions` is explicitly recreated with its previous permission logic, `wm.status = 'active'`, and `security_invoker=true`.
 - `v_workspace_members_with_permissions` is hardened with active-membership filtering, `security_invoker=true`, and direct `anon`/`authenticated` grants are revoked when present.
 
+Remote verification confirmed:
+
+- all existing `workspace_members` rows are `active`
+- active-only helper functions are deployed
+- direct `workspace_members` INSERT/UPDATE/DELETE policies require active `superadmin`
+- member-management and last-active-superadmin triggers are deployed
+- permission/member views are active-aware and use `security_invoker=true`
+- `v_workspace_members_with_permissions` does not grant direct `SELECT` to `anon` or `authenticated`
+
 Deferred to later phases:
 
 - `workspace_invitations` table and invitation RPCs.
 - User-management action RPCs for invite, accept, revoke, deactivate, reactivate, remove, and role change.
 - User-management-specific audit events.
 - First-superadmin bootstrap contract.
-- Remote Supabase verification after deployment.
 
 ## Auth User
 
