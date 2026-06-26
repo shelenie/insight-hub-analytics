@@ -6,6 +6,25 @@ Meaningful changes for Internal Analytics Workspace.
 
 ---
 
+
+## 2026-06-26
+
+### Added
+
+- Added Phase 1 Supabase migration `20260626_phase1_active_membership_access_hardening.sql` for active membership enforcement.
+- Added `workspace_members.status` lifecycle values `active`, `inactive`, and `removed`, plus `updated_at` maintenance.
+- Hardened central workspace role/access helpers and verified overloads to grant access only for active memberships while preserving `get_workspace_role(p_workspace_id uuid, p_user_id uuid DEFAULT auth.uid())` argument order.
+- Hardened `workspace_members` RLS admin checks to depend on active membership through `get_current_user_workspace_role`.
+- Made direct `workspace_members` membership management superadmin-only for authenticated users; admins cannot create, update, deactivate, reactivate, remove, or move ordinary or superadmin memberships through direct table access.
+- Added trigger-based protection against demoting, deactivating, removing, moving, or deleting the last active `superadmin` membership in a workspace.
+- Hardened known permission/member views: `v_current_user_permissions` is explicitly recreated with its previous permission logic, `wm.status = 'active'`, and `security_invoker=true`; `v_workspace_members_with_permissions` is made active-aware and direct `authenticated`/`anon` grants are revoked when the view exists.
+
+### Deferred
+
+- Workspace invitations table/RPCs are deferred to a later phase. Pending invitations still must not grant access.
+- User-management action RPCs and user-management-specific audit events are deferred.
+- Remote deployment verification remains required after migration application.
+
 ## 2026-06-25
 
 ### Confirmed
