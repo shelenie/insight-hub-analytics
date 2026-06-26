@@ -19,11 +19,21 @@ Meaningful changes for Internal Analytics Workspace.
 - Added trigger-based protection against demoting, deactivating, removing, moving, or deleting the last active `superadmin` membership in a workspace.
 - Hardened known permission/member views: `v_current_user_permissions` is explicitly recreated with its previous permission logic, `wm.status = 'active'`, and `security_invoker=true`; `v_workspace_members_with_permissions` is made active-aware and direct `authenticated`/`anon` grants are revoked when the view exists.
 
+- ### Confirmed
+
+- PR #183 was merged into `main`.
+- Remote Supabase Phase 1 user-access hardening was manually applied and verified on 2026-06-26.
+- Verified `workspace_members.status` exists and all existing workspace memberships are `active`.
+- Verified active-only role/access helpers through `get_current_user_workspace_role` and `get_workspace_role`.
+- Verified `workspace_members` direct INSERT/UPDATE/DELETE policies are superadmin-only for authenticated users.
+- Verified triggers exist for `updated_at`, workspace member management enforcement, and last active `superadmin` protection.
+- Verified `v_current_user_permissions` and `v_workspace_members_with_permissions` are active-aware and use `security_invoker=true`.
+- Verified `v_workspace_members_with_permissions` has no direct `SELECT` grant for `anon` or `authenticated`.
+
 ### Deferred
 
 - Workspace invitations table/RPCs are deferred to a later phase. Pending invitations still must not grant access.
 - User-management action RPCs and user-management-specific audit events are deferred.
-- Remote deployment verification remains required after migration application.
 
 ## 2026-06-25
 
