@@ -112,6 +112,7 @@ Still needs definition/implementation in later phases:
 
 Priority: high
 Status: partially completed for Phase 1 user-access hardening on 2026-06-26; broader remote contract verification still upcoming
+
 Compare local repository expectations with remote Supabase objects for:
 
 - `profiles`
