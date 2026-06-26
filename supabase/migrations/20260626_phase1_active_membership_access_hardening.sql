@@ -36,6 +36,7 @@ end;
 $$;
 
 drop trigger if exists set_workspace_members_updated_at on public.workspace_members;
+
 create trigger set_workspace_members_updated_at
 before update on public.workspace_members
 for each row
@@ -117,7 +118,6 @@ $$;
 revoke all on function public.get_workspace_role(uuid, uuid) from public;
 grant execute on function public.get_workspace_role(uuid, uuid) to authenticated;
 
--- Preserve and harden a separate one-argument overload only if the remote schema already has it.
 do $$
 begin
   if to_regprocedure('public.get_workspace_role(uuid)') is not null then
@@ -148,7 +148,10 @@ as $$
   select public.workspace_role_rank(public.get_workspace_role(p_workspace_id, auth.uid())) >= 1;
 $$;
 
-create or replace function public.is_workspace_member(p_workspace_id uuid, p_user_id uuid)
+create or replace function public.is_workspace_member(
+  p_workspace_id uuid,
+  p_user_id uuid default auth.uid()
+)
 returns boolean
 language sql
 stable
@@ -168,7 +171,10 @@ as $$
   select public.workspace_role_rank(public.get_workspace_role(p_workspace_id, auth.uid())) >= 2;
 $$;
 
-create or replace function public.is_workspace_admin(p_workspace_id uuid, p_user_id uuid)
+create or replace function public.is_workspace_admin(
+  p_workspace_id uuid,
+  p_user_id uuid default auth.uid()
+)
 returns boolean
 language sql
 stable
@@ -198,7 +204,10 @@ as $$
   select public.workspace_role_rank(public.get_workspace_role(p_workspace_id, auth.uid())) >= 3;
 $$;
 
-create or replace function public.is_workspace_superadmin(p_workspace_id uuid, p_user_id uuid)
+create or replace function public.is_workspace_superadmin(
+  p_workspace_id uuid,
+  p_user_id uuid default auth.uid()
+)
 returns boolean
 language sql
 stable
@@ -218,7 +227,10 @@ as $$
   select public.workspace_role_rank(public.get_workspace_role(p_workspace_id, auth.uid())) >= 1;
 $$;
 
-create or replace function public.can_view_workspace_data(p_workspace_id uuid, p_user_id uuid)
+create or replace function public.can_view_workspace_data(
+  p_workspace_id uuid,
+  p_user_id uuid default auth.uid()
+)
 returns boolean
 language sql
 stable
@@ -237,6 +249,7 @@ revoke all on function public.is_workspace_superadmin(uuid) from public;
 revoke all on function public.is_workspace_superadmin(uuid, uuid) from public;
 revoke all on function public.can_view_workspace_data(uuid) from public;
 revoke all on function public.can_view_workspace_data(uuid, uuid) from public;
+
 grant execute on function public.is_workspace_member(uuid) to authenticated;
 grant execute on function public.is_workspace_member(uuid, uuid) to authenticated;
 grant execute on function public.is_workspace_admin(uuid) to authenticated;
@@ -247,8 +260,8 @@ grant execute on function public.is_workspace_superadmin(uuid, uuid) to authenti
 grant execute on function public.can_view_workspace_data(uuid) to authenticated;
 grant execute on function public.can_view_workspace_data(uuid, uuid) to authenticated;
 
--- Recreate workspace_members policies so every admin check depends on an active membership.
 drop policy if exists workspace_members_select_access on public.workspace_members;
+
 create policy workspace_members_select_access
 on public.workspace_members
 for select
@@ -259,6 +272,7 @@ using (
 );
 
 drop policy if exists workspace_members_insert_admin on public.workspace_members;
+
 create policy workspace_members_insert_admin
 on public.workspace_members
 for insert
@@ -269,6 +283,7 @@ with check (
 );
 
 drop policy if exists workspace_members_update_admin on public.workspace_members;
+
 create policy workspace_members_update_admin
 on public.workspace_members
 for update
@@ -281,6 +296,7 @@ with check (
 );
 
 drop policy if exists workspace_members_delete_superadmin on public.workspace_members;
+
 create policy workspace_members_delete_superadmin
 on public.workspace_members
 for delete
@@ -301,8 +317,6 @@ declare
   v_actor_old_rank integer;
   v_actor_new_rank integer;
 begin
-  -- Allow service-role/maintenance contexts without an end-user JWT; RLS still
-  -- governs authenticated client access and service_role bypasses RLS by design.
   if auth.uid() is null then
     return new;
   end if;
@@ -329,6 +343,7 @@ end;
 $$;
 
 drop trigger if exists enforce_workspace_member_management_rules on public.workspace_members;
+
 create trigger enforce_workspace_member_management_rules
 before insert or update on public.workspace_members
 for each row
@@ -382,13 +397,12 @@ end;
 $$;
 
 drop trigger if exists prevent_last_active_superadmin_change on public.workspace_members;
+
 create trigger prevent_last_active_superadmin_change
 before update or delete on public.workspace_members
 for each row
 execute function public.prevent_last_active_superadmin_change();
 
--- Recreate the known current-user permissions view explicitly so inactive/removed
--- memberships cannot appear through the user's own workspace_members SELECT policy.
 create or replace view public.v_current_user_permissions as
 select
   wm.workspace_id,
@@ -418,33 +432,46 @@ where wm.user_id = auth.uid()
 
 alter view public.v_current_user_permissions set (security_invoker = true);
 
--- Harden the admin/member listing view when present while preserving its output columns.
-do $$
-declare
-  v_workspace_members_sql text;
-begin
-  if to_regclass('public.v_workspace_members_with_permissions') is not null then
-    select pg_get_viewdef('public.v_workspace_members_with_permissions'::regclass, true)
-      into v_workspace_members_sql;
+create or replace view public.v_workspace_members_with_permissions as
+select
+  wm.workspace_id,
+  wm.user_id,
+  wm.role,
+  (
+    wm.status = 'active'
+    and wm.role in ('member', 'admin', 'superadmin')
+  ) as can_view_workspace_data,
+  (
+    wm.status = 'active'
+    and wm.role in ('admin', 'superadmin')
+  ) as can_manage_sources,
+  (
+    wm.status = 'active'
+    and wm.role in ('admin', 'superadmin')
+  ) as can_manage_imports,
+  (
+    wm.status = 'active'
+    and wm.role in ('admin', 'superadmin')
+  ) as can_view_backup_status,
+  (
+    wm.status = 'active'
+    and wm.role = 'superadmin'
+  ) as can_run_backup_export,
+  (
+    wm.status = 'active'
+    and wm.role = 'superadmin'
+  ) as can_run_backup_restore,
+  (
+    wm.status = 'active'
+    and wm.role = 'superadmin'
+  ) as can_run_dev_action,
+  (
+    wm.status = 'active'
+    and wm.role in ('member', 'admin', 'superadmin')
+  ) as can_use_ai_helper
+from public.workspace_members wm;
 
-    if v_workspace_members_sql !~* 'wm\.status\s*=\s*''active''' then
-      if v_workspace_members_sql ~* '\mwhere\M' then
-        v_workspace_members_sql := regexp_replace(
-          v_workspace_members_sql,
-          '\mwhere\M',
-          'where wm.status = ''active'' and',
-          'i'
-        );
-      else
-        v_workspace_members_sql := v_workspace_members_sql || E'
-where wm.status = ''active''';
-      end if;
-    end if;
-
-    execute 'create or replace view public.v_workspace_members_with_permissions as ' || v_workspace_members_sql;
-    execute 'alter view public.v_workspace_members_with_permissions set (security_invoker = true)';
-    execute 'revoke all on public.v_workspace_members_with_permissions from anon, authenticated';
-  end if;
-end $$;
+alter view public.v_workspace_members_with_permissions set (security_invoker = true);
+revoke all on public.v_workspace_members_with_permissions from anon, authenticated;
 
 commit;
