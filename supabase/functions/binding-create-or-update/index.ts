@@ -420,7 +420,7 @@ function sharedBindingRpcPayload(body: RequestBody, workspaceId: string, created
     p_notes: body.notes ?? null,
     p_created_by: createdBy,
     p_created_by_email: createdByEmail ?? null,
-    p_metadata: body.metadata ?? {},
+    p_metadata: body.metadata ?? null,
   };
 }
 
@@ -500,7 +500,7 @@ Deno.serve(async (req) => {
       p_ad_account_id: adAccount!.id,
       p_external_account_id: adAccount!.external_account_id,
       p_external_account_name: adAccount!.external_account_name,
-      p_is_primary: typeof body.is_primary === "boolean" ? body.is_primary : false,
+      p_is_primary: typeof body.is_primary === "boolean" ? body.is_primary : null,
     };
   }
 

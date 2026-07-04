@@ -37,6 +37,12 @@ describe("binding-create-or-update RPC payloads", () => {
     expect(adAccountPayloadSource).toContain("p_external_account_id:");
     expect(adAccountPayloadSource).toContain("p_external_account_name:");
     expect(adAccountPayloadSource).toContain("p_is_primary:");
+    expect(adAccountPayloadSource).toContain('typeof body.is_primary === "boolean" ? body.is_primary : null');
     expect(adAccountPayloadSource).not.toContain("p_source_id:");
+  });
+
+  it("does not send empty metadata as the default RPC payload", () => {
+    expect(functionSource).toContain("p_metadata: body.metadata ?? null");
+    expect(functionSource).not.toContain("p_metadata: body.metadata ?? {}");
   });
 });

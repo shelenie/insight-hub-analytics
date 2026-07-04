@@ -181,6 +181,21 @@ Do not add frontend user-management screens until backend/RLS access behavior is
 
 ---
 
+## Task: Verify Source Binding Idempotency
+
+Priority: medium
+Status: upcoming
+
+Manual ad account binding idempotency is addressed locally by migration `20260704_make_ad_account_binding_idempotent.sql`. Local repository inspection did not find the existing `public.bind_source_entity_to_scope` SQL definition, so verify the deployed remote source-binding function and any source binding table constraints/indexes for the same duplicate-active-row risk.
+
+Acceptance criteria:
+
+- confirm the remote `public.bind_source_entity_to_scope` implementation
+- confirm source binding natural key and active/archived status values
+- add idempotent update-before-insert behavior and an active-only DB guard if the deployed source binding path has the same duplicate risk
+- do not weaken RLS or delete production data
+
+
 ## Task: Define Dashboard Metrics
 
 Priority: high

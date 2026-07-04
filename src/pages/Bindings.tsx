@@ -28,6 +28,7 @@ type BindingsData = {
   telegramHitlHealth: OptionalViewData;
 };
 type BindingType = "source" | "ad_account";
+type AdAccountBindingStatusFilter = "active" | "archived" | "all";
 
 const FRIENDLY_COLUMN_LABELS: Record<string, string> = {
   ad_account_name: "Рекламний акаунт",
@@ -66,6 +67,8 @@ const FRIENDLY_COLUMN_LABELS: Record<string, string> = {
 
 const FRIENDLY_VALUE_LABELS: Record<string, string> = {
   active: "Активний",
+  archived: "Архівний",
+  paused: "Призупинений",
   ad_account: "Рекламний акаунт",
   confirmed: "Підтверджено",
   healthy: "Все гаразд",
@@ -95,6 +98,24 @@ function filterRows(rows: Row[]) {
   return rows.filter((row) => !isPlaceholderRow(row));
 }
 
+function getBindingStatus(row: Row) {
+  return String(row.binding_status ?? row.status ?? "").trim().toLowerCase();
+}
+
+function isActiveBinding(row: Row) {
+  return getBindingStatus(row) === "active";
+}
+
+function isArchivedOrPausedBinding(row: Row) {
+  return ["archived", "paused"].includes(getBindingStatus(row));
+}
+
+function matchesAdAccountBindingStatusFilter(row: Row, filter: AdAccountBindingStatusFilter) {
+  if (filter === "active") return isActiveBinding(row);
+  if (filter === "archived") return isArchivedOrPausedBinding(row);
+  return true;
+}
+
 export default function Bindings() {
   const { session } = useAuth();
   const queryClient = useQueryClient();
@@ -105,6 +126,7 @@ export default function Bindings() {
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const [sourceForm, setSourceForm] = useState({ source_id: "", client_id: "", project_id: "", funnel_id: "" });
   const [adForm, setAdForm] = useState({ ad_account_id: "", client_id: "", project_id: "", funnel_id: "" });
+  const [adAccountStatusFilter, setAdAccountStatusFilter] = useState<AdAccountBindingStatusFilter>("active");
 
   const query = useQuery<BindingsData>({
     queryKey: ["bindings-mapping-workspace", WORKSPACE_ID],
@@ -164,11 +186,12 @@ export default function Bindings() {
 
   const refreshBindings = async () => {
     await query.refetch();
-    await Promise.all(
-      ["v_source_entity_bindings", "v_ad_account_bindings", "v_project_data_bindings", "v_mapping_review_queue", "v_binding_health", "v_mapping_review_health", "v_mapping_review_actions_recent"].map((queryKey) =>
+    await Promise.all([
+      ...["v_source_entity_bindings", "v_ad_account_bindings", "v_project_data_bindings", "v_mapping_review_queue", "v_binding_health", "v_mapping_review_health", "v_mapping_review_actions_recent"].map((queryKey) =>
         queryClient.invalidateQueries({ queryKey: [queryKey, WORKSPACE_ID] }),
       ),
-    );
+      queryClient.invalidateQueries({ queryKey: ["ads-connectors-workspace", WORKSPACE_ID] }),
+    ]);
   };
 
   const handleRefresh = async () => {
@@ -177,7 +200,10 @@ export default function Bindings() {
   };
 
   const filteredSourceBindings = useMemo(() => filterRows(query.data?.sourceBindings ?? []), [query.data?.sourceBindings]);
-  const filteredAdAccountBindings = useMemo(() => filterRows(query.data?.adAccountBindings ?? []), [query.data?.adAccountBindings]);
+  const filteredAdAccountBindings = useMemo(() => {
+    const rows = filterRows(query.data?.adAccountBindings ?? []);
+    return rows.filter((row) => matchesAdAccountBindingStatusFilter(row, adAccountStatusFilter));
+  }, [adAccountStatusFilter, query.data?.adAccountBindings]);
   const filteredProjectDataBindings = useMemo(() => filterRows(query.data?.projectDataBindings ?? []), [query.data?.projectDataBindings]);
   const filteredMappingReviewQueue = useMemo(() => filterRows(query.data?.mappingReviewQueue ?? []), [query.data?.mappingReviewQueue]);
   const firstQueue = filteredMappingReviewQueue[0];
@@ -262,7 +288,17 @@ export default function Bindings() {
 
             <TabsContent value="ad-account" className="mt-1">
               <SectionCard title="Рекламні акаунти" description="Підключені рекламні акаунти">
-                <KnownColumnsTable rows={filteredAdAccountBindings} columns={["external_account_id", "platform", "client_name", "project_name", "funnel_name", "mapping_status", "binding_status", "updated_at"]} emptyText="Рекламні акаунти ще не привʼязані." />
+                <div className="mb-3 rounded-lg border border-border/70 bg-muted/25 p-3 text-sm text-muted-foreground">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <p>За замовчуванням показані лише активні привʼязки. Архівні та призупинені записи залишаються в базі й доступні через фільтр.</p>
+                    <div className="flex shrink-0 rounded-lg border border-border/70 bg-background/70 p-1">
+                      <Button type="button" size="sm" variant={adAccountStatusFilter === "active" ? "secondary" : "ghost"} className="h-7 px-2.5 text-xs" onClick={() => setAdAccountStatusFilter("active")}>Активні</Button>
+                      <Button type="button" size="sm" variant={adAccountStatusFilter === "archived" ? "secondary" : "ghost"} className="h-7 px-2.5 text-xs" onClick={() => setAdAccountStatusFilter("archived")}>Архівні/призупинені</Button>
+                      <Button type="button" size="sm" variant={adAccountStatusFilter === "all" ? "secondary" : "ghost"} className="h-7 px-2.5 text-xs" onClick={() => setAdAccountStatusFilter("all")}>Усі</Button>
+                    </div>
+                  </div>
+                </div>
+                <KnownColumnsTable rows={filteredAdAccountBindings} columns={["external_account_id", "platform", "client_name", "project_name", "funnel_name", "mapping_status", "binding_status", "updated_at"]} emptyText="Рекламні акаунти ще не привʼязані для вибраного фільтра." />
                 <AdminBindingForm type="ad_account" canManage={canManage} session={Boolean(session)} pending={pending} form={adForm} setForm={setAdForm} onSubmit={() => runAction("create-ad", () => supabase.functions.invoke("binding-create-or-update", { body: { workspace_id: WORKSPACE_ID, binding_type: "ad_account", ...adForm } }))} />
               </SectionCard>
             </TabsContent>

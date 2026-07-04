@@ -6,6 +6,22 @@ Meaningful changes for Internal Analytics Workspace.
 
 ---
 
+## 2026-07-04
+
+### Fixed
+
+- Added Supabase migration `20260704_make_ad_account_binding_idempotent.sql` to make `public.bind_ad_account_to_scope` idempotent for repeated manual submissions of the same active ad account binding target.
+- Added a non-destructive preflight duplicate check and partial unique index guard for active `ad_account_bindings` on `workspace_id`, `ad_account_id`, `client_id`, `project_id`, and `funnel_id` with `binding_status = 'active'`.
+- Added regression tests covering the migration contract: update-before-insert behavior, active natural key matching, archived-row preservation, creator preservation, and active-only unique guard.
+- Updated both the Data Bindings Ad Accounts tab and Ads connectors ad account UI so default lists show only active bindings, with explicit Active / Archived-paused / All filters for historical rows.
+- Added Ads connectors cache invalidation after binding actions so manual save/archive/update flows refresh the connected ad accounts list.
+- Hardened the ad account idempotent update path to preserve existing `notes`, `metadata`, and `is_primary` when repeated manual saves do not explicitly provide replacement values.
+
+### Notes
+
+- The migration does not delete or archive production data; it fails with an explicit error if duplicate active ad account bindings still exist before the unique index is created.
+- Local repository inspection found the Edge Function caller and tests, but local migrations do not contain the existing `public.bind_source_entity_to_scope` definition; source binding duplicate risk remains a remote-contract verification follow-up.
+
 
 ## 2026-06-26
 

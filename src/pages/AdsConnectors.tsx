@@ -42,6 +42,7 @@ type ConnectorState = { loading: boolean; error: string | null };
 type TabKey = "overview" | "connections" | "ad-accounts" | "sync" | "facebook-lead-ads" | "diagnostics";
 type ActiveConnectionDetails = { id: string; displayName: string | null; lastConnectedAt: string | null; activeCount: number };
 type SyncRunState = { loading: boolean; error: string | null; success: string | null; details: Record<string, unknown> | null };
+type AdAccountBindingStatusFilter = "active" | "archived" | "all";
 
 const ADS_SUBNAV_TRIGGER_CLASS =
   "h-10 whitespace-nowrap rounded-lg border border-transparent px-4 text-sm font-semibold transition-all hover:border-primary/30 hover:bg-primary/10 hover:text-primary data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm";
@@ -177,8 +178,12 @@ const copy = {
     oauthUrlMissing: "Не вдалося отримати посилання для безпечного підключення.",
     adAccountsTitle: "Рекламні акаунти",
     adAccountsDescription: "Прив’язки акаунтів до клієнтів, проєктів і воронок.",
-    adAccountsAllExplain: "Реальні акаунти показані першими. Нижче доступні тестові та архівні прив’язки для перевірки.",
+    adAccountsAllExplain: "За замовчуванням показані лише активні прив’язки. Архівні та призупинені прив’язки доступні через фільтр.",
     adAccountsTestExplain: "Ці записи потрібні для перевірки сценаріїв. Вони не підтверджують реальне підключення.",
+    adAccountsStatusFilterLabel: "Фільтр статусу",
+    adAccountsStatusFilterActive: "Активні",
+    adAccountsStatusFilterArchived: "Архівні/призупинені",
+    adAccountsStatusFilterAll: "Усі",
     adAccountsNoRealExplain: "Реальні рекламні акаунти з’являться після OAuth-підключення та першої синхронізації акаунтів. Нижче можуть бути службові тестові прив’язки.",
     accountSection: "Акаунт",
     realAccountsSection: "Реальні акаунти",
@@ -462,8 +467,12 @@ const copy = {
     oauthUrlMissing: "A secure connection link was not returned.",
     adAccountsTitle: "Ad accounts",
     adAccountsDescription: "Account bindings to clients, projects, and funnels.",
-    adAccountsAllExplain: "Real accounts are shown first. Test and archived bindings are available below for review.",
+    adAccountsAllExplain: "Only active bindings are shown by default. Archived and paused bindings are available through the filter.",
     adAccountsTestExplain: "These records are used for scenario checks. They do not confirm a real connection.",
+    adAccountsStatusFilterLabel: "Status filter",
+    adAccountsStatusFilterActive: "Active",
+    adAccountsStatusFilterArchived: "Archived/paused",
+    adAccountsStatusFilterAll: "All",
     adAccountsNoRealExplain: "Real ad accounts will appear after OAuth connection and the first account sync. Service test bindings may appear below.",
     accountSection: "Account",
     realAccountsSection: "Real accounts",
@@ -705,7 +714,7 @@ export default function AdsConnectors() {
   }), [query.data]);
 
   const realAccountRows = useMemo(
-    () => (query.data?.adBindings.rows ?? []).filter((row) => !isTestOrArchivedAccount(row)),
+    () => (query.data?.adBindings.rows ?? []).filter((row) => isActiveAccountBinding(row) && !hasTestBindingMarker(row)),
     [query.data?.adBindings.rows],
   );
 
@@ -1351,19 +1360,34 @@ function ConnectorCard({
 }
 
 function AdAccountsTable({ data, ui, timestampDisplayMode, timezoneName }: { data: OptionalViewData | undefined; ui: Copy } & TimezoneFormattingOptions) {
+  const [statusFilter, setStatusFilter] = useState<AdAccountBindingStatusFilter>("active");
+
   if (!data) return <p className="text-sm text-muted-foreground">{ui.dataUnavailable}</p>;
   if (data.unavailableReason) return <UnavailableMessage reason={data.unavailableReason} ui={ui} />;
   if (data.rows.length === 0) return <p className="text-sm text-muted-foreground">{ui.adAccountsEmpty}</p>;
 
-  const realRows = data.rows.filter((row) => !isTestOrArchivedAccount(row)).sort(sortAdAccountsForDisplay);
-  const testRows = data.rows.filter(isTestOrArchivedAccount).sort(sortAdAccountsForDisplay);
+  const visibleRows = data.rows.filter((row) => matchesAdAccountBindingStatusFilter(row, statusFilter));
+  const realRows = visibleRows.filter((row) => !isTestOrArchivedAccount(row)).sort(sortAdAccountsForDisplay);
+  const testRows = visibleRows.filter(isTestOrArchivedAccount).sort(sortAdAccountsForDisplay);
 
   return (
     <div className="space-y-5">
       <div className="rounded-lg border border-border/70 bg-muted/20 p-3 text-sm text-muted-foreground">
-        <p>{ui.adAccountsAllExplain}</p>
-        {testRows.length > 0 ? <p className="mt-1 text-xs">{ui.adAccountsTestExplain}</p> : null}
-        {realRows.length === 0 ? <p className="mt-1 text-xs">{ui.adAccountsNoRealExplain}</p> : null}
+        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p>{ui.adAccountsAllExplain}</p>
+            {testRows.length > 0 ? <p className="mt-1 text-xs">{ui.adAccountsTestExplain}</p> : null}
+            {realRows.length === 0 ? <p className="mt-1 text-xs">{ui.adAccountsNoRealExplain}</p> : null}
+          </div>
+          <div className="flex shrink-0 flex-col gap-1.5">
+            <span className="text-xs font-medium text-muted-foreground">{ui.adAccountsStatusFilterLabel}</span>
+            <div className="flex rounded-lg border border-border/70 bg-background/70 p-1">
+              <Button type="button" size="sm" variant={statusFilter === "active" ? "secondary" : "ghost"} className="h-7 px-2.5 text-xs" onClick={() => setStatusFilter("active")}>{ui.adAccountsStatusFilterActive}</Button>
+              <Button type="button" size="sm" variant={statusFilter === "archived" ? "secondary" : "ghost"} className="h-7 px-2.5 text-xs" onClick={() => setStatusFilter("archived")}>{ui.adAccountsStatusFilterArchived}</Button>
+              <Button type="button" size="sm" variant={statusFilter === "all" ? "secondary" : "ghost"} className="h-7 px-2.5 text-xs" onClick={() => setStatusFilter("all")}>{ui.adAccountsStatusFilterAll}</Button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <AdAccountSection title={ui.realAccountsSection} emptyText={realRows.length === 0 ? ui.adAccountsNoRealExplain : undefined}>
@@ -1915,11 +1939,25 @@ function isPlaceholderAccount(row: Row) {
 }
 
 function isTestOrArchivedAccount(row: Row) {
-  return hasTestBindingMarker(row) || isArchivedAccount(row);
+  return hasTestBindingMarker(row) || isArchivedOrPausedAccount(row);
 }
 
 function isArchivedAccount(row: Row) {
   return String(row.binding_status ?? row.status ?? "").toLowerCase() === "archived";
+}
+
+function isPausedAccount(row: Row) {
+  return String(row.binding_status ?? row.status ?? "").toLowerCase() === "paused";
+}
+
+function isArchivedOrPausedAccount(row: Row) {
+  return isArchivedAccount(row) || isPausedAccount(row);
+}
+
+function matchesAdAccountBindingStatusFilter(row: Row, filter: AdAccountBindingStatusFilter) {
+  if (filter === "active") return isActiveAccountBinding(row);
+  if (filter === "archived") return isArchivedOrPausedAccount(row);
+  return true;
 }
 
 function hasTestBindingMarker(row: Row) {

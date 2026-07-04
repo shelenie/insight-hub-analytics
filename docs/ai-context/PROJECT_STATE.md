@@ -16,7 +16,7 @@ Approval: awaiting client approval
 Current stack: Codex + Supabase + GitHub
 Source of truth for code: GitHub
 Backend/data layer: Supabase
-Last updated: 2026-06-26
+Last updated: 2026-07-04
 Confidence: high for Phase 1 user-access hardening after manual remote Supabase verification; medium-high for broader repo facts
 
 ---
@@ -74,6 +74,14 @@ Do not assume data is clean.
 Do not add unrelated tools unless Olena explicitly confirms them.
 
 ---
+
+
+## Verified Local Change — 2026-07-04
+
+Manual ad account binding duplicate prevention was added locally for review. Migration `20260704_make_ad_account_binding_idempotent.sql` replaces `public.bind_ad_account_to_scope` with update-before-insert behavior for the active natural key: `workspace_id`, `ad_account_id`, `client_id`, `project_id`, `funnel_id`, and `binding_status = 'active'`. The migration also adds a non-destructive preflight check and a partial unique index using `where binding_status = 'active'`. The Data Bindings Ad Accounts tab and Ads connectors ad account list now default to active bindings only and expose explicit Active / Archived-paused / All status filters for historical rows. Repeated manual saves preserve existing ad account binding `notes`, `metadata`, and `is_primary` unless replacement values are intentionally provided.
+
+Local inspection confirmed `supabase/functions/binding-create-or-update/index.ts` calls `public.bind_ad_account_to_scope` for manual ad account bindings and `public.bind_source_entity_to_scope` for source bindings. Local migrations do not contain the existing source-binding SQL function definition, so source binding idempotency remains a remote-contract verification item.
+
 
 ## Verified Remote Supabase State — 2026-06-26
 
