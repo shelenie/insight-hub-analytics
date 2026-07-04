@@ -22,4 +22,17 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain('setAdAccountStatusFilter("archived")');
     expect(source).toContain('setAdAccountStatusFilter("all")');
   });
+
+  it("shows visible manual binding feedback beside the technical setup form", () => {
+    expect(source).toContain("Звʼязок рекламного акаунта збережено. Якщо такий active-звʼязок уже існував, його оновлено без створення дубля.");
+    expect(source).toContain("Звʼязок джерела збережено.");
+    expect(source).toContain('role="status"');
+    expect(source).toContain('variant: "success"');
+    expect(source).toContain("border-emerald-500/40");
+    expect(source).toContain("clearFormFeedback");
+    expect(source).toContain("onValueChange={handleTabChange}");
+    expect(source).toContain("setForm={updateAdForm}");
+    expect(source).toContain("Technical details");
+    expect(source).toContain("getBindingActionTechnicalDetails");
+  });
 });
