@@ -20,11 +20,11 @@ create or replace function public.bind_ad_account_to_scope(
   p_mapping_status text default 'confirmed',
   p_binding_method text default 'manual',
   p_confidence numeric default 1.0,
-  p_is_primary boolean default false,
+  p_is_primary boolean default null,
   p_notes text default null,
   p_created_by uuid default auth.uid(),
   p_created_by_email text default null,
-  p_metadata jsonb default '{}'::jsonb
+  p_metadata jsonb default null
 )
 returns uuid
 language plpgsql
@@ -44,8 +44,11 @@ begin
     binding_method = coalesce(p_binding_method, binding_method),
     confidence = coalesce(p_confidence, confidence),
     is_primary = coalesce(p_is_primary, is_primary),
-    notes = p_notes,
-    metadata = coalesce(p_metadata, '{}'::jsonb),
+    notes = coalesce(nullif(btrim(p_notes), ''), notes),
+    metadata = case
+      when p_metadata is not null and p_metadata <> '{}'::jsonb then p_metadata
+      else metadata
+    end,
     updated_at = now()
   where workspace_id = p_workspace_id
     and ad_account_id = p_ad_account_id

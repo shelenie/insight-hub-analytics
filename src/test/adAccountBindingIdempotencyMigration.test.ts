@@ -39,10 +39,20 @@ describe("ad account binding idempotency migration", () => {
     expect(updateStatement).toContain("binding_method = coalesce(p_binding_method, binding_method)");
     expect(updateStatement).toContain("confidence = coalesce(p_confidence, confidence)");
     expect(updateStatement).toContain("is_primary = coalesce(p_is_primary, is_primary)");
+    expect(updateStatement).toContain("notes = coalesce(nullif(btrim(p_notes), ''), notes)");
+    expect(updateStatement).toContain("when p_metadata is not null and p_metadata <> '{}'::jsonb then p_metadata");
+    expect(updateStatement).toContain("else metadata");
     expect(updateStatement).toContain("updated_at = now()");
     expect(updateStatement).not.toContain("created_by =");
     expect(updateStatement).not.toContain("created_by_email =");
     expect(updateStatement).not.toContain("created_at =");
+  });
+
+  it("defaults optional update-only fields to null so repeated saves preserve existing values", () => {
+    expect(migration).toContain("p_is_primary boolean default null");
+    expect(migration).toContain("p_metadata jsonb default null");
+    expect(migration).toContain("coalesce(p_is_primary, false)");
+    expect(migration).toContain("coalesce(p_metadata, '{}'::jsonb)");
   });
 
   it("adds a partial unique guard for active rows only", () => {
