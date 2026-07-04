@@ -164,11 +164,12 @@ export default function Bindings() {
 
   const refreshBindings = async () => {
     await query.refetch();
-    await Promise.all(
-      ["v_source_entity_bindings", "v_ad_account_bindings", "v_project_data_bindings", "v_mapping_review_queue", "v_binding_health", "v_mapping_review_health", "v_mapping_review_actions_recent"].map((queryKey) =>
+    await Promise.all([
+      ...["v_source_entity_bindings", "v_ad_account_bindings", "v_project_data_bindings", "v_mapping_review_queue", "v_binding_health", "v_mapping_review_health", "v_mapping_review_actions_recent"].map((queryKey) =>
         queryClient.invalidateQueries({ queryKey: [queryKey, WORKSPACE_ID] }),
       ),
-    );
+      queryClient.invalidateQueries({ queryKey: ["ads-connectors-workspace", WORKSPACE_ID] }),
+    ]);
   };
 
   const handleRefresh = async () => {
