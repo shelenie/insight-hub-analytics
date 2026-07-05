@@ -19,8 +19,26 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain("matchesAdAccountBindingStatusFilter(row, adAccountStatusFilter)");
     expect(source).toContain('if (filter === "active") return isActiveBinding(row);');
     expect(source).toContain('if (filter === "archived") return isArchivedOrPausedBinding(row);');
-    expect(source).toContain('setAdAccountStatusFilter("archived")');
-    expect(source).toContain('setAdAccountStatusFilter("all")');
+    expect(source).toContain('onValueChange={(value) =>');
+    expect(source).toContain('setAdAccountStatusFilter(');
+    expect(source).toContain('value="archived"');
+    expect(source).toContain('Архівні/призупинені');
+    expect(source).toContain('value="all"');
+    expect(source).toContain('Усі');
+    expect(source).not.toContain('variant={adAccountStatusFilter === "active" ? "secondary" : "ghost"}');
+  });
+
+  it("uses a normal dropdown-first ad account binding flow while keeping technical setup secondary", () => {
+    expect(source).toContain("+ Привʼязати рекламний акаунт");
+    expect(source).toContain("Нова привʼязка рекламного акаунта");
+    expect(source).toContain('label="Рекламний акаунт"');
+    expect(source).toContain('label="Клієнт"');
+    expect(source).toContain('label="Проєкт"');
+    expect(source).toContain('label="Воронка"');
+    expect(source).toContain("Для цього клієнта ще немає проєктів");
+    expect(source).toContain("Для цього проєкту ще немає воронок");
+    expect(source).toContain("Технічне налаштування через ID");
+    expect(source).toContain("<details");
   });
 
   it("shows visible manual binding feedback beside the technical setup form", () => {
