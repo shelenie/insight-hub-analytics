@@ -42,6 +42,7 @@ import {
 } from "@/components/common/DeveloperDetails";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { toast } from "@/hooks/use-toast";
+import { useI18n } from "@/i18n/I18nProvider";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 const ADS_SUBNAV_TRIGGER_CLASS =
@@ -211,6 +212,7 @@ function hasMatchingActiveAdBinding(rows: Row[], form: Record<string, string>) {
 }
 
 export default function Bindings() {
+  const { t } = useI18n();
   const { session } = useAuth();
   const queryClient = useQueryClient();
   const {
@@ -509,28 +511,24 @@ export default function Bindings() {
   };
   const overviewCards = [
     {
-      title: "Файли й таблиці",
+      title: t("bindingsOverviewFilesTitle"),
       value: visibleBindingCounts.sourceBindings,
-      description:
-        "Google Sheets, CSV/імпорти, CRM-експорти та зовнішні таблиці без рекламних акаунтів.",
+      description: t("bindingsOverviewFilesDescription"),
     },
     {
-      title: "Рекламні акаунти",
+      title: t("bindingsOverviewAdAccountsTitle"),
       value: visibleBindingCounts.adAccountBindings,
-      description:
-        "Окремі привʼязки ad accounts до клієнтів, проєктів і воронок.",
+      description: t("bindingsOverviewAdAccountsDescription"),
     },
     {
-      title: "Контекст проєктів",
+      title: t("bindingsOverviewProjectContextTitle"),
       value: visibleBindingCounts.projectDataBindings,
-      description:
-        "Джерела, які вже мають клієнта, проєкт або воронку.",
+      description: t("bindingsOverviewProjectContextDescription"),
     },
     {
-      title: "Очікують підтвердження",
+      title: t("bindingsOverviewAwaitingConfirmationTitle"),
       value: visibleBindingCounts.mappingReviewQueue,
-      description:
-        "Невідомі або непідтверджені мапінги для ручної перевірки.",
+      description: t("bindingsOverviewAwaitingConfirmationDescription"),
     },
   ];
   const connectionStatusCards = buildConnectionStatusCards(
@@ -565,26 +563,35 @@ export default function Bindings() {
 
   return (
     <DashboardLayout
-      title="Звʼязки даних"
-      subtitle="Керування звʼязками даних"
+      title={t("bindingsPageTitle")}
+      subtitle={t("bindingsPageSubtitle")}
       actions={headerActions}
       contentClassName="pt-1 lg:pt-2"
     >
       <div className="space-y-4">
         {!session ? (
-          <SectionCard title="Звʼязки даних" description="Потрібен вхід">
+          <SectionCard
+            title={t("bindingsPageTitle")}
+            description="Потрібен вхід"
+          >
             <p className="text-sm text-muted-foreground">
               Увійдіть, щоб переглянути звʼязки даних і чергу перевірки мапінгу.
             </p>
           </SectionCard>
         ) : query.isLoading ? (
-          <SectionCard title="Звʼязки даних" description="Завантаження">
+          <SectionCard
+            title={t("bindingsPageTitle")}
+            description="Завантаження"
+          >
             <p className="text-sm text-muted-foreground">
               Завантажуємо звʼязки робочого простору…
             </p>
           </SectionCard>
         ) : query.error ? (
-          <SectionCard title="Звʼязки даних" description="Стан розділу">
+          <SectionCard
+            title={t("bindingsPageTitle")}
+            description="Стан розділу"
+          >
             <FriendlyError
               message="Потрібне оновлення backend для цього розділу."
               technical={query.error.message}
@@ -602,37 +609,37 @@ export default function Bindings() {
                   className={ADS_SUBNAV_TRIGGER_CLASS}
                   value="overview"
                 >
-                  Огляд
+                  {t("bindingsTabOverview")}
                 </TabsTrigger>
                 <TabsTrigger
                   className={ADS_SUBNAV_TRIGGER_CLASS}
                   value="source"
                 >
-                  Джерела даних
+                  {t("bindingsTabSources")}
                 </TabsTrigger>
                 <TabsTrigger
                   className={ADS_SUBNAV_TRIGGER_CLASS}
                   value="ad-account"
                 >
-                  Рекламні акаунти
+                  {t("bindingsTabAdAccounts")}
                 </TabsTrigger>
                 <TabsTrigger
                   className={ADS_SUBNAV_TRIGGER_CLASS}
                   value="project-data"
                 >
-                  Звʼязки з проєктами
+                  {t("bindingsTabProjectData")}
                 </TabsTrigger>
                 <TabsTrigger
                   className={ADS_SUBNAV_TRIGGER_CLASS}
                   value="mapping-review"
                 >
-                  Мапінг на перевірку
+                  {t("bindingsTabMappingReview")}
                 </TabsTrigger>
                 <TabsTrigger
                   className={ADS_SUBNAV_TRIGGER_CLASS}
                   value="health"
                 >
-                  Стан підключень
+                  {t("bindingsTabHealth")}
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -657,24 +664,18 @@ export default function Bindings() {
 
             <TabsContent value="overview" className="mt-1">
               <SectionCard
-                title="Огляд звʼязків"
-                description="Високорівневий статус усіх звʼязків даних: окремо файли/таблиці, рекламні акаунти та мапінги на підтвердження."
+                title={t("bindingsOverviewTitle")}
+                description={t("bindingsOverviewDescription")}
               >
                 <KpiGrid cards={overviewCards} />
                 <div className="mt-4 space-y-1 rounded-md border border-border/70 bg-muted/25 p-3 text-sm text-muted-foreground">
-                  <p>
-                    Файли й таблиці показують нерекламні джерела; рекламні
-                    акаунти рахуються окремими привʼязками.
-                  </p>
-                  <p>
-                    Елементи «на перевірці» — це мапінги, які ще очікують
-                    підтвердження адміністратора.
-                  </p>
+                  <p>{t("bindingsOverviewSourcesVsAdsHelper")}</p>
+                  <p>{t("bindingsOverviewReviewHelper")}</p>
                   {filteredMappingReviewQueue.length === 0 ? (
-                    <p>Немає звʼязків на перевірці.</p>
+                    <p>{t("bindingsOverviewNoReview")}</p>
                   ) : null}
                   {isHealthy(query.data?.bindingHealth ?? []) ? (
-                    <p>Основні звʼязки виглядають коректно.</p>
+                    <p>{t("bindingsOverviewHealthy")}</p>
                   ) : null}
                 </div>
               </SectionCard>
@@ -682,8 +683,8 @@ export default function Bindings() {
 
             <TabsContent value="source" className="mt-1">
               <SectionCard
-                title="Джерела даних"
-                description="Нерекламні джерела: Google Sheets, CSV/імпортні файли, CRM-експорти та зовнішні таблиці."
+                title={t("bindingsSourcesTitle")}
+                description={t("bindingsSourcesDescription")}
               >
                 <KnownColumnsTable
                   rows={filteredSourceBindings}
@@ -701,7 +702,7 @@ export default function Bindings() {
                     "created_at",
                     "updated_at",
                   ]}
-                  emptyText="Поки немає підключених файлів або таблиць. Рекламні акаунти керуються в окремій вкладці."
+                  emptyText={t("bindingsSourcesEmpty")}
                 />
                 <AdminBindingForm
                   type="source"
@@ -737,10 +738,10 @@ export default function Bindings() {
                 <div className="flex flex-col gap-3 border-b border-border/60 px-4 py-3.5 lg:flex-row lg:items-center lg:justify-between">
                   <div className="min-w-0">
                     <h2 className="text-[14px] font-semibold tracking-tight">
-                      Рекламні акаунти
+                      {t("bindingsAdAccountsTitle")}
                     </h2>
                     <p className="mt-0.5 text-[11.5px] text-muted-foreground">
-                      Керуйте привʼязкою рекламних акаунтів до клієнтів, проєктів і воронок. ID передаються автоматично.
+                      {t("bindingsAdAccountsDescription")}
                     </p>
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end lg:shrink-0">
@@ -831,10 +832,11 @@ export default function Bindings() {
                           const validationError = validateAdForm(normalAdForm);
                           if (validationError)
                             return setAdFormError(validationError);
-                          const existingActiveBinding = hasMatchingActiveAdBinding(
-                            query.data?.adAccountBindings ?? [],
-                            normalAdForm,
-                          );
+                          const existingActiveBinding =
+                            hasMatchingActiveAdBinding(
+                              query.data?.adAccountBindings ?? [],
+                              normalAdForm,
+                            );
                           const saved = await runAction(
                             "create-ad",
                             () =>
@@ -904,13 +906,16 @@ export default function Bindings() {
                       runAction(
                         "create-ad",
                         () =>
-                          supabase.functions.invoke("binding-create-or-update", {
-                            body: {
-                              workspace_id: WORKSPACE_ID,
-                              binding_type: "ad_account",
-                              ...technicalAdForm,
+                          supabase.functions.invoke(
+                            "binding-create-or-update",
+                            {
+                              body: {
+                                workspace_id: WORKSPACE_ID,
+                                binding_type: "ad_account",
+                                ...technicalAdForm,
+                              },
                             },
-                          }),
+                          ),
                         {
                           bindingType: "ad_account",
                           feedbackHandler: setTechnicalAdFeedback,
@@ -926,8 +931,8 @@ export default function Bindings() {
 
             <TabsContent value="project-data" className="mt-1">
               <SectionCard
-                title="Привʼязки до проєктів"
-                description="Усі джерела, які вже привʼязані до клієнтів, проєктів і воронок. Це консолідований read-only перегляд наявних звʼязків."
+                title={t("bindingsProjectBindingsTitle")}
+                description={t("bindingsProjectBindingsDescription")}
               >
                 <KnownColumnsTable
                   rows={filteredProjectDataBindings}
@@ -944,18 +949,21 @@ export default function Bindings() {
                     "health_status",
                     "binding_status",
                   ]}
-                  emptyText="Звʼязків із проєктами поки немає."
+                  emptyText={t("bindingsProjectBindingsEmpty")}
                 />
               </SectionCard>
             </TabsContent>
 
             <TabsContent value="mapping-review" className="mt-1">
               <SectionCard
-                title="Мапінг на перевірку"
-                description="Тут зʼявлятимуться джерела, які система не змогла впевнено привʼязати автоматично."
+                title={t("bindingsMappingReviewTitle")}
+                description={t("bindingsMappingReviewDescription")}
               >
                 {filteredMappingReviewQueue.length === 0 ? (
-                  <EmptyMappingReviewState />
+                  <EmptyMappingReviewState
+                    title={t("bindingsMappingReviewEmptyTitle")}
+                    description={t("bindingsMappingReviewEmptyDescription")}
+                  />
                 ) : (
                   <>
                     <KnownColumnsTable
@@ -973,7 +981,7 @@ export default function Bindings() {
                         "details",
                         "created_at",
                       ]}
-                      emptyText="Немає звʼязків на перевірці."
+                      emptyText={t("bindingsMappingReviewEmptyTitle")}
                     />
                     <div className="mt-4 rounded-md border border-dashed border-border/70 bg-muted/30 p-3">
                       <div className="flex flex-wrap gap-2">
@@ -1065,8 +1073,8 @@ export default function Bindings() {
 
             <TabsContent value="health" className="mt-1">
               <SectionCard
-                title="Стан мапінгу та підтверджень"
-                description="Виробничий стан черги мапінгу, Telegram-підтверджень і помилок."
+                title={t("bindingsHealthTitle")}
+                description={t("bindingsHealthDescription")}
               >
                 <KpiGrid cards={connectionStatusCards.production} />
                 <DeveloperDetails title="Деталі Telegram HITL">
@@ -1754,16 +1762,17 @@ function CompactDiagnosticsGrid({
   );
 }
 
-function EmptyMappingReviewState() {
+function EmptyMappingReviewState({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
   return (
     <div className="rounded-md border border-dashed border-border/70 bg-muted/25 p-6 text-center">
-      <p className="text-sm font-medium text-foreground">
-        Немає звʼязків на перевірці.
-      </p>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Коли система знайде невідоме або непідтверджене джерело, воно зʼявиться
-        тут.
-      </p>
+      <p className="text-sm font-medium text-foreground">{title}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
     </div>
   );
 }

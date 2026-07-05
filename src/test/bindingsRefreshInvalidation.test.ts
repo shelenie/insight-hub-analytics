@@ -2,7 +2,14 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const source = readFileSync(resolve(process.cwd(), "src/pages/Bindings.tsx"), "utf8");
+const source = readFileSync(
+  resolve(process.cwd(), "src/pages/Bindings.tsx"),
+  "utf8",
+);
+const translationsSource = readFileSync(
+  resolve(process.cwd(), "src/i18n/translations.ts"),
+  "utf8",
+);
 
 describe("Bindings page ad account behavior", () => {
   it("refreshes Ads connectors data after binding actions", () => {
@@ -11,23 +18,34 @@ describe("Bindings page ad account behavior", () => {
     const refreshSource = source.slice(refreshStart, refreshEnd);
 
     expect(refreshSource).toContain("query.refetch()");
-    expect(refreshSource).toContain('["ads-connectors-workspace", WORKSPACE_ID]');
+    expect(refreshSource).toContain(
+      '["ads-connectors-workspace", WORKSPACE_ID]',
+    );
   });
 
   it("defaults the Ad Accounts tab to active bindings with explicit historical filters", () => {
-    expect(source).toContain('useState<AdAccountBindingStatusFilter>("active")');
-    expect(source).toContain("matchesAdAccountBindingStatusFilter(row, adAccountStatusFilter)");
-    expect(source).toContain('if (filter === "active") return isActiveBinding(row);');
-    expect(source).toContain('if (filter === "archived") return isArchivedOrPausedBinding(row);');
-    expect(source).toContain('onValueChange={(value) =>');
-    expect(source).toContain('setAdAccountStatusFilter(');
+    expect(source).toContain(
+      'useState<AdAccountBindingStatusFilter>("active")',
+    );
+    expect(source).toContain(
+      "matchesAdAccountBindingStatusFilter(row, adAccountStatusFilter)",
+    );
+    expect(source).toContain(
+      'if (filter === "active") return isActiveBinding(row);',
+    );
+    expect(source).toContain(
+      'if (filter === "archived") return isArchivedOrPausedBinding(row);',
+    );
+    expect(source).toContain("onValueChange={(value) =>");
+    expect(source).toContain("setAdAccountStatusFilter(");
     expect(source).toContain('value="archived"');
-    expect(source).toContain('Архівні/призупинені');
+    expect(source).toContain("Архівні/призупинені");
     expect(source).toContain('value="all"');
-    expect(source).toContain('Усі');
-    expect(source).not.toContain('variant={adAccountStatusFilter === "active" ? "secondary" : "ghost"}');
+    expect(source).toContain("Усі");
+    expect(source).not.toContain(
+      'variant={adAccountStatusFilter === "active" ? "secondary" : "ghost"}',
+    );
   });
-
 
   it("merges the ad account section header and controls without a separate helper toolbar card", () => {
     const tabStart = source.indexOf('<TabsContent value="ad-account"');
@@ -35,32 +53,59 @@ describe("Bindings page ad account behavior", () => {
     const adAccountTabSource = source.slice(tabStart, tableStart);
 
     expect(adAccountTabSource).toContain("<SectionCard noPadding>");
-    expect(adAccountTabSource).toContain("Рекламні акаунти");
-    expect(adAccountTabSource).toContain("Керуйте привʼязкою рекламних акаунтів до клієнтів, проєктів і воронок. ID передаються автоматично.");
-    expect(adAccountTabSource).not.toContain("Оберіть акаунт, клієнта, проєкт і воронку — ID передаються автоматично.");
+    expect(adAccountTabSource).toContain('t("bindingsAdAccountsTitle")');
+    expect(adAccountTabSource).toContain('t("bindingsAdAccountsDescription")');
+    expect(translationsSource).toContain('bindingsAdAccountsTitle: { uk: "Рекламні акаунти", en: "Ad accounts" }');
+    expect(translationsSource).toContain("Manage ad account bindings to clients, projects, and funnels. IDs are passed automatically.");
+    expect(adAccountTabSource).not.toContain(
+      "Оберіть акаунт, клієнта, проєкт і воронку — ID передаються автоматично.",
+    );
     expect(adAccountTabSource).toContain("Статус:");
     expect(adAccountTabSource).toContain("sm:w-[14.5rem]");
     expect(adAccountTabSource).toContain("lg:shrink-0");
     expect(adAccountTabSource).toContain("+ Привʼязати рекламний акаунт");
-    expect(adAccountTabSource).not.toContain("rounded-lg border border-border/60 bg-muted/20");
+    expect(adAccountTabSource).not.toContain(
+      "rounded-lg border border-border/60 bg-muted/20",
+    );
     expect(adAccountTabSource).not.toContain('className="space-y-1"');
-    expect(adAccountTabSource).not.toContain(">\n                        Статус\n                      </label>");
+    expect(adAccountTabSource).not.toContain(
+      ">\n                        Статус\n                      </label>",
+    );
   });
-  it("clarifies Data Bindings admin tab copy and empty states", () => {
-    expect(source).toContain("Високорівневий статус усіх звʼязків даних");
-    expect(source).toContain("Файли й таблиці");
-    expect(source).toContain("акаунти рахуються окремими привʼязками");
-    expect(source).toContain("підтвердження адміністратора");
-    expect(source).toContain("Нерекламні джерела: Google Sheets, CSV/імпортні файли, CRM-експорти та зовнішні таблиці.");
-    expect(source).toContain("Поки немає підключених файлів або таблиць. Рекламні акаунти керуються в окремій вкладці.");
-    expect(source).toContain("Привʼязки до проєктів");
-    expect(source).toContain("консолідований read-only перегляд наявних звʼязків");
-    expect(source).toContain("Тут зʼявлятимуться джерела, які система не змогла впевнено привʼязати автоматично.");
-    expect(source).toContain("Немає звʼязків на перевірці.");
-    expect(source).toContain("Коли система знайде невідоме або непідтверджене джерело, воно зʼявиться");
-    expect(source).toContain("Виробничий стан черги мапінгу, Telegram-підтверджень і помилок.");
-  });
+  it("routes Data Bindings admin copy through the bilingual i18n dictionary", () => {
+    [
+      "bindingsTabOverview",
+      "bindingsTabSources",
+      "bindingsTabAdAccounts",
+      "bindingsOverviewTitle",
+      "bindingsOverviewFilesTitle",
+      "bindingsOverviewFilesDescription",
+      "bindingsSourcesTitle",
+      "bindingsSourcesDescription",
+      "bindingsSourcesEmpty",
+      "bindingsProjectBindingsTitle",
+      "bindingsProjectBindingsDescription",
+      "bindingsMappingReviewTitle",
+      "bindingsMappingReviewDescription",
+      "bindingsMappingReviewEmptyTitle",
+      "bindingsMappingReviewEmptyDescription",
+      "bindingsHealthTitle",
+      "bindingsHealthDescription",
+    ].forEach((key) => expect(source).toContain(`t("${key}")`));
 
+    expect(translationsSource).toContain('bindingsOverviewFilesTitle: { uk: "Файли й таблиці", en: "Files and tables" }');
+    expect(translationsSource).toContain("Google Sheets, CSV/import files, CRM exports, and external tables without ad accounts.");
+    expect(translationsSource).toContain("Non-ad sources: Google Sheets, CSV/import files, CRM exports, and external tables.");
+    expect(translationsSource).toContain("No files or tables are connected yet. Ad accounts are managed in a separate tab.");
+    expect(translationsSource).toContain('bindingsProjectBindingsTitle: { uk: "Привʼязки до проєктів", en: "Project bindings" }');
+    expect(translationsSource).toContain("All sources already connected to clients, projects, and funnels. This is a consolidated read-only view of existing bindings.");
+    expect(translationsSource).toContain('bindingsMappingReviewTitle: { uk: "Мапінг на перевірку", en: "Mapping review" }');
+    expect(translationsSource).toContain("Sources that the system could not confidently bind automatically will appear here.");
+    expect(translationsSource).toContain("No bindings require review.");
+    expect(translationsSource).toContain("When the system finds an unknown or unconfirmed source, it will appear here.");
+    expect(translationsSource).toContain('bindingsHealthTitle: { uk: "Стан мапінгу та підтверджень", en: "Mapping and confirmation status" }');
+    expect(translationsSource).toContain("Production status of the mapping queue, Telegram confirmations, and errors.");
+  });
 
   it("uses a searchable combobox-first ad account binding flow while keeping technical setup secondary", () => {
     expect(source).toContain("+ Привʼязати рекламний акаунт");
@@ -79,7 +124,9 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain('label="Воронка"');
     expect(source).toContain("Для цього клієнта ще немає проєктів");
     expect(source).toContain("Для цього проєкту ще немає воронок");
-    expect(source).toContain("Advanced / Технічний режим: налаштування через ID");
+    expect(source).toContain(
+      "Advanced / Технічний режим: налаштування через ID",
+    );
     expect(source).toContain("<details");
   });
 
@@ -96,8 +143,10 @@ describe("Bindings page ad account behavior", () => {
     expect(adAccountTabSource).toContain("setAdFormOpen(true)");
     expect(adAccountTabSource).toContain("setNormalAdFeedback(null)");
     expect(adAccountTabSource).toContain("<AdAccountsBusinessTable");
-    expect(adAccountTabSource).toContain("Рекламні акаунти");
-    expect(adAccountTabSource).not.toContain("mb-4 rounded-xl border border-primary/20");
+    expect(adAccountTabSource).toContain('t("bindingsAdAccountsTitle")');
+    expect(adAccountTabSource).not.toContain(
+      "mb-4 rounded-xl border border-primary/20",
+    );
   });
 
   it("uses an auto-dismissing toast for normal ad account save success and clears the form", () => {
@@ -109,36 +158,49 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain("toast({");
     expect(source).toContain("hasMatchingActiveAdBinding");
     expect(source).toContain("Звʼязок оновлено");
-    expect(source).toContain("Існуючий active-звʼязок оновлено без створення дубля.");
+    expect(source).toContain(
+      "Існуючий active-звʼязок оновлено без створення дубля.",
+    );
     expect(source).toContain("Звʼязок створено");
-    expect(source).toContain("Рекламний акаунт привʼязано до клієнта, проєкту і воронки.");
+    expect(source).toContain(
+      "Рекламний акаунт привʼязано до клієнта, проєкту і воронки.",
+    );
     expect(source).toContain("border-emerald-500/50 bg-emerald-50");
     expect(source).toContain("duration: 5000");
     expect(source).not.toContain("normalAdSuccess");
     expect(source).not.toContain("setNormalAdSuccess");
-    expect(source).toContain("normalAdFeedback?.variant === \"error\"");
-    expect(source).toContain('successFeedback: false');
-    expect(source).not.toContain('feedback={formFeedback.ad_account}');
+    expect(source).toContain('normalAdFeedback?.variant === "error"');
+    expect(source).toContain("successFeedback: false");
+    expect(source).not.toContain("feedback={formFeedback.ad_account}");
   });
 
-
   it("keeps normal drawer state separate from technical UUID form state", () => {
-    expect(source).toContain("const [normalAdForm, setNormalAdForm] = useState(EMPTY_AD_FORM)");
-    expect(source).toContain("const [technicalAdForm, setTechnicalAdForm] = useState(EMPTY_AD_FORM)");
+    expect(source).toContain(
+      "const [normalAdForm, setNormalAdForm] = useState(EMPTY_AD_FORM)",
+    );
+    expect(source).toContain(
+      "const [technicalAdForm, setTechnicalAdForm] = useState(EMPTY_AD_FORM)",
+    );
     expect(source).toContain("const [normalAdFeedback, setNormalAdFeedback]");
-    expect(source).toContain("const [technicalAdFeedback, setTechnicalAdFeedback]");
+    expect(source).toContain(
+      "const [technicalAdFeedback, setTechnicalAdFeedback]",
+    );
     expect(source).toContain("updateNormalAdForm");
     expect(source).toContain("updateTechnicalAdForm");
     expect(source).toContain("form={normalAdForm}");
     expect(source).toContain("form={technicalAdForm}");
     expect(source).toContain("feedback={technicalAdFeedback}");
     expect(source).toContain("feedbackHandler: setTechnicalAdFeedback");
-    expect(source).not.toContain("const [adForm, setAdForm] = useState(EMPTY_AD_FORM)");
+    expect(source).not.toContain(
+      "const [adForm, setAdForm] = useState(EMPTY_AD_FORM)",
+    );
     expect(source).not.toContain("formFeedback.ad_account");
   });
 
   it("shows visible manual binding feedback beside the technical setup form", () => {
-    expect(source).toContain("Звʼязок рекламного акаунта збережено. Якщо такий active-звʼязок уже існував, його оновлено без створення дубля.");
+    expect(source).toContain(
+      "Звʼязок рекламного акаунта збережено. Якщо такий active-звʼязок уже існував, його оновлено без створення дубля.",
+    );
     expect(source).toContain("Звʼязок джерела збережено.");
     expect(source).toContain('role="status"');
     expect(source).toContain('variant: "success"');
