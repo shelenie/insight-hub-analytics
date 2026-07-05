@@ -28,6 +28,23 @@ describe("Bindings page ad account behavior", () => {
     expect(source).not.toContain('variant={adAccountStatusFilter === "active" ? "secondary" : "ghost"}');
   });
 
+
+  it("keeps the ad account toolbar compact with stable status select width", () => {
+    const tabStart = source.indexOf('<TabsContent value="ad-account"');
+    const tableStart = source.indexOf("<AdAccountsBusinessTable", tabStart);
+    const adAccountTabSource = source.slice(tabStart, tableStart);
+
+    expect(adAccountTabSource).toContain("lg:grid-cols-[minmax(0,1fr)_auto]");
+    expect(adAccountTabSource).toContain("lg:items-center");
+    expect(adAccountTabSource).toContain("Оберіть акаунт, клієнта, проєкт і воронку — ID передаються автоматично.");
+    expect(adAccountTabSource).toContain("Статус:");
+    expect(adAccountTabSource).toContain("sm:w-[14.5rem]");
+    expect(adAccountTabSource).toContain("sm:shrink-0");
+    expect(adAccountTabSource).not.toContain("lg:items-end");
+    expect(adAccountTabSource).not.toContain('className="space-y-1"');
+    expect(adAccountTabSource).not.toContain(">\n                        Статус\n                      </label>");
+  });
+
   it("uses a searchable combobox-first ad account binding flow while keeping technical setup secondary", () => {
     expect(source).toContain("+ Привʼязати рекламний акаунт");
     expect(source).toContain("Привʼязати рекламний акаунт");

@@ -723,17 +723,17 @@ export default function Bindings() {
                 title="Рекламні акаунти"
                 description="Керуйте привʼязкою рекламних акаунтів до клієнтів, проєктів і воронок."
               >
-                <div className="mb-4 flex flex-col gap-3 rounded-xl border border-border/70 bg-card/70 p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between">
-                  <p className="max-w-2xl text-sm text-muted-foreground">
+                <div className="mb-3 grid gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 sm:px-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                  <p className="text-sm leading-5 text-muted-foreground">
                     Оберіть акаунт, клієнта, проєкт і воронку — ID передаються автоматично.
                   </p>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                    <div className="space-y-1">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
                       <label
-                        className="text-xs font-medium text-muted-foreground"
+                        className="text-xs font-medium text-muted-foreground sm:whitespace-nowrap"
                         htmlFor="ad-account-status-filter"
                       >
-                        Статус
+                        Статус:
                       </label>
                       <Select
                         value={adAccountStatusFilter}
@@ -745,7 +745,7 @@ export default function Bindings() {
                       >
                         <SelectTrigger
                           id="ad-account-status-filter"
-                          className="h-9 w-full min-w-[13rem] bg-background sm:w-[13rem]"
+                          className="h-9 w-full bg-background sm:w-[14.5rem] sm:shrink-0"
                         >
                           <SelectValue placeholder="Статус" />
                         </SelectTrigger>
@@ -760,7 +760,7 @@ export default function Bindings() {
                     </div>
                     <Button
                       type="button"
-                      className="h-9"
+                      className="h-9 sm:shrink-0"
                       disabled={!session || !canManage}
                       onClick={() => {
                         setNormalAdForm(EMPTY_AD_FORM);
