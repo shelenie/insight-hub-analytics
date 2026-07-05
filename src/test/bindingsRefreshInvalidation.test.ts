@@ -30,7 +30,10 @@ describe("Bindings page ad account behavior", () => {
 
   it("uses a searchable combobox-first ad account binding flow while keeping technical setup secondary", () => {
     expect(source).toContain("+ Привʼязати рекламний акаунт");
-    expect(source).toContain("Нова привʼязка рекламного акаунта");
+    expect(source).toContain("Привʼязати рекламний акаунт");
+    expect(source).toContain("<Sheet");
+    expect(source).toContain("<SheetContent");
+    expect(source).toContain('side="right"');
     expect(source).toContain('role="combobox"');
     expect(source).toContain("CommandInput");
     expect(source).toContain("filterComboboxOptions");
@@ -41,10 +44,25 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain('label="Воронка"');
     expect(source).toContain("Для цього клієнта ще немає проєктів");
     expect(source).toContain("Для цього проєкту ще немає воронок");
-    expect(source).toContain("Технічне налаштування через ID");
+    expect(source).toContain("Advanced / Технічний режим: налаштування через ID");
     expect(source).toContain("<details");
   });
 
+  it("opens ad account binding in a sheet without rendering the form inline above the table", () => {
+    const tabStart = source.indexOf('<TabsContent value="ad-account"');
+    const tableStart = source.indexOf("<AdAccountsBusinessTable", tabStart);
+    const technicalStart = source.indexOf("<AdminBindingForm", tableStart);
+    const adAccountTabSource = source.slice(tabStart, technicalStart);
+
+    expect(adAccountTabSource).toContain("<Sheet");
+    expect(adAccountTabSource).toContain("<SheetContent");
+    expect(adAccountTabSource).toContain("setAdForm(EMPTY_AD_FORM)");
+    expect(adAccountTabSource).toContain("setAdFormOpen(true)");
+    expect(adAccountTabSource).toContain('clearFormFeedback("ad_account")');
+    expect(adAccountTabSource).toContain("<AdAccountsBusinessTable");
+    expect(adAccountTabSource).not.toContain("<h2");
+    expect(adAccountTabSource).not.toContain("mb-4 rounded-xl border border-primary/20");
+  });
 
   it("uses an auto-dismissing toast for normal ad account save success and clears the form", () => {
     expect(source).toContain("const EMPTY_AD_FORM");
