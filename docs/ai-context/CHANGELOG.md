@@ -10,7 +10,7 @@ Meaningful changes for Internal Analytics Workspace.
 
 ### Changed
 
-- Moved the clarified Data Bindings admin UX copy into the existing bilingual i18n dictionary so the updated tabs, descriptions, KPI helper text, and empty states render in both Ukrainian and English.
+- Completed the Data Bindings bilingual i18n pass by moving the remaining visible page states, ad-account workflow copy, technical-flow feedback, table labels, and mapping/Telegram health helper text into existing Ukrainian/English translations.
 - Clarified the Data Bindings manual/admin UX before AI-assisted mapping/autobinding: polished overview/source/project/mapping-review/health tab titles, descriptions, and empty states without backend, RPC, or RLS changes.
 - Polished the Data Bindings “Рекламні акаунти” section header by merging the title, description, status filter, and primary action into one compact admin header with a fixed-width status select.
 - Finished separating Data Bindings ad-account drawer and technical UUID feedback: normal drawer errors now stay inside the drawer and successful normal saves use toast only, while technical UUID success/error feedback stays inside the collapsed advanced block.

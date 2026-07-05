@@ -43,6 +43,7 @@ import {
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { toast } from "@/hooks/use-toast";
 import { useI18n } from "@/i18n/I18nProvider";
+import type { Lang, TranslationKey } from "@/i18n/translations";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 const ADS_SUBNAV_TRIGGER_CLASS =
@@ -91,53 +92,56 @@ type BindingsTab =
   | "mapping-review"
   | "health";
 
-const FRIENDLY_COLUMN_LABELS: Record<string, string> = {
-  ad_account_name: "Рекламний акаунт",
-  binding_method: "Метод",
-  binding_status: "Статус",
-  binding_type: "Тип звʼязку",
-  campaign: "Кампанія",
-  client: "Клієнт",
-  client_name: "Клієнт",
-  confidence: "Впевненість",
-  created_at: "Створено",
+const FRIENDLY_COLUMN_LABELS: Record<string, string | Record<Lang, string>> = {
+  ad_account_name: { uk: "Рекламний акаунт", en: "Ad account" },
+  binding_method: { uk: "Метод", en: "Method" },
+  binding_status: { uk: "Статус", en: "Status" },
+  binding_type: { uk: "Тип звʼязку", en: "Binding type" },
+  campaign: { uk: "Кампанія", en: "Campaign" },
+  client: { uk: "Клієнт", en: "Client" },
+  client_name: { uk: "Клієнт", en: "Client" },
+  confidence: { uk: "Впевненість", en: "Confidence" },
+  created_at: { uk: "Створено", en: "Created" },
   ctr: "CTR",
   cpc: "CPC",
   cpm: "CPM",
-  details: "Деталі",
-  external_account_id: "ID акаунта",
-  funnel: "Воронка",
-  funnel_name: "Воронка",
-  health_status: "Стан звʼязків",
-  impressions: "Покази",
-  mapping_status: "Мапінг",
-  platform: "Платформа",
-  project: "Проєкт",
-  project_name: "Проєкт",
-  proposed_client_name: "Запропонований клієнт",
-  proposed_funnel_name: "Запропонована воронка",
-  proposed_project_name: "Запропонований проєкт",
-  reach: "Охоплення",
-  reason: "Причина",
-  source_kind: "Тип джерела",
-  source_name: "Джерело",
-  spend: "Витрати",
-  status: "Статус",
-  updated_at: "Оновлено",
+  details: { uk: "Деталі", en: "Details" },
+  external_account_id: { uk: "ID акаунта", en: "Account ID" },
+  funnel: { uk: "Воронка", en: "Funnel" },
+  funnel_name: { uk: "Воронка", en: "Funnel" },
+  health_status: { uk: "Стан звʼязків", en: "Binding health" },
+  impressions: { uk: "Покази", en: "Impressions" },
+  mapping_status: { uk: "Мапінг", en: "Mapping" },
+  platform: { uk: "Платформа", en: "Platform" },
+  project: { uk: "Проєкт", en: "Project" },
+  project_name: { uk: "Проєкт", en: "Project" },
+  proposed_client_name: { uk: "Запропонований клієнт", en: "Proposed client" },
+  proposed_funnel_name: { uk: "Запропонована воронка", en: "Proposed funnel" },
+  proposed_project_name: {
+    uk: "Запропонований проєкт",
+    en: "Proposed project",
+  },
+  reach: { uk: "Охоплення", en: "Reach" },
+  reason: { uk: "Причина", en: "Reason" },
+  source_kind: { uk: "Тип джерела", en: "Source type" },
+  source_name: { uk: "Джерело", en: "Source" },
+  spend: { uk: "Витрати", en: "Spend" },
+  status: { uk: "Статус", en: "Status" },
+  updated_at: { uk: "Оновлено", en: "Updated" },
 };
 
-const FRIENDLY_VALUE_LABELS: Record<string, string> = {
-  active: "Активний",
-  archived: "Архівний",
-  paused: "Призупинений",
-  ad_account: "Рекламний акаунт",
-  confirmed: "Підтверджено",
-  healthy: "Все гаразд",
-  manual: "Вручну",
-  pending: "Очікує",
-  rejected: "Відхилено",
-  resolved_not_applied: "Не застосовано",
-  source: "Джерело даних",
+const FRIENDLY_VALUE_LABELS: Record<string, string | Record<Lang, string>> = {
+  active: { uk: "Активний", en: "Active" },
+  archived: { uk: "Архівний", en: "Archived" },
+  paused: { uk: "Призупинений", en: "Paused" },
+  ad_account: { uk: "Рекламний акаунт", en: "Ad account" },
+  confirmed: { uk: "Підтверджено", en: "Confirmed" },
+  healthy: { uk: "Все гаразд", en: "Healthy" },
+  manual: { uk: "Вручну", en: "Manual" },
+  pending: { uk: "Очікує", en: "Pending" },
+  rejected: { uk: "Відхилено", en: "Rejected" },
+  resolved_not_applied: { uk: "Не застосовано", en: "Not applied" },
+  source: { uk: "Джерело даних", en: "Data source" },
 };
 
 const FRIENDLY_PLATFORM_LABELS: Record<string, string> = {
@@ -212,7 +216,7 @@ function hasMatchingActiveAdBinding(rows: Row[], form: Record<string, string>) {
 }
 
 export default function Bindings() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { session } = useAuth();
   const queryClient = useQueryClient();
   const {
@@ -366,7 +370,7 @@ export default function Bindings() {
     const { data, error } = await fn();
     setPending("");
     if (error) {
-      const friendlyError = await getFriendlyBindingActionError(error);
+      const friendlyError = await getFriendlyBindingActionError(error, t);
       if (options?.feedbackHandler) {
         options.feedbackHandler({
           message: friendlyError,
@@ -390,7 +394,7 @@ export default function Bindings() {
 
     const response = data as BindingActionResponse | null;
     if (response?.ok === false) {
-      const friendlyError = getFriendlyBindingActionMessage(response);
+      const friendlyError = getFriendlyBindingActionMessage(response, t);
       if (options?.feedbackHandler) {
         options.feedbackHandler({
           message: friendlyError,
@@ -418,7 +422,7 @@ export default function Bindings() {
     if (options?.feedbackHandler) {
       if (options.successFeedback !== false) {
         options.feedbackHandler({
-          message: options.successMessage ?? "Дію успішно виконано.",
+          message: options.successMessage ?? t("bindingsActionSuccess"),
           technical:
             options.includeTechnicalDetails === false
               ? null
@@ -430,7 +434,7 @@ export default function Bindings() {
       setFormFeedback((current) => ({
         ...current,
         [options.bindingType!]: {
-          message: options.successMessage ?? "Дію успішно виконано.",
+          message: options.successMessage ?? t("bindingsActionSuccess"),
           technical:
             options.includeTechnicalDetails === false
               ? null
@@ -439,7 +443,7 @@ export default function Bindings() {
         },
       }));
     } else {
-      setMessage("Дію успішно виконано.");
+      setMessage(t("bindingsActionSuccess"));
     }
     await refreshBindings();
     return true;
@@ -495,8 +499,8 @@ export default function Bindings() {
     [query.data],
   );
   const adFormOptions = useMemo(
-    () => buildAdFormOptions(query.data, normalAdForm),
-    [normalAdForm, query.data],
+    () => buildAdFormOptions(query.data, normalAdForm, t, lang),
+    [lang, normalAdForm, query.data, t],
   );
   const filteredMappingReviewQueue = useMemo(
     () => filterRows(query.data?.mappingReviewQueue ?? []),
@@ -534,15 +538,20 @@ export default function Bindings() {
   const connectionStatusCards = buildConnectionStatusCards(
     query.data,
     visibleBindingCounts,
+    t,
+    lang,
   );
   const isRefreshing = query.isFetching;
-  const refreshLabel = isRefreshing ? "Оновлюємо…" : "Оновити";
+  const refreshLabel = isRefreshing
+    ? t("bindingsRefreshRefreshing")
+    : t("refresh");
   const headerActions =
     session && !query.isLoading && !query.error ? (
       <>
         {lastRefreshedAt ? (
           <p className="text-xs text-muted-foreground">
-            Оновлено: {formatDateTime(lastRefreshedAt.toISOString())}
+            {t("bindingsRefreshUpdated")}{" "}
+            {formatDateTime(lastRefreshedAt.toISOString())}
           </p>
         ) : null}
         <Button
@@ -572,28 +581,28 @@ export default function Bindings() {
         {!session ? (
           <SectionCard
             title={t("bindingsPageTitle")}
-            description="Потрібен вхід"
+            description={t("bindingsLoginRequiredTitle")}
           >
             <p className="text-sm text-muted-foreground">
-              Увійдіть, щоб переглянути звʼязки даних і чергу перевірки мапінгу.
+              {t("bindingsLoginRequiredMessage")}
             </p>
           </SectionCard>
         ) : query.isLoading ? (
           <SectionCard
             title={t("bindingsPageTitle")}
-            description="Завантаження"
+            description={t("bindingsLoadingTitle")}
           >
             <p className="text-sm text-muted-foreground">
-              Завантажуємо звʼязки робочого простору…
+              {t("bindingsLoadingMessage")}
             </p>
           </SectionCard>
         ) : query.error ? (
           <SectionCard
             title={t("bindingsPageTitle")}
-            description="Стан розділу"
+            description={t("bindingsSectionStatusTitle")}
           >
             <FriendlyError
-              message="Потрібне оновлення backend для цього розділу."
+              message={t("bindingsBackendUpdateRequired")}
               technical={query.error.message}
             />
           </SectionCard>
@@ -651,12 +660,12 @@ export default function Bindings() {
                 ) : null}
                 {!roleLoading && !canManage ? (
                   <p className="text-xs text-muted-foreground">
-                    У вас немає доступу до керування цим розділом.
+                    {t("bindingsNoManageAccess")}
                   </p>
                 ) : null}
                 {!roleLoading && roleError ? (
                   <p className="text-xs text-muted-foreground">
-                    Доступ тимчасово не підтягнувся. Дії вимкнені.
+                    {t("bindingsRoleUnavailable")}
                   </p>
                 ) : null}
               </div>
@@ -725,7 +734,7 @@ export default function Bindings() {
                         }),
                       {
                         bindingType: "source",
-                        successMessage: "Звʼязок джерела збережено.",
+                        successMessage: t("bindingsSourceSaved"),
                       },
                     )
                   }
@@ -750,7 +759,7 @@ export default function Bindings() {
                         className="text-xs font-medium text-muted-foreground sm:whitespace-nowrap"
                         htmlFor="ad-account-status-filter"
                       >
-                        Статус:
+                        {t("bindingsStatusLabel")}
                       </label>
                       <Select
                         value={adAccountStatusFilter}
@@ -764,14 +773,20 @@ export default function Bindings() {
                           id="ad-account-status-filter"
                           className="h-9 w-full bg-background sm:w-[14.5rem] sm:shrink-0"
                         >
-                          <SelectValue placeholder="Статус" />
+                          <SelectValue
+                            placeholder={t("bindingsStatusPlaceholder")}
+                          />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="active">Активні</SelectItem>
-                          <SelectItem value="archived">
-                            Архівні/призупинені
+                          <SelectItem value="active">
+                            {t("bindingsStatusActive")}
                           </SelectItem>
-                          <SelectItem value="all">Усі</SelectItem>
+                          <SelectItem value="archived">
+                            {t("bindingsStatusArchivedPaused")}
+                          </SelectItem>
+                          <SelectItem value="all">
+                            {t("bindingsStatusAll")}
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -787,7 +802,7 @@ export default function Bindings() {
                         setAdFormOpen(true);
                       }}
                     >
-                      + Привʼязати рекламний акаунт
+                      {t("bindingsCreateAdAccountButton")}
                     </Button>
                   </div>
                 </div>
@@ -806,12 +821,11 @@ export default function Bindings() {
                       <SheetHeader className="pr-8">
                         <SheetTitle>
                           {adFormMode === "edit"
-                            ? "Редагувати привʼязку"
-                            : "Привʼязати рекламний акаунт"}
+                            ? t("bindingsAdDrawerEditTitle")
+                            : t("bindingsAdDrawerCreateTitle")}
                         </SheetTitle>
                         <SheetDescription>
-                          Оберіть назви зі списків — технічні ID передаються у
-                          backend автоматично.
+                          {t("bindingsAdDrawerDescription")}
                         </SheetDescription>
                       </SheetHeader>
                       <AdAccountBindingCard
@@ -829,7 +843,10 @@ export default function Bindings() {
                         }
                         onCancel={() => setAdFormOpen(false)}
                         onSubmit={async () => {
-                          const validationError = validateAdForm(normalAdForm);
+                          const validationError = validateAdForm(
+                            normalAdForm,
+                            t,
+                          );
                           if (validationError)
                             return setAdFormError(validationError);
                           const existingActiveBinding =
@@ -852,8 +869,7 @@ export default function Bindings() {
                               ),
                             {
                               bindingType: "ad_account",
-                              successMessage:
-                                "Звʼязок рекламного акаунта збережено.",
+                              successMessage: t("bindingsAdSaved"),
                               includeTechnicalDetails: false,
                               feedbackHandler: setNormalAdFeedback,
                               successFeedback: false,
@@ -864,11 +880,11 @@ export default function Bindings() {
                             setAdFormOpen(false);
                             toast({
                               title: existingActiveBinding
-                                ? "Звʼязок оновлено"
-                                : "Звʼязок створено",
+                                ? t("bindingsToastUpdatedTitle")
+                                : t("bindingsToastCreatedTitle"),
                               description: existingActiveBinding
-                                ? "Існуючий active-звʼязок оновлено без створення дубля."
-                                : "Рекламний акаунт привʼязано до клієнта, проєкту і воронки.",
+                                ? t("bindingsToastUpdatedDescription")
+                                : t("bindingsToastCreatedDescription"),
                               className:
                                 "border-emerald-500/50 bg-emerald-50 text-emerald-950 shadow-xl dark:bg-emerald-950 dark:text-emerald-50",
                               duration: 5000,
@@ -919,8 +935,7 @@ export default function Bindings() {
                         {
                           bindingType: "ad_account",
                           feedbackHandler: setTechnicalAdFeedback,
-                          successMessage:
-                            "Звʼязок рекламного акаунта збережено. Якщо такий active-звʼязок уже існував, його оновлено без створення дубля.",
+                          successMessage: t("bindingsAdSavedIdempotent"),
                         },
                       )
                     }
@@ -1009,8 +1024,8 @@ export default function Bindings() {
                           }
                         >
                           {pending === "send-telegram"
-                            ? "Виконуємо…"
-                            : "Надіслати в Telegram"}
+                            ? t("bindingsRunning")
+                            : t("bindingsSendTelegram")}
                         </Button>
                         <Button
                           type="button"
@@ -1036,7 +1051,9 @@ export default function Bindings() {
                             )
                           }
                         >
-                          {pending === "approve" ? "Виконуємо…" : "Підтвердити"}
+                          {pending === "approve"
+                            ? t("bindingsRunning")
+                            : t("bindingsApprove")}
                         </Button>
                         <Button
                           type="button"
@@ -1062,7 +1079,9 @@ export default function Bindings() {
                             )
                           }
                         >
-                          {pending === "reject" ? "Виконуємо…" : "Відхилити"}
+                          {pending === "reject"
+                            ? t("bindingsRunning")
+                            : t("bindingsReject")}
                         </Button>
                       </div>
                     </div>
@@ -1077,11 +1096,8 @@ export default function Bindings() {
                 description={t("bindingsHealthDescription")}
               >
                 <KpiGrid cards={connectionStatusCards.production} />
-                <DeveloperDetails title="Деталі Telegram HITL">
-                  <p>
-                    Компактна діагностика Telegram-підтверджень без технічних
-                    ID.
-                  </p>
+                <DeveloperDetails title={t("bindingsTelegramDetailsTitle")}>
+                  <p>{t("bindingsTelegramDetailsDescription")}</p>
                   <CompactDiagnosticsGrid
                     cards={connectionStatusCards.telegramHitlDetails}
                   />
@@ -1116,13 +1132,19 @@ type InvokeError = {
   context?: unknown;
 };
 
-async function getFriendlyBindingActionError(error: InvokeError) {
+async function getFriendlyBindingActionError(
+  error: InvokeError,
+  t: (key: TranslationKey) => string,
+) {
   const payload = await readFunctionErrorPayload(error);
-  return getFriendlyBindingActionMessage({
-    ok: false,
-    error: payload?.error ?? error.message,
-    code: payload?.code,
-  });
+  return getFriendlyBindingActionMessage(
+    {
+      ok: false,
+      error: payload?.error ?? error.message,
+      code: payload?.code,
+    },
+    t,
+  );
 }
 
 async function readFunctionErrorPayload(
@@ -1139,20 +1161,23 @@ async function readFunctionErrorPayload(
     : null;
 }
 
-function getFriendlyBindingActionMessage(response: BindingActionResponse) {
+function getFriendlyBindingActionMessage(
+  response: BindingActionResponse,
+  t: (key: TranslationKey) => string,
+) {
   if (
     response.code === "permission_denied" ||
     response.code === "insufficient_role" ||
     response.error?.toLowerCase().includes("insufficient")
   ) {
-    return "Недостатньо прав для ручної прив’язки. Перевірте роль користувача або права робочого простору.";
+    return t("bindingsPermissionDenied");
   }
 
   if (
     response.code === "archived_target" ||
     response.error?.toLowerCase().includes("archiv")
   ) {
-    return "Не можна створити зв’язок для архівного клієнта, проєкту або воронки.";
+    return t("bindingsArchivedTargetError");
   }
 
   if (
@@ -1167,7 +1192,7 @@ function getFriendlyBindingActionMessage(response: BindingActionResponse) {
     response.code === "source_not_found" ||
     response.code === "source_workspace_mismatch"
   ) {
-    return "Перевірте ID рекламного акаунта, клієнта, проєкту і воронки.";
+    return t("bindingsInvalidTargetError");
   }
 
   if (
@@ -1175,10 +1200,10 @@ function getFriendlyBindingActionMessage(response: BindingActionResponse) {
     response.code === "rpc_not_wired" ||
     response.code === "access_check_failed"
   ) {
-    return "Backend не зміг зберегти звʼязок. Спробуйте ще раз або передайте деталі адміністратору.";
+    return t("bindingsBackendSaveError");
   }
 
-  return response.error || "Не вдалося виконати дію.";
+  return response.error || t("bindingsActionFailed");
 }
 
 function getBindingActionTechnicalDetails(
@@ -1270,27 +1295,28 @@ function AdAccountBindingCard({
   onCancel: () => void;
   onSubmit: () => void;
 }) {
+  const { t } = useI18n();
   const disabled = !session || !canManage || pending === "create-ad";
   return (
     <div className="mt-6 flex min-h-0 flex-1 flex-col">
       <div className="grid gap-3">
         <BindingSelect
-          label="Рекламний акаунт"
-          placeholder="Оберіть рекламний акаунт"
+          label={t("bindingsSelectAdAccountLabel")}
+          placeholder={t("bindingsSelectAdAccountPlaceholder")}
           value={form.ad_account_id}
           options={options.adAccounts}
-          emptyText="Рекламних акаунтів поки немає."
+          emptyText={t("bindingsSelectAdAccountEmpty")}
           disabled={disabled}
           onChange={(value) =>
             setForm((current) => ({ ...current, ad_account_id: value }))
           }
         />
         <BindingSelect
-          label="Клієнт"
-          placeholder="Оберіть клієнта"
+          label={t("bindingsSelectClientLabel")}
+          placeholder={t("bindingsSelectClientPlaceholder")}
           value={form.client_id}
           options={options.clients}
-          emptyText="Клієнтів поки немає."
+          emptyText={t("bindingsSelectClientEmpty")}
           disabled={disabled}
           onChange={(value) =>
             setForm((current) => ({
@@ -1302,8 +1328,8 @@ function AdAccountBindingCard({
           }
         />
         <BindingSelect
-          label="Проєкт"
-          placeholder="Оберіть проєкт"
+          label={t("bindingsSelectProjectLabel")}
+          placeholder={t("bindingsSelectProjectPlaceholder")}
           value={form.project_id}
           options={options.projects}
           emptyText={options.projectEmptyText}
@@ -1319,8 +1345,8 @@ function AdAccountBindingCard({
           }
         />
         <BindingSelect
-          label="Воронка"
-          placeholder="Оберіть воронку"
+          label={t("bindingsSelectFunnelLabel")}
+          placeholder={t("bindingsSelectFunnelPlaceholder")}
           value={form.funnel_id}
           options={options.funnels}
           emptyText={options.funnelEmptyText}
@@ -1339,10 +1365,12 @@ function AdAccountBindingCard({
       ) : null}
       <div className="mt-6 flex flex-wrap items-center gap-2">
         <Button type="button" disabled={disabled} onClick={onSubmit}>
-          {pending === "create-ad" ? "Зберігаємо…" : "Зберегти привʼязку"}
+          {pending === "create-ad"
+            ? t("bindingsSaveInProgress")
+            : t("bindingsSaveBinding")}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel}>
-          Скасувати
+          {t("bindingsCancel")}
         </Button>
       </div>
       <BindingFeedback feedback={feedback} />
@@ -1369,7 +1397,8 @@ function BindingSelect({
 }) {
   const [open, setOpen] = useState(false);
   const selectedOption = options.find((option) => option.value === value);
-  const searchPlaceholder = `Пошук: ${label.toLowerCase()}`;
+  const { t } = useI18n();
+  const searchPlaceholder = `${t("bindingsSearchPrefix")} ${label.toLowerCase()}`;
 
   return (
     <div className="space-y-1.5">
@@ -1481,10 +1510,11 @@ function AdAccountsBusinessTable({
   rows: Row[];
   onEdit: (row: Row) => void;
 }) {
+  const { t } = useI18n();
   if (rows.length === 0)
     return (
       <p className="text-sm text-muted-foreground">
-        Рекламні акаунти ще не привʼязані для вибраного фільтра.
+        {t("bindingsAdTableEmpty")}
       </p>
     );
   return (
@@ -1493,15 +1523,15 @@ function AdAccountsBusinessTable({
         <thead>
           <tr className="border-b border-border/70 text-muted-foreground">
             {[
-              "Акаунт",
-              "Платформа",
-              "Клієнт",
-              "Проєкт",
-              "Воронка",
-              "Мапінг",
-              "Статус",
-              "Оновлено",
-              "Дія",
+              t("bindingsColumnAccount"),
+              t("tablePlatform"),
+              t("bindingsSelectClientLabel"),
+              t("bindingsSelectProjectLabel"),
+              t("bindingsSelectFunnelLabel"),
+              t("tableMappingStatus"),
+              t("tableStatus"),
+              t("tableUpdatedAt"),
+              t("bindingsColumnAction"),
             ].map((h) => (
               <th key={h} className="px-3 py-2 font-medium">
                 {h}
@@ -1517,7 +1547,7 @@ function AdAccountsBusinessTable({
             >
               <td className="px-3 py-2">
                 <div className="font-medium text-foreground">
-                  {accountName(row)}
+                  {accountName(row, t)}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {asText(row.external_account_id) || "—"}
@@ -1552,7 +1582,7 @@ function AdAccountsBusinessTable({
                   className="h-8 text-xs"
                   onClick={() => onEdit(row)}
                 >
-                  Перепривʼязати
+                  {t("bindingsRebind")}
                 </Button>
               </td>
             </tr>
@@ -1584,18 +1614,16 @@ function AdminBindingForm({
 }) {
   const idField = type === "source" ? "source_id" : "ad_account_id";
   const pendingKey = type === "source" ? "create-source" : "create-ad";
+  const { t } = useI18n();
   const submitLabel =
-    type === "source"
-      ? "Зберегти звʼязок джерела"
-      : "Зберегти звʼязок рекламного акаунта";
+    type === "source" ? t("bindingsSaveSource") : t("bindingsSaveAdAccount");
   return (
     <details className="mt-6 rounded-md border border-dashed border-border/70 bg-muted/10 p-3 text-sm">
       <summary className="cursor-pointer text-sm font-medium text-muted-foreground">
-        Advanced / Технічний режим: налаштування через ID
+        {t("bindingsTechnicalSummary")}
       </summary>
       <p className="mt-2 text-xs text-muted-foreground">
-        Для адміністратора. Використовуйте тільки для ручної привʼязки, коли
-        точно знаєте ID.
+        {t("bindingsTechnicalHelp")}
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
         {[idField, "client_id", "project_id", "funnel_id"].map((field) => (
@@ -1618,7 +1646,7 @@ function AdminBindingForm({
           }
           onClick={onSubmit}
         >
-          {pending === pendingKey ? "Зберігаємо…" : submitLabel}
+          {pending === pendingKey ? t("bindingsSaveInProgress") : submitLabel}
         </Button>
       </div>
       <BindingFeedback feedback={feedback} />
@@ -1646,6 +1674,7 @@ function KnownColumnsTable({
 }
 
 function GenericTable({ rows, emptyText }: { rows: Row[]; emptyText: string }) {
+  const { t } = useI18n();
   if (rows.length === 0)
     return <p className="text-sm text-muted-foreground">{emptyText}</p>;
   const columns = Object.keys(rows[0] ?? {}).filter(
@@ -1654,7 +1683,7 @@ function GenericTable({ rows, emptyText }: { rows: Row[]; emptyText: string }) {
   if (columns.length === 0)
     return (
       <p className="text-sm text-muted-foreground">
-        Дані є, але немає полів для відображення.
+        {t("bindingsNoDisplayFields")}
       </p>
     );
   return <GenericDataTable rows={rows} columns={columns} />;
@@ -1667,6 +1696,7 @@ function GenericDataTable({
   rows: Row[];
   columns: string[];
 }) {
+  const { lang } = useI18n();
   return (
     <div className="overflow-x-auto rounded-md border border-border/60">
       <table className="min-w-full table-auto text-left text-sm">
@@ -1677,7 +1707,7 @@ function GenericDataTable({
                 key={column}
                 className={`px-3 py-2 font-medium ${isCompactColumn(column) ? "text-center" : ""}`}
               >
-                {friendlyLabel(column)}
+                {friendlyLabel(column, lang)}
               </th>
             ))}
           </tr>
@@ -1784,7 +1814,8 @@ function FormattedValue({
   value: string | number | boolean | null | undefined;
   column: string;
 }) {
-  const formatted = formatValue(value, column);
+  const { lang } = useI18n();
+  const formatted = formatValue(value, column, lang);
   if (formatted === "—")
     return <span className="text-muted-foreground">—</span>;
   if (STATUS_COLUMNS.has(column))
@@ -1810,17 +1841,19 @@ function buildAdAccountBindingOptions(data: BindingsData | undefined) {
 function buildAdFormOptions(
   data: BindingsData | undefined,
   form: Record<string, string>,
+  t: (key: TranslationKey) => string,
+  lang: Lang,
 ): AdFormOptions {
   const clients = filterRows(data?.clients ?? [])
     .map((row) => ({
       value: entityId(row, "client_id"),
-      label: entityName(row, "client"),
+      label: entityName(row, "client", t),
     }))
     .filter((option) => option.value);
   const projectsAll = filterRows(data?.projects ?? [])
     .map((row) => ({
       value: entityId(row, "project_id"),
-      label: entityName(row, "project"),
+      label: entityName(row, "project", t),
       clientId: asText(row.client_id),
     }))
     .filter((option) => option.value);
@@ -1830,7 +1863,7 @@ function buildAdFormOptions(
   const funnelsAll = filterRows(data?.funnels ?? [])
     .map((row) => ({
       value: entityId(row, "funnel_id"),
-      label: entityName(row, "funnel"),
+      label: entityName(row, "funnel", t),
       projectId: asText(row.project_id),
     }))
     .filter((option) => option.value);
@@ -1848,11 +1881,11 @@ function buildAdFormOptions(
             asText(row.external_account_id),
       );
       const hint = boundRow
-        ? `${formatStatus(getBindingStatus(boundRow))}: ${[boundRow.client_name, boundRow.project_name, boundRow.funnel_name].map(asText).filter(Boolean).join(" → ") || "привʼязка без назви"}`
-        : "Ще не привʼязано";
+        ? `${formatStatus(getBindingStatus(boundRow), lang)}: ${[boundRow.client_name, boundRow.project_name, boundRow.funnel_name].map(asText).filter(Boolean).join(" → ") || t("bindingsAdAlreadyBoundFallback")}`
+        : t("bindingsAdUnboundHint");
       return {
         value,
-        label: `${formatPlatform(asText(row.platform))} · ${accountName(row)} · ${asText(row.external_account_id) || value}`,
+        label: `${formatPlatform(asText(row.platform))} · ${accountName(row, t)} · ${asText(row.external_account_id) || value}`,
         description: hint,
       };
     })
@@ -1863,34 +1896,45 @@ function buildAdFormOptions(
     projects,
     funnels,
     projectEmptyText: form.client_id
-      ? "Для цього клієнта ще немає проєктів"
-      : "Спочатку оберіть клієнта",
+      ? t("bindingsProjectEmptyForClient")
+      : t("bindingsChooseClientFirst"),
     funnelEmptyText: form.project_id
-      ? "Для цього проєкту ще немає воронок"
-      : "Спочатку оберіть проєкт",
+      ? t("bindingsFunnelEmptyForProject")
+      : t("bindingsChooseProjectFirst"),
   };
 }
 
-function validateAdForm(form: Record<string, string>) {
-  if (!form.ad_account_id) return "Оберіть рекламний акаунт.";
-  if (!form.client_id) return "Оберіть клієнта.";
-  if (!form.project_id) return "Оберіть проєкт.";
-  if (!form.funnel_id) return "Оберіть воронку.";
+function validateAdForm(
+  form: Record<string, string>,
+  t: (key: TranslationKey) => string,
+) {
+  if (!form.ad_account_id) return t("bindingsValidationAdAccount");
+  if (!form.client_id) return t("bindingsValidationClient");
+  if (!form.project_id) return t("bindingsValidationProject");
+  if (!form.funnel_id) return t("bindingsValidationFunnel");
   return "";
 }
 
 function entityId(row: Row, preferredKey: string) {
   return asText(row[preferredKey]) || asText(row.id);
 }
-function entityName(row: Row, entity: "client" | "project" | "funnel") {
-  return asText(row.name) || asText(row[`${entity}_name`]) || `Без назви`;
+function entityName(
+  row: Row,
+  entity: "client" | "project" | "funnel",
+  t: (key: TranslationKey) => string,
+) {
+  return (
+    asText(row.name) ||
+    asText(row[`${entity}_name`]) ||
+    t("bindingsUnnamedEntity")
+  );
 }
-function accountName(row: Row) {
+function accountName(row: Row, t: (key: TranslationKey) => string) {
   return (
     asText(row.external_account_name) ||
     asText(row.ad_account_name) ||
     asText(row.name) ||
-    "Рекламний акаунт без назви"
+    t("bindingsUnnamedAdAccount")
   );
 }
 function asText(value: unknown) {
@@ -1904,6 +1948,8 @@ function buildConnectionStatusCards(
     adAccountBindings: number;
     mappingReviewQueue: number;
   },
+  t: (key: TranslationKey) => string,
+  lang: Lang,
 ) {
   const healthRows = data?.bindingHealth ?? [];
   const mappingRows = data?.mappingReviewHealth.rows ?? [];
@@ -1963,37 +2009,37 @@ function buildConnectionStatusCards(
   return {
     production: [
       {
-        title: "Мапінг на перевірці",
+        title: t("bindingsMappingInReviewTitle"),
         value: pendingMappingReviews,
-        description: "Звʼязки, які потребують ручного підтвердження.",
+        description: t("bindingsMappingInReviewDescription"),
       },
       {
-        title: "Очікують відповіді в Telegram",
+        title: t("bindingsTelegramPendingTitle"),
         value: pendingTelegramActions,
-        description: "Надіслані запити, які ще не оброблені.",
+        description: t("bindingsTelegramPendingDescription"),
       },
       {
-        title: "Помилок за 24 год",
+        title: t("bindingsErrors24hTitle"),
         value:
           metricFromRows(telegramRows, [
             "failed_messages_last_24h",
             "failed_messages_24h",
             "errors_last_24h",
           ]) ?? 0,
-        description: "Помилки Telegram-повідомлень за останню добу.",
+        description: t("bindingsErrors24hDescription"),
       },
       {
-        title: "Стан",
-        value: formatStatus(mappingStatus),
+        title: t("bindingsStatusCardTitle"),
+        value: formatStatus(mappingStatus, lang),
         description:
           telegramStatus.toLowerCase() === "healthy"
-            ? "Мапінг і Telegram-підтвердження працюють."
-            : `Telegram: ${formatStatus(telegramStatus)}`,
+            ? t("bindingsHealthyStatusDescription")
+            : `Telegram: ${formatStatus(telegramStatus, lang)}`,
       },
     ],
     telegramHitlDetails: [
       {
-        title: "Активні Telegram-чати",
+        title: t("bindingsActiveTelegramChats"),
         value:
           metricFromRows(telegramRows, [
             "active_chats",
@@ -2002,7 +2048,7 @@ function buildConnectionStatusCards(
           ]) ?? 0,
       },
       {
-        title: "Активні маршрути",
+        title: t("bindingsActiveRoutes"),
         value:
           metricFromRows(telegramRows, [
             "active_routes",
@@ -2011,7 +2057,7 @@ function buildConnectionStatusCards(
           ]) ?? 0,
       },
       {
-        title: "Повідомлень у черзі",
+        title: t("bindingsQueuedMessages"),
         value:
           metricFromRows(telegramRows, [
             "queued_messages",
@@ -2020,7 +2066,7 @@ function buildConnectionStatusCards(
           ]) ?? 0,
       },
       {
-        title: "Запитів на дію",
+        title: t("bindingsActionRequests"),
         value:
           metricFromRows(telegramRows, [
             "pending_action_requests",
@@ -2029,28 +2075,28 @@ function buildConnectionStatusCards(
           ]) ?? pendingTelegramActions,
       },
       {
-        title: "Підтверджувачі",
+        title: t("bindingsApprovers"),
         value: activeApprovers ?? 0,
         description:
           activeApprovers === 1
-            ? "Активний підтверджувач."
-            : "Активні підтверджувачі.",
+            ? t("bindingsApproverSingle")
+            : t("bindingsApproverPlural"),
       },
       {
-        title: "Стан Telegram HITL",
+        title: t("bindingsTelegramHitlStatus"),
         value: formatStatus(telegramStatus),
-        description: "Telegram-підтвердження доступні.",
+        description: t("bindingsTelegramAvailable"),
       },
     ],
     unavailableNotes: [
       data?.mappingReviewHealth.unavailableReason
-        ? "Дані стану мапінгу тимчасово недоступні."
+        ? t("bindingsMappingHealthUnavailable")
         : null,
       data?.mappingReviewActionsRecent.unavailableReason
-        ? "Останні дії мапінгу тимчасово недоступні."
+        ? t("bindingsRecentActionsUnavailable")
         : null,
       data?.telegramHitlHealth.unavailableReason
-        ? "Дані Telegram HITL тимчасово недоступні."
+        ? t("bindingsTelegramHealthUnavailable")
         : null,
     ].filter((note): note is string => Boolean(note)),
   };
@@ -2091,9 +2137,11 @@ function isHealthy(rows: Row[]) {
   return !status || status.toLowerCase() === "healthy";
 }
 
-function friendlyLabel(value: string) {
+function friendlyLabel(value: string, lang: Lang) {
+  const label = FRIENDLY_COLUMN_LABELS[value.toLowerCase()];
+  if (typeof label === "string") return label;
   return (
-    FRIENDLY_COLUMN_LABELS[value.toLowerCase()] ??
+    label?.[lang] ??
     value
       .split("_")
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
@@ -2104,12 +2152,13 @@ function friendlyLabel(value: string) {
 function formatValue(
   value: string | number | boolean | null | undefined,
   column: string,
+  lang: Lang,
 ) {
   if (value === null || value === undefined || value === "") return "—";
   if (column.endsWith("_at") || column.includes("date"))
     return formatDateTime(value);
   if (column === "platform") return formatPlatform(String(value));
-  if (STATUS_COLUMNS.has(column)) return formatStatus(String(value));
+  if (STATUS_COLUMNS.has(column)) return formatStatus(String(value), lang);
   if (column === "confidence") {
     const numeric = typeof value === "number" ? value : Number(value);
     if (!Number.isNaN(numeric))
@@ -2120,10 +2169,10 @@ function formatValue(
   return String(value);
 }
 
-function formatStatus(value: string) {
-  return (
-    FRIENDLY_VALUE_LABELS[value.toLowerCase()] ?? value.replaceAll("_", " ")
-  );
+function formatStatus(value: string, lang: Lang = "uk") {
+  const label = FRIENDLY_VALUE_LABELS[value.toLowerCase()];
+  if (typeof label === "string") return label;
+  return label?.[lang] ?? value.replaceAll("_", " ");
 }
 
 function formatPlatform(value: string) {

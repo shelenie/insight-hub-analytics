@@ -39,9 +39,10 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain("onValueChange={(value) =>");
     expect(source).toContain("setAdAccountStatusFilter(");
     expect(source).toContain('value="archived"');
-    expect(source).toContain("Архівні/призупинені");
+    expect(source).toContain('t("bindingsStatusArchivedPaused")');
+    expect(translationsSource).toContain("Archived/paused");
     expect(source).toContain('value="all"');
-    expect(source).toContain("Усі");
+    expect(source).toContain('t("bindingsStatusAll")');
     expect(source).not.toContain(
       'variant={adAccountStatusFilter === "active" ? "secondary" : "ghost"}',
     );
@@ -55,15 +56,19 @@ describe("Bindings page ad account behavior", () => {
     expect(adAccountTabSource).toContain("<SectionCard noPadding>");
     expect(adAccountTabSource).toContain('t("bindingsAdAccountsTitle")');
     expect(adAccountTabSource).toContain('t("bindingsAdAccountsDescription")');
-    expect(translationsSource).toContain('bindingsAdAccountsTitle: { uk: "Рекламні акаунти", en: "Ad accounts" }');
-    expect(translationsSource).toContain("Manage ad account bindings to clients, projects, and funnels. IDs are passed automatically.");
+    expect(translationsSource).toContain(
+      'bindingsAdAccountsTitle: { uk: "Рекламні акаунти", en: "Ad accounts" }',
+    );
+    expect(translationsSource).toContain(
+      "Manage ad account bindings to clients, projects, and funnels. IDs are passed automatically.",
+    );
     expect(adAccountTabSource).not.toContain(
       "Оберіть акаунт, клієнта, проєкт і воронку — ID передаються автоматично.",
     );
-    expect(adAccountTabSource).toContain("Статус:");
+    expect(adAccountTabSource).toContain('t("bindingsStatusLabel")');
     expect(adAccountTabSource).toContain("sm:w-[14.5rem]");
     expect(adAccountTabSource).toContain("lg:shrink-0");
-    expect(adAccountTabSource).toContain("+ Привʼязати рекламний акаунт");
+    expect(adAccountTabSource).toContain('t("bindingsCreateAdAccountButton")');
     expect(adAccountTabSource).not.toContain(
       "rounded-lg border border-border/60 bg-muted/20",
     );
@@ -93,24 +98,46 @@ describe("Bindings page ad account behavior", () => {
       "bindingsHealthDescription",
     ].forEach((key) => expect(source).toContain(`t("${key}")`));
 
-    expect(translationsSource).toContain('bindingsOverviewFilesTitle: { uk: "Файли й таблиці", en: "Files and tables" }');
-    expect(translationsSource).toContain("Google Sheets, CSV/import files, CRM exports, and external tables without ad accounts.");
-    expect(translationsSource).toContain("Non-ad sources: Google Sheets, CSV/import files, CRM exports, and external tables.");
-    expect(translationsSource).toContain("No files or tables are connected yet. Ad accounts are managed in a separate tab.");
-    expect(translationsSource).toContain('bindingsProjectBindingsTitle: { uk: "Привʼязки до проєктів", en: "Project bindings" }');
-    expect(translationsSource).toContain("All sources already connected to clients, projects, and funnels. This is a consolidated read-only view of existing bindings.");
-    expect(translationsSource).toContain('bindingsMappingReviewTitle: { uk: "Мапінг на перевірку", en: "Mapping review" }');
-    expect(translationsSource).toContain("Sources that the system could not confidently bind automatically will appear here.");
+    expect(translationsSource).toContain(
+      'bindingsOverviewFilesTitle: { uk: "Файли й таблиці", en: "Files and tables" }',
+    );
+    expect(translationsSource).toContain(
+      "Google Sheets, CSV/import files, CRM exports, and external tables without ad accounts.",
+    );
+    expect(translationsSource).toContain(
+      "Non-ad sources: Google Sheets, CSV/import files, CRM exports, and external tables.",
+    );
+    expect(translationsSource).toContain(
+      "No files or tables are connected yet. Ad accounts are managed in a separate tab.",
+    );
+    expect(translationsSource).toContain(
+      'bindingsProjectBindingsTitle: { uk: "Привʼязки до проєктів", en: "Project bindings" }',
+    );
+    expect(translationsSource).toContain(
+      "All sources already connected to clients, projects, and funnels. This is a consolidated read-only view of existing bindings.",
+    );
+    expect(translationsSource).toContain(
+      'bindingsMappingReviewTitle: { uk: "Мапінг на перевірку", en: "Mapping review" }',
+    );
+    expect(translationsSource).toContain(
+      "Sources that the system could not confidently bind automatically will appear here.",
+    );
     expect(translationsSource).toContain("No bindings require review.");
-    expect(translationsSource).toContain("When the system finds an unknown or unconfirmed source, it will appear here.");
-    expect(translationsSource).toContain('bindingsHealthTitle: { uk: "Стан мапінгу та підтверджень", en: "Mapping and confirmation status" }');
-    expect(translationsSource).toContain("Production status of the mapping queue, Telegram confirmations, and errors.");
+    expect(translationsSource).toContain(
+      "When the system finds an unknown or unconfirmed source, it will appear here.",
+    );
+    expect(translationsSource).toContain(
+      'bindingsHealthTitle: { uk: "Стан мапінгу та підтверджень", en: "Mapping and confirmation status" }',
+    );
+    expect(translationsSource).toContain(
+      "Production status of the mapping queue, Telegram confirmations, and errors.",
+    );
   });
 
   it("uses a searchable combobox-first ad account binding flow while keeping technical setup secondary", () => {
-    expect(source).toContain("+ Привʼязати рекламний акаунт");
-    expect(source).toContain("Привʼязати рекламний акаунт");
-    expect(source).toContain("Редагувати привʼязку");
+    expect(source).toContain('t("bindingsCreateAdAccountButton")');
+    expect(source).toContain('t("bindingsAdDrawerCreateTitle")');
+    expect(source).toContain('t("bindingsAdDrawerEditTitle")');
     expect(source).toContain("<Sheet");
     expect(source).toContain("<SheetContent");
     expect(source).toContain('side="right"');
@@ -118,15 +145,13 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain("CommandInput");
     expect(source).toContain("filterComboboxOptions");
     expect(source).toContain("comboboxSearchValue(option)");
-    expect(source).toContain('label="Рекламний акаунт"');
-    expect(source).toContain('label="Клієнт"');
-    expect(source).toContain('label="Проєкт"');
-    expect(source).toContain('label="Воронка"');
-    expect(source).toContain("Для цього клієнта ще немає проєктів");
-    expect(source).toContain("Для цього проєкту ще немає воронок");
-    expect(source).toContain(
-      "Advanced / Технічний режим: налаштування через ID",
-    );
+    expect(source).toContain('label={t("bindingsSelectAdAccountLabel")}');
+    expect(source).toContain('label={t("bindingsSelectClientLabel")}');
+    expect(source).toContain('label={t("bindingsSelectProjectLabel")}');
+    expect(source).toContain('label={t("bindingsSelectFunnelLabel")}');
+    expect(source).toContain('t("bindingsProjectEmptyForClient")');
+    expect(source).toContain('t("bindingsFunnelEmptyForProject")');
+    expect(source).toContain('t("bindingsTechnicalSummary")');
     expect(source).toContain("<details");
   });
 
@@ -157,14 +182,10 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain('import { toast } from "@/hooks/use-toast";');
     expect(source).toContain("toast({");
     expect(source).toContain("hasMatchingActiveAdBinding");
-    expect(source).toContain("Звʼязок оновлено");
-    expect(source).toContain(
-      "Існуючий active-звʼязок оновлено без створення дубля.",
-    );
-    expect(source).toContain("Звʼязок створено");
-    expect(source).toContain(
-      "Рекламний акаунт привʼязано до клієнта, проєкту і воронки.",
-    );
+    expect(source).toContain('t("bindingsToastUpdatedTitle")');
+    expect(source).toContain('t("bindingsToastUpdatedDescription")');
+    expect(source).toContain('t("bindingsToastCreatedTitle")');
+    expect(source).toContain('t("bindingsToastCreatedDescription")');
     expect(source).toContain("border-emerald-500/50 bg-emerald-50");
     expect(source).toContain("duration: 5000");
     expect(source).not.toContain("normalAdSuccess");
@@ -198,10 +219,8 @@ describe("Bindings page ad account behavior", () => {
   });
 
   it("shows visible manual binding feedback beside the technical setup form", () => {
-    expect(source).toContain(
-      "Звʼязок рекламного акаунта збережено. Якщо такий active-звʼязок уже існував, його оновлено без створення дубля.",
-    );
-    expect(source).toContain("Звʼязок джерела збережено.");
+    expect(source).toContain('t("bindingsAdSavedIdempotent")');
+    expect(source).toContain('t("bindingsSourceSaved")');
     expect(source).toContain('role="status"');
     expect(source).toContain('variant: "success"');
     expect(source).toContain("border-emerald-500/40");
