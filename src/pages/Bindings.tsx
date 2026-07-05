@@ -719,15 +719,17 @@ export default function Bindings() {
             </TabsContent>
 
             <TabsContent value="ad-account" className="mt-1">
-              <SectionCard
-                title="Рекламні акаунти"
-                description="Керуйте привʼязкою рекламних акаунтів до клієнтів, проєктів і воронок."
-              >
-                <div className="mb-3 grid gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 sm:px-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-                  <p className="text-sm leading-5 text-muted-foreground">
-                    Оберіть акаунт, клієнта, проєкт і воронку — ID передаються автоматично.
-                  </p>
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <SectionCard noPadding>
+                <div className="flex flex-col gap-3 border-b border-border/60 px-4 py-3.5 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0">
+                    <h2 className="text-[14px] font-semibold tracking-tight">
+                      Рекламні акаунти
+                    </h2>
+                    <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+                      Керуйте привʼязкою рекламних акаунтів до клієнтів, проєктів і воронок. ID передаються автоматично.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end lg:shrink-0">
                     <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
                       <label
                         className="text-xs font-medium text-muted-foreground sm:whitespace-nowrap"
@@ -774,136 +776,137 @@ export default function Bindings() {
                     </Button>
                   </div>
                 </div>
-
-                <Sheet
-                  open={adFormOpen}
-                  onOpenChange={(open) => {
-                    setAdFormOpen(open);
-                    if (!open) setAdFormError("");
-                  }}
-                >
-                  <SheetContent
-                    side="right"
-                    className="flex h-full w-full flex-col overflow-y-auto sm:max-w-xl"
+                <div className="p-4">
+                  <Sheet
+                    open={adFormOpen}
+                    onOpenChange={(open) => {
+                      setAdFormOpen(open);
+                      if (!open) setAdFormError("");
+                    }}
                   >
-                    <SheetHeader className="pr-8">
-                      <SheetTitle>
-                        {adFormMode === "edit"
-                          ? "Редагувати привʼязку"
-                          : "Привʼязати рекламний акаунт"}
-                      </SheetTitle>
-                      <SheetDescription>
-                        Оберіть назви зі списків — технічні ID передаються у
-                        backend автоматично.
-                      </SheetDescription>
-                    </SheetHeader>
-                    <AdAccountBindingCard
-                      canManage={canManage}
-                      session={Boolean(session)}
-                      pending={pending}
-                      form={normalAdForm}
-                      setForm={updateNormalAdForm}
-                      options={adFormOptions}
-                      error={adFormError}
-                      feedback={
-                        normalAdFeedback?.variant === "error"
-                          ? { ...normalAdFeedback, technical: null }
-                          : null
-                      }
-                      onCancel={() => setAdFormOpen(false)}
-                      onSubmit={async () => {
-                        const validationError = validateAdForm(normalAdForm);
-                        if (validationError)
-                          return setAdFormError(validationError);
-                        const existingActiveBinding = hasMatchingActiveAdBinding(
-                          query.data?.adAccountBindings ?? [],
-                          normalAdForm,
-                        );
-                        const saved = await runAction(
-                          "create-ad",
-                          () =>
-                            supabase.functions.invoke(
-                              "binding-create-or-update",
-                              {
-                                body: {
-                                  workspace_id: WORKSPACE_ID,
-                                  binding_type: "ad_account",
-                                  ...normalAdForm,
-                                },
-                              },
-                            ),
-                          {
-                            bindingType: "ad_account",
-                            successMessage:
-                              "Звʼязок рекламного акаунта збережено.",
-                            includeTechnicalDetails: false,
-                            feedbackHandler: setNormalAdFeedback,
-                            successFeedback: false,
-                          },
-                        );
-                        if (saved) {
-                          setNormalAdForm(EMPTY_AD_FORM);
-                          setAdFormOpen(false);
-                          toast({
-                            title: existingActiveBinding
-                              ? "Звʼязок оновлено"
-                              : "Звʼязок створено",
-                            description: existingActiveBinding
-                              ? "Існуючий active-звʼязок оновлено без створення дубля."
-                              : "Рекламний акаунт привʼязано до клієнта, проєкту і воронки.",
-                            className:
-                              "border-emerald-500/50 bg-emerald-50 text-emerald-950 shadow-xl dark:bg-emerald-950 dark:text-emerald-50",
-                            duration: 5000,
-                          });
+                    <SheetContent
+                      side="right"
+                      className="flex h-full w-full flex-col overflow-y-auto sm:max-w-xl"
+                    >
+                      <SheetHeader className="pr-8">
+                        <SheetTitle>
+                          {adFormMode === "edit"
+                            ? "Редагувати привʼязку"
+                            : "Привʼязати рекламний акаунт"}
+                        </SheetTitle>
+                        <SheetDescription>
+                          Оберіть назви зі списків — технічні ID передаються у
+                          backend автоматично.
+                        </SheetDescription>
+                      </SheetHeader>
+                      <AdAccountBindingCard
+                        canManage={canManage}
+                        session={Boolean(session)}
+                        pending={pending}
+                        form={normalAdForm}
+                        setForm={updateNormalAdForm}
+                        options={adFormOptions}
+                        error={adFormError}
+                        feedback={
+                          normalAdFeedback?.variant === "error"
+                            ? { ...normalAdFeedback, technical: null }
+                            : null
                         }
-                      }}
-                    />
-                  </SheetContent>
-                </Sheet>
+                        onCancel={() => setAdFormOpen(false)}
+                        onSubmit={async () => {
+                          const validationError = validateAdForm(normalAdForm);
+                          if (validationError)
+                            return setAdFormError(validationError);
+                          const existingActiveBinding = hasMatchingActiveAdBinding(
+                            query.data?.adAccountBindings ?? [],
+                            normalAdForm,
+                          );
+                          const saved = await runAction(
+                            "create-ad",
+                            () =>
+                              supabase.functions.invoke(
+                                "binding-create-or-update",
+                                {
+                                  body: {
+                                    workspace_id: WORKSPACE_ID,
+                                    binding_type: "ad_account",
+                                    ...normalAdForm,
+                                  },
+                                },
+                              ),
+                            {
+                              bindingType: "ad_account",
+                              successMessage:
+                                "Звʼязок рекламного акаунта збережено.",
+                              includeTechnicalDetails: false,
+                              feedbackHandler: setNormalAdFeedback,
+                              successFeedback: false,
+                            },
+                          );
+                          if (saved) {
+                            setNormalAdForm(EMPTY_AD_FORM);
+                            setAdFormOpen(false);
+                            toast({
+                              title: existingActiveBinding
+                                ? "Звʼязок оновлено"
+                                : "Звʼязок створено",
+                              description: existingActiveBinding
+                                ? "Існуючий active-звʼязок оновлено без створення дубля."
+                                : "Рекламний акаунт привʼязано до клієнта, проєкту і воронки.",
+                              className:
+                                "border-emerald-500/50 bg-emerald-50 text-emerald-950 shadow-xl dark:bg-emerald-950 dark:text-emerald-50",
+                              duration: 5000,
+                            });
+                          }
+                        }}
+                      />
+                    </SheetContent>
+                  </Sheet>
 
-                <AdAccountsBusinessTable
-                  rows={filteredAdAccountBindings}
-                  onEdit={(row) => {
-                    setAdFormError("");
-                    setNormalAdFeedback(null);
-                    setAdFormMode("edit");
-                    setNormalAdForm({
-                      ad_account_id: asText(row.ad_account_id ?? row.id),
-                      client_id: asText(row.client_id),
-                      project_id: asText(row.project_id),
-                      funnel_id: asText(row.funnel_id),
-                    });
-                    setAdFormOpen(true);
-                  }}
-                />
-                <AdminBindingForm
-                  type="ad_account"
-                  canManage={canManage}
-                  session={Boolean(session)}
-                  pending={pending}
-                  form={technicalAdForm}
-                  setForm={updateTechnicalAdForm}
-                  feedback={technicalAdFeedback}
-                  onSubmit={() =>
-                    runAction(
-                      "create-ad",
-                      () =>
-                        supabase.functions.invoke("binding-create-or-update", {
-                          body: {
-                            workspace_id: WORKSPACE_ID,
-                            binding_type: "ad_account",
-                            ...technicalAdForm,
-                          },
-                        }),
-                      {
-                        bindingType: "ad_account",
-                        feedbackHandler: setTechnicalAdFeedback,
-                        successMessage:
-                          "Звʼязок рекламного акаунта збережено. Якщо такий active-звʼязок уже існував, його оновлено без створення дубля.",
-                      },
-                    )
-                  }
-                />
+                  <AdAccountsBusinessTable
+                    rows={filteredAdAccountBindings}
+                    onEdit={(row) => {
+                      setAdFormError("");
+                      setNormalAdFeedback(null);
+                      setAdFormMode("edit");
+                      setNormalAdForm({
+                        ad_account_id: asText(row.ad_account_id ?? row.id),
+                        client_id: asText(row.client_id),
+                        project_id: asText(row.project_id),
+                        funnel_id: asText(row.funnel_id),
+                      });
+                      setAdFormOpen(true);
+                    }}
+                  />
+                  <AdminBindingForm
+                    type="ad_account"
+                    canManage={canManage}
+                    session={Boolean(session)}
+                    pending={pending}
+                    form={technicalAdForm}
+                    setForm={updateTechnicalAdForm}
+                    feedback={technicalAdFeedback}
+                    onSubmit={() =>
+                      runAction(
+                        "create-ad",
+                        () =>
+                          supabase.functions.invoke("binding-create-or-update", {
+                            body: {
+                              workspace_id: WORKSPACE_ID,
+                              binding_type: "ad_account",
+                              ...technicalAdForm,
+                            },
+                          }),
+                        {
+                          bindingType: "ad_account",
+                          feedbackHandler: setTechnicalAdFeedback,
+                          successMessage:
+                            "Звʼязок рекламного акаунта збережено. Якщо такий active-звʼязок уже існував, його оновлено без створення дубля.",
+                        },
+                      )
+                    }
+                  />
+                </div>
               </SectionCard>
             </TabsContent>
 

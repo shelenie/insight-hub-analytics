@@ -10,7 +10,7 @@ Meaningful changes for Internal Analytics Workspace.
 
 ### Changed
 
-- Polished the Data Bindings “Рекламні акаунти” toolbar into a compact helper/filter/action row with an inline status label and fixed-width status select to prevent option-change layout shift.
+- Polished the Data Bindings “Рекламні акаунти” section header by merging the title, description, status filter, and primary action into one compact admin header with a fixed-width status select.
 - Finished separating Data Bindings ad-account drawer and technical UUID feedback: normal drawer errors now stay inside the drawer and successful normal saves use toast only, while technical UUID success/error feedback stays inside the collapsed advanced block.
 - Polished the Data Bindings “Рекламні акаунти” drawer UX: separated normal drawer state from the advanced UUID form state, added create-vs-update success toast copy, made success toasts more visually distinct, switched the drawer title between create/edit modes, and shortened the table helper text.
 - Moved the normal Data Bindings ad-account binding form from inline page expansion into a right-side Sheet drawer so opening “+ Привʼязати рекламний акаунт” or “Перепривʼязати” no longer pushes the table down; kept the technical UUID mode collapsed below the table as a smaller advanced workflow.

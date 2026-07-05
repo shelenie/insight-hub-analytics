@@ -79,7 +79,7 @@ Do not add unrelated tools unless Olena explicitly confirms them.
 
 ## Verified Local Change — 2026-07-05 Ad Account Binding Admin UX
 
-Follow-up toolbar polish makes the Data Bindings “Рекламні акаунти” controls more compact: the helper text, inline status filter, and primary bind button now align as one row on desktop, stack cleanly on smaller screens, and the status select uses a fixed width sized for “Архівні/призупинені” so changing filter values does not move the button.
+Follow-up header polish merges the Data Bindings “Рекламні акаунти” title, description, inline status filter, and primary bind button into one compact admin header. The separate helper toolbar card is removed, the automatic-ID note is part of the description, and the status select keeps a fixed width sized for “Архівні/призупинені” so changing filter values does not move the button.
 
 Follow-up polish after the drawer migration separates normal drawer form and feedback state from the advanced UUID technical form and feedback state, so normal name-based saves no longer fill technical ID inputs or write success/error feedback into the advanced block. The drawer now distinguishes create and edit titles, detects whether the submitted active binding already existed before saving, and shows a clearer styled success toast for created vs updated bindings. The helper text above the ad account table is shortened for admin users while technical details remain confined to the collapsed advanced mode.
 
