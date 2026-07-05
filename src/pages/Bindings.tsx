@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw } from "lucide-react";
+import { Check, ChevronsUpDown, RefreshCw } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { useAuth } from "@/auth/AuthProvider";
@@ -15,6 +15,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
 import {
   DeveloperDetails,
   FriendlyError,
@@ -1219,37 +1233,84 @@ function BindingSelect({
   disabled: boolean;
   onChange: (value: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
+  const selectedOption = options.find((option) => option.value === value);
+  const searchPlaceholder = `Пошук: ${label.toLowerCase()}`;
+
   return (
     <div className="space-y-1.5">
       <label className="text-sm font-medium text-foreground">{label}</label>
-      <Select value={value} onValueChange={onChange} disabled={disabled}>
-        <SelectTrigger className="min-h-10 bg-background text-left">
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          {options.length ? (
-            options.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                <span className="block">{option.label}</span>
-                {option.description ? (
-                  <span className="block text-xs text-muted-foreground">
-                    {option.description}
-                  </span>
-                ) : null}
-              </SelectItem>
-            ))
-          ) : (
-            <SelectItem value="__empty" disabled>
-              {emptyText}
-            </SelectItem>
-          )}
-        </SelectContent>
-      </Select>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            disabled={disabled}
+            className="min-h-10 w-full justify-between bg-background text-left font-normal"
+          >
+            <span className="min-w-0 flex-1 truncate">
+              {selectedOption ? selectedOption.label : placeholder}
+            </span>
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-[min(92vw,520px)] p-0" align="start">
+          <Command filter={filterComboboxOptions}>
+            <CommandInput placeholder={searchPlaceholder} />
+            <CommandList>
+              <CommandEmpty>{emptyText}</CommandEmpty>
+              <CommandGroup>
+                {options.map((option) => (
+                  <CommandItem
+                    key={option.value}
+                    value={comboboxSearchValue(option)}
+                    onSelect={() => {
+                      onChange(option.value);
+                      setOpen(false);
+                    }}
+                    className="items-start gap-2"
+                  >
+                    <Check
+                      className={cn(
+                        "mt-0.5 h-4 w-4 shrink-0",
+                        option.value === value ? "opacity-100" : "opacity-0",
+                      )}
+                    />
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium">
+                        {option.label}
+                      </span>
+                      {option.description ? (
+                        <span className="block truncate text-xs text-muted-foreground">
+                          {option.description}
+                        </span>
+                      ) : null}
+                    </span>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
       {!options.length ? (
         <p className="text-xs text-muted-foreground">{emptyText}</p>
       ) : null}
     </div>
   );
+}
+
+function comboboxSearchValue(option: SelectOption) {
+  return [option.label, option.description, option.value]
+    .filter(Boolean)
+    .join(" ");
+}
+
+function filterComboboxOptions(value: string, search: string) {
+  if (!search.trim()) return 1;
+  return value.toLowerCase().includes(search.toLowerCase()) ? 1 : 0;
 }
 
 function BindingFeedback({

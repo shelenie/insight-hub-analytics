@@ -28,9 +28,13 @@ describe("Bindings page ad account behavior", () => {
     expect(source).not.toContain('variant={adAccountStatusFilter === "active" ? "secondary" : "ghost"}');
   });
 
-  it("uses a normal dropdown-first ad account binding flow while keeping technical setup secondary", () => {
+  it("uses a searchable combobox-first ad account binding flow while keeping technical setup secondary", () => {
     expect(source).toContain("+ Привʼязати рекламний акаунт");
     expect(source).toContain("Нова привʼязка рекламного акаунта");
+    expect(source).toContain('role="combobox"');
+    expect(source).toContain("CommandInput");
+    expect(source).toContain("filterComboboxOptions");
+    expect(source).toContain("comboboxSearchValue(option)");
     expect(source).toContain('label="Рекламний акаунт"');
     expect(source).toContain('label="Клієнт"');
     expect(source).toContain('label="Проєкт"');
