@@ -509,19 +509,29 @@ export default function Bindings() {
   };
   const overviewCards = [
     {
-      title: "Джерела файлів / таблиць",
+      title: "Файли й таблиці",
       value: visibleBindingCounts.sourceBindings,
-      description: "Google Sheets, імпорти або інші нерекламні джерела.",
+      description:
+        "Google Sheets, CSV/імпорти, CRM-експорти та зовнішні таблиці без рекламних акаунтів.",
     },
     {
-      title: "Привʼязані рекламні акаунти",
+      title: "Рекламні акаунти",
       value: visibleBindingCounts.adAccountBindings,
+      description:
+        "Окремі привʼязки ad accounts до клієнтів, проєктів і воронок.",
     },
     {
-      title: "Активні звʼязки з проєктами",
+      title: "Контекст проєктів",
       value: visibleBindingCounts.projectDataBindings,
+      description:
+        "Джерела, які вже мають клієнта, проєкт або воронку.",
     },
-    { title: "На перевірці", value: visibleBindingCounts.mappingReviewQueue },
+    {
+      title: "Очікують підтвердження",
+      value: visibleBindingCounts.mappingReviewQueue,
+      description:
+        "Невідомі або непідтверджені мапінги для ручної перевірки.",
+    },
   ];
   const connectionStatusCards = buildConnectionStatusCards(
     query.data,
@@ -648,13 +658,17 @@ export default function Bindings() {
             <TabsContent value="overview" className="mt-1">
               <SectionCard
                 title="Огляд звʼязків"
-                description="Короткий стан підключень"
+                description="Високорівневий статус усіх звʼязків даних: окремо файли/таблиці, рекламні акаунти та мапінги на підтвердження."
               >
                 <KpiGrid cards={overviewCards} />
                 <div className="mt-4 space-y-1 rounded-md border border-border/70 bg-muted/25 p-3 text-sm text-muted-foreground">
                   <p>
-                    Рекламні акаунти рахуються окремо від джерел файлів і
-                    таблиць.
+                    Файли й таблиці показують нерекламні джерела; рекламні
+                    акаунти рахуються окремими привʼязками.
+                  </p>
+                  <p>
+                    Елементи «на перевірці» — це мапінги, які ще очікують
+                    підтвердження адміністратора.
                   </p>
                   {filteredMappingReviewQueue.length === 0 ? (
                     <p>Немає звʼязків на перевірці.</p>
@@ -669,7 +683,7 @@ export default function Bindings() {
             <TabsContent value="source" className="mt-1">
               <SectionCard
                 title="Джерела даних"
-                description="Підключені джерела даних"
+                description="Нерекламні джерела: Google Sheets, CSV/імпортні файли, CRM-експорти та зовнішні таблиці."
               >
                 <KnownColumnsTable
                   rows={filteredSourceBindings}
@@ -687,7 +701,7 @@ export default function Bindings() {
                     "created_at",
                     "updated_at",
                   ]}
-                  emptyText="Джерела даних ще не привʼязані."
+                  emptyText="Поки немає підключених файлів або таблиць. Рекламні акаунти керуються в окремій вкладці."
                 />
                 <AdminBindingForm
                   type="source"
@@ -912,8 +926,8 @@ export default function Bindings() {
 
             <TabsContent value="project-data" className="mt-1">
               <SectionCard
-                title="Звʼязки з проєктами"
-                description="Звʼязки даних із проєктами"
+                title="Привʼязки до проєктів"
+                description="Усі джерела, які вже привʼязані до клієнтів, проєктів і воронок. Це консолідований read-only перегляд наявних звʼязків."
               >
                 <KnownColumnsTable
                   rows={filteredProjectDataBindings}
@@ -938,7 +952,7 @@ export default function Bindings() {
             <TabsContent value="mapping-review" className="mt-1">
               <SectionCard
                 title="Мапінг на перевірку"
-                description="Звʼязки, які потрібно перевірити"
+                description="Черга ручного підтвердження для невідомих або непевних мапінгів перед майбутнім AI-assisted autobinding."
               >
                 {filteredMappingReviewQueue.length === 0 ? (
                   <EmptyMappingReviewState />
@@ -1052,7 +1066,7 @@ export default function Bindings() {
             <TabsContent value="health" className="mt-1">
               <SectionCard
                 title="Стан мапінгу та підтверджень"
-                description="Виробничий стан мапінгу та Telegram-підтверджень"
+                description="Виробничий стан черги мапінгу, Telegram-підтверджень і помилок."
               >
                 <KpiGrid cards={connectionStatusCards.production} />
                 <DeveloperDetails title="Деталі Telegram HITL">
@@ -1747,7 +1761,7 @@ function EmptyMappingReviewState() {
         Немає звʼязків на перевірці.
       </p>
       <p className="mt-1 text-sm text-muted-foreground">
-        Коли система знайде невідомий або непідтверджений звʼязок, він зʼявиться
+        Коли система знайде невідоме або непідтверджене джерело, воно зʼявиться
         тут.
       </p>
     </div>

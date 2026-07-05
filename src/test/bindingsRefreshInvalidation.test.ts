@@ -46,6 +46,21 @@ describe("Bindings page ad account behavior", () => {
     expect(adAccountTabSource).not.toContain('className="space-y-1"');
     expect(adAccountTabSource).not.toContain(">\n                        Статус\n                      </label>");
   });
+  it("clarifies Data Bindings admin tab copy and empty states", () => {
+    expect(source).toContain("Високорівневий статус усіх звʼязків даних");
+    expect(source).toContain("Файли й таблиці");
+    expect(source).toContain("акаунти рахуються окремими привʼязками");
+    expect(source).toContain("підтвердження адміністратора");
+    expect(source).toContain("Нерекламні джерела: Google Sheets, CSV/імпортні файли, CRM-експорти та зовнішні таблиці.");
+    expect(source).toContain("Поки немає підключених файлів або таблиць. Рекламні акаунти керуються в окремій вкладці.");
+    expect(source).toContain("Привʼязки до проєктів");
+    expect(source).toContain("консолідований read-only перегляд наявних звʼязків");
+    expect(source).toContain("майбутнім AI-assisted autobinding");
+    expect(source).toContain("Немає звʼязків на перевірці.");
+    expect(source).toContain("Коли система знайде невідоме або непідтверджене джерело, воно зʼявиться");
+    expect(source).toContain("Виробничий стан черги мапінгу, Telegram-підтверджень і помилок.");
+  });
+
 
   it("uses a searchable combobox-first ad account binding flow while keeping technical setup secondary", () => {
     expect(source).toContain("+ Привʼязати рекламний акаунт");
