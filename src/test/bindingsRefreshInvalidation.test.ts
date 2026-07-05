@@ -46,13 +46,17 @@ describe("Bindings page ad account behavior", () => {
   });
 
 
-  it("keeps normal ad account save feedback short and clears the normal form", () => {
+  it("uses an auto-dismissing toast for normal ad account save success and clears the form", () => {
     expect(source).toContain("const EMPTY_AD_FORM");
     expect(source).toContain("includeTechnicalDetails: false");
     expect(source).toContain("setAdForm(EMPTY_AD_FORM)");
     expect(source).toContain("setAdFormOpen(false)");
-    expect(source).toContain("setNormalAdSuccess(");
+    expect(source).toContain('import { toast } from "@/hooks/use-toast";');
+    expect(source).toContain("toast({");
     expect(source).toContain("Звʼязок рекламного акаунта збережено.");
+    expect(source).toContain("duration: 4000");
+    expect(source).not.toContain("normalAdSuccess");
+    expect(source).not.toContain("setNormalAdSuccess");
     expect(source).toContain('feedback={adFormOpen ? null : formFeedback.ad_account}');
   });
 

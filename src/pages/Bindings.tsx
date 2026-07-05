@@ -34,6 +34,7 @@ import {
   FriendlyError,
 } from "@/components/common/DeveloperDetails";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
+import { toast } from "@/hooks/use-toast";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 const ADS_SUBNAV_TRIGGER_CLASS =
@@ -219,7 +220,6 @@ export default function Bindings() {
   const [adForm, setAdForm] = useState(EMPTY_AD_FORM);
   const [adFormOpen, setAdFormOpen] = useState(false);
   const [adFormError, setAdFormError] = useState("");
-  const [normalAdSuccess, setNormalAdSuccess] = useState("");
   const [adAccountStatusFilter, setAdAccountStatusFilter] =
     useState<AdAccountBindingStatusFilter>("active");
 
@@ -310,7 +310,6 @@ export default function Bindings() {
     update,
   ) => {
     clearFormFeedback("ad_account");
-    setNormalAdSuccess("");
     setAdFormError("");
     setAdForm(update);
   };
@@ -709,7 +708,6 @@ export default function Bindings() {
                       className="h-9"
                       disabled={!session || !canManage}
                       onClick={() => {
-                        setNormalAdSuccess("");
                         setAdFormOpen((open) => !open);
                       }}
                     >
@@ -737,7 +735,6 @@ export default function Bindings() {
                       const validationError = validateAdForm(adForm);
                       if (validationError)
                         return setAdFormError(validationError);
-                      setNormalAdSuccess("");
                       const saved = await runAction(
                         "create-ad",
                         () =>
@@ -761,23 +758,15 @@ export default function Bindings() {
                       if (saved) {
                         setAdForm(EMPTY_AD_FORM);
                         setAdFormOpen(false);
-                        setNormalAdSuccess(
-                          "Звʼязок рекламного акаунта збережено.",
-                        );
+                        toast({
+                          title: "Звʼязок рекламного акаунта збережено.",
+                          duration: 4000,
+                        });
                       }
                     }}
                   />
                 ) : null}
 
-                {normalAdSuccess ? (
-                  <div
-                    className="mb-4 rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm font-medium text-emerald-950 shadow-sm dark:text-emerald-100"
-                    role="status"
-                    aria-live="polite"
-                  >
-                    {normalAdSuccess}
-                  </div>
-                ) : null}
 
                 <AdAccountsBusinessTable
                   rows={filteredAdAccountBindings}

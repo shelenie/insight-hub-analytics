@@ -10,6 +10,7 @@ Meaningful changes for Internal Analytics Workspace.
 
 ### Changed
 
+- Replaced the normal Data Bindings ad-account success block with the existing app toast notification after successful save, while preserving form close/clear and table refresh behavior.
 - Improved the Data Bindings “Рекламні акаунти” tab into a production-oriented admin workflow with a compact status dropdown, business-focused table, primary “+ Привʼязати рекламний акаунт” action, and searchable name-based comboboxes for ad account/client/project/funnel selection, plus short normal-flow success feedback that closes and clears the form after save.
 - Kept the manual UUID-based ad account binding setup available as a collapsed secondary “Технічне налаштування через ID” block.
 
