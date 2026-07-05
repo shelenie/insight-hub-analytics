@@ -28,6 +28,25 @@ describe("Bindings page ad account behavior", () => {
     expect(source).not.toContain('variant={adAccountStatusFilter === "active" ? "secondary" : "ghost"}');
   });
 
+
+  it("merges the ad account section header and controls without a separate helper toolbar card", () => {
+    const tabStart = source.indexOf('<TabsContent value="ad-account"');
+    const tableStart = source.indexOf("<AdAccountsBusinessTable", tabStart);
+    const adAccountTabSource = source.slice(tabStart, tableStart);
+
+    expect(adAccountTabSource).toContain("<SectionCard noPadding>");
+    expect(adAccountTabSource).toContain("Рекламні акаунти");
+    expect(adAccountTabSource).toContain("Керуйте привʼязкою рекламних акаунтів до клієнтів, проєктів і воронок. ID передаються автоматично.");
+    expect(adAccountTabSource).not.toContain("Оберіть акаунт, клієнта, проєкт і воронку — ID передаються автоматично.");
+    expect(adAccountTabSource).toContain("Статус:");
+    expect(adAccountTabSource).toContain("sm:w-[14.5rem]");
+    expect(adAccountTabSource).toContain("lg:shrink-0");
+    expect(adAccountTabSource).toContain("+ Привʼязати рекламний акаунт");
+    expect(adAccountTabSource).not.toContain("rounded-lg border border-border/60 bg-muted/20");
+    expect(adAccountTabSource).not.toContain('className="space-y-1"');
+    expect(adAccountTabSource).not.toContain(">\n                        Статус\n                      </label>");
+  });
+
   it("uses a searchable combobox-first ad account binding flow while keeping technical setup secondary", () => {
     expect(source).toContain("+ Привʼязати рекламний акаунт");
     expect(source).toContain("Привʼязати рекламний акаунт");
@@ -62,7 +81,7 @@ describe("Bindings page ad account behavior", () => {
     expect(adAccountTabSource).toContain("setAdFormOpen(true)");
     expect(adAccountTabSource).toContain("setNormalAdFeedback(null)");
     expect(adAccountTabSource).toContain("<AdAccountsBusinessTable");
-    expect(adAccountTabSource).not.toContain("<h2");
+    expect(adAccountTabSource).toContain("Рекламні акаунти");
     expect(adAccountTabSource).not.toContain("mb-4 rounded-xl border border-primary/20");
   });
 
@@ -82,8 +101,7 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain("duration: 5000");
     expect(source).not.toContain("normalAdSuccess");
     expect(source).not.toContain("setNormalAdSuccess");
-    expect(source).toContain(`feedback={
-                        normalAdFeedback?.variant === "error"`);
+    expect(source).toContain("normalAdFeedback?.variant === \"error\"");
     expect(source).toContain('successFeedback: false');
     expect(source).not.toContain('feedback={formFeedback.ad_account}');
   });
