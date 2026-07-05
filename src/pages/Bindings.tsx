@@ -199,6 +199,17 @@ function matchesAdAccountBindingStatusFilter(
   return true;
 }
 
+function hasMatchingActiveAdBinding(rows: Row[], form: Record<string, string>) {
+  return rows.some(
+    (row) =>
+      isActiveBinding(row) &&
+      asText(row.ad_account_id) === form.ad_account_id &&
+      asText(row.client_id) === form.client_id &&
+      asText(row.project_id) === form.project_id &&
+      asText(row.funnel_id) === form.funnel_id,
+  );
+}
+
 export default function Bindings() {
   const { session } = useAuth();
   const queryClient = useQueryClient();
@@ -216,6 +227,10 @@ export default function Bindings() {
   const [formFeedback, setFormFeedback] = useState<
     Record<BindingType, BindingActionFeedback | null>
   >({ source: null, ad_account: null });
+  const [normalAdFeedback, setNormalAdFeedback] =
+    useState<BindingActionFeedback | null>(null);
+  const [technicalAdFeedback, setTechnicalAdFeedback] =
+    useState<BindingActionFeedback | null>(null);
   const [pending, setPending] = useState<string>("");
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const [sourceForm, setSourceForm] = useState({
@@ -224,8 +239,10 @@ export default function Bindings() {
     project_id: "",
     funnel_id: "",
   });
-  const [adForm, setAdForm] = useState(EMPTY_AD_FORM);
+  const [normalAdForm, setNormalAdForm] = useState(EMPTY_AD_FORM);
+  const [technicalAdForm, setTechnicalAdForm] = useState(EMPTY_AD_FORM);
   const [adFormOpen, setAdFormOpen] = useState(false);
+  const [adFormMode, setAdFormMode] = useState<"create" | "edit">("create");
   const [adFormError, setAdFormError] = useState("");
   const [adAccountStatusFilter, setAdAccountStatusFilter] =
     useState<AdAccountBindingStatusFilter>("active");
@@ -304,6 +321,8 @@ export default function Bindings() {
       return;
     }
     setFormFeedback({ source: null, ad_account: null });
+    setNormalAdFeedback(null);
+    setTechnicalAdFeedback(null);
   };
 
   const updateSourceForm: React.Dispatch<
@@ -313,12 +332,19 @@ export default function Bindings() {
     setSourceForm(update);
   };
 
-  const updateAdForm: React.Dispatch<React.SetStateAction<typeof adForm>> = (
-    update,
-  ) => {
-    clearFormFeedback("ad_account");
+  const updateNormalAdForm: React.Dispatch<
+    React.SetStateAction<typeof normalAdForm>
+  > = (update) => {
+    setNormalAdFeedback(null);
     setAdFormError("");
-    setAdForm(update);
+    setNormalAdForm(update);
+  };
+
+  const updateTechnicalAdForm: React.Dispatch<
+    React.SetStateAction<typeof technicalAdForm>
+  > = (update) => {
+    setTechnicalAdFeedback(null);
+    setTechnicalAdForm(update);
   };
 
   const runAction = async (
@@ -328,6 +354,8 @@ export default function Bindings() {
       bindingType?: BindingType;
       successMessage?: string;
       includeTechnicalDetails?: boolean;
+      feedbackHandler?: (feedback: BindingActionFeedback) => void;
+      successFeedback?: boolean;
     },
   ) => {
     setPending(key);
@@ -337,7 +365,13 @@ export default function Bindings() {
     setPending("");
     if (error) {
       const friendlyError = await getFriendlyBindingActionError(error);
-      if (options?.bindingType) {
+      if (options?.feedbackHandler) {
+        options.feedbackHandler({
+          message: friendlyError,
+          technical: null,
+          variant: "error",
+        });
+      } else if (options?.bindingType) {
         setFormFeedback((current) => ({
           ...current,
           [options.bindingType!]: {
@@ -355,7 +389,16 @@ export default function Bindings() {
     const response = data as BindingActionResponse | null;
     if (response?.ok === false) {
       const friendlyError = getFriendlyBindingActionMessage(response);
-      if (options?.bindingType) {
+      if (options?.feedbackHandler) {
+        options.feedbackHandler({
+          message: friendlyError,
+          technical:
+            options.includeTechnicalDetails === false
+              ? null
+              : getBindingActionTechnicalDetails(response),
+          variant: "error",
+        });
+      } else if (options?.bindingType) {
         setFormFeedback((current) => ({
           ...current,
           [options.bindingType!]: {
@@ -370,7 +413,18 @@ export default function Bindings() {
       return false;
     }
 
-    if (options?.bindingType) {
+    if (options?.feedbackHandler) {
+      if (options.successFeedback !== false) {
+        options.feedbackHandler({
+          message: options.successMessage ?? "Дію успішно виконано.",
+          technical:
+            options.includeTechnicalDetails === false
+              ? null
+              : getBindingActionTechnicalDetails(response),
+          variant: "success",
+        });
+      }
+    } else if (options?.bindingType) {
       setFormFeedback((current) => ({
         ...current,
         [options.bindingType!]: {
@@ -439,8 +493,8 @@ export default function Bindings() {
     [query.data],
   );
   const adFormOptions = useMemo(
-    () => buildAdFormOptions(query.data, adForm),
-    [adForm, query.data],
+    () => buildAdFormOptions(query.data, normalAdForm),
+    [normalAdForm, query.data],
   );
   const filteredMappingReviewQueue = useMemo(
     () => filterRows(query.data?.mappingReviewQueue ?? []),
@@ -671,8 +725,7 @@ export default function Bindings() {
               >
                 <div className="mb-4 flex flex-col gap-3 rounded-xl border border-border/70 bg-card/70 p-4 shadow-sm lg:flex-row lg:items-end lg:justify-between">
                   <p className="max-w-2xl text-sm text-muted-foreground">
-                    Основний workflow: оберіть рекламний акаунт і бізнес-контекст
-                    через пошук, без ручного копіювання UUID.
+                    Оберіть акаунт, клієнта, проєкт і воронку — ID передаються автоматично.
                   </p>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                     <div className="space-y-1">
@@ -710,9 +763,10 @@ export default function Bindings() {
                       className="h-9"
                       disabled={!session || !canManage}
                       onClick={() => {
-                        setAdForm(EMPTY_AD_FORM);
+                        setNormalAdForm(EMPTY_AD_FORM);
+                        setAdFormMode("create");
                         setAdFormError("");
-                        clearFormFeedback("ad_account");
+                        setNormalAdFeedback(null);
                         setAdFormOpen(true);
                       }}
                     >
@@ -733,7 +787,11 @@ export default function Bindings() {
                     className="flex h-full w-full flex-col overflow-y-auto sm:max-w-xl"
                   >
                     <SheetHeader className="pr-8">
-                      <SheetTitle>Привʼязати рекламний акаунт</SheetTitle>
+                      <SheetTitle>
+                        {adFormMode === "edit"
+                          ? "Редагувати привʼязку"
+                          : "Привʼязати рекламний акаунт"}
+                      </SheetTitle>
                       <SheetDescription>
                         Оберіть назви зі списків — технічні ID передаються у
                         backend автоматично.
@@ -743,20 +801,24 @@ export default function Bindings() {
                       canManage={canManage}
                       session={Boolean(session)}
                       pending={pending}
-                      form={adForm}
-                      setForm={updateAdForm}
+                      form={normalAdForm}
+                      setForm={updateNormalAdForm}
                       options={adFormOptions}
                       error={adFormError}
                       feedback={
-                        formFeedback.ad_account?.variant === "error"
-                          ? { ...formFeedback.ad_account, technical: null }
+                        normalAdFeedback?.variant === "error"
+                          ? { ...normalAdFeedback, technical: null }
                           : null
                       }
                       onCancel={() => setAdFormOpen(false)}
                       onSubmit={async () => {
-                        const validationError = validateAdForm(adForm);
+                        const validationError = validateAdForm(normalAdForm);
                         if (validationError)
                           return setAdFormError(validationError);
+                        const existingActiveBinding = hasMatchingActiveAdBinding(
+                          query.data?.adAccountBindings ?? [],
+                          normalAdForm,
+                        );
                         const saved = await runAction(
                           "create-ad",
                           () =>
@@ -766,7 +828,7 @@ export default function Bindings() {
                                 body: {
                                   workspace_id: WORKSPACE_ID,
                                   binding_type: "ad_account",
-                                  ...adForm,
+                                  ...normalAdForm,
                                 },
                               },
                             ),
@@ -775,14 +837,23 @@ export default function Bindings() {
                             successMessage:
                               "Звʼязок рекламного акаунта збережено.",
                             includeTechnicalDetails: false,
+                            feedbackHandler: setNormalAdFeedback,
+                            successFeedback: false,
                           },
                         );
                         if (saved) {
-                          setAdForm(EMPTY_AD_FORM);
+                          setNormalAdForm(EMPTY_AD_FORM);
                           setAdFormOpen(false);
                           toast({
-                            title: "Звʼязок рекламного акаунта збережено.",
-                            duration: 4000,
+                            title: existingActiveBinding
+                              ? "Звʼязок оновлено"
+                              : "Звʼязок створено",
+                            description: existingActiveBinding
+                              ? "Існуючий active-звʼязок оновлено без створення дубля."
+                              : "Рекламний акаунт привʼязано до клієнта, проєкту і воронки.",
+                            className:
+                              "border-emerald-500/50 bg-emerald-50 text-emerald-950 shadow-xl dark:bg-emerald-950 dark:text-emerald-50",
+                            duration: 5000,
                           });
                         }
                       }}
@@ -794,8 +865,9 @@ export default function Bindings() {
                   rows={filteredAdAccountBindings}
                   onEdit={(row) => {
                     setAdFormError("");
-                    clearFormFeedback("ad_account");
-                    setAdForm({
+                    setNormalAdFeedback(null);
+                    setAdFormMode("edit");
+                    setNormalAdForm({
                       ad_account_id: asText(row.ad_account_id ?? row.id),
                       client_id: asText(row.client_id),
                       project_id: asText(row.project_id),
@@ -809,9 +881,9 @@ export default function Bindings() {
                   canManage={canManage}
                   session={Boolean(session)}
                   pending={pending}
-                  form={adForm}
-                  setForm={updateAdForm}
-                  feedback={adFormOpen ? null : formFeedback.ad_account}
+                  form={technicalAdForm}
+                  setForm={updateTechnicalAdForm}
+                  feedback={technicalAdFeedback}
                   onSubmit={() =>
                     runAction(
                       "create-ad",
@@ -820,11 +892,12 @@ export default function Bindings() {
                           body: {
                             workspace_id: WORKSPACE_ID,
                             binding_type: "ad_account",
-                            ...adForm,
+                            ...technicalAdForm,
                           },
                         }),
                       {
                         bindingType: "ad_account",
+                        feedbackHandler: setTechnicalAdFeedback,
                         successMessage:
                           "Звʼязок рекламного акаунта збережено. Якщо такий active-звʼязок уже існував, його оновлено без створення дубля.",
                       },
