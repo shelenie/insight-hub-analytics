@@ -28,7 +28,10 @@ type BindingsData = {
   telegramHitlHealth: OptionalViewData;
 };
 type BindingType = "source" | "ad_account";
+type BindingActionFeedback = { message: string; technical: BindingActionTechnicalDetails | null; variant: "success" | "error" };
+type BindingActionTechnicalDetails = { rpc?: string; action?: string; binding_id?: string; result?: unknown };
 type AdAccountBindingStatusFilter = "active" | "archived" | "all";
+type BindingsTab = "overview" | "source" | "ad-account" | "project-data" | "mapping-review" | "health";
 
 const FRIENDLY_COLUMN_LABELS: Record<string, string> = {
   ad_account_name: "Рекламний акаунт",
@@ -122,6 +125,8 @@ export default function Bindings() {
   const { capabilities, isLoading: roleLoading, error: roleError } = useWorkspaceRole(WORKSPACE_ID);
   const canManage = !roleLoading && (capabilities.can_manage_bindings || capabilities.can_manage_mapping_review);
   const [message, setMessage] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<BindingsTab>("overview");
+  const [formFeedback, setFormFeedback] = useState<Record<BindingType, BindingActionFeedback | null>>({ source: null, ad_account: null });
   const [pending, setPending] = useState<string>("");
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const [sourceForm, setSourceForm] = useState({ source_id: "", client_id: "", project_id: "", funnel_id: "" });
@@ -164,23 +169,63 @@ export default function Bindings() {
     },
   });
 
-  const runAction = async (key: string, fn: () => Promise<{ data: unknown; error: InvokeError | null }>) => {
+  const clearFormFeedback = (bindingType?: BindingType) => {
+    if (bindingType) {
+      setFormFeedback((current) => ({ ...current, [bindingType]: null }));
+      return;
+    }
+    setFormFeedback({ source: null, ad_account: null });
+  };
+
+  const updateSourceForm: React.Dispatch<React.SetStateAction<typeof sourceForm>> = (update) => {
+    clearFormFeedback("source");
+    setSourceForm(update);
+  };
+
+  const updateAdForm: React.Dispatch<React.SetStateAction<typeof adForm>> = (update) => {
+    clearFormFeedback("ad_account");
+    setAdForm(update);
+  };
+
+  const runAction = async (key: string, fn: () => Promise<{ data: unknown; error: InvokeError | null }>, options?: { bindingType?: BindingType; successMessage?: string }) => {
     setPending(key);
     setMessage("");
+    if (options?.bindingType) clearFormFeedback(options.bindingType);
     const { data, error } = await fn();
     setPending("");
     if (error) {
-      setMessage(await getFriendlyBindingActionError(error));
+      const friendlyError = await getFriendlyBindingActionError(error);
+      if (options?.bindingType) {
+        setFormFeedback((current) => ({ ...current, [options.bindingType!]: { message: friendlyError, technical: null, variant: "error" } }));
+      } else {
+        setMessage(friendlyError);
+      }
       return;
     }
 
     const response = data as BindingActionResponse | null;
     if (response?.ok === false) {
-      setMessage(getFriendlyBindingActionMessage(response));
+      const friendlyError = getFriendlyBindingActionMessage(response);
+      if (options?.bindingType) {
+        setFormFeedback((current) => ({ ...current, [options.bindingType!]: { message: friendlyError, technical: getBindingActionTechnicalDetails(response), variant: "error" } }));
+      } else {
+        setMessage(friendlyError);
+      }
       return;
     }
 
-    setMessage("Дію успішно виконано.");
+    if (options?.bindingType) {
+      setFormFeedback((current) => ({
+        ...current,
+        [options.bindingType!]: {
+          message: options.successMessage ?? "Дію успішно виконано.",
+          technical: getBindingActionTechnicalDetails(response),
+          variant: "success",
+        },
+      }));
+    } else {
+      setMessage("Дію успішно виконано.");
+    }
     await refreshBindings();
   };
 
@@ -195,8 +240,14 @@ export default function Bindings() {
   };
 
   const handleRefresh = async () => {
+    clearFormFeedback();
     await refreshBindings();
     setLastRefreshedAt(new Date());
+  };
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value as BindingsTab);
+    clearFormFeedback();
   };
 
   const filteredSourceBindings = useMemo(() => filterRows(query.data?.sourceBindings ?? []), [query.data?.sourceBindings]);
@@ -248,7 +299,7 @@ export default function Bindings() {
             <FriendlyError message="Потрібне оновлення backend для цього розділу." technical={query.error.message} />
           </SectionCard>
         ) : (
-          <Tabs defaultValue="overview" className="space-y-4">
+          <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
             <div className="overflow-x-auto pb-1">
               <TabsList className="inline-flex h-auto min-w-full justify-start gap-2 rounded-xl border border-border/60 bg-card/70 p-1.5 shadow-sm">
                 <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="overview">Огляд</TabsTrigger>
@@ -282,7 +333,7 @@ export default function Bindings() {
             <TabsContent value="source" className="mt-1">
               <SectionCard title="Джерела даних" description="Підключені джерела даних">
                 <KnownColumnsTable rows={filteredSourceBindings} columns={["source_name", "source_kind", "platform", "client_name", "project_name", "funnel_name", "mapping_status", "binding_status", "confidence", "binding_method", "created_at", "updated_at"]} emptyText="Джерела даних ще не привʼязані." />
-                <AdminBindingForm type="source" canManage={canManage} session={Boolean(session)} pending={pending} form={sourceForm} setForm={setSourceForm} onSubmit={() => runAction("create-source", () => supabase.functions.invoke("binding-create-or-update", { body: { workspace_id: WORKSPACE_ID, binding_type: "source", ...sourceForm } }))} />
+                <AdminBindingForm type="source" canManage={canManage} session={Boolean(session)} pending={pending} form={sourceForm} setForm={updateSourceForm} feedback={formFeedback.source} onSubmit={() => runAction("create-source", () => supabase.functions.invoke("binding-create-or-update", { body: { workspace_id: WORKSPACE_ID, binding_type: "source", ...sourceForm } }), { bindingType: "source", successMessage: "Звʼязок джерела збережено." })} />
               </SectionCard>
             </TabsContent>
 
@@ -299,7 +350,7 @@ export default function Bindings() {
                   </div>
                 </div>
                 <KnownColumnsTable rows={filteredAdAccountBindings} columns={["external_account_id", "platform", "client_name", "project_name", "funnel_name", "mapping_status", "binding_status", "updated_at"]} emptyText="Рекламні акаунти ще не привʼязані для вибраного фільтра." />
-                <AdminBindingForm type="ad_account" canManage={canManage} session={Boolean(session)} pending={pending} form={adForm} setForm={setAdForm} onSubmit={() => runAction("create-ad", () => supabase.functions.invoke("binding-create-or-update", { body: { workspace_id: WORKSPACE_ID, binding_type: "ad_account", ...adForm } }))} />
+                <AdminBindingForm type="ad_account" canManage={canManage} session={Boolean(session)} pending={pending} form={adForm} setForm={updateAdForm} feedback={formFeedback.ad_account} onSubmit={() => runAction("create-ad", () => supabase.functions.invoke("binding-create-or-update", { body: { workspace_id: WORKSPACE_ID, binding_type: "ad_account", ...adForm } }), { bindingType: "ad_account", successMessage: "Звʼязок рекламного акаунта збережено. Якщо такий active-звʼязок уже існував, його оновлено без створення дубля." })} />
               </SectionCard>
             </TabsContent>
 
@@ -354,6 +405,10 @@ type BindingActionResponse = {
   ok?: boolean;
   error?: string;
   code?: string;
+  rpc?: string;
+  action?: string;
+  binding_id?: string;
+  result?: unknown;
 };
 type InvokeError = {
   message?: string;
@@ -387,11 +442,29 @@ function getFriendlyBindingActionMessage(response: BindingActionResponse) {
     return "Не можна створити зв’язок для архівного клієнта, проєкту або воронки.";
   }
 
-  if (response.code === "invalid_payload" || response.code === "target_not_found" || response.code === "target_workspace_mismatch" || response.code === "target_lookup_failed") {
+  if (response.code === "invalid_payload" || response.code === "target_not_found" || response.code === "target_workspace_mismatch" || response.code === "target_lookup_failed" || response.code === "ad_account_not_found" || response.code === "ad_account_workspace_mismatch" || response.code === "ad_account_lookup_failed" || response.code === "ad_account_platform_missing" || response.code === "source_not_found" || response.code === "source_workspace_mismatch") {
     return "Перевірте ID рекламного акаунта, клієнта, проєкту і воронки.";
   }
 
+  if (response.code === "rpc_failed" || response.code === "rpc_not_wired" || response.code === "access_check_failed") {
+    return "Backend не зміг зберегти звʼязок. Спробуйте ще раз або передайте деталі адміністратору.";
+  }
+
   return response.error || "Не вдалося виконати дію.";
+}
+
+function getBindingActionTechnicalDetails(response: BindingActionResponse | null): BindingActionTechnicalDetails | null {
+  if (!response) return null;
+  const resultObject = response.result && typeof response.result === "object" && !Array.isArray(response.result) ? response.result as Record<string, unknown> : null;
+  const resultString = typeof response.result === "string" && response.result.trim() ? response.result.trim() : null;
+  const bindingId = response.binding_id ?? (typeof resultObject?.id === "string" ? resultObject.id : null) ?? (typeof resultObject?.binding_id === "string" ? resultObject.binding_id : null) ?? resultString;
+  if (!response.rpc && !response.action && !bindingId && response.result === undefined) return null;
+  return {
+    rpc: response.rpc,
+    action: response.action,
+    binding_id: bindingId ?? undefined,
+    result: response.result,
+  };
 }
 
 const getBindingId = (row: Row) => String(row.binding_id ?? row.id ?? "");
@@ -403,7 +476,7 @@ async function readOptionalView(viewName: string): Promise<OptionalViewData> {
   return { rows: (result.data ?? []) as Row[], unavailableReason: null };
 }
 
-function AdminBindingForm({ type, canManage, session, pending, form, setForm, onSubmit }: { type: BindingType; canManage: boolean; session: boolean; pending: string; form: Record<string, string>; setForm: React.Dispatch<React.SetStateAction<Record<string, string>>>; onSubmit: () => void }) {
+function AdminBindingForm({ type, canManage, session, pending, form, setForm, feedback, onSubmit }: { type: BindingType; canManage: boolean; session: boolean; pending: string; form: Record<string, string>; setForm: React.Dispatch<React.SetStateAction<Record<string, string>>>; feedback: BindingActionFeedback | null; onSubmit: () => void }) {
   const idField = type === "source" ? "source_id" : "ad_account_id";
   const pendingKey = type === "source" ? "create-source" : "create-ad";
   const submitLabel = type === "source" ? "Зберегти звʼязок джерела" : "Зберегти звʼязок рекламного акаунта";
@@ -417,6 +490,17 @@ function AdminBindingForm({ type, canManage, session, pending, form, setForm, on
         ))}
         <Button disabled={!session || !canManage || !form[idField] || pending === pendingKey} onClick={onSubmit}>{pending === pendingKey ? "Зберігаємо…" : submitLabel}</Button>
       </div>
+      {feedback ? (
+        <div className={`mt-3 rounded-md border p-3 text-sm shadow-sm ${feedback.variant === "success" ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-950 dark:text-emerald-100" : "border-destructive/40 bg-destructive/10 text-destructive"}`} role="status" aria-live="polite">
+          <p className="font-medium">{feedback.message}</p>
+          {feedback.technical ? (
+            <details className="mt-2 rounded border border-border/60 bg-muted/25 p-2 text-xs text-muted-foreground">
+              <summary className="cursor-pointer font-medium">Technical details</summary>
+              <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words">{JSON.stringify(feedback.technical, null, 2)}</pre>
+            </details>
+          ) : null}
+        </div>
+      ) : null}
     </details>
   );
 }

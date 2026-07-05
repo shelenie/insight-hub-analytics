@@ -8,6 +8,19 @@ const migration = readFileSync(
 );
 
 describe("ad account binding idempotency migration", () => {
+  it("checks for duplicate active bindings before replacing the function", () => {
+    const preflightStart = migration.indexOf("do $$");
+    const dropStart = migration.indexOf("drop function if exists public.bind_ad_account_to_scope");
+    const createStart = migration.indexOf("create function public.bind_ad_account_to_scope");
+
+    expect(preflightStart).toBeGreaterThan(-1);
+    expect(dropStart).toBeGreaterThan(preflightStart);
+    expect(createStart).toBeGreaterThan(dropStart);
+    expect(migration).toContain("Duplicate active ad_account_bindings exist");
+    expect(migration).not.toContain("cascade");
+    expect(migration).not.toContain("create or replace function public.bind_ad_account_to_scope");
+  });
+
   it("updates and returns an existing active binding before inserting", () => {
     const updateStart = migration.indexOf("update public.ad_account_bindings");
     const insertStart = migration.indexOf("insert into public.ad_account_bindings");
@@ -59,5 +72,13 @@ describe("ad account binding idempotency migration", () => {
     expect(migration).toContain("create unique index if not exists ad_account_bindings_one_active_per_scope_uidx");
     expect(migration).toContain("(workspace_id, ad_account_id, client_id, project_id, funnel_id) nulls not distinct");
     expect(migration).toContain("where binding_status = 'active'");
+  });
+
+  it("keeps function execution limited to the service role after replacement", () => {
+    expect(migration).toContain("revoke execute on function public.bind_ad_account_to_scope");
+    expect(migration).toContain("from public, anon, authenticated");
+    expect(migration).toContain("grant execute on function public.bind_ad_account_to_scope");
+    expect(migration).toContain("to service_role");
+    expect(migration).toContain("notify pgrst, 'reload schema'");
   });
 });

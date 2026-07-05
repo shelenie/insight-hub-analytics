@@ -5,9 +5,44 @@
 -- - Do not use inactive.
 -- - This migration is additive/reversible and does not delete or archive production data.
 -- - If duplicate active rows already exist for the natural active-binding key, the migration
---   fails before adding the unique guard so an operator can archive duplicates explicitly.
+--   fails before replacing the function or adding the unique guard so an operator can archive duplicates explicitly.
+-- - The function is dropped without CASCADE before CREATE FUNCTION so environments with older
+--   parameter defaults do not hit PostgreSQL parameter-default replacement errors.
 
-create or replace function public.bind_ad_account_to_scope(
+do $$
+begin
+  if exists (
+    select 1
+    from public.ad_account_bindings
+    where binding_status = 'active'
+    group by workspace_id, ad_account_id, client_id, project_id, funnel_id
+    having count(*) > 1
+  ) then
+    raise exception 'Duplicate active ad_account_bindings exist. Archive duplicate active rows before applying unique guard.';
+  end if;
+end $$;
+
+drop function if exists public.bind_ad_account_to_scope(
+  uuid,
+  text,
+  uuid,
+  uuid,
+  text,
+  text,
+  uuid,
+  uuid,
+  uuid,
+  text,
+  text,
+  numeric,
+  boolean,
+  text,
+  uuid,
+  text,
+  jsonb
+);
+
+create function public.bind_ad_account_to_scope(
   p_workspace_id uuid,
   p_platform text,
   p_ad_platform_connection_id uuid,
@@ -111,19 +146,17 @@ begin
 end;
 $$;
 
-do $$
-begin
-  if exists (
-    select 1
-    from public.ad_account_bindings
-    where binding_status = 'active'
-    group by workspace_id, ad_account_id, client_id, project_id, funnel_id
-    having count(*) > 1
-  ) then
-    raise exception 'Duplicate active ad_account_bindings exist. Archive duplicate active rows before applying unique guard.';
-  end if;
-end $$;
-
 create unique index if not exists ad_account_bindings_one_active_per_scope_uidx
   on public.ad_account_bindings (workspace_id, ad_account_id, client_id, project_id, funnel_id) nulls not distinct
   where binding_status = 'active';
+
+
+revoke execute on function public.bind_ad_account_to_scope(
+  uuid, text, uuid, uuid, text, text, uuid, uuid, uuid, text, text, numeric, boolean, text, uuid, text, jsonb
+) from public, anon, authenticated;
+
+grant execute on function public.bind_ad_account_to_scope(
+  uuid, text, uuid, uuid, text, text, uuid, uuid, uuid, text, text, numeric, boolean, text, uuid, text, jsonb
+) to service_role;
+
+notify pgrst, 'reload schema';

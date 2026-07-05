@@ -8,6 +8,12 @@ Meaningful changes for Internal Analytics Workspace.
 
 ## 2026-07-04
 
+### Changed
+
+- Improved manual Data Bindings save feedback so source and ad account technical setup forms show visible success/error status near the form after Edge Function actions complete; feedback persists with submitted form values until the next save, refresh, tab change, or form edit.
+- Added compact collapsed technical details for binding save responses, including RPC/result identifiers when returned.
+- Hardened the ad account idempotency migration for future environments by replacing `CREATE OR REPLACE FUNCTION` with duplicate preflight, `DROP FUNCTION` without `CASCADE`, `CREATE FUNCTION`, explicit execute grants, and PostgREST schema reload notification.
+
 ### Fixed
 
 - Added Supabase migration `20260704_make_ad_account_binding_idempotent.sql` to make `public.bind_ad_account_to_scope` idempotent for repeated manual submissions of the same active ad account binding target.

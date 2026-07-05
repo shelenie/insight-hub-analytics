@@ -76,6 +76,11 @@ Do not add unrelated tools unless Olena explicitly confirms them.
 ---
 
 
+## Verified Local Change — 2026-07-04 Manual Binding Save Feedback
+
+The Data Bindings technical setup forms now show visible Ukrainian status feedback next to the manual source/ad account binding form after save attempts. Successful ad account saves explain that an existing active binding may have been updated without creating a duplicate; source saves show a concise saved message. Feedback keeps submitted form values visible and persists until the next save, refresh, tab change, or form edit. Compact technical response details are kept inside a collapsed details block. The ad account idempotency migration now avoids PostgreSQL parameter-default replacement errors in future environments by preflighting duplicates, dropping the target function without `CASCADE`, recreating it, restoring service-role-only execution, and notifying PostgREST to reload its schema cache.
+
+
 ## Verified Local Change — 2026-07-04
 
 Manual ad account binding duplicate prevention was added locally for review. Migration `20260704_make_ad_account_binding_idempotent.sql` replaces `public.bind_ad_account_to_scope` with update-before-insert behavior for the active natural key: `workspace_id`, `ad_account_id`, `client_id`, `project_id`, `funnel_id`, and `binding_status = 'active'`. The migration also adds a non-destructive preflight check and a partial unique index using `where binding_status = 'active'`. The Data Bindings Ad Accounts tab and Ads connectors ad account list now default to active bindings only and expose explicit Active / Archived-paused / All status filters for historical rows. Repeated manual saves preserve existing ad account binding `notes`, `metadata`, and `is_primary` unless replacement values are intentionally provided.
