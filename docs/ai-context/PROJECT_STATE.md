@@ -76,6 +76,11 @@ Do not add unrelated tools unless Olena explicitly confirms them.
 ---
 
 
+
+## Verified Local Change — 2026-07-05 Ad Account Binding Admin UX
+
+The Data Bindings “Рекламні акаунти” tab now presents a production-style admin workflow for normal admins. The active-only default remains, but the status filter is a compact “Статус” dropdown. Admins can open “+ Привʼязати рекламний акаунт” and search/select ad account, client, project, and funnel by readable labels instead of copying UUIDs; project and funnel choices are filtered by the selected parent. After a normal save, the form closes, clears, and shows a short success message. The existing UUID-based technical setup remains available as a collapsed secondary block for advanced details. Saving still calls the existing `binding-create-or-update` Edge Function, preserving backend idempotency/RLS behavior.
+
 ## Verified Local Change — 2026-07-04 Manual Binding Save Feedback
 
 The Data Bindings technical setup forms now show visible Ukrainian status feedback next to the manual source/ad account binding form after save attempts. Successful ad account saves explain that an existing active binding may have been updated without creating a duplicate; source saves show a concise saved message. Feedback keeps submitted form values visible and persists until the next save, refresh, tab change, or form edit. Compact technical response details are kept inside a collapsed details block. The ad account idempotency migration now avoids PostgreSQL parameter-default replacement errors in future environments by preflighting duplicates, dropping the target function without `CASCADE`, recreating it, restoring service-role-only execution, and notifying PostgREST to reload its schema cache.

@@ -19,8 +19,41 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain("matchesAdAccountBindingStatusFilter(row, adAccountStatusFilter)");
     expect(source).toContain('if (filter === "active") return isActiveBinding(row);');
     expect(source).toContain('if (filter === "archived") return isArchivedOrPausedBinding(row);');
-    expect(source).toContain('setAdAccountStatusFilter("archived")');
-    expect(source).toContain('setAdAccountStatusFilter("all")');
+    expect(source).toContain('onValueChange={(value) =>');
+    expect(source).toContain('setAdAccountStatusFilter(');
+    expect(source).toContain('value="archived"');
+    expect(source).toContain('Архівні/призупинені');
+    expect(source).toContain('value="all"');
+    expect(source).toContain('Усі');
+    expect(source).not.toContain('variant={adAccountStatusFilter === "active" ? "secondary" : "ghost"}');
+  });
+
+  it("uses a searchable combobox-first ad account binding flow while keeping technical setup secondary", () => {
+    expect(source).toContain("+ Привʼязати рекламний акаунт");
+    expect(source).toContain("Нова привʼязка рекламного акаунта");
+    expect(source).toContain('role="combobox"');
+    expect(source).toContain("CommandInput");
+    expect(source).toContain("filterComboboxOptions");
+    expect(source).toContain("comboboxSearchValue(option)");
+    expect(source).toContain('label="Рекламний акаунт"');
+    expect(source).toContain('label="Клієнт"');
+    expect(source).toContain('label="Проєкт"');
+    expect(source).toContain('label="Воронка"');
+    expect(source).toContain("Для цього клієнта ще немає проєктів");
+    expect(source).toContain("Для цього проєкту ще немає воронок");
+    expect(source).toContain("Технічне налаштування через ID");
+    expect(source).toContain("<details");
+  });
+
+
+  it("keeps normal ad account save feedback short and clears the normal form", () => {
+    expect(source).toContain("const EMPTY_AD_FORM");
+    expect(source).toContain("includeTechnicalDetails: false");
+    expect(source).toContain("setAdForm(EMPTY_AD_FORM)");
+    expect(source).toContain("setAdFormOpen(false)");
+    expect(source).toContain("setNormalAdSuccess(");
+    expect(source).toContain("Звʼязок рекламного акаунта збережено.");
+    expect(source).toContain('feedback={adFormOpen ? null : formFeedback.ad_account}');
   });
 
   it("shows visible manual binding feedback beside the technical setup form", () => {
