@@ -16,7 +16,7 @@ Approval: awaiting client approval
 Current stack: Codex + Supabase + GitHub
 Source of truth for code: GitHub
 Backend/data layer: Supabase
-Last updated: 2026-07-04
+Last updated: 2026-07-05
 Confidence: high for Phase 1 user-access hardening after manual remote Supabase verification; medium-high for broader repo facts
 
 ---
@@ -76,6 +76,16 @@ Do not add unrelated tools unless Olena explicitly confirms them.
 ---
 
 
+
+
+
+## Verified Local Change — 2026-07-05 Data Bindings Bilingual Copy
+
+The Data Bindings manual/admin UX copy from PR #190 now uses the existing app i18n system instead of hardcoded Ukrainian for updated tab labels, section descriptions, KPI helper text, empty states, page state messages, ad-account workflow copy, technical feedback, table labels, and mapping/Telegram health helper text. English translations were added without backend logic, RPC signature, RLS, query, drawer, filter, or table behavior changes.
+
+## Verified Local Change — 2026-07-05 Data Bindings Manual/Admin UX Clarification
+
+The Data Bindings page copy now distinguishes non-ad-account file/table sources from ad account bindings, explains overview counts and pending mapping-review confirmations, labels the project bindings tab as a consolidated read-only project-context view, and clarifies that the health tab covers mapping queue, Telegram confirmations, and errors rather than generic Ads connector status. Empty states now prepare admins for future AI-assisted mapping/autobinding without adding backend logic, changing RPC signatures, weakening RLS, or changing existing data queries and table behavior.
 
 ## Verified Local Change — 2026-07-05 Ad Account Binding Admin UX
 
