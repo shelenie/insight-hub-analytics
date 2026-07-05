@@ -10,7 +10,7 @@ Current next actions for Internal Analytics Workspace.
 
 Continue verification of user management, Supabase security, and dashboard metric definitions before feature expansion.
 
-2026-07-05 update: Data Bindings manual/admin UX copy has been clarified and the visible page/ad-account workflow text has been routed through existing Ukrainian/English i18n before AI-assisted mapping/autobinding work; next mapping/autobinding work should still define backend/RLS/RPC contracts before implementation.
+2026-07-05 update: Data Bindings manual/admin UX copy has been clarified and the visible page/ad-account workflow text has been routed through existing Ukrainian/English i18n before AI-assisted mapping/autobinding work. Final copy polish aligned Overview, project bindings, mapping status, and technical-mode labels without changing backend behavior; next mapping/autobinding work should still define backend/RLS/RPC contracts before implementation.
 
 ---
 

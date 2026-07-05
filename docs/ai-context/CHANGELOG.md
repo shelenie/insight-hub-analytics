@@ -10,6 +10,8 @@ Meaningful changes for Internal Analytics Workspace.
 
 ### Changed
 
+- Finished Data Bindings / Bindings Mapping copy polish: moved the Overview intro into the helper block, removed mixed English from Ukrainian ad-account copy, aligned project binding tab and section labels, kept the mapping status tab label distinct from Ads Connectors, and localized the advanced technical-mode label.
+- Polished Data Bindings Overview helper copy in Ukrainian and English to use clearer admin-facing language for files/tables, ad-account bindings, automatic review items, and the no-manual-review state. Renamed the Data Bindings health tab to “Стан мапінгу” / “Mapping status” as a copy-only change.
 - Completed the Data Bindings bilingual i18n pass by moving the remaining visible page states, ad-account workflow copy, technical-flow feedback, table labels, and mapping/Telegram health helper text into existing Ukrainian/English translations.
 - Clarified the Data Bindings manual/admin UX before AI-assisted mapping/autobinding: polished overview/source/project/mapping-review/health tab titles, descriptions, and empty states without backend, RPC, or RLS changes.
 - Polished the Data Bindings “Рекламні акаунти” section header by merging the title, description, status filter, and primary action into one compact admin header with a fixed-width status select.

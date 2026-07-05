@@ -672,19 +672,17 @@ export default function Bindings() {
             ) : null}
 
             <TabsContent value="overview" className="mt-1">
-              <SectionCard
-                title={t("bindingsOverviewTitle")}
-                description={t("bindingsOverviewDescription")}
-              >
+              <SectionCard title={t("bindingsOverviewTitle")}>
                 <KpiGrid cards={overviewCards} />
-                <div className="mt-4 space-y-1 rounded-md border border-border/70 bg-muted/25 p-3 text-sm text-muted-foreground">
-                  <p>{t("bindingsOverviewSourcesVsAdsHelper")}</p>
-                  <p>{t("bindingsOverviewReviewHelper")}</p>
+                <div className="mt-4 space-y-3 rounded-md border border-border/70 bg-muted/25 p-3 text-sm text-muted-foreground">
+                  <p>{t("bindingsOverviewDescription")}</p>
+                  <div className="space-y-1">
+                    <p>{t("bindingsOverviewFilesHelper")}</p>
+                    <p>{t("bindingsOverviewAdAccountsHelper")}</p>
+                    <p>{t("bindingsOverviewReviewHelper")}</p>
+                  </div>
                   {filteredMappingReviewQueue.length === 0 ? (
                     <p>{t("bindingsOverviewNoReview")}</p>
-                  ) : null}
-                  {isHealthy(query.data?.bindingHealth ?? []) ? (
-                    <p>{t("bindingsOverviewHealthy")}</p>
                   ) : null}
                 </div>
               </SectionCard>
@@ -2126,15 +2124,6 @@ function textFromRows(rows: Row[], keys: string[]) {
     }
   }
   return "";
-}
-
-function isHealthy(rows: Row[]) {
-  const status = textFromRows(rows, [
-    "binding_health_status",
-    "health_status",
-    "status",
-  ]);
-  return !status || status.toLowerCase() === "healthy";
 }
 
 function friendlyLabel(value: string, lang: Lang) {

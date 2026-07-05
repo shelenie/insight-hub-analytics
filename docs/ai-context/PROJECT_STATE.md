@@ -81,6 +81,10 @@ Do not add unrelated tools unless Olena explicitly confirms them.
 
 ## Verified Local Change — 2026-07-05 Data Bindings Bilingual Copy
 
+Final copy polish for the Data Bindings / Bindings Mapping page keeps behavior and data access unchanged while aligning the Overview helper block, project bindings labels, mapping status tab label, ad-account wording, and advanced technical-mode label in Ukrainian and English.
+
+Follow-up copy polish simplified the Data Bindings Overview helper text for admins in both Ukrainian and English, keeping KPI cards, overview counts, backend logic, RPC signatures, RLS, and data queries unchanged. The Data Bindings health tab label is now “Стан мапінгу” / “Mapping status” as a copy-only rename.
+
 The Data Bindings manual/admin UX copy from PR #190 now uses the existing app i18n system instead of hardcoded Ukrainian for updated tab labels, section descriptions, KPI helper text, empty states, page state messages, ad-account workflow copy, technical feedback, table labels, and mapping/Telegram health helper text. English translations were added without backend logic, RPC signature, RLS, query, drawer, filter, or table behavior changes.
 
 ## Verified Local Change — 2026-07-05 Data Bindings Manual/Admin UX Clarification
