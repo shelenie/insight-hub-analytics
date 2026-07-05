@@ -55,7 +55,7 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain("Поки немає підключених файлів або таблиць. Рекламні акаунти керуються в окремій вкладці.");
     expect(source).toContain("Привʼязки до проєктів");
     expect(source).toContain("консолідований read-only перегляд наявних звʼязків");
-    expect(source).toContain("майбутнім AI-assisted autobinding");
+    expect(source).toContain("Тут зʼявлятимуться джерела, які система не змогла впевнено привʼязати автоматично.");
     expect(source).toContain("Немає звʼязків на перевірці.");
     expect(source).toContain("Коли система знайде невідоме або непідтверджене джерело, воно зʼявиться");
     expect(source).toContain("Виробничий стан черги мапінгу, Telegram-підтверджень і помилок.");

@@ -952,7 +952,7 @@ export default function Bindings() {
             <TabsContent value="mapping-review" className="mt-1">
               <SectionCard
                 title="Мапінг на перевірку"
-                description="Черга ручного підтвердження для невідомих або непевних мапінгів перед майбутнім AI-assisted autobinding."
+                description="Тут зʼявлятимуться джерела, які система не змогла впевнено привʼязати автоматично."
               >
                 {filteredMappingReviewQueue.length === 0 ? (
                   <EmptyMappingReviewState />
