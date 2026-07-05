@@ -31,6 +31,7 @@ describe("Bindings page ad account behavior", () => {
   it("uses a searchable combobox-first ad account binding flow while keeping technical setup secondary", () => {
     expect(source).toContain("+ Привʼязати рекламний акаунт");
     expect(source).toContain("Привʼязати рекламний акаунт");
+    expect(source).toContain("Редагувати привʼязку");
     expect(source).toContain("<Sheet");
     expect(source).toContain("<SheetContent");
     expect(source).toContain('side="right"');
@@ -56,7 +57,8 @@ describe("Bindings page ad account behavior", () => {
 
     expect(adAccountTabSource).toContain("<Sheet");
     expect(adAccountTabSource).toContain("<SheetContent");
-    expect(adAccountTabSource).toContain("setAdForm(EMPTY_AD_FORM)");
+    expect(adAccountTabSource).toContain("setNormalAdForm(EMPTY_AD_FORM)");
+    expect(adAccountTabSource).toContain('setAdFormMode("create")');
     expect(adAccountTabSource).toContain("setAdFormOpen(true)");
     expect(adAccountTabSource).toContain('clearFormFeedback("ad_account")');
     expect(adAccountTabSource).toContain("<AdAccountsBusinessTable");
@@ -67,15 +69,31 @@ describe("Bindings page ad account behavior", () => {
   it("uses an auto-dismissing toast for normal ad account save success and clears the form", () => {
     expect(source).toContain("const EMPTY_AD_FORM");
     expect(source).toContain("includeTechnicalDetails: false");
-    expect(source).toContain("setAdForm(EMPTY_AD_FORM)");
+    expect(source).toContain("setNormalAdForm(EMPTY_AD_FORM)");
     expect(source).toContain("setAdFormOpen(false)");
     expect(source).toContain('import { toast } from "@/hooks/use-toast";');
     expect(source).toContain("toast({");
-    expect(source).toContain("Звʼязок рекламного акаунта збережено.");
-    expect(source).toContain("duration: 4000");
+    expect(source).toContain("hasMatchingActiveAdBinding");
+    expect(source).toContain("Звʼязок оновлено");
+    expect(source).toContain("Існуючий active-звʼязок оновлено без створення дубля.");
+    expect(source).toContain("Звʼязок створено");
+    expect(source).toContain("Рекламний акаунт привʼязано до клієнта, проєкту і воронки.");
+    expect(source).toContain("border-emerald-500/50 bg-emerald-50");
+    expect(source).toContain("duration: 5000");
     expect(source).not.toContain("normalAdSuccess");
     expect(source).not.toContain("setNormalAdSuccess");
-    expect(source).toContain('feedback={adFormOpen ? null : formFeedback.ad_account}');
+    expect(source).toContain('feedback={formFeedback.ad_account}');
+  });
+
+
+  it("keeps normal drawer state separate from technical UUID form state", () => {
+    expect(source).toContain("const [normalAdForm, setNormalAdForm] = useState(EMPTY_AD_FORM)");
+    expect(source).toContain("const [technicalAdForm, setTechnicalAdForm] = useState(EMPTY_AD_FORM)");
+    expect(source).toContain("updateNormalAdForm");
+    expect(source).toContain("updateTechnicalAdForm");
+    expect(source).toContain("form={normalAdForm}");
+    expect(source).toContain("form={technicalAdForm}");
+    expect(source).not.toContain("const [adForm, setAdForm] = useState(EMPTY_AD_FORM)");
   });
 
   it("shows visible manual binding feedback beside the technical setup form", () => {
@@ -86,7 +104,7 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain("border-emerald-500/40");
     expect(source).toContain("clearFormFeedback");
     expect(source).toContain("onValueChange={handleTabChange}");
-    expect(source).toContain("setForm={updateAdForm}");
+    expect(source).toContain("setForm={updateTechnicalAdForm}");
     expect(source).toContain("Technical details");
     expect(source).toContain("getBindingActionTechnicalDetails");
   });

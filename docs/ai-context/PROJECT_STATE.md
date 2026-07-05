@@ -79,6 +79,8 @@ Do not add unrelated tools unless Olena explicitly confirms them.
 
 ## Verified Local Change — 2026-07-05 Ad Account Binding Admin UX
 
+Follow-up polish after the drawer migration separates normal drawer form state from the advanced UUID technical form state, so normal name-based saves no longer fill technical ID inputs. The drawer now distinguishes create and edit titles, detects whether the submitted active binding already existed before saving, and shows a clearer styled success toast for created vs updated bindings. The helper text above the ad account table is shortened for admin users while technical details remain confined to the collapsed advanced mode.
+
 The Data Bindings “Рекламні акаунти” tab now presents a production-style admin workflow for normal admins. The active-only default remains, but the status filter is a compact “Статус” dropdown. Admins can open “+ Привʼязати рекламний акаунт” in a right-side Sheet drawer and search/select ad account, client, project, and funnel by readable labels instead of copying UUIDs; project and funnel choices are filtered by the selected parent. The same drawer opens from “Перепривʼязати” without pushing the table down. After a normal save, the drawer closes, the form clears, the table refreshes, and a short auto-dismissing toast success notification appears. The existing UUID-based technical setup remains available below the table as a collapsed smaller advanced block. Saving still calls the existing `binding-create-or-update` Edge Function, preserving backend idempotency/RLS behavior.
 
 ## Verified Local Change — 2026-07-04 Manual Binding Save Feedback

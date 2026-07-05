@@ -10,6 +10,7 @@ Meaningful changes for Internal Analytics Workspace.
 
 ### Changed
 
+- Polished the Data Bindings “Рекламні акаунти” drawer UX: separated normal drawer state from the advanced UUID form state, added create-vs-update success toast copy, made success toasts more visually distinct, switched the drawer title between create/edit modes, and shortened the table helper text.
 - Moved the normal Data Bindings ad-account binding form from inline page expansion into a right-side Sheet drawer so opening “+ Привʼязати рекламний акаунт” or “Перепривʼязати” no longer pushes the table down; kept the technical UUID mode collapsed below the table as a smaller advanced workflow.
 - Replaced the normal Data Bindings ad-account success block with the existing app toast notification after successful save, while preserving form close/clear and table refresh behavior.
 - Improved the Data Bindings “Рекламні акаунти” tab into a production-oriented admin workflow with a compact status dropdown, business-focused table, primary “+ Привʼязати рекламний акаунт” action, and searchable name-based comboboxes for ad account/client/project/funnel selection, plus short normal-flow success feedback that closes and clears the form after save.
