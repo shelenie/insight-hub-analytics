@@ -227,6 +227,10 @@ export default function Bindings() {
   const [formFeedback, setFormFeedback] = useState<
     Record<BindingType, BindingActionFeedback | null>
   >({ source: null, ad_account: null });
+  const [normalAdFeedback, setNormalAdFeedback] =
+    useState<BindingActionFeedback | null>(null);
+  const [technicalAdFeedback, setTechnicalAdFeedback] =
+    useState<BindingActionFeedback | null>(null);
   const [pending, setPending] = useState<string>("");
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const [sourceForm, setSourceForm] = useState({
@@ -317,6 +321,8 @@ export default function Bindings() {
       return;
     }
     setFormFeedback({ source: null, ad_account: null });
+    setNormalAdFeedback(null);
+    setTechnicalAdFeedback(null);
   };
 
   const updateSourceForm: React.Dispatch<
@@ -329,7 +335,7 @@ export default function Bindings() {
   const updateNormalAdForm: React.Dispatch<
     React.SetStateAction<typeof normalAdForm>
   > = (update) => {
-    clearFormFeedback("ad_account");
+    setNormalAdFeedback(null);
     setAdFormError("");
     setNormalAdForm(update);
   };
@@ -337,7 +343,7 @@ export default function Bindings() {
   const updateTechnicalAdForm: React.Dispatch<
     React.SetStateAction<typeof technicalAdForm>
   > = (update) => {
-    clearFormFeedback("ad_account");
+    setTechnicalAdFeedback(null);
     setTechnicalAdForm(update);
   };
 
@@ -348,6 +354,8 @@ export default function Bindings() {
       bindingType?: BindingType;
       successMessage?: string;
       includeTechnicalDetails?: boolean;
+      feedbackHandler?: (feedback: BindingActionFeedback) => void;
+      successFeedback?: boolean;
     },
   ) => {
     setPending(key);
@@ -357,7 +365,13 @@ export default function Bindings() {
     setPending("");
     if (error) {
       const friendlyError = await getFriendlyBindingActionError(error);
-      if (options?.bindingType) {
+      if (options?.feedbackHandler) {
+        options.feedbackHandler({
+          message: friendlyError,
+          technical: null,
+          variant: "error",
+        });
+      } else if (options?.bindingType) {
         setFormFeedback((current) => ({
           ...current,
           [options.bindingType!]: {
@@ -375,7 +389,16 @@ export default function Bindings() {
     const response = data as BindingActionResponse | null;
     if (response?.ok === false) {
       const friendlyError = getFriendlyBindingActionMessage(response);
-      if (options?.bindingType) {
+      if (options?.feedbackHandler) {
+        options.feedbackHandler({
+          message: friendlyError,
+          technical:
+            options.includeTechnicalDetails === false
+              ? null
+              : getBindingActionTechnicalDetails(response),
+          variant: "error",
+        });
+      } else if (options?.bindingType) {
         setFormFeedback((current) => ({
           ...current,
           [options.bindingType!]: {
@@ -390,7 +413,18 @@ export default function Bindings() {
       return false;
     }
 
-    if (options?.bindingType) {
+    if (options?.feedbackHandler) {
+      if (options.successFeedback !== false) {
+        options.feedbackHandler({
+          message: options.successMessage ?? "Дію успішно виконано.",
+          technical:
+            options.includeTechnicalDetails === false
+              ? null
+              : getBindingActionTechnicalDetails(response),
+          variant: "success",
+        });
+      }
+    } else if (options?.bindingType) {
       setFormFeedback((current) => ({
         ...current,
         [options.bindingType!]: {
@@ -732,7 +766,7 @@ export default function Bindings() {
                         setNormalAdForm(EMPTY_AD_FORM);
                         setAdFormMode("create");
                         setAdFormError("");
-                        clearFormFeedback("ad_account");
+                        setNormalAdFeedback(null);
                         setAdFormOpen(true);
                       }}
                     >
@@ -772,8 +806,8 @@ export default function Bindings() {
                       options={adFormOptions}
                       error={adFormError}
                       feedback={
-                        formFeedback.ad_account?.variant === "error"
-                          ? { ...formFeedback.ad_account, technical: null }
+                        normalAdFeedback?.variant === "error"
+                          ? { ...normalAdFeedback, technical: null }
                           : null
                       }
                       onCancel={() => setAdFormOpen(false)}
@@ -803,6 +837,8 @@ export default function Bindings() {
                             successMessage:
                               "Звʼязок рекламного акаунта збережено.",
                             includeTechnicalDetails: false,
+                            feedbackHandler: setNormalAdFeedback,
+                            successFeedback: false,
                           },
                         );
                         if (saved) {
@@ -829,7 +865,7 @@ export default function Bindings() {
                   rows={filteredAdAccountBindings}
                   onEdit={(row) => {
                     setAdFormError("");
-                    clearFormFeedback("ad_account");
+                    setNormalAdFeedback(null);
                     setAdFormMode("edit");
                     setNormalAdForm({
                       ad_account_id: asText(row.ad_account_id ?? row.id),
@@ -847,7 +883,7 @@ export default function Bindings() {
                   pending={pending}
                   form={technicalAdForm}
                   setForm={updateTechnicalAdForm}
-                  feedback={formFeedback.ad_account}
+                  feedback={technicalAdFeedback}
                   onSubmit={() =>
                     runAction(
                       "create-ad",
@@ -861,6 +897,7 @@ export default function Bindings() {
                         }),
                       {
                         bindingType: "ad_account",
+                        feedbackHandler: setTechnicalAdFeedback,
                         successMessage:
                           "Звʼязок рекламного акаунта збережено. Якщо такий active-звʼязок уже існував, його оновлено без створення дубля.",
                       },

@@ -60,7 +60,7 @@ describe("Bindings page ad account behavior", () => {
     expect(adAccountTabSource).toContain("setNormalAdForm(EMPTY_AD_FORM)");
     expect(adAccountTabSource).toContain('setAdFormMode("create")');
     expect(adAccountTabSource).toContain("setAdFormOpen(true)");
-    expect(adAccountTabSource).toContain('clearFormFeedback("ad_account")');
+    expect(adAccountTabSource).toContain("setNormalAdFeedback(null)");
     expect(adAccountTabSource).toContain("<AdAccountsBusinessTable");
     expect(adAccountTabSource).not.toContain("<h2");
     expect(adAccountTabSource).not.toContain("mb-4 rounded-xl border border-primary/20");
@@ -82,18 +82,26 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain("duration: 5000");
     expect(source).not.toContain("normalAdSuccess");
     expect(source).not.toContain("setNormalAdSuccess");
-    expect(source).toContain('feedback={formFeedback.ad_account}');
+    expect(source).toContain(`feedback={
+                        normalAdFeedback?.variant === "error"`);
+    expect(source).toContain('successFeedback: false');
+    expect(source).not.toContain('feedback={formFeedback.ad_account}');
   });
 
 
   it("keeps normal drawer state separate from technical UUID form state", () => {
     expect(source).toContain("const [normalAdForm, setNormalAdForm] = useState(EMPTY_AD_FORM)");
     expect(source).toContain("const [technicalAdForm, setTechnicalAdForm] = useState(EMPTY_AD_FORM)");
+    expect(source).toContain("const [normalAdFeedback, setNormalAdFeedback]");
+    expect(source).toContain("const [technicalAdFeedback, setTechnicalAdFeedback]");
     expect(source).toContain("updateNormalAdForm");
     expect(source).toContain("updateTechnicalAdForm");
     expect(source).toContain("form={normalAdForm}");
     expect(source).toContain("form={technicalAdForm}");
+    expect(source).toContain("feedback={technicalAdFeedback}");
+    expect(source).toContain("feedbackHandler: setTechnicalAdFeedback");
     expect(source).not.toContain("const [adForm, setAdForm] = useState(EMPTY_AD_FORM)");
+    expect(source).not.toContain("formFeedback.ad_account");
   });
 
   it("shows visible manual binding feedback beside the technical setup form", () => {
@@ -105,6 +113,7 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain("clearFormFeedback");
     expect(source).toContain("onValueChange={handleTabChange}");
     expect(source).toContain("setForm={updateTechnicalAdForm}");
+    expect(source).toContain("feedback={technicalAdFeedback}");
     expect(source).toContain("Technical details");
     expect(source).toContain("getBindingActionTechnicalDetails");
   });
