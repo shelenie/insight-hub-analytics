@@ -38,6 +38,12 @@ import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 const ADS_SUBNAV_TRIGGER_CLASS =
   "h-10 whitespace-nowrap rounded-lg border border-transparent px-4 text-sm font-semibold transition-all hover:border-primary/30 hover:bg-primary/10 hover:text-primary data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm";
+const EMPTY_AD_FORM = {
+  ad_account_id: "",
+  client_id: "",
+  project_id: "",
+  funnel_id: "",
+};
 
 type Row = Record<string, string | number | boolean | null>;
 type OptionalViewData = { rows: Row[]; unavailableReason: string | null };
@@ -210,14 +216,10 @@ export default function Bindings() {
     project_id: "",
     funnel_id: "",
   });
-  const [adForm, setAdForm] = useState({
-    ad_account_id: "",
-    client_id: "",
-    project_id: "",
-    funnel_id: "",
-  });
+  const [adForm, setAdForm] = useState(EMPTY_AD_FORM);
   const [adFormOpen, setAdFormOpen] = useState(false);
   const [adFormError, setAdFormError] = useState("");
+  const [normalAdSuccess, setNormalAdSuccess] = useState("");
   const [adAccountStatusFilter, setAdAccountStatusFilter] =
     useState<AdAccountBindingStatusFilter>("active");
 
@@ -308,6 +310,7 @@ export default function Bindings() {
     update,
   ) => {
     clearFormFeedback("ad_account");
+    setNormalAdSuccess("");
     setAdFormError("");
     setAdForm(update);
   };
@@ -315,7 +318,11 @@ export default function Bindings() {
   const runAction = async (
     key: string,
     fn: () => Promise<{ data: unknown; error: InvokeError | null }>,
-    options?: { bindingType?: BindingType; successMessage?: string },
+    options?: {
+      bindingType?: BindingType;
+      successMessage?: string;
+      includeTechnicalDetails?: boolean;
+    },
   ) => {
     setPending(key);
     setMessage("");
@@ -336,7 +343,7 @@ export default function Bindings() {
       } else {
         setMessage(friendlyError);
       }
-      return;
+      return false;
     }
 
     const response = data as BindingActionResponse | null;
@@ -354,7 +361,7 @@ export default function Bindings() {
       } else {
         setMessage(friendlyError);
       }
-      return;
+      return false;
     }
 
     if (options?.bindingType) {
@@ -362,7 +369,10 @@ export default function Bindings() {
         ...current,
         [options.bindingType!]: {
           message: options.successMessage ?? "Дію успішно виконано.",
-          technical: getBindingActionTechnicalDetails(response),
+          technical:
+            options.includeTechnicalDetails === false
+              ? null
+              : getBindingActionTechnicalDetails(response),
           variant: "success",
         },
       }));
@@ -370,6 +380,7 @@ export default function Bindings() {
       setMessage("Дію успішно виконано.");
     }
     await refreshBindings();
+    return true;
   };
 
   const refreshBindings = async () => {
@@ -697,7 +708,10 @@ export default function Bindings() {
                       type="button"
                       className="h-9"
                       disabled={!session || !canManage}
-                      onClick={() => setAdFormOpen((open) => !open)}
+                      onClick={() => {
+                        setNormalAdSuccess("");
+                        setAdFormOpen((open) => !open);
+                      }}
                     >
                       + Привʼязати рекламний акаунт
                     </Button>
@@ -713,13 +727,18 @@ export default function Bindings() {
                     setForm={updateAdForm}
                     options={adFormOptions}
                     error={adFormError}
-                    feedback={formFeedback.ad_account}
+                    feedback={
+                      formFeedback.ad_account?.variant === "error"
+                        ? { ...formFeedback.ad_account, technical: null }
+                        : null
+                    }
                     onCancel={() => setAdFormOpen(false)}
-                    onSubmit={() => {
+                    onSubmit={async () => {
                       const validationError = validateAdForm(adForm);
                       if (validationError)
                         return setAdFormError(validationError);
-                      return runAction(
+                      setNormalAdSuccess("");
+                      const saved = await runAction(
                         "create-ad",
                         () =>
                           supabase.functions.invoke(
@@ -735,11 +754,29 @@ export default function Bindings() {
                         {
                           bindingType: "ad_account",
                           successMessage:
-                            "Звʼязок рекламного акаунта збережено. Якщо такий active-звʼязок уже існував, його оновлено без створення дубля.",
+                            "Звʼязок рекламного акаунта збережено.",
+                          includeTechnicalDetails: false,
                         },
                       );
+                      if (saved) {
+                        setAdForm(EMPTY_AD_FORM);
+                        setAdFormOpen(false);
+                        setNormalAdSuccess(
+                          "Звʼязок рекламного акаунта збережено.",
+                        );
+                      }
                     }}
                   />
+                ) : null}
+
+                {normalAdSuccess ? (
+                  <div
+                    className="mb-4 rounded-md border border-emerald-500/40 bg-emerald-500/10 p-3 text-sm font-medium text-emerald-950 shadow-sm dark:text-emerald-100"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    {normalAdSuccess}
+                  </div>
                 ) : null}
 
                 <AdAccountsBusinessTable

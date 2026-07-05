@@ -45,6 +45,17 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain("<details");
   });
 
+
+  it("keeps normal ad account save feedback short and clears the normal form", () => {
+    expect(source).toContain("const EMPTY_AD_FORM");
+    expect(source).toContain("includeTechnicalDetails: false");
+    expect(source).toContain("setAdForm(EMPTY_AD_FORM)");
+    expect(source).toContain("setAdFormOpen(false)");
+    expect(source).toContain("setNormalAdSuccess(");
+    expect(source).toContain("Звʼязок рекламного акаунта збережено.");
+    expect(source).toContain('feedback={adFormOpen ? null : formFeedback.ad_account}');
+  });
+
   it("shows visible manual binding feedback beside the technical setup form", () => {
     expect(source).toContain("Звʼязок рекламного акаунта збережено. Якщо такий active-звʼязок уже існував, його оновлено без створення дубля.");
     expect(source).toContain("Звʼязок джерела збережено.");

@@ -79,7 +79,7 @@ Do not add unrelated tools unless Olena explicitly confirms them.
 
 ## Verified Local Change — 2026-07-05 Ad Account Binding Admin UX
 
-The Data Bindings “Рекламні акаунти” tab now presents a production-style admin workflow for normal admins. The active-only default remains, but the status filter is a compact “Статус” dropdown. Admins can open “+ Привʼязати рекламний акаунт” and search/select ad account, client, project, and funnel by readable labels instead of copying UUIDs; project and funnel choices are filtered by the selected parent. The existing UUID-based technical setup remains available as a collapsed secondary block. Saving still calls the existing `binding-create-or-update` Edge Function, preserving backend idempotency/RLS behavior.
+The Data Bindings “Рекламні акаунти” tab now presents a production-style admin workflow for normal admins. The active-only default remains, but the status filter is a compact “Статус” dropdown. Admins can open “+ Привʼязати рекламний акаунт” and search/select ad account, client, project, and funnel by readable labels instead of copying UUIDs; project and funnel choices are filtered by the selected parent. After a normal save, the form closes, clears, and shows a short success message. The existing UUID-based technical setup remains available as a collapsed secondary block for advanced details. Saving still calls the existing `binding-create-or-update` Edge Function, preserving backend idempotency/RLS behavior.
 
 ## Verified Local Change — 2026-07-04 Manual Binding Save Feedback
 
