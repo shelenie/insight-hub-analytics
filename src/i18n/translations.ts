@@ -248,6 +248,9 @@ export const translations = {
   onboardingFunnelSavedTitle: { uk: "Воронку збережено", en: "Funnel saved" },
   onboardingFunnelSavedDescription: { uk: "Воронку успішно створено або оновлено.", en: "The funnel was created or updated successfully." },
   onboardingClientSaveError: { uk: "Не вдалося зберегти клієнта", en: "Could not save client" },
+  onboardingClientUnexpectedResponseError: { uk: "Не вдалося зберегти клієнта. Backend не повернув очікувану відповідь.", en: "Could not save client. The backend did not return the expected response." },
+  onboardingProjectUnexpectedResponseError: { uk: "Не вдалося зберегти проєкт. Backend не повернув очікувану відповідь.", en: "Could not save project. The backend did not return the expected response." },
+  onboardingFunnelUnexpectedResponseError: { uk: "Не вдалося зберегти воронку. Backend не повернув очікувану відповідь.", en: "Could not save funnel. The backend did not return the expected response." },
   onboardingProjectSaveError: { uk: "Не вдалося зберегти проєкт", en: "Could not save project" },
   onboardingFunnelSaveError: { uk: "Не вдалося зберегти воронку", en: "Could not save funnel" },
 

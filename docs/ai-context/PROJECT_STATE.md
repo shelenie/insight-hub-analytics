@@ -80,7 +80,7 @@ Do not add unrelated tools unless Olena explicitly confirms them.
 
 ## Verified Local Change — 2026-07-06 Onboarding Frontend Polish
 
-The Onboarding page frontend was clarified before backend AI-assisted mapping work. The page now uses existing Ukrainian/English i18n for visible admin-facing copy, explains that admins prepare the analytics hierarchy of clients, projects, and funnels before connecting sources/ad accounts, improves loading/error/no-access/empty/action-disabled language, and keeps workspace/client/project/funnel IDs plus view diagnostics inside collapsed technical details. Existing onboarding read views and onboarding upsert Edge Function calls remain unchanged. No backend logic, RPC signatures, RLS policies, Supabase schema, routes, or permission logic were changed.
+The Onboarding page frontend was clarified before backend AI-assisted mapping work. The page now uses existing Ukrainian/English i18n for visible admin-facing copy, explains that admins prepare the analytics hierarchy of clients, projects, and funnels before connecting sources/ad accounts, improves loading/error/no-access/empty/action-disabled language, and keeps workspace/client/project/funnel IDs plus view diagnostics inside collapsed technical details. Existing onboarding read views and onboarding upsert Edge Function calls remain unchanged. Onboarding unexpected-response fallback errors are localized so raw developer fallback strings are not primary admin-facing copy. No backend logic, RPC signatures, RLS policies, Supabase schema, routes, or permission logic were changed.
 
 ## Verified Local Audit — 2026-07-06 Remaining Admin / Control-Center Frontend
 

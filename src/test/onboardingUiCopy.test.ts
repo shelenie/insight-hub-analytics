@@ -23,7 +23,19 @@ describe("Onboarding UI polish", () => {
     expect(source).not.toContain('description="ID');
   });
 
-  it("does not add fake invite, member, or access management actions", () => {
+  it("does not expose hardcoded technical fallback errors as primary copy", () => {
+    expect(source).not.toContain("Client upsert failed");
+    expect(source).not.toContain("Project upsert failed");
+    expect(source).not.toContain("Funnel upsert failed");
+    expect(translations.onboardingClientUnexpectedResponseError.uk).toBe("Не вдалося зберегти клієнта. Backend не повернув очікувану відповідь.");
+    expect(translations.onboardingClientUnexpectedResponseError.en).toBe("Could not save client. The backend did not return the expected response.");
+    expect(translations.onboardingProjectUnexpectedResponseError.uk).toBe("Не вдалося зберегти проєкт. Backend не повернув очікувану відповідь.");
+    expect(translations.onboardingProjectUnexpectedResponseError.en).toBe("Could not save project. The backend did not return the expected response.");
+    expect(translations.onboardingFunnelUnexpectedResponseError.uk).toBe("Не вдалося зберегти воронку. Backend не повернув очікувану відповідь.");
+    expect(translations.onboardingFunnelUnexpectedResponseError.en).toBe("Could not save funnel. The backend did not return the expected response.");
+  });
+
+  it("does not add fake invite, member, or access management actions and keeps backend function names unchanged", () => {
     expect(source).not.toMatch(/invite|invitation|member|workspace member|user access/i);
     expect(source).toContain("onboarding-client-upsert");
     expect(source).toContain("onboarding-project-upsert");

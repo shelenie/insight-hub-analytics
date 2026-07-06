@@ -41,6 +41,7 @@ Meaningful changes for Internal Analytics Workspace.
 - Routed Onboarding page titles, descriptions, labels, buttons, empty/loading/error/no-access states, toasts, status labels, and technical-detail labels through the existing Ukrainian/English i18n dictionary.
 - Kept workspace/client/project/funnel IDs, view field lists, health counters, and unnamed-record diagnostics secondary inside collapsed technical details.
 - Added frontend tests that verify key Onboarding copy is bilingual, technical IDs remain secondary, and no fake invite/member/access actions were added.
+- Localized the Onboarding Edge Function unexpected-response fallback errors so raw developer strings such as `Client upsert failed`, `Project upsert failed`, and `Funnel upsert failed` are not shown as primary admin-facing form/toast copy.
 
 ### Notes
 

@@ -166,7 +166,7 @@ export default function Onboarding() {
         body: { workspace_id: WORKSPACE_ID, ...payload },
       });
       if (error) throw error;
-      if (!data?.ok) throw new Error(data?.error ?? "Client upsert failed");
+      if (!data?.ok) throw new Error(t("onboardingClientUnexpectedResponseError"));
       return data;
     },
     onSuccess: async () => {
@@ -186,7 +186,7 @@ export default function Onboarding() {
         body: { workspace_id: WORKSPACE_ID, ...payload },
       });
       if (error) throw error;
-      if (!data?.ok) throw new Error(data?.error ?? "Project upsert failed");
+      if (!data?.ok) throw new Error(t("onboardingProjectUnexpectedResponseError"));
       return data;
     },
     onSuccess: async () => {
@@ -206,7 +206,7 @@ export default function Onboarding() {
         body: { workspace_id: WORKSPACE_ID, ...payload },
       });
       if (error) throw error;
-      if (!data?.ok) throw new Error(data?.error ?? "Funnel upsert failed");
+      if (!data?.ok) throw new Error(t("onboardingFunnelUnexpectedResponseError"));
       return data;
     },
     onSuccess: async () => {
