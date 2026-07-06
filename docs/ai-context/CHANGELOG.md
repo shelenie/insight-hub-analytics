@@ -7,7 +7,21 @@ Meaningful changes for Internal Analytics Workspace.
 ---
 
 
+
 ## 2026-07-06
+
+### Changed
+
+- Redesigned the AI Assistant frontend into a chat-style assistant surface with a central conversation area, welcome message, suggested prompt cards, compact context selector, bottom composer, user/assistant bubbles, thinking/error/no-access states, and secondary previous-response history.
+- Added Ukrainian/English i18n copy for the AI Assistant title, subtitle, safety note, composer, context labels, suggested prompts, history labels, empty/loading/error states, and technical details.
+- Kept raw IDs, request scopes, payloads, response metadata, role diagnostics, and saved-response debug data hidden behind localized technical-details blocks.
+
+### Notes
+
+- The assistant explains prepared workspace data and does not directly modify data.
+- No backend logic, RPC calls, RLS policies, Supabase schema, routes, permission logic, database tables/views, Edge Function name, or `ai-helper-run` request/response contract were changed.
+- Next step remains Imports / Data Health micro-polish only if needed, then backend AI-assisted mapping audit.
+
 
 ### Audited
 

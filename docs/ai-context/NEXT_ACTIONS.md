@@ -12,6 +12,9 @@ Continue verification of user management, Supabase security, and dashboard metri
 
 2026-07-05 update: Data Bindings manual/admin UX copy has been clarified and the visible page/ad-account workflow text has been routed through existing Ukrainian/English i18n before AI-assisted mapping/autobinding work. Final copy polish aligned Overview, project bindings, mapping status, and technical-mode labels without changing backend behavior; next mapping/autobinding work should still define backend/RLS/RPC contracts before implementation.
 
+
+2026-07-06 update: AI Assistant frontend polish is complete. The page is now a chat-style prepared-data assistant with suggested prompts, compact context selection, secondary response history, and hidden technical details. The assistant is explicitly read/explain-only and does not directly modify data. No backend, RPC, RLS, schema, route, Edge Function contract, or permission behavior changed. Next step remains Imports / Data Health micro-polish only if needed, then backend AI-assisted mapping audit.
+
 ---
 
 2026-07-06 update: Telegram / Alerts UI was clarified before AI-assisted mapping/autobinding work. Copy, i18n, empty states, technical-details placement, and safe UI action visibility were polished without backend, RPC, RLS, Edge Function contract, or schema changes. Telegram remains the HITL confirmation surface for future mapping review flows.

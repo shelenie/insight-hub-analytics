@@ -75,6 +75,10 @@ Do not add unrelated tools unless Olena explicitly confirms them.
 
 ---
 
+## Verified Local Change — 2026-07-06 AI Assistant Chat UI
+
+The AI Assistant page frontend was redesigned into a chat-style assistant surface. It now presents a central conversation area with a prepared-data welcome state, suggested prompt cards, compact context selection, bottom composer, user/assistant bubbles, thinking/error/no-access states, and secondary response history with technical diagnostics hidden under localized technical details. The assistant copy explicitly states that it explains prepared workspace data across ads, imports, data quality, bindings, alerts, anomalies, and overall workspace status, and that AI does not directly modify data. No backend logic, RPC calls, RLS policies, Supabase schema, routes, permissions logic, database objects, Edge Function name, or `ai-helper-run` request/response contract were changed.
+
 
 
 
