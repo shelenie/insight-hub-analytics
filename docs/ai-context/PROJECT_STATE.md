@@ -77,6 +77,11 @@ Do not add unrelated tools unless Olena explicitly confirms them.
 
 
 
+
+## Verified Local Change — 2026-07-06 AI Assistant Final Layout Polish
+
+Final frontend polish for the AI Assistant page is complete. The chat card is now the clear primary surface, while response history is available through a compact collapsed History panel by default and still shows at most three latest items with technical details collapsed. The safety note is visually lighter near the welcome/composer area, the welcome copy is performance-marketing specific, and visible analysis modes are ordered around marketing workflows: full overview, ads performance, drops/anomalies, data quality, imports, mapping, alerts, clients/funnels, ads connection health, and system readiness. No backend logic, RPC calls, Supabase schema, RLS policies, routes, permission logic, database tables/views, Edge Function name, or `ai-helper-run` request/response contract were changed.
+
 ## Verified Local Change — 2026-07-06 Sidebar Navigation Structure
 
 The sidebar navigation structure was corrected as a frontend-only change. Overview now appears under the Workspace section, the Analytics section starts with Conversions and contains Campaigns, Sales / Revenue, and Imports / Data Health, and the Admin group remains collapsible with active Admin routes auto-opening the group. Icon-collapsed sidebar behavior remains unchanged. No backend logic, routes, permissions, RLS policies, Supabase schema/objects, or new pages were changed. Users & Access remains deferred as a future security-sensitive feature; role-aware sidebar filtering should wait for a safe capability/read contract if needed.

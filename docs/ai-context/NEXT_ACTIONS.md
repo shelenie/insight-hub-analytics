@@ -8,6 +8,9 @@ Current next actions for Internal Analytics Workspace.
 
 ## Current Priority
 
+
+2026-07-06 update: Final AI Assistant layout polish is complete. Chat is the primary surface, History is secondary/collapsed by default with at most three latest items shown when opened, the safety note is lighter near the welcome/composer, and analysis modes are marketing-oriented. No backend/RPC/RLS/schema/route/permission/Edge Function contract changes were made. Next step remains Imports / Data Health micro-polish only if needed, then backend AI-assisted mapping audit.
+
 Continue verification of user management, Supabase security, and dashboard metric definitions before feature expansion.
 
 2026-07-06 sidebar structure update: Overview has been moved from Analytics into Workspace in the frontend sidebar. Admin remains collapsible and auto-opens for active Admin routes. This PR intentionally makes no backend, route, permission, RLS, Supabase schema/object, or new-page changes. Users & Access remains deferred as a security-sensitive feature, and role-aware sidebar filtering should wait for a safe role/capability sidebar contract if needed.

@@ -1,6 +1,6 @@
 import { Fragment, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Bot, Clock, Send, Sparkles, User } from "lucide-react";
+import { Bot, Clock, History, Send, Sparkles, User } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { Button } from "@/components/ui/button";
@@ -17,7 +17,7 @@ import type { TranslationKey } from "@/i18n/translations";
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
 type ContextOption = {
-  labelKey: "assistantContextSystemReadiness" | "assistantContextClientsFunnels" | "assistantContextMappingReview" | "assistantContextAlerts" | "assistantContextAdsHealth" | "assistantContextAdsPerformance" | "assistantContextAdsAnomalies" | "assistantContextDataQuality" | "assistantContextImportStatus" | "assistantContextImportErrors" | "assistantContextFullOverview";
+  labelKey: "assistantContextFullOverview" | "assistantContextAdsPerformance" | "assistantContextAdsAnomalies" | "assistantContextDataQuality" | "assistantContextImportStatus" | "assistantContextMappingReview" | "assistantContextAlerts" | "assistantContextClientsFunnels" | "assistantContextAdsHealth" | "assistantContextSystemReadiness";
   requestType: string;
   contextScope: string;
 };
@@ -25,17 +25,16 @@ type ContextOption = {
 type ChatMessage = { id: string; role: "user" | "assistant"; text: string; contextLabel: string };
 
 const OPTIONS = [
-  { labelKey: "assistantContextSystemReadiness", requestType: "production_readiness_summary", contextScope: "production_readiness" },
-  { labelKey: "assistantContextClientsFunnels", requestType: "onboarding_summary", contextScope: "onboarding" },
-  { labelKey: "assistantContextMappingReview", requestType: "mapping_review_summary", contextScope: "mapping_review" },
-  { labelKey: "assistantContextAlerts", requestType: "operational_alerts_summary", contextScope: "operational_alerts" },
-  { labelKey: "assistantContextAdsHealth", requestType: "ads_health_summary", contextScope: "ads_health" },
+  { labelKey: "assistantContextFullOverview", requestType: "full_production_summary", contextScope: "full_production" },
   { labelKey: "assistantContextAdsPerformance", requestType: "ads_performance_summary", contextScope: "ads_performance" },
   { labelKey: "assistantContextAdsAnomalies", requestType: "ads_anomaly_explanation", contextScope: "ads_anomalies" },
   { labelKey: "assistantContextDataQuality", requestType: "data_quality_summary", contextScope: "data_quality" },
   { labelKey: "assistantContextImportStatus", requestType: "import_health_summary", contextScope: "import_health" },
-  { labelKey: "assistantContextImportErrors", requestType: "import_error_explanation", contextScope: "import_errors" },
-  { labelKey: "assistantContextFullOverview", requestType: "full_production_summary", contextScope: "full_production" },
+  { labelKey: "assistantContextMappingReview", requestType: "mapping_review_summary", contextScope: "mapping_review" },
+  { labelKey: "assistantContextAlerts", requestType: "operational_alerts_summary", contextScope: "operational_alerts" },
+  { labelKey: "assistantContextClientsFunnels", requestType: "onboarding_summary", contextScope: "onboarding" },
+  { labelKey: "assistantContextAdsHealth", requestType: "ads_health_summary", contextScope: "ads_health" },
+  { labelKey: "assistantContextSystemReadiness", requestType: "production_readiness_summary", contextScope: "production_readiness" },
 ] as const satisfies readonly ContextOption[];
 
 const PROMPT_KEYS = ["assistantPromptSevenDayDrop", "assistantPromptCampaignsAttention", "assistantPromptCplIncrease", "assistantPromptDataQuality", "assistantPromptClientSituation", "assistantPromptTeamPriorities"] as const;
@@ -73,34 +72,33 @@ export default function Assistant() {
   };
 
   return <DashboardLayout title={t("assistantTitle")} subtitle={t("assistantSubtitle")}>
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
-      <SectionCard className="min-h-[70vh]" contentClassName="flex min-h-[70vh] flex-col p-0">
-        <div className="border-b border-border/60 p-4">
-          <div className="rounded-lg border border-primary/15 bg-primary/5 p-3 text-sm text-muted-foreground">{t("assistantSafetyNote")}</div>
-        </div>
-        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+    <div className="mx-auto flex max-w-6xl flex-col gap-3">
+      <div className="flex justify-end">
+        <HistoryPanel rows={filterPlaceholderRows((requests.data ?? []) as Record<string, unknown>[])} labels={requestLabelByType} t={t} lang={lang} />
+      </div>
+
+      <SectionCard className="min-h-[74vh]" contentClassName="flex min-h-[74vh] flex-col p-0">
+        <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
           {messages.length === 0 ? <Welcome t={t} onPrompt={(value) => setPrompt(value)} /> : messages.map((message) => <MessageBubble key={message.id} message={message} />)}
           {run.isPending ? <div className="flex items-start gap-3"><div className="rounded-full bg-primary/10 p-2 text-primary"><Bot className="h-4 w-4" /></div><div className="rounded-2xl rounded-tl-sm border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">{t("assistantThinking")}</div></div> : null}
           {run.error ? <FriendlyError message={t("assistantError")} technical={run.error.message} /> : null}
           {!roleLoading && !canUseAi ? <p className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">{t("assistantNoAccess")}</p> : null}
         </div>
-        <div className="border-t border-border/60 bg-background/95 p-4">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-muted-foreground">{t("assistantContextLabel")}</span>
-            <Select value={selected} onValueChange={(v: (typeof OPTIONS)[number]["labelKey"]) => setSelected(v)}><SelectTrigger className="h-8 w-[14rem]"><SelectValue /></SelectTrigger><SelectContent>{OPTIONS.map((o) => <SelectItem key={`${o.requestType}-${o.contextScope}-${o.labelKey}`} value={o.labelKey}>{t(o.labelKey)}</SelectItem>)}</SelectContent></Select>
-          </div>
-          <div className="flex gap-2">
-            <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} className="min-h-16 resize-none" placeholder={t("assistantComposerPlaceholder")} onKeyDown={(event) => { if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) submitPrompt(); }} />
-            <Button className="self-end" onClick={() => submitPrompt()} disabled={runDisabled || !prompt.trim()}><Send className="mr-2 h-4 w-4" />{run.isPending ? t("assistantSending") : t("assistantSend")}</Button>
+        <div className="sticky bottom-0 border-t border-border/60 bg-background/95 p-4 shadow-sm backdrop-blur sm:p-5">
+          <div className="mx-auto max-w-4xl">
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-medium text-muted-foreground">{t("assistantContextLabel")}</span>
+              <Select value={selected} onValueChange={(v: (typeof OPTIONS)[number]["labelKey"]) => setSelected(v)}><SelectTrigger className="h-8 w-full max-w-[16rem] rounded-full"><SelectValue /></SelectTrigger><SelectContent>{OPTIONS.map((o) => <SelectItem key={`${o.requestType}-${o.contextScope}-${o.labelKey}`} value={o.labelKey}>{t(o.labelKey)}</SelectItem>)}</SelectContent></Select>
+            </div>
+            <div className="rounded-3xl border bg-card p-2 shadow-sm focus-within:border-primary/50">
+              <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} className="min-h-20 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0" placeholder={t("assistantComposerPlaceholder")} onKeyDown={(event) => { if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) submitPrompt(); }} />
+              <div className="flex items-center justify-between gap-3 px-2 pb-1">
+                <p className="text-xs text-muted-foreground">{t("assistantSafetyNote")}</p>
+                <Button className="shrink-0 rounded-full" onClick={() => submitPrompt()} disabled={runDisabled || !prompt.trim()}><Send className="mr-2 h-4 w-4" />{run.isPending ? t("assistantSending") : t("assistantSend")}</Button>
+              </div>
+            </div>
           </div>
         </div>
-      </SectionCard>
-
-      <SectionCard title={t("assistantHistoryTitle")} description={t("assistantHistoryDescription")}>
-        <details>
-          <summary className="cursor-pointer text-sm font-medium text-muted-foreground">{t("assistantHistoryToggle")}</summary>
-          <HistoryList rows={filterPlaceholderRows((requests.data ?? []) as Record<string, unknown>[])} labels={requestLabelByType} t={t} lang={lang} />
-        </details>
       </SectionCard>
 
       <DeveloperDetails title={t("assistantTechnicalDetails")}>
@@ -114,12 +112,16 @@ export default function Assistant() {
 }
 
 function Welcome({ t, onPrompt }: { t: (key: TranslationKey) => string; onPrompt: (value: string) => void }) {
-  return <div className="mx-auto flex max-w-3xl flex-col items-center py-10 text-center"><div className="mb-4 rounded-full bg-primary/10 p-3 text-primary"><Sparkles className="h-6 w-6" /></div><h2 className="text-2xl font-semibold">{t("assistantWelcomeTitle")}</h2><p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("assistantWelcome")}</p><div className="mt-6 grid w-full gap-2 sm:grid-cols-2">{PROMPT_KEYS.map((key) => <button key={key} type="button" onClick={() => onPrompt(t(key))} className="rounded-xl border bg-card p-3 text-left text-sm font-medium transition hover:border-primary/50 hover:bg-primary/5">{t(key)}</button>)}</div></div>;
+  return <div className="mx-auto flex max-w-3xl flex-col items-center py-10 text-center"><div className="mb-4 rounded-full bg-primary/10 p-3 text-primary"><Sparkles className="h-6 w-6" /></div><h2 className="text-2xl font-semibold">{t("assistantWelcomeTitle")}</h2><p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("assistantWelcome")}</p><p className="mt-3 max-w-2xl text-xs text-muted-foreground/80">{t("assistantSafetyNote")}</p><div className="mt-6 grid w-full gap-2 sm:grid-cols-2">{PROMPT_KEYS.map((key) => <button key={key} type="button" onClick={() => onPrompt(t(key))} className="rounded-xl border bg-card p-3 text-left text-sm font-medium transition hover:border-primary/50 hover:bg-primary/5">{t(key)}</button>)}</div></div>;
 }
 
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
   return <div className={`flex items-start gap-3 ${isUser ? "justify-end" : "justify-start"}`}>{!isUser ? <div className="rounded-full bg-primary/10 p-2 text-primary"><Bot className="h-4 w-4" /></div> : null}<div className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm ${isUser ? "rounded-tr-sm bg-primary text-primary-foreground" : "rounded-tl-sm border bg-card"}`}><p className="mb-1 text-[11px] opacity-75">{message.contextLabel}</p>{isUser ? <p className="whitespace-pre-wrap">{message.text}</p> : <AiAnswer text={message.text} />}</div>{isUser ? <div className="rounded-full bg-muted p-2 text-muted-foreground"><User className="h-4 w-4" /></div> : null}</div>;
+}
+
+function HistoryPanel({ rows, labels, t, lang }: { rows: Record<string, unknown>[]; labels: Record<string, string>; t: (key: TranslationKey) => string; lang: "uk" | "en" }) {
+  return <details className="group relative z-10"><summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border bg-background px-4 py-2 text-sm font-medium text-muted-foreground shadow-sm transition hover:border-primary/40 hover:text-foreground"><History className="h-4 w-4" />{t("assistantHistoryToggle")}</summary><div className="absolute right-0 mt-2 w-[min(24rem,calc(100vw-2rem))] rounded-2xl border bg-card p-4 shadow-xl"><div className="mb-3"><p className="font-medium">{t("assistantHistoryTitle")}</p><p className="text-xs text-muted-foreground">{t("assistantHistoryDescription")}</p></div><HistoryList rows={rows} labels={labels} t={t} lang={lang} /></div></details>;
 }
 
 function HistoryList({ rows, labels, t, lang }: { rows: Record<string, unknown>[]; labels: Record<string, string>; t: (key: TranslationKey) => string; lang: "uk" | "en" }) {
