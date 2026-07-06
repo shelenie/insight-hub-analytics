@@ -6,6 +6,18 @@ Meaningful changes for Internal Analytics Workspace.
 
 ---
 
+## 2026-07-06
+
+### Changed
+
+- Clarified the Telegram / Alerts page before AI-assisted mapping/autobinding work with bilingual Ukrainian/English copy, friendlier overview/health summaries, improved empty states, localized table/value labels, and collapsed technical details for raw health/error payloads.
+- Adjusted UI-only button guards so empty queues do not show an active send action, empty confirmation requests do not show an open action, and already resolved operational alerts show an “Already resolved” badge instead of a close button.
+
+### Notes
+
+- No backend logic, database schema, RPC signatures, RLS policies, or Edge Function contracts were changed.
+- Telegram remains the HITL confirmation surface for future mapping review flows.
+
 ## 2026-07-05
 
 ### Changed
