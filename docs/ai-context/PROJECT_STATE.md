@@ -79,6 +79,10 @@ Do not add unrelated tools unless Olena explicitly confirms them.
 
 
 
+## Verified Local Change — 2026-07-06 Telegram / Alerts UI Clarification
+
+The Telegram / Alerts page has been clarified before AI-assisted mapping/autobinding work. The page now uses existing Ukrainian/English i18n keys for visible admin copy, friendlier overview and health summaries, improved queue/confirmation/alert empty states, localized table headers and status values, friendly action-failure toasts, and collapsed technical detail sections for raw diagnostics. Already resolved operational alerts no longer show the close-alert action and instead show an already-resolved badge. No backend logic, RPC signatures, RLS policies, Edge Function contracts, or database schema were changed. Telegram remains the HITL confirmation surface for future mapping review flows.
+
 ## Verified Local Change — 2026-07-05 Data Bindings Bilingual Copy
 
 Final copy polish for the Data Bindings / Bindings Mapping page keeps behavior and data access unchanged while aligning the Overview helper block, project bindings labels, mapping status tab label, ad-account wording, and advanced technical-mode label in Ukrainian and English.

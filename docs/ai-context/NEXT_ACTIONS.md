@@ -14,6 +14,8 @@ Continue verification of user management, Supabase security, and dashboard metri
 
 ---
 
+2026-07-06 update: Telegram / Alerts UI was clarified before AI-assisted mapping/autobinding work. Copy, i18n, empty states, technical-details placement, and safe UI action visibility were polished without backend, RPC, RLS, Edge Function contract, or schema changes. Telegram remains the HITL confirmation surface for future mapping review flows.
+
 ## Task: Add Project Context Files
 
 Priority: high
