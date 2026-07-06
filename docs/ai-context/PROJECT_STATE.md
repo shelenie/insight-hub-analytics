@@ -81,6 +81,10 @@ Do not add unrelated tools unless Olena explicitly confirms them.
 
 ## Verified Local Change — 2026-07-06 Telegram / Alerts UI Clarification
 
+Final polish after PR #192 removes the default visible security/status note from happy-path page load, renames notification routes to admin-facing rules, shows friendly event labels as the primary rule names with technical route values as muted secondary text, localizes common technical health headers, and keeps open operational alerts primary while moving resolved recent alerts into collapsed history. Backend logic, RPC signatures, RLS policies, Edge Function contracts, database schema, and action behavior remain unchanged.
+
+## Verified Local Change — 2026-07-06 Telegram / Alerts UI Clarification
+
 The Telegram / Alerts page has been clarified before AI-assisted mapping/autobinding work. The page now uses existing Ukrainian/English i18n keys for visible admin copy, friendlier overview and health summaries, improved queue/confirmation/alert empty states, localized table headers and status values, friendly action-failure toasts, and collapsed technical detail sections for raw diagnostics. Already resolved operational alerts no longer show the close-alert action and instead show an already-resolved badge. No backend logic, RPC signatures, RLS policies, Edge Function contracts, or database schema were changed. Telegram remains the HITL confirmation surface for future mapping review flows.
 
 ## Verified Local Change — 2026-07-05 Data Bindings Bilingual Copy
