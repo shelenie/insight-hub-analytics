@@ -38,7 +38,31 @@ describe("AI Assistant chat UI", () => {
     expect(source).not.toMatch(/labelKey:\s*"[^"]*Auto"/);
     expect(source).toContain('useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextFullOverview")');
     expect(source).toContain('rows.slice(0, 3)');
-    expect(source).toContain('<details>');
+    expect(source).toContain("function HistoryPanel");
+    expect(source).toContain("<details className=");
+    expect(source).not.toContain("xl:grid-cols-[minmax(0,1fr)_20rem]");
+  });
+  it("uses the requested analysis mode label and marketing-oriented order", () => {
+    expect(translations.assistantContextLabel.uk).toBe("Режим аналізу");
+    expect(translations.assistantContextLabel.en).toBe("Analysis mode");
+    const optionsBlock = source.slice(source.indexOf("const OPTIONS = ["), source.indexOf("] as const satisfies readonly ContextOption[];"));
+    const optionLabels = Array.from(optionsBlock.matchAll(/labelKey: "([^"]+)"/g)).map((match) => match[1]);
+    expect(optionLabels.slice(0, 10)).toEqual([
+      "assistantContextFullOverview",
+      "assistantContextAdsPerformance",
+      "assistantContextAdsAnomalies",
+      "assistantContextDataQuality",
+      "assistantContextImportStatus",
+      "assistantContextMappingReview",
+      "assistantContextAlerts",
+      "assistantContextClientsFunnels",
+      "assistantContextAdsHealth",
+      "assistantContextSystemReadiness",
+    ]);
+    expect(translations.assistantContextFullOverview.en).toBe("Full overview");
+    expect(translations.assistantContextAdsAnomalies.en).toBe("Drops / anomalies");
+    expect(translations.assistantContextImportStatus.en).toBe("Imports");
+    expect(translations.assistantContextMappingReview.en).toBe("Mapping");
   });
 
   it("keeps backend contract and does not add unsupported fake action labels", () => {

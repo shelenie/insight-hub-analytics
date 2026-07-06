@@ -7,6 +7,21 @@ Meaningful changes for Internal Analytics Workspace.
 ---
 
 
+## 2026-07-06 — AI Assistant Final Layout Polish
+
+Changed:
+
+- Completed final frontend-only AI Assistant layout polish after the chat-style redesign.
+- Made chat the clear primary surface and replaced the large always-visible right history column with a compact collapsed History panel.
+- Kept history data reading behavior intact while showing a maximum of three latest items when opened and keeping technical details collapsed under Technical details / Технічні деталі.
+- Moved the safety note into lighter helper text near the welcome/composer area.
+- Updated welcome copy and analysis modes for performance-marketing agency workflows, with Full overview as the default and no visible Auto context.
+
+Safety / scope:
+
+- No backend logic, RPC calls, Supabase schema, RLS policies, routes, permissions logic, database tables/views, Edge Function name, or `ai-helper-run` request/response contract were changed.
+
+
 
 ## 2026-07-06
 
