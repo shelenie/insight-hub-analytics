@@ -12,6 +12,16 @@ Meaningful changes for Internal Analytics Workspace.
 
 ### Changed
 
+- Refined AI Assistant frontend positioning for performance marketing analytics: removed the visible Auto context option, made Full overview the default context, updated assistant subtitle/welcome copy, replaced suggested prompt cards with Ukrainian/English performance-marketing prompts, and made response history secondary with a collapsed three-item maximum.
+
+### Notes
+
+- Kept the existing `ai-helper-run` request/response contract unchanged. No backend/RPC/RLS/schema/routes/permissions changes were made.
+
+
+
+### Changed
+
 - Redesigned the AI Assistant frontend into a chat-style assistant surface with a central conversation area, welcome message, suggested prompt cards, compact context selector, bottom composer, user/assistant bubbles, thinking/error/no-access states, and secondary previous-response history.
 - Added Ukrainian/English i18n copy for the AI Assistant title, subtitle, safety note, composer, context labels, suggested prompts, history labels, empty/loading/error states, and technical details.
 - Kept raw IDs, request scopes, payloads, response metadata, role diagnostics, and saved-response debug data hidden behind localized technical-details blocks.

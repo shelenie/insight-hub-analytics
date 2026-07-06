@@ -17,21 +17,28 @@ describe("AI Assistant chat UI", () => {
     expect(source).not.toContain('Тип запиту');
   });
 
-  it("defines suggested prompt and technical details labels in Ukrainian and English", () => {
-    expect(translations.assistantPromptAttention.uk).toBe("Що зараз потребує уваги?");
-    expect(translations.assistantPromptAttention.en).toBe("What needs attention now?");
-    expect(translations.assistantPromptAds.uk).toBe("Поясни стан реклами");
-    expect(translations.assistantPromptAds.en).toBe("Explain ads performance");
-    expect(translations.assistantPromptDataQuality.uk).toBe("Які є проблеми з якістю даних?");
-    expect(translations.assistantPromptDataQuality.en).toBe("What data quality issues exist?");
-    expect(translations.assistantPromptImportErrors.uk).toBe("Які імпорти мають помилки?");
-    expect(translations.assistantPromptImportErrors.en).toBe("Which imports have errors?");
-    expect(translations.assistantPromptMapping.uk).toBe("Що треба перевірити в мапінгу?");
-    expect(translations.assistantPromptMapping.en).toBe("What should be reviewed in mapping?");
-    expect(translations.assistantPromptOverview.uk).toBe("Дай короткий огляд workspace");
-    expect(translations.assistantPromptOverview.en).toBe("Give me a short workspace overview");
+  it("defines performance marketing suggested prompts and technical details labels in Ukrainian and English", () => {
+    expect(translations.assistantPromptSevenDayDrop.uk).toBe("Що просіло за останні 7 днів?");
+    expect(translations.assistantPromptSevenDayDrop.en).toBe("What dropped in the last 7 days?");
+    expect(translations.assistantPromptCampaignsAttention.uk).toBe("Які кампанії потребують уваги?");
+    expect(translations.assistantPromptCampaignsAttention.en).toBe("Which campaigns need attention?");
+    expect(translations.assistantPromptCplIncrease.uk).toBe("Чому міг вирости CPL?");
+    expect(translations.assistantPromptCplIncrease.en).toBe("Why might CPL have increased?");
+    expect(translations.assistantPromptDataQuality.uk).toBe("Де є проблеми з якістю даних?");
+    expect(translations.assistantPromptDataQuality.en).toBe("Where are the data quality issues?");
+    expect(translations.assistantPromptClientSituation.uk).toBe("Що сказати клієнту по ситуації?");
+    expect(translations.assistantPromptClientSituation.en).toBe("What should we tell the client about the situation?");
+    expect(translations.assistantPromptTeamPriorities.uk).toBe("Дай пріоритети для команди на сьогодні");
+    expect(translations.assistantPromptTeamPriorities.en).toBe("Give the team priorities for today");
     expect(translations.assistantTechnicalDetails.uk).toBe("Технічні деталі");
     expect(translations.assistantTechnicalDetails.en).toBe("Technical details");
+  });
+
+  it("hides Auto as a context option, defaults to full overview, and keeps history secondary", () => {
+    expect(source).not.toMatch(/labelKey:\s*"[^"]*Auto"/);
+    expect(source).toContain('useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextFullOverview")');
+    expect(source).toContain('rows.slice(0, 3)');
+    expect(source).toContain('<details>');
   });
 
   it("keeps backend contract and does not add unsupported fake action labels", () => {
