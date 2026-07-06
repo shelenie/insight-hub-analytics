@@ -28,5 +28,14 @@ describe("Telegram / Alerts UI polish", () => {
     expect(translations.alertsQueueEmptyTitle.en).toBe("No messages are waiting in the queue.");
     expect(translations.alertsConfirmationsEmptyTitle.uk).toBe("Немає запитів на підтвердження.");
     expect(translations.alertsConfirmationsEmptyTitle.en).toBe("No confirmation requests.");
+    expect(translations.alertsPageHelper.uk).toContain("системні сповіщення");
+    expect(translations.alertsEventBackupFailure.uk).toBe("Помилка резервного копіювання");
+    expect(translations.alertsEventRestoreFailure.uk).toBe("Помилка відновлення");
+  });
+
+  it("renders the default security note from the current translation instead of fixed state", () => {
+    expect(source).toContain("statusMessage ?? t(\"alertsSecurityNote\")");
+    expect(source).not.toContain("useState<string>(t(\"alertsSecurityNote\"))");
+    expect(source).not.toContain("roleLoading ? <p className=\"mb-4 text-xs text-muted-foreground\">{t(\"alertsCheckingAccess\")}");
   });
 });
