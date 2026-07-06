@@ -471,7 +471,6 @@ export const translations = {
   assistantNoAccess: { uk: "AI-асистент недоступний для вашої ролі або workspace.", en: "AI Assistant is not available for your role or workspace." },
   assistantEmptyAnswer: { uk: "Відповідь поки відсутня.", en: "No answer returned yet." },
   assistantContextLabel: { uk: "Контекст", en: "Context" },
-  assistantContextAuto: { uk: "Авто", en: "Auto" },
   assistantContextSystemReadiness: { uk: "Готовність системи", en: "System readiness" },
   assistantContextClientsFunnels: { uk: "Клієнти та воронки", en: "Clients and funnels" },
   assistantContextMappingReview: { uk: "Мапінг на перевірку", en: "Mapping review" },

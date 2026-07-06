@@ -35,7 +35,7 @@ describe("AI Assistant chat UI", () => {
   });
 
   it("hides Auto as a context option, defaults to full overview, and keeps history secondary", () => {
-    expect(source).not.toContain('labelKey: "assistantContextAuto"');
+    expect(source).not.toMatch(/labelKey:\s*"[^"]*Auto"/);
     expect(source).toContain('useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextFullOverview")');
     expect(source).toContain('rows.slice(0, 3)');
     expect(source).toContain('<details>');
