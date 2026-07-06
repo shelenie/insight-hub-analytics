@@ -7,6 +7,17 @@ Meaningful changes for Internal Analytics Workspace.
 ---
 
 ## 2026-07-06
+
+### Changed
+
+- Clarified the left sidebar admin/control-center section by renaming Operations to Admin in Ukrainian and English, keeping the existing Onboarding, Data Bindings / Mapping, Telegram / Alerts, and Ads Connectors items under it.
+- Made the Admin sidebar group collapsible in the expanded desktop sidebar using the existing collapsible UI pattern; active admin routes auto-open the group and icon-collapsed sidebar behavior remains unchanged.
+
+### Notes
+
+- No backend logic, RLS policies, permissions, routes, Supabase objects, or new pages were changed.
+- Users & Access / Користувачі й доступи remains planned as a separate security-sensitive admin feature for email invitations, workspace role assignment, access deactivation, and audit history.
+
 ### Changed
 
 - Applied final Telegram / Alerts plain-language polish after PR #192: removed the default visible security/status note from normal page load, renamed routes to notification rules, showed friendly rule/event labels before technical route values, translated common technical health headers, and moved resolved operational alerts into collapsed recent history when no open alerts are present.

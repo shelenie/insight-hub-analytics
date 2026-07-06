@@ -187,7 +187,7 @@ export const translations = {
   bindingsEmpty: { uk: "Додаткові дані про звʼязки недоступні.", en: "Additional binding data is unavailable." },
   anomaliesEmpty: { uk: "Додаткові дані про аномалії недоступні.", en: "Additional anomaly data is unavailable." },
   sidebarAnalytics: { uk: "Аналітика", en: "Analytics" },
-  sidebarOperations: { uk: "Операції", en: "Operations" },
+  sidebarAdmin: { uk: "Адмін", en: "Admin" },
   sidebarAi: { uk: "AI", en: "AI" },
   goToOverview: { uk: "Перейти до огляду", en: "Go to overview" },
 
