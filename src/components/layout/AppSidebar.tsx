@@ -6,7 +6,6 @@ import {
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -34,9 +33,12 @@ import type { TranslationKey } from "@/i18n/translations";
 
 const navSections: { labelKey: TranslationKey; items: { titleKey: TranslationKey; url: string; icon: typeof LayoutDashboard }[] }[] = [
   {
+    labelKey: "workspace",
+    items: [{ titleKey: "navOverview", url: "/", icon: LayoutDashboard }],
+  },
+  {
     labelKey: "sidebarAnalytics",
     items: [
-      { titleKey: "navOverview", url: "/", icon: LayoutDashboard },
       { titleKey: "navFunnel", url: "/conversions", icon: GitBranch },
       { titleKey: "navCampaigns", url: "/campaigns", icon: Megaphone },
       { titleKey: "navSales", url: "/sales", icon: DollarSign },
@@ -97,11 +99,6 @@ export function AppSidebar() {
 
       <SidebarContent className="px-1.5 sidebar-scroll">
         <SidebarGroup>
-          {!collapsed && (
-            <SidebarGroupLabel className="px-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/80">
-              {t("workspace")}
-            </SidebarGroupLabel>
-          )}
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
               {navSections.map((section) => {

@@ -76,6 +76,11 @@ Do not add unrelated tools unless Olena explicitly confirms them.
 ---
 
 
+
+## Verified Local Change — 2026-07-06 Sidebar Navigation Structure
+
+The sidebar navigation structure was corrected as a frontend-only change. Overview now appears under the Workspace section, the Analytics section starts with Conversions and contains Campaigns, Sales / Revenue, and Imports / Data Health, and the Admin group remains collapsible with active Admin routes auto-opening the group. Icon-collapsed sidebar behavior remains unchanged. No backend logic, routes, permissions, RLS policies, Supabase schema/objects, or new pages were changed. Users & Access remains deferred as a future security-sensitive feature; role-aware sidebar filtering should wait for a safe capability/read contract if needed.
+
 ## Verified Local Change — 2026-07-06 AI Assistant Performance Marketing Defaults
 
 The AI Assistant frontend was refined for performance marketing analytics. The visible Auto context option was removed, Full overview is now the default context, subtitle and welcome copy now focus on ads, CPL, campaign attention, data quality, and client-ready explanations, suggested prompts were replaced with Ukrainian/English performance-marketing questions, and response history is secondary/collapsed by default with at most three visible items. The existing `ai-helper-run` Edge Function request body contract remains unchanged, and no backend logic, RPCs, RLS policies, schema, routes, or permissions were changed.

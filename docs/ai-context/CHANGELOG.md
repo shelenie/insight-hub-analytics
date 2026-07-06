@@ -12,6 +12,17 @@ Meaningful changes for Internal Analytics Workspace.
 
 ### Changed
 
+- Corrected the frontend-only sidebar navigation structure so Overview is listed under Workspace, while Analytics now starts with Conversions and keeps Campaigns, Sales / Revenue, and Imports / Data Health.
+- Kept the Admin group collapsible, expanded by default, and auto-opened for active Admin routes, without changing icon-collapsed sidebar behavior.
+
+### Notes
+
+- No backend logic, routes, permissions, RLS policies, Supabase schema/objects, or new pages were changed.
+- Users & Access was not added; it remains a future security-sensitive feature. Role-aware sidebar filtering remains deferred until safe role/capability data is intentionally wired into the sidebar.
+
+
+### Changed
+
 - Refined AI Assistant frontend positioning for performance marketing analytics: removed the visible Auto context option, made Full overview the default context, updated assistant subtitle/welcome copy, replaced suggested prompt cards with Ukrainian/English performance-marketing prompts, and made response history secondary with a collapsed three-item maximum.
 
 ### Notes
