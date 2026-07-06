@@ -16,7 +16,7 @@ Approval: awaiting client approval
 Current stack: Codex + Supabase + GitHub
 Source of truth for code: GitHub
 Backend/data layer: Supabase
-Last updated: 2026-07-05
+Last updated: 2026-07-06
 Confidence: high for Phase 1 user-access hardening after manual remote Supabase verification; medium-high for broader repo facts
 
 ---
@@ -76,7 +76,9 @@ Do not add unrelated tools unless Olena explicitly confirms them.
 ---
 
 
+## Verified Local Change — 2026-07-06 Admin Sidebar Clarification
 
+The left sidebar admin/control-center section has been clarified from Operations to Admin in Ukrainian and English. The existing admin items remain unchanged: Onboarding, Data Bindings / Mapping, Telegram / Alerts, and Ads Connectors. The Admin group uses the existing Radix/shadcn collapsible UI pattern in the expanded desktop sidebar, auto-opens when one of its routes is active, and keeps icon-collapsed sidebar behavior unchanged. No backend logic, routes, permissions, RLS policies, Supabase objects, or new pages were changed. Users & Access / Користувачі й доступи remains planned as a separate security-sensitive admin feature.
 
 
 ## Verified Local Change — 2026-07-06 Telegram / Alerts UI Clarification

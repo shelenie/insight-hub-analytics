@@ -16,6 +16,10 @@ Continue verification of user management, Supabase security, and dashboard metri
 
 2026-07-06 update: Telegram / Alerts UI was clarified before AI-assisted mapping/autobinding work. Copy, i18n, empty states, technical-details placement, and safe UI action visibility were polished without backend, RPC, RLS, Edge Function contract, or schema changes. Telegram remains the HITL confirmation surface for future mapping review flows.
 
+2026-07-06 update: The sidebar admin/control-center group was clarified from Operations to Admin and made collapsible using the existing sidebar/collapsible UI pattern, with active admin routes auto-opening the group. No backend, RLS, permission, route, or page changes were made.
+
+Future admin page: Users & Access / Користувачі й доступи. Purpose: invite users by email, assign workspace roles, deactivate access, and audit changes. Treat this as a separate security-sensitive admin feature that requires backend/RLS/RPC/audit contract verification before UI implementation.
+
 ## Task: Add Project Context Files
 
 Priority: high

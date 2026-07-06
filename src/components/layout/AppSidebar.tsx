@@ -1,4 +1,5 @@
 import { NavLink } from "@/components/NavLink";
+import { useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
   Sidebar,
@@ -25,7 +26,9 @@ import {
   Link2,
   BellRing,
   PlugZap,
+  ChevronDown,
 } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { TranslationKey } from "@/i18n/translations";
 
@@ -41,7 +44,7 @@ const navSections: { labelKey: TranslationKey; items: { titleKey: TranslationKey
     ],
   },
   {
-    labelKey: "sidebarOperations",
+    labelKey: "sidebarAdmin",
     items: [
       { titleKey: "navOnboarding", url: "/onboarding", icon: Layers3 },
       { titleKey: "navBindingsMapping", url: "/bindings", icon: Link2 },
@@ -60,8 +63,18 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const { t } = useI18n();
+  const [adminOpen, setAdminOpen] = useState(true);
   const isActive = (path: string) =>
     path === "/" ? location.pathname === "/" : location.pathname.startsWith(path);
+  const isAdminActive = navSections
+    .find((section) => section.labelKey === "sidebarAdmin")
+    ?.items.some((item) => isActive(item.url));
+
+  useEffect(() => {
+    if (isAdminActive) {
+      setAdminOpen(true);
+    }
+  }, [isAdminActive]);
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -91,37 +104,53 @@ export function AppSidebar() {
           )}
           <SidebarGroupContent>
             <SidebarMenu className="gap-0.5">
-              {navSections.map((section) => (
-                <div key={section.labelKey} className="space-y-1">
-                  {!collapsed && (
-                    <p className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
-                      {t(section.labelKey)}
-                    </p>
-                  )}
-                  {section.items.map((item) => {
-                const title = t(item.titleKey);
-                const active = isActive(item.url);
+              {navSections.map((section) => {
+                const sectionItems = section.items.map((item) => {
+                  const title = t(item.titleKey);
+                  const active = isActive(item.url);
+                  return (
+                    <SidebarMenuItem key={item.url}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={active}
+                        tooltip={title}
+                        className="relative h-9 rounded-md text-[13px] data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-semibold"
+                      >
+                        <NavLink to={item.url} end={item.url === "/"} className="flex items-center gap-2.5">
+                          {active && (
+                            <span className="absolute left-0 top-1.5 bottom-1.5 w-[2.5px] rounded-r-full bg-primary" />
+                          )}
+                          <item.icon className="h-[15px] w-[15px] shrink-0" />
+                          {!collapsed && <span className="truncate">{title}</span>}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                });
+
+                if (!collapsed && section.labelKey === "sidebarAdmin") {
+                  return (
+                    <Collapsible key={section.labelKey} open={adminOpen} onOpenChange={setAdminOpen} className="space-y-1">
+                      <CollapsibleTrigger className="group flex w-full items-center justify-between rounded-md px-2 pb-1 pt-2 text-left text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70 transition-colors hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring">
+                        <span>{t(section.labelKey)}</span>
+                        <ChevronDown className="h-3.5 w-3.5 transition-transform group-data-[state=open]:rotate-180" />
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="space-y-0.5">{sectionItems}</CollapsibleContent>
+                    </Collapsible>
+                  );
+                }
+
                 return (
-                  <SidebarMenuItem key={item.url}>
-                    <SidebarMenuButton
-                      asChild
-                      isActive={active}
-                      tooltip={title}
-                      className="relative h-9 rounded-md text-[13px] data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground data-[active=true]:font-semibold"
-                    >
-                      <NavLink to={item.url} end={item.url === "/"} className="flex items-center gap-2.5">
-                        {active && (
-                          <span className="absolute left-0 top-1.5 bottom-1.5 w-[2.5px] rounded-r-full bg-primary" />
-                        )}
-                        <item.icon className="h-[15px] w-[15px] shrink-0" />
-                        {!collapsed && <span className="truncate">{title}</span>}
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+                  <div key={section.labelKey} className="space-y-1">
+                    {!collapsed && (
+                      <p className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/70">
+                        {t(section.labelKey)}
+                      </p>
+                    )}
+                    {sectionItems}
+                  </div>
                 );
-                  })}
-                </div>
-              ))}
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
