@@ -111,7 +111,13 @@ describe("Bindings page ad account behavior", () => {
       "No files or tables are connected yet. Ad accounts are managed in a separate tab.",
     );
     expect(translationsSource).toContain(
+      'bindingsTabProjectData: { uk: "Привʼязки до проєктів", en: "Project bindings" }',
+    );
+    expect(translationsSource).toContain(
       'bindingsProjectBindingsTitle: { uk: "Привʼязки до проєктів", en: "Project bindings" }',
+    );
+    expect(translationsSource).toContain(
+      "Це зведений перегляд наявних звʼязків без редагування.",
     );
     expect(translationsSource).toContain(
       "All sources already connected to clients, projects, and funnels. This is a consolidated read-only view of existing bindings.",
@@ -122,12 +128,18 @@ describe("Bindings page ad account behavior", () => {
     expect(translationsSource).toContain(
       "Sources that the system could not confidently bind automatically will appear here.",
     );
-    expect(translationsSource).toContain("No bindings require review.");
+    expect(translationsSource).toContain("There are currently no bindings that need manual review.");
     expect(translationsSource).toContain(
       "When the system finds an unknown or unconfirmed source, it will appear here.",
     );
     expect(translationsSource).toContain(
+      'bindingsTabHealth: { uk: "Стан мапінгу", en: "Mapping status" }',
+    );
+    expect(translationsSource).toContain(
       'bindingsHealthTitle: { uk: "Стан мапінгу та підтверджень", en: "Mapping and confirmation status" }',
+    );
+    expect(translationsSource).toContain(
+      'bindingsTechnicalSummary: { uk: "Розширений / технічний режим: налаштування через ID", en: "Advanced / technical mode: setup by ID" }',
     );
     expect(translationsSource).toContain(
       "Production status of the mapping queue, Telegram confirmations, and errors.",
