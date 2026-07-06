@@ -10,6 +10,8 @@ Current next actions for Internal Analytics Workspace.
 
 Continue verification of user management, Supabase security, and dashboard metric definitions before feature expansion.
 
+2026-07-06 sidebar structure update: Overview has been moved from Analytics into Workspace in the frontend sidebar. Admin remains collapsible and auto-opens for active Admin routes. This PR intentionally makes no backend, route, permission, RLS, Supabase schema/object, or new-page changes. Users & Access remains deferred as a security-sensitive feature, and role-aware sidebar filtering should wait for a safe role/capability sidebar contract if needed.
+
 2026-07-05 update: Data Bindings manual/admin UX copy has been clarified and the visible page/ad-account workflow text has been routed through existing Ukrainian/English i18n before AI-assisted mapping/autobinding work. Final copy polish aligned Overview, project bindings, mapping status, and technical-mode labels without changing backend behavior; next mapping/autobinding work should still define backend/RLS/RPC contracts before implementation.
 
 
