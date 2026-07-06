@@ -1,5 +1,6 @@
 import { Fragment, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { Bot, Clock, Send, Sparkles, User } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { Button } from "@/components/ui/button";
@@ -10,58 +11,100 @@ import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { supabase } from "@/integrations/supabase/client";
 import { DeveloperDetails, FriendlyError } from "@/components/common/DeveloperDetails";
 import { filterPlaceholderRows } from "@/lib/demoFilters";
+import { useI18n } from "@/i18n/I18nProvider";
+import type { TranslationKey } from "@/i18n/translations";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
-// types omitted for brevity
+
+type ContextOption = {
+  labelKey: "assistantContextAuto" | "assistantContextSystemReadiness" | "assistantContextClientsFunnels" | "assistantContextMappingReview" | "assistantContextAlerts" | "assistantContextAdsHealth" | "assistantContextAdsPerformance" | "assistantContextAdsAnomalies" | "assistantContextDataQuality" | "assistantContextImportStatus" | "assistantContextImportErrors" | "assistantContextFullOverview";
+  requestType: string;
+  contextScope: string;
+};
+
+type ChatMessage = { id: string; role: "user" | "assistant"; text: string; contextLabel: string };
+
 const OPTIONS = [
-  { label: "Готовність системи", requestType: "production_readiness_summary", contextScope: "production_readiness" },
-  { label: "Клієнти та воронки", requestType: "onboarding_summary", contextScope: "onboarding" },
-  { label: "Мапінг на перевірку", requestType: "mapping_review_summary", contextScope: "mapping_review" },
-  { label: "Сповіщення", requestType: "operational_alerts_summary", contextScope: "operational_alerts" },
-  { label: "Повний огляд", requestType: "full_production_summary", contextScope: "full_production" },
-  { label: "Стан рекламних підключень", requestType: "ads_health_summary", contextScope: "ads_health" },
-  { label: "Ефективність реклами", requestType: "ads_performance_summary", contextScope: "ads_performance" },
-  { label: "Пояснити аномалію в рекламі", requestType: "ads_anomaly_explanation", contextScope: "ads_anomalies" },
-  { label: "Якість даних", requestType: "data_quality_summary", contextScope: "data_quality" },
-  { label: "Стан імпортів", requestType: "import_health_summary", contextScope: "import_health" },
-  { label: "Помилки імпорту", requestType: "import_error_explanation", contextScope: "import_errors" },
-] as const;
+  { labelKey: "assistantContextAuto", requestType: "production_readiness_summary", contextScope: "production_readiness" },
+  { labelKey: "assistantContextSystemReadiness", requestType: "production_readiness_summary", contextScope: "production_readiness" },
+  { labelKey: "assistantContextClientsFunnels", requestType: "onboarding_summary", contextScope: "onboarding" },
+  { labelKey: "assistantContextMappingReview", requestType: "mapping_review_summary", contextScope: "mapping_review" },
+  { labelKey: "assistantContextAlerts", requestType: "operational_alerts_summary", contextScope: "operational_alerts" },
+  { labelKey: "assistantContextAdsHealth", requestType: "ads_health_summary", contextScope: "ads_health" },
+  { labelKey: "assistantContextAdsPerformance", requestType: "ads_performance_summary", contextScope: "ads_performance" },
+  { labelKey: "assistantContextAdsAnomalies", requestType: "ads_anomaly_explanation", contextScope: "ads_anomalies" },
+  { labelKey: "assistantContextDataQuality", requestType: "data_quality_summary", contextScope: "data_quality" },
+  { labelKey: "assistantContextImportStatus", requestType: "import_health_summary", contextScope: "import_health" },
+  { labelKey: "assistantContextImportErrors", requestType: "import_error_explanation", contextScope: "import_errors" },
+  { labelKey: "assistantContextFullOverview", requestType: "full_production_summary", contextScope: "full_production" },
+] as const satisfies readonly ContextOption[];
+
+const PROMPT_KEYS = ["assistantPromptAttention", "assistantPromptAds", "assistantPromptDataQuality", "assistantPromptImportErrors", "assistantPromptMapping", "assistantPromptOverview"] as const;
 
 export default function Assistant() {
   const { session } = useAuth();
   const { role, capabilities, isLoading: roleLoading, error: roleError } = useWorkspaceRole(WORKSPACE_ID);
-  const [selected, setSelected] = useState<(typeof OPTIONS)[number]["requestType"]>(OPTIONS[0].requestType);
+  const { t, lang } = useI18n();
+  const [selected, setSelected] = useState<(typeof OPTIONS)[number]["labelKey"]>(OPTIONS[0].labelKey);
   const [prompt, setPrompt] = useState("");
   const [latest, setLatest] = useState<Record<string, unknown> | null>(null);
-  const selectedOption = useMemo(() => OPTIONS.find((o) => o.requestType === selected) ?? OPTIONS[0], [selected]);
-  const requestLabelByType = useMemo(() => Object.fromEntries(OPTIONS.map((o) => [o.requestType, o.label])), []);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const selectedOption = useMemo(() => OPTIONS.find((o) => o.labelKey === selected) ?? OPTIONS[0], [selected]);
+  const requestLabelByType = useMemo(() => Object.fromEntries(OPTIONS.map((o) => [o.requestType, t(o.labelKey)])), [t]);
 
   const requests = useQuery({ queryKey: ["ai-helper-requests", WORKSPACE_ID], enabled: Boolean(session), queryFn: async () => (await supabase.from("v_ai_helper_requests_recent").select("*").eq("workspace_id", WORKSPACE_ID).limit(20)).data ?? [] });
-  const run = useMutation({ mutationFn: async () => {
-    const response = await supabase.functions.invoke("ai-helper-run", { body: { workspace_id: WORKSPACE_ID, request_type: selectedOption.requestType, context_scope: selectedOption.contextScope, prompt } });
+  const run = useMutation({ mutationFn: async (submittedPrompt: string) => {
+    const response = await supabase.functions.invoke("ai-helper-run", { body: { workspace_id: WORKSPACE_ID, request_type: selectedOption.requestType, context_scope: selectedOption.contextScope, prompt: submittedPrompt } });
     if (response.error) throw response.error;
     return (response.data ?? {}) as Record<string, unknown>;
-  }, onSuccess: (r) => { setLatest(r); void requests.refetch(); } });
+  }, onSuccess: (r) => {
+    setLatest(r);
+    setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: getAnswerText(r, t("assistantEmptyAnswer")), contextLabel: t(selectedOption.labelKey) }]);
+    void requests.refetch();
+  } });
 
   const canUseAi = capabilities.can_use_ai_helper;
   const runDisabled = !session || run.isPending || roleLoading || !canUseAi;
+  const submitPrompt = (value = prompt) => {
+    const submittedPrompt = value.trim();
+    if (!submittedPrompt || runDisabled) return;
+    setMessages((current) => [...current, { id: `user-${Date.now()}`, role: "user", text: submittedPrompt, contextLabel: t(selectedOption.labelKey) }]);
+    setPrompt("");
+    run.mutate(submittedPrompt);
+  };
 
-  return <DashboardLayout title="AI-асистент" subtitle="Поставте питання по даних робочого простору">
-    <div className="space-y-4">
-      <SectionCard title="Запитати Insight Hub AI">
-        <p className="text-xs text-muted-foreground mb-2">Тип запиту</p>
-        <Select value={selected} onValueChange={(v: (typeof OPTIONS)[number]["requestType"]) => setSelected(v)}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{OPTIONS.map((o) => <SelectItem key={o.requestType} value={o.requestType}>{o.label}</SelectItem>)}</SelectContent></Select>
-        <p className="text-xs text-muted-foreground mt-3 mb-2">Ваше питання</p>
-        <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} className="min-h-24" placeholder="Запитайте про тренди, аномалії, якість даних, імпорти або готовність системи." />
-        <Button className="mt-3" onClick={() => run.mutate()} disabled={runDisabled}>{run.isPending ? "Обробляємо…" : "Запитати AI"}</Button>
-        {!roleLoading && !canUseAi ? <p className="mt-2 text-sm text-muted-foreground">У вас немає доступу до цієї AI-дії.</p> : null}
-        {run.error ? <FriendlyError message="Цей розділ поки недоступний." technical={run.error.message} /> : null}
+  return <DashboardLayout title={t("assistantTitle")} subtitle={t("assistantSubtitle")}>
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_20rem]">
+      <SectionCard className="min-h-[70vh]" contentClassName="flex min-h-[70vh] flex-col p-0">
+        <div className="border-b border-border/60 p-4">
+          <div className="rounded-lg border border-primary/15 bg-primary/5 p-3 text-sm text-muted-foreground">{t("assistantSafetyNote")}</div>
+        </div>
+        <div className="flex-1 space-y-4 overflow-y-auto p-4">
+          {messages.length === 0 ? <Welcome t={t} onPrompt={(value) => setPrompt(value)} /> : messages.map((message) => <MessageBubble key={message.id} message={message} />)}
+          {run.isPending ? <div className="flex items-start gap-3"><div className="rounded-full bg-primary/10 p-2 text-primary"><Bot className="h-4 w-4" /></div><div className="rounded-2xl rounded-tl-sm border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">{t("assistantThinking")}</div></div> : null}
+          {run.error ? <FriendlyError message={t("assistantError")} technical={run.error.message} /> : null}
+          {!roleLoading && !canUseAi ? <p className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">{t("assistantNoAccess")}</p> : null}
+        </div>
+        <div className="border-t border-border/60 bg-background/95 p-4">
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-muted-foreground">{t("assistantContextLabel")}</span>
+            <Select value={selected} onValueChange={(v: (typeof OPTIONS)[number]["labelKey"]) => setSelected(v)}><SelectTrigger className="h-8 w-[14rem]"><SelectValue /></SelectTrigger><SelectContent>{OPTIONS.map((o) => <SelectItem key={`${o.requestType}-${o.contextScope}-${o.labelKey}`} value={o.labelKey}>{t(o.labelKey)}</SelectItem>)}</SelectContent></Select>
+          </div>
+          <div className="flex gap-2">
+            <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} className="min-h-16 resize-none" placeholder={t("assistantComposerPlaceholder")} onKeyDown={(event) => { if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) submitPrompt(); }} />
+            <Button className="self-end" onClick={() => submitPrompt()} disabled={runDisabled || !prompt.trim()}><Send className="mr-2 h-4 w-4" />{run.isPending ? t("assistantSending") : t("assistantSend")}</Button>
+          </div>
+        </div>
       </SectionCard>
 
-      <SectionCard title="Остання відповідь">{!latest ? <p className="text-sm text-muted-foreground">У цій сесії ще немає відповідей AI.</p> : <AiAnswer text={String(latest.answer ?? latest.summary ?? latest.response ?? latest.text ?? "") || "Відповідь поки відсутня."} />}</SectionCard>
-      <SectionCard title="Попередні відповіді AI"><details><summary className="cursor-pointer">Показати попередні відповіді AI</summary>{filterPlaceholderRows((requests.data ?? []) as Record<string, unknown>[]).length === 0 ? <p className="text-sm text-muted-foreground">Попередніх відповідей ще немає.</p> : <div className="space-y-2">{filterPlaceholderRows((requests.data ?? []) as Record<string, unknown>[]).slice(0, 5).map((r: Record<string, unknown>, i: number) => { const title = String(r.title ?? "Відповідь AI"); const requestType = typeof r.request_type === "string" ? requestLabelByType[r.request_type] ?? r.request_type : null; return <div key={i} className="rounded border p-3 text-sm"><p className="font-medium">{title}</p>{requestType ? <p className="mt-0.5 text-xs text-muted-foreground">{requestType}</p> : null}{r.created_at ? <p className="mt-1 text-xs text-muted-foreground">{new Date(String(r.created_at)).toLocaleString()}</p> : null}<p className="mt-1 text-muted-foreground">Відповідь збережена</p><p className="mt-2 text-xs text-muted-foreground">Деталі доступні в debug mode.</p><DeveloperDetails><pre className="max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify(r, null, 2)}</pre></DeveloperDetails></div>; })}</div>}</details></SectionCard>
+      <SectionCard title={t("assistantHistoryTitle")} description={t("assistantHistoryDescription")}>
+        <details className="xl:open:block" open>
+          <summary className="cursor-pointer text-sm font-medium text-muted-foreground xl:hidden">{t("assistantHistoryToggle")}</summary>
+          <HistoryList rows={filterPlaceholderRows((requests.data ?? []) as Record<string, unknown>[])} labels={requestLabelByType} t={t} lang={lang} />
+        </details>
+      </SectionCard>
 
-      <DeveloperDetails>
+      <DeveloperDetails title={t("assistantTechnicalDetails")}>
         <p>Role: {role ?? "unknown"}</p>
         <p>Capabilities: {JSON.stringify(capabilities)}</p>
         {roleError ? <p className="break-words">Role error: {roleError.message}</p> : null}
@@ -71,9 +114,27 @@ export default function Assistant() {
   </DashboardLayout>;
 }
 
+function Welcome({ t, onPrompt }: { t: (key: TranslationKey) => string; onPrompt: (value: string) => void }) {
+  return <div className="mx-auto flex max-w-3xl flex-col items-center py-10 text-center"><div className="mb-4 rounded-full bg-primary/10 p-3 text-primary"><Sparkles className="h-6 w-6" /></div><h2 className="text-2xl font-semibold">{t("assistantWelcomeTitle")}</h2><p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("assistantWelcome")}</p><div className="mt-6 grid w-full gap-2 sm:grid-cols-2">{PROMPT_KEYS.map((key) => <button key={key} type="button" onClick={() => onPrompt(t(key))} className="rounded-xl border bg-card p-3 text-left text-sm font-medium transition hover:border-primary/50 hover:bg-primary/5">{t(key)}</button>)}</div></div>;
+}
+
+function MessageBubble({ message }: { message: ChatMessage }) {
+  const isUser = message.role === "user";
+  return <div className={`flex items-start gap-3 ${isUser ? "justify-end" : "justify-start"}`}>{!isUser ? <div className="rounded-full bg-primary/10 p-2 text-primary"><Bot className="h-4 w-4" /></div> : null}<div className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm ${isUser ? "rounded-tr-sm bg-primary text-primary-foreground" : "rounded-tl-sm border bg-card"}`}><p className="mb-1 text-[11px] opacity-75">{message.contextLabel}</p>{isUser ? <p className="whitespace-pre-wrap">{message.text}</p> : <AiAnswer text={message.text} />}</div>{isUser ? <div className="rounded-full bg-muted p-2 text-muted-foreground"><User className="h-4 w-4" /></div> : null}</div>;
+}
+
+function HistoryList({ rows, labels, t, lang }: { rows: Record<string, unknown>[]; labels: Record<string, string>; t: (key: TranslationKey) => string; lang: "uk" | "en" }) {
+  if (rows.length === 0) return <p className="text-sm text-muted-foreground">{t("assistantHistoryEmpty")}</p>;
+  return <div className="space-y-2">{rows.slice(0, 8).map((r, i) => { const title = String(r.title ?? t("assistantHistoryDefaultTitle")); const requestType = typeof r.request_type === "string" ? labels[r.request_type] ?? r.request_type : t("assistantContextAuto"); const status = String(r.status ?? r.state ?? "saved"); return <div key={i} className="rounded-lg border p-3 text-sm"><p className="font-medium">{title}</p><p className="mt-1 text-xs text-muted-foreground">{requestType}</p>{r.created_at ? <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Clock className="h-3 w-3" />{new Date(String(r.created_at)).toLocaleString(lang === "uk" ? "uk-UA" : "en-US")}</p> : null}<p className="mt-1 text-xs text-muted-foreground">{status === "failed" ? t("assistantHistoryFailed") : t("assistantHistorySaved")}</p><DeveloperDetails title={t("assistantTechnicalDetails")}><pre className="max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify(r, null, 2)}</pre></DeveloperDetails></div>; })}</div>;
+}
+
+function getAnswerText(payload: Record<string, unknown>, fallback: string) {
+  return String(payload.answer ?? payload.summary ?? payload.response ?? payload.text ?? "") || fallback;
+}
+
 function AiAnswer({ text }: { text: string }) {
   const lines = text.split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith("{") && !l.endsWith("}"));
-  return <div className="space-y-2 text-sm">{lines.map((line, i) => {
+  return <div className="space-y-2 text-sm leading-relaxed">{lines.map((line, i) => {
     if (/^##\s+/.test(line)) return <p key={i} className="font-semibold">{renderBold(line.replace(/^##\s+/, ""))}</p>;
     if (/^(?:[-*•])\s+/.test(line)) return <ul key={i} className="list-disc pl-5"><li>{renderBold(line.replace(/^(?:[-*•])\s+/, ""))}</li></ul>;
     return <p key={i}>{renderBold(line)}</p>;
