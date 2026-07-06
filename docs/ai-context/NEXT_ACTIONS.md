@@ -21,13 +21,15 @@ Continue verification of user management, Supabase security, and dashboard metri
 
 2026-07-06 audit update: Remaining frontend admin/control-center pages were inspected before backend AI-assisted mapping work. Frontend-ready as-is: Admin sidebar structure, Telegram / Alerts, Data Bindings / Mapping, and Overview as a high-level operational entry point. Needs frontend polish before backend mapping work: Onboarding should get bilingual i18n and friendlier admin copy around hierarchy/health/editing states; AI Assistant should use existing i18n, clearer safe-disabled/no-access/loading states, and less prominent debug details; Imports / Data Health may need small copy/empty-state polish only after reviewing live data-health wording in UX. Ads Connectors is safe to keep and mostly polished, but should not add fake Google/TikTok actions beyond verified OAuth/sync contracts. Users & Access must remain deferred: local/verified backend foundations include active-aware membership status, role/capability helpers, and permission/member views, but direct member view grants are revoked and invitation/action RPC/audit/bootstrap contracts are still missing. Do not add a Users & Access page until safe read RPC/view access and write RPC/audit/RLS contracts are verified.
 
-Recommended PR order before backend AI-assisted mapping work:
 
-1. Onboarding frontend polish only: route visible copy through UK/EN i18n, clarify purpose/empty states/no-access/loading/error states, and keep existing onboarding Edge Function calls unchanged.
-2. AI Assistant frontend polish only: route visible copy through UK/EN i18n, clarify that it uses prepared/verified data, improve no-access/loading/error states, and keep existing `ai-helper-run` contract unchanged.
-3. Imports / Data Health micro-polish if needed: refine labels/empty states for rejected rows, mapping review, alerts, and safe links to Data Bindings / Telegram / Ads Connectors without changing queries or actions.
-4. Users & Access backend-contract PR: verify/create safe read model, invitations, member lifecycle action RPCs, audit events, first-superadmin/bootstrap rules, and deployed RLS before any management UI.
-5. Users & Access frontend PR only after step 4: read-only member list first, then invite/deactivate/role-change UI only through verified backend contracts.
+2026-07-06 update: Onboarding frontend polish was completed before backend AI-assisted mapping work. Visible page copy now uses Ukrainian/English i18n, explains the client → project → funnel analytics hierarchy in admin-facing language, improves empty/loading/error/no-access states, and keeps technical IDs/details collapsed. No backend, RPC, RLS, schema, route, Edge Function contract, or permission changes were made.
+
+Recommended remaining PR order before backend AI-assisted mapping work:
+
+1. AI Assistant frontend polish only: route visible copy through UK/EN i18n, clarify that it uses prepared/verified data, improve no-access/loading/error states, and keep existing `ai-helper-run` contract unchanged.
+2. Imports / Data Health micro-polish if needed: refine labels/empty states for rejected rows, mapping review, alerts, and safe links to Data Bindings / Telegram / Ads Connectors without changing queries or actions.
+3. Users & Access backend-contract PR: verify/create safe read model, invitations, member lifecycle action RPCs, audit events, first-superadmin/bootstrap rules, and deployed RLS before any management UI.
+4. Users & Access frontend PR only after step 3: read-only member list first, then invite/deactivate/role-change UI only through verified backend contracts.
 
 Future admin page: Users & Access / Користувачі й доступи. Purpose: invite users by email, assign workspace roles, deactivate access, and audit changes. Treat this as a separate security-sensitive admin feature that requires backend/RLS/RPC/audit contract verification before UI implementation.
 
