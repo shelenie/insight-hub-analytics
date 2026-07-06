@@ -73,12 +73,13 @@ export default function Assistant() {
 
   return <DashboardLayout title={t("assistantTitle")} subtitle={t("assistantSubtitle")}>
     <div className="mx-auto flex max-w-6xl flex-col gap-3">
-      <div className="flex justify-end">
-        <HistoryPanel rows={filterPlaceholderRows((requests.data ?? []) as Record<string, unknown>[])} labels={requestLabelByType} t={t} lang={lang} />
-      </div>
-
-      <SectionCard className="min-h-[74vh]" contentClassName="flex min-h-[74vh] flex-col p-0">
-        <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-6">
+      <SectionCard
+        title={t("assistantWelcomeTitle")}
+        actions={<HistoryPanel rows={filterPlaceholderRows((requests.data ?? []) as Record<string, unknown>[])} labels={requestLabelByType} t={t} lang={lang} />}
+        className="min-h-[68vh]"
+        contentClassName="flex min-h-[68vh] flex-col p-0"
+      >
+        <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-5 lg:p-6">
           {messages.length === 0 ? <Welcome t={t} onPrompt={(value) => setPrompt(value)} /> : messages.map((message) => <MessageBubble key={message.id} message={message} />)}
           {run.isPending ? <div className="flex items-start gap-3"><div className="rounded-full bg-primary/10 p-2 text-primary"><Bot className="h-4 w-4" /></div><div className="rounded-2xl rounded-tl-sm border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">{t("assistantThinking")}</div></div> : null}
           {run.error ? <FriendlyError message={t("assistantError")} technical={run.error.message} /> : null}
@@ -112,7 +113,7 @@ export default function Assistant() {
 }
 
 function Welcome({ t, onPrompt }: { t: (key: TranslationKey) => string; onPrompt: (value: string) => void }) {
-  return <div className="mx-auto flex max-w-3xl flex-col items-center py-10 text-center"><div className="mb-4 rounded-full bg-primary/10 p-3 text-primary"><Sparkles className="h-6 w-6" /></div><h2 className="text-2xl font-semibold">{t("assistantWelcomeTitle")}</h2><p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("assistantWelcome")}</p><p className="mt-3 max-w-2xl text-xs text-muted-foreground/80">{t("assistantSafetyNote")}</p><div className="mt-6 grid w-full gap-2 sm:grid-cols-2">{PROMPT_KEYS.map((key) => <button key={key} type="button" onClick={() => onPrompt(t(key))} className="rounded-xl border bg-card p-3 text-left text-sm font-medium transition hover:border-primary/50 hover:bg-primary/5">{t(key)}</button>)}</div></div>;
+  return <div className="mx-auto flex max-w-3xl flex-col items-center py-5 text-center sm:py-7 lg:py-8"><div className="mb-3 rounded-full bg-primary/10 p-3 text-primary"><Sparkles className="h-6 w-6" /></div><h2 className="text-2xl font-semibold">{t("assistantWelcomeTitle")}</h2><p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("assistantWelcome")}</p><p className="mt-3 max-w-2xl text-xs text-muted-foreground/80">{t("assistantSafetyNote")}</p><div className="mt-5 grid w-full gap-2 sm:grid-cols-2">{PROMPT_KEYS.map((key) => <button key={key} type="button" onClick={() => onPrompt(t(key))} className="rounded-xl border bg-card p-3 text-left text-sm font-medium transition hover:border-primary/50 hover:bg-primary/5">{t(key)}</button>)}</div></div>;
 }
 
 function MessageBubble({ message }: { message: ChatMessage }) {
@@ -121,12 +122,12 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 }
 
 function HistoryPanel({ rows, labels, t, lang }: { rows: Record<string, unknown>[]; labels: Record<string, string>; t: (key: TranslationKey) => string; lang: "uk" | "en" }) {
-  return <details className="group relative z-10"><summary className="flex cursor-pointer list-none items-center gap-2 rounded-full border bg-background px-4 py-2 text-sm font-medium text-muted-foreground shadow-sm transition hover:border-primary/40 hover:text-foreground"><History className="h-4 w-4" />{t("assistantHistoryToggle")}</summary><div className="absolute right-0 mt-2 w-[min(24rem,calc(100vw-2rem))] rounded-2xl border bg-card p-4 shadow-xl"><div className="mb-3"><p className="font-medium">{t("assistantHistoryTitle")}</p><p className="text-xs text-muted-foreground">{t("assistantHistoryDescription")}</p></div><HistoryList rows={rows} labels={labels} t={t} lang={lang} /></div></details>;
+  return <details className="group relative z-20"><summary className="flex h-8 cursor-pointer list-none items-center gap-2 rounded-full border bg-background px-3 text-xs font-medium text-muted-foreground shadow-sm transition hover:border-primary/40 hover:text-foreground"><History className="h-3.5 w-3.5" />{t("assistantHistoryToggle")}</summary><div className="absolute right-0 mt-2 max-h-80 w-[min(22rem,calc(100vw-2rem))] overflow-y-auto rounded-2xl border bg-card p-3 shadow-xl"><div className="mb-2"><p className="text-sm font-medium">{t("assistantHistoryTitle")}</p><p className="text-xs text-muted-foreground">{t("assistantHistoryDescription")}</p></div><HistoryList rows={rows} labels={labels} t={t} lang={lang} /></div></details>;
 }
 
 function HistoryList({ rows, labels, t, lang }: { rows: Record<string, unknown>[]; labels: Record<string, string>; t: (key: TranslationKey) => string; lang: "uk" | "en" }) {
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">{t("assistantHistoryEmpty")}</p>;
-  return <div className="space-y-2">{rows.slice(0, 3).map((r, i) => { const title = String(r.title ?? t("assistantHistoryDefaultTitle")); const requestType = typeof r.request_type === "string" ? labels[r.request_type] ?? r.request_type : t("assistantContextFullOverview"); const status = String(r.status ?? r.state ?? "saved"); return <div key={i} className="rounded-lg border p-3 text-sm"><p className="font-medium">{title}</p><p className="mt-1 text-xs text-muted-foreground">{requestType}</p>{r.created_at ? <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Clock className="h-3 w-3" />{new Date(String(r.created_at)).toLocaleString(lang === "uk" ? "uk-UA" : "en-US")}</p> : null}<p className="mt-1 text-xs text-muted-foreground">{status === "failed" ? t("assistantHistoryFailed") : t("assistantHistorySaved")}</p><DeveloperDetails title={t("assistantTechnicalDetails")}><pre className="max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify(r, null, 2)}</pre></DeveloperDetails></div>; })}</div>;
+  return <div className="space-y-2">{rows.slice(0, 3).map((r, i) => { const title = String(r.title ?? t("assistantHistoryDefaultTitle")); const requestType = typeof r.request_type === "string" ? labels[r.request_type] ?? r.request_type : t("assistantContextFullOverview"); const status = String(r.status ?? r.state ?? "saved"); return <div key={i} className="rounded-lg border p-2.5 text-sm"><p className="line-clamp-2 font-medium">{title}</p><p className="mt-1 text-xs text-muted-foreground">{requestType}</p>{r.created_at ? <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Clock className="h-3 w-3" />{new Date(String(r.created_at)).toLocaleString(lang === "uk" ? "uk-UA" : "en-US")}</p> : null}<p className="mt-1 text-xs text-muted-foreground">{status === "failed" ? t("assistantHistoryFailed") : t("assistantHistorySaved")}</p><DeveloperDetails title={t("assistantTechnicalDetails")}><pre className="max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify(r, null, 2)}</pre></DeveloperDetails></div>; })}</div>;
 }
 
 function getAnswerText(payload: Record<string, unknown>, fallback: string) {
