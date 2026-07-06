@@ -15,8 +15,8 @@ describe("Telegram / Alerts UI polish", () => {
   });
 
   it("does not use resolved alerts as close-button targets", () => {
-    expect(source).toContain("const firstOpenAlert = alerts.find((row) => !isResolvedAlert(row));");
-    expect(source).toContain("alertsAlreadyResolved");
+    expect(source).toContain("const firstOpenAlert = openAlerts[0];");
+    expect(source).toContain("alertsRecentHistoryTitle");
   });
 
   it("has key Ukrainian and English translations for tabs and sections", () => {
@@ -24,6 +24,10 @@ describe("Telegram / Alerts UI polish", () => {
     expect(translations.alertsTabOverview.en).toBe("Overview");
     expect(translations.alertsTabHealth.uk).toBe("Стан");
     expect(translations.alertsTabHealth.en).toBe("Health");
+    expect(translations.alertsTabRoutes.uk).toBe("Правила");
+    expect(translations.alertsTabRoutes.en).toBe("Rules");
+    expect(translations.alertsRoutesTitle.uk).toBe("Правила сповіщень");
+    expect(translations.alertsRoutesTitle.en).toBe("Notification rules");
     expect(translations.alertsQueueEmptyTitle.uk).toBe("Немає повідомлень у черзі.");
     expect(translations.alertsQueueEmptyTitle.en).toBe("No messages are waiting in the queue.");
     expect(translations.alertsConfirmationsEmptyTitle.uk).toBe("Немає запитів на підтвердження.");
@@ -33,9 +37,17 @@ describe("Telegram / Alerts UI polish", () => {
     expect(translations.alertsEventRestoreFailure.uk).toBe("Помилка відновлення");
   });
 
-  it("renders the default security note from the current translation instead of fixed state", () => {
-    expect(source).toContain("statusMessage ?? t(\"alertsSecurityNote\")");
+  it("does not render the default security note during happy-path usage", () => {
+    expect(source).toContain("statusMessage ? <p");
+    expect(source).not.toContain("statusMessage ?? t(\"alertsSecurityNote\")");
     expect(source).not.toContain("useState<string>(t(\"alertsSecurityNote\"))");
     expect(source).not.toContain("roleLoading ? <p className=\"mb-4 text-xs text-muted-foreground\">{t(\"alertsCheckingAccess\")}");
+  });
+
+  it("keeps friendly route and technical health labels available", () => {
+    expect(source).toContain("formatRouteName");
+    expect(source).toContain("alertsTechnicalActiveChats");
+    expect(translations.alertsProductionHealthTechnical.uk).toBe("Технічні деталі робочого стану");
+    expect(translations.alertsRecentHistoryTitle.en).toBe("Recent alert history");
   });
 });

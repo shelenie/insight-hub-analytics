@@ -7,6 +7,14 @@ Meaningful changes for Internal Analytics Workspace.
 ---
 
 ## 2026-07-06
+### Changed
+
+- Applied final Telegram / Alerts plain-language polish after PR #192: removed the default visible security/status note from normal page load, renamed routes to notification rules, showed friendly rule/event labels before technical route values, translated common technical health headers, and moved resolved operational alerts into collapsed recent history when no open alerts are present.
+
+### Notes
+
+- No backend logic, RPC signatures, RLS policies, Edge Function contracts, database schema, or action behavior were changed.
+
 
 ### Changed
 
