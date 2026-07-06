@@ -6,6 +6,19 @@ Meaningful changes for Internal Analytics Workspace.
 
 ---
 
+## 2026-07-06 — AI Assistant Visual Micro-Polish
+
+Changed:
+
+- Moved the AI Assistant history trigger into the chat card header as a secondary compact control instead of a detached control above the chat.
+- Kept the opened history dropdown attached to the trigger, compact, scrollable with max height, limited to three latest items, and with technical details still collapsed.
+- Reduced vertical spacing in the empty welcome state so prompts and composer are visible with less blank space on large screens.
+- Updated the Ukrainian and English assistant subtitle copy to the approved performance-marketing wording.
+
+Safety / scope:
+
+- No backend logic, RPC calls, Supabase schema, RLS policies, routes, permissions logic, database tables/views, Edge Function name, `ai-helper-run` request/response contract, suggested prompts, or analysis mode backend mappings were changed.
+
 
 ## 2026-07-06 — AI Assistant Final Layout Polish
 

@@ -448,8 +448,8 @@ export const translations = {
   // AI Assistant
   assistantTitle: { uk: "AI-асистент", en: "AI Assistant" },
   assistantSubtitle: {
-    uk: "Performance marketing AI-асистент для аналізу реклами, CPL, кампаній, лідів, якості даних і клієнтських висновків.",
-    en: "A performance marketing AI assistant for analyzing ads, CPL, campaigns, leads, data quality, and client-ready takeaways.",
+    uk: "AI-асистент для performance marketing: аналізує рекламу, CPL, кампанії, ліди, якість даних і готує висновки для команди та клієнтів.",
+    en: "AI assistant for performance marketing: analyzes ads, CPL, campaigns, leads, data quality, and prepares insights for teams and clients.",
   },
   assistantSafetyNote: {
     uk: "AI дає пояснення й рекомендації. Він не змінює дані без підтвердження та окремого backend-flow.",
