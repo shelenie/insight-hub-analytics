@@ -17,7 +17,7 @@ import type { TranslationKey } from "@/i18n/translations";
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
 type ContextOption = {
-  labelKey: "assistantContextAuto" | "assistantContextSystemReadiness" | "assistantContextClientsFunnels" | "assistantContextMappingReview" | "assistantContextAlerts" | "assistantContextAdsHealth" | "assistantContextAdsPerformance" | "assistantContextAdsAnomalies" | "assistantContextDataQuality" | "assistantContextImportStatus" | "assistantContextImportErrors" | "assistantContextFullOverview";
+  labelKey: "assistantContextSystemReadiness" | "assistantContextClientsFunnels" | "assistantContextMappingReview" | "assistantContextAlerts" | "assistantContextAdsHealth" | "assistantContextAdsPerformance" | "assistantContextAdsAnomalies" | "assistantContextDataQuality" | "assistantContextImportStatus" | "assistantContextImportErrors" | "assistantContextFullOverview";
   requestType: string;
   contextScope: string;
 };
@@ -25,7 +25,6 @@ type ContextOption = {
 type ChatMessage = { id: string; role: "user" | "assistant"; text: string; contextLabel: string };
 
 const OPTIONS = [
-  { labelKey: "assistantContextAuto", requestType: "production_readiness_summary", contextScope: "production_readiness" },
   { labelKey: "assistantContextSystemReadiness", requestType: "production_readiness_summary", contextScope: "production_readiness" },
   { labelKey: "assistantContextClientsFunnels", requestType: "onboarding_summary", contextScope: "onboarding" },
   { labelKey: "assistantContextMappingReview", requestType: "mapping_review_summary", contextScope: "mapping_review" },
@@ -39,13 +38,13 @@ const OPTIONS = [
   { labelKey: "assistantContextFullOverview", requestType: "full_production_summary", contextScope: "full_production" },
 ] as const satisfies readonly ContextOption[];
 
-const PROMPT_KEYS = ["assistantPromptAttention", "assistantPromptAds", "assistantPromptDataQuality", "assistantPromptImportErrors", "assistantPromptMapping", "assistantPromptOverview"] as const;
+const PROMPT_KEYS = ["assistantPromptSevenDayDrop", "assistantPromptCampaignsAttention", "assistantPromptCplIncrease", "assistantPromptDataQuality", "assistantPromptClientSituation", "assistantPromptTeamPriorities"] as const;
 
 export default function Assistant() {
   const { session } = useAuth();
   const { role, capabilities, isLoading: roleLoading, error: roleError } = useWorkspaceRole(WORKSPACE_ID);
   const { t, lang } = useI18n();
-  const [selected, setSelected] = useState<(typeof OPTIONS)[number]["labelKey"]>(OPTIONS[0].labelKey);
+  const [selected, setSelected] = useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextFullOverview");
   const [prompt, setPrompt] = useState("");
   const [latest, setLatest] = useState<Record<string, unknown> | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -98,8 +97,8 @@ export default function Assistant() {
       </SectionCard>
 
       <SectionCard title={t("assistantHistoryTitle")} description={t("assistantHistoryDescription")}>
-        <details className="xl:open:block" open>
-          <summary className="cursor-pointer text-sm font-medium text-muted-foreground xl:hidden">{t("assistantHistoryToggle")}</summary>
+        <details>
+          <summary className="cursor-pointer text-sm font-medium text-muted-foreground">{t("assistantHistoryToggle")}</summary>
           <HistoryList rows={filterPlaceholderRows((requests.data ?? []) as Record<string, unknown>[])} labels={requestLabelByType} t={t} lang={lang} />
         </details>
       </SectionCard>
@@ -125,7 +124,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 
 function HistoryList({ rows, labels, t, lang }: { rows: Record<string, unknown>[]; labels: Record<string, string>; t: (key: TranslationKey) => string; lang: "uk" | "en" }) {
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">{t("assistantHistoryEmpty")}</p>;
-  return <div className="space-y-2">{rows.slice(0, 8).map((r, i) => { const title = String(r.title ?? t("assistantHistoryDefaultTitle")); const requestType = typeof r.request_type === "string" ? labels[r.request_type] ?? r.request_type : t("assistantContextAuto"); const status = String(r.status ?? r.state ?? "saved"); return <div key={i} className="rounded-lg border p-3 text-sm"><p className="font-medium">{title}</p><p className="mt-1 text-xs text-muted-foreground">{requestType}</p>{r.created_at ? <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Clock className="h-3 w-3" />{new Date(String(r.created_at)).toLocaleString(lang === "uk" ? "uk-UA" : "en-US")}</p> : null}<p className="mt-1 text-xs text-muted-foreground">{status === "failed" ? t("assistantHistoryFailed") : t("assistantHistorySaved")}</p><DeveloperDetails title={t("assistantTechnicalDetails")}><pre className="max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify(r, null, 2)}</pre></DeveloperDetails></div>; })}</div>;
+  return <div className="space-y-2">{rows.slice(0, 3).map((r, i) => { const title = String(r.title ?? t("assistantHistoryDefaultTitle")); const requestType = typeof r.request_type === "string" ? labels[r.request_type] ?? r.request_type : t("assistantContextFullOverview"); const status = String(r.status ?? r.state ?? "saved"); return <div key={i} className="rounded-lg border p-3 text-sm"><p className="font-medium">{title}</p><p className="mt-1 text-xs text-muted-foreground">{requestType}</p>{r.created_at ? <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground"><Clock className="h-3 w-3" />{new Date(String(r.created_at)).toLocaleString(lang === "uk" ? "uk-UA" : "en-US")}</p> : null}<p className="mt-1 text-xs text-muted-foreground">{status === "failed" ? t("assistantHistoryFailed") : t("assistantHistorySaved")}</p><DeveloperDetails title={t("assistantTechnicalDetails")}><pre className="max-h-48 overflow-auto whitespace-pre-wrap">{JSON.stringify(r, null, 2)}</pre></DeveloperDetails></div>; })}</div>;
 }
 
 function getAnswerText(payload: Record<string, unknown>, fallback: string) {
