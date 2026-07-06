@@ -76,6 +76,23 @@ Do not add unrelated tools unless Olena explicitly confirms them.
 ---
 
 
+
+## Verified Local Audit — 2026-07-06 Remaining Admin / Control-Center Frontend
+
+A local frontend audit inspected Onboarding, Ads Connectors, AI Assistant, Imports / Data Health, Overview touchpoints, the current Admin sidebar, and existing Users & Access foundations before backend AI-assisted mapping work. No backend logic, RPC signatures, RLS policies, Supabase schema, or application behavior were changed.
+
+Audit conclusions:
+
+- Admin sidebar is safe to keep: the Admin group currently contains Onboarding, Data Bindings / Mapping, Telegram / Alerts, and Ads Connectors, while AI Assistant remains in the AI section.
+- Overview is safe to keep as an executive/operational entry point and links admins toward Imports, Data Bindings, Alerts, and Ads Connectors when relevant.
+- Ads Connectors is safe to keep before backend mapping work and already has Ukrainian/English local page copy, verified/pending connector states, disabled management actions when capabilities are missing, and technical diagnostics secondary. Do not add fake connector actions beyond verified OAuth/sync contracts.
+- Onboarding is safe to keep because it uses existing read views and existing onboarding upsert Edge Functions with role/capability gating, but it still needs frontend polish: UK/EN i18n, clearer non-technical page purpose, improved empty/loading/error/no-access language, and keeping technical IDs/details secondary.
+- AI Assistant is safe to keep only as a prepared-data assistant surface using the existing `ai-helper-run` Edge Function, but it needs frontend polish: UK/EN i18n, clearer safe-disabled states, clearer explanation that answers depend on prepared fact/health data, and debug details kept secondary.
+- Imports / Data Health is safe to keep and already links to Data Bindings, Telegram / Alerts, and Ads Connectors for operational follow-up; any remaining work should be copy/empty-state polish only, with no query/action/backend changes.
+- Users & Access must not be added yet. Verified foundations exist for active-aware membership status and role/capability checks, but invitation/action RPCs, user-management audit events, first-superadmin/bootstrap contract, and safe frontend read/write contracts are still deferred.
+
+Final frontend polish plan before backend AI-assisted mapping work: polish Onboarding first, then AI Assistant, then small Imports / Data Health copy refinements if live review still finds unclear states. Users & Access should wait for a backend/RLS/RPC/audit contract PR and should not be faked in the UI.
+
 ## Verified Local Change — 2026-07-06 Admin Sidebar Clarification
 
 The left sidebar admin/control-center section has been clarified from Operations to Admin in Ukrainian and English. The existing admin items remain unchanged: Onboarding, Data Bindings / Mapping, Telegram / Alerts, and Ads Connectors. The Admin group uses the existing Radix/shadcn collapsible UI pattern in the expanded desktop sidebar, auto-opens when one of its routes is active, and keeps icon-collapsed sidebar behavior unchanged. No backend logic, routes, permissions, RLS policies, Supabase objects, or new pages were changed. Users & Access / Користувачі й доступи remains planned as a separate security-sensitive admin feature.

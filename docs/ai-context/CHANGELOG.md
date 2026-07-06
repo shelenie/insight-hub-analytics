@@ -6,6 +6,34 @@ Meaningful changes for Internal Analytics Workspace.
 
 ---
 
+
+## 2026-07-06
+
+### Audited
+
+- Audited remaining frontend admin/control-center surfaces before backend AI-assisted mapping work: Onboarding, Ads Connectors, AI Assistant, Imports / Data Health, Overview touchpoints, the Admin sidebar, and possible Users & Access foundations.
+- Confirmed the audit is documentation/planning only: no backend logic, RPC signatures, RLS policies, Supabase schema, or frontend behavior were changed.
+
+### Findings
+
+- Admin sidebar, Data Bindings / Mapping, Telegram / Alerts, Ads Connectors, and Overview are safe to keep before backend mapping work.
+- Onboarding needs frontend polish around Ukrainian/English i18n, non-technical purpose, empty states, loading/error/no-access copy, and secondary placement of technical details.
+- AI Assistant needs frontend polish around Ukrainian/English i18n, prepared-data boundaries, safe disabled/no-access/loading/error states, and less prominent debug details.
+- Imports / Data Health may need only small copy/empty-state refinements after live UX review; it should continue linking operational follow-up to Data Bindings, Telegram / Alerts, and Ads Connectors without backend changes.
+- Users & Access has partial backend foundations for active memberships and capabilities, but no complete safe frontend read/write contract for invitations, role changes, deactivation/reactivation/removal, audit events, or bootstrap. It remains deferred.
+
+### Recommended PR order
+
+1. Onboarding frontend polish only.
+2. AI Assistant frontend polish only.
+3. Imports / Data Health micro-polish only if needed.
+4. Users & Access backend/RLS/RPC/audit contract verification/implementation.
+5. Users & Access frontend, starting read-only and adding writes only through verified contracts.
+
+### Must not fake
+
+- Do not show invite, role-change, deactivate/remove/reactivate, connector, mapping approval, or AI actions as working unless the corresponding backend/RLS/RPC/Edge Function contract is verified.
+
 ## 2026-07-06
 
 ### Changed
