@@ -28,6 +28,7 @@ declare
   v_notes jsonb := '[]'::jsonb;
   v_platform_clause text := '';
   v_daily_source regclass;
+  v_daily_date_column text;
   v_summary_source regclass;
   v_anomaly_source regclass;
   v_sql text;
@@ -38,11 +39,11 @@ begin
   end if;
 
   if to_regclass('public.facts_ads_daily') is not null then
-    execute 'select count(*), min(metric_date), max(metric_date)
+    execute 'select count(*), min(insight_date), max(insight_date)
              from public.facts_ads_daily
              where workspace_id = $1
-               and ($2 is null or metric_date >= $2)
-               and ($3 is null or metric_date <= $3)' || v_platform_clause
+               and ($2 is null or insight_date >= $2)
+               and ($3 is null or insight_date <= $3)' || v_platform_clause
       into v_fact_rows, v_first_available, v_last_available
       using p_workspace_id, p_date_from, p_date_to, p_platform;
   end if;
@@ -62,16 +63,18 @@ begin
   if v_fact_rows > 0 then
     v_source_layer_used := 'facts_ads_daily';
     v_daily_source := coalesce(to_regclass('public.v_ai_ads_daily_context'), to_regclass('public.facts_ads_daily'));
+    v_daily_date_column := 'insight_date';
     v_summary_source := to_regclass('public.v_ai_ads_summary_context');
     v_anomaly_source := to_regclass('public.v_ai_ads_anomaly_candidates');
 
-    execute 'select min(metric_date), max(metric_date) from ' || v_daily_source ||
-            ' where workspace_id = $1 and ($2 is null or metric_date >= $2) and ($3 is null or metric_date <= $3)' || v_platform_clause
+    execute 'select min(insight_date), max(insight_date) from ' || v_daily_source ||
+            ' where workspace_id = $1 and ($2 is null or insight_date >= $2) and ($3 is null or insight_date <= $3)' || v_platform_clause
       into v_first_available, v_last_available
       using p_workspace_id, p_date_from, p_date_to, p_platform;
   else
     v_source_layer_used := 'v_unified_ads_performance_daily';
     v_daily_source := to_regclass('public.v_unified_ads_performance_daily');
+    v_daily_date_column := 'metric_date';
     v_summary_source := to_regclass('public.v_unified_ads_performance_summary');
     v_notes := v_notes || jsonb_build_array('Facts-based ads context is empty; using unified imported ads performance data as fallback.');
   end if;
@@ -109,22 +112,22 @@ begin
     execute v_sql into v_summary using p_workspace_id;
   end if;
 
-  if v_daily_source is not null then
-    v_sql := 'select coalesce(jsonb_agg(to_jsonb(c) order by coalesce(c.spend, 0) desc), ''[]''::jsonb)
+  if v_daily_source is not null and v_daily_date_column is not null then
+    v_sql := format('select coalesce(jsonb_agg(to_jsonb(c) order by coalesce(c.spend, 0) desc), ''[]''::jsonb)
               from (
                 select campaign_name,
-                       min(metric_date) as first_date,
-                       max(metric_date) as last_date,
+                       min(%1$I) as first_date,
+                       max(%1$I) as last_date,
                        sum(coalesce(spend, 0))::numeric as spend,
                        sum(coalesce(clicks, 0))::numeric as clicks,
                        sum(coalesce(leads, 0))::numeric as leads,
                        case when sum(coalesce(leads, 0)) = 0 then null else sum(coalesce(spend, 0)) / nullif(sum(coalesce(leads, 0)), 0) end as cpl
-                from ' || v_daily_source || '
-                where workspace_id = $1 and ($2 is null or metric_date >= $2) and ($3 is null or metric_date <= $3)
+                from %2$s
+                where workspace_id = $1 and ($2 is null or %1$I >= $2) and ($3 is null or %1$I <= $3)
                 group by campaign_name
                 order by spend desc
                 limit 10
-              ) c';
+              ) c', v_daily_date_column, v_daily_source);
     execute v_sql into v_top_campaigns using p_workspace_id, p_date_from, p_date_to;
   end if;
 

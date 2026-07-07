@@ -14,7 +14,7 @@ Meaningful changes for Internal Analytics Workspace.
 - Fixed the `ai-helper-run` to `build_ai_ads_context` RPC contract mismatch by removing unsupported `p_context_scope` from the database payload while keeping frontend request types and context scopes unchanged.
 - Added a Supabase migration for `build_ai_ads_context` that keeps facts-based ads context primary and safely falls back to `v_unified_ads_performance_daily` / `v_unified_ads_performance_summary` when `facts_ads_daily` is empty.
 - Added AI ads context freshness metadata, including available date range, latest sync timestamp when available, fact/unified row counts, freshness status, warning text, source layer used, health, summaries/top campaigns, anomaly candidates when available, and notes.
-- Added tests covering the RPC payload contract and migration fallback/freshness fields.
+- Added tests covering the RPC payload contract, migration fallback/freshness fields, and the facts-vs-unified date-column contract (`insight_date` for facts/AI daily context, `metric_date` for unified imported ads data).
 
 ### Notes
 

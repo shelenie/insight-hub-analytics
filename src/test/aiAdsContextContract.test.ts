@@ -35,4 +35,20 @@ describe("AI ads context backend contract", () => {
     expect(migrationSource).toContain("current_date - 7");
     expect(migrationSource).toContain("historical/imported data");
   });
+
+  it("uses the correct date column for facts and unified ads sources", () => {
+    const factsCountBlock = migrationSource.match(/from public\.facts_ads_daily[\s\S]*?using p_workspace_id, p_date_from, p_date_to, p_platform;/)?.[0] ?? "";
+    const factsBranchBlock = migrationSource.match(/if v_fact_rows > 0 then[\s\S]*?else/)?.[0] ?? "";
+    const unifiedCountBlock = migrationSource.match(/from public\.v_unified_ads_performance_daily[\s\S]*?using p_workspace_id, p_date_from, p_date_to;/)?.[0] ?? "";
+    const topCampaignsBlock = migrationSource.match(/if v_daily_source is not null and v_daily_date_column is not null then[\s\S]*?end if;/)?.[0] ?? "";
+
+    expect(factsCountBlock).toContain("insight_date");
+    expect(factsCountBlock).not.toContain("metric_date");
+    expect(factsBranchBlock).toContain("v_daily_date_column := 'insight_date'");
+    expect(factsBranchBlock).toContain("min(insight_date), max(insight_date)");
+    expect(unifiedCountBlock).toContain("metric_date");
+    expect(topCampaignsBlock).toContain("v_daily_date_column");
+    expect(topCampaignsBlock).toContain("min(%1$I) as first_date");
+    expect(topCampaignsBlock).toContain("max(%1$I) as last_date");
+  });
 });
