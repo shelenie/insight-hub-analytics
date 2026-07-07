@@ -1,3 +1,10 @@
+## Updated — 2026-07-07 Bindings Ads Binding Gap Readiness
+
+- Verify `/bindings` against production `build_ads_multi_account_readiness` output to confirm Overview counters read from nested `summary` and Ad accounts renders `binding_gaps` rows next to the existing binding workflow.
+- Keep AdsConnectors focused on source/account/sync readiness and Bindings focused on actual binding management plus read-only gap guidance.
+- Design one-click binding fix actions separately before adding any backend write action; current gap guidance is read-only.
+- Real Google/Meta/TikTok platform sync fixes remain deferred until real ad accounts/data are available.
+
 ## Updated — 2026-07-07 AdsConnectors Readiness Summary Shape
 
 - Re-test `/ads-connectors` against production `build_ads_multi_account_readiness` to confirm nested `summary` counters render correctly.

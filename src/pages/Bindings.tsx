@@ -57,6 +57,10 @@ const EMPTY_AD_FORM = {
 
 type Row = Record<string, string | number | boolean | null>;
 type OptionalViewData = { rows: Row[]; unavailableReason: string | null };
+type OptionalJsonData = {
+  payload: Record<string, unknown> | null;
+  unavailableReason: string | null;
+};
 type BindingsData = {
   sourceBindings: Row[];
   adAccountBindings: Row[];
@@ -70,6 +74,7 @@ type BindingsData = {
   mappingReviewHealth: OptionalViewData;
   mappingReviewActionsRecent: OptionalViewData;
   telegramHitlHealth: OptionalViewData;
+  adsMultiAccountReadiness: OptionalJsonData;
 };
 type BindingType = "source" | "ad_account";
 type BindingActionFeedback = {
@@ -107,12 +112,17 @@ const FRIENDLY_COLUMN_LABELS: Record<string, string | Record<Lang, string>> = {
   cpm: "CPM",
   details: { uk: "Деталі", en: "Details" },
   external_account_id: { uk: "ID акаунта", en: "Account ID" },
+  external_account_name: { uk: "Назва акаунта", en: "Account name" },
+  gap_type: { uk: "Тип розриву", en: "Gap type" },
   funnel: { uk: "Воронка", en: "Funnel" },
   funnel_name: { uk: "Воронка", en: "Funnel" },
   health_status: { uk: "Стан звʼязків", en: "Binding health" },
+  message: { uk: "Повідомлення", en: "Message" },
   impressions: { uk: "Покази", en: "Impressions" },
   mapping_status: { uk: "Мапінг", en: "Mapping" },
   platform: { uk: "Платформа", en: "Platform" },
+  next_action: { uk: "Наступний крок", en: "Next action" },
+  overall_status: { uk: "Загальний стан", en: "Overall status" },
   project: { uk: "Проєкт", en: "Project" },
   project_name: { uk: "Проєкт", en: "Project" },
   proposed_client_name: { uk: "Запропонований клієнт", en: "Proposed client" },
@@ -127,6 +137,10 @@ const FRIENDLY_COLUMN_LABELS: Record<string, string | Record<Lang, string>> = {
   source_name: { uk: "Джерело", en: "Source" },
   spend: { uk: "Витрати", en: "Spend" },
   status: { uk: "Статус", en: "Status" },
+  total_accounts: { uk: "Усього акаунтів", en: "Total accounts" },
+  bound_accounts: { uk: "Привʼязані", en: "Bound accounts" },
+  unbound_accounts: { uk: "Непривʼязані", en: "Unbound accounts" },
+  needs_attention_count: { uk: "Потребують уваги", en: "Needs attention" },
   updated_at: { uk: "Оновлено", en: "Updated" },
 };
 
@@ -298,10 +312,12 @@ export default function Bindings() {
         mappingReviewHealth,
         mappingReviewActionsRecent,
         telegramHitlHealth,
+        adsMultiAccountReadiness,
       ] = await Promise.all([
         readOptionalView("v_mapping_review_health"),
         readOptionalView("v_mapping_review_actions_recent"),
         readOptionalView("v_telegram_hitl_production_health"),
+        readAdsMultiAccountReadiness(),
       ]);
 
       return {
@@ -317,6 +333,7 @@ export default function Bindings() {
         mappingReviewHealth,
         mappingReviewActionsRecent,
         telegramHitlHealth,
+        adsMultiAccountReadiness,
       };
     },
   });
@@ -674,6 +691,9 @@ export default function Bindings() {
             <TabsContent value="overview" className="mt-1">
               <SectionCard title={t("bindingsOverviewTitle")}>
                 <KpiGrid cards={overviewCards} />
+                <AdsBindingReadinessSummary
+                  readiness={query.data?.adsMultiAccountReadiness}
+                />
                 <div className="mt-4 space-y-3 rounded-md border border-border/70 bg-muted/25 p-3 text-sm text-muted-foreground">
                   <p>{t("bindingsOverviewDescription")}</p>
                   <div className="space-y-1">
@@ -893,6 +913,9 @@ export default function Bindings() {
                     </SheetContent>
                   </Sheet>
 
+                  <BindingGapsPanel
+                    readiness={query.data?.adsMultiAccountReadiness}
+                  />
                   <AdAccountsBusinessTable
                     rows={filteredAdAccountBindings}
                     onEdit={(row) => {
@@ -1094,6 +1117,22 @@ export default function Bindings() {
                 description={t("bindingsHealthDescription")}
               >
                 <KpiGrid cards={connectionStatusCards.production} />
+                <DeveloperDetails
+                  title={t("bindingsAdsReadinessTechnicalTitle")}
+                >
+                  {query.data?.adsMultiAccountReadiness?.unavailableReason ||
+                  !query.data?.adsMultiAccountReadiness?.payload ? (
+                    <p>{t("bindingsAdsReadinessUnavailable")}</p>
+                  ) : (
+                    <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md bg-muted/40 p-3 text-xs">
+                      {JSON.stringify(
+                        query.data.adsMultiAccountReadiness.payload,
+                        null,
+                        2,
+                      )}
+                    </pre>
+                  )}
+                </DeveloperDetails>
                 <DeveloperDetails title={t("bindingsTelegramDetailsTitle")}>
                   <p>{t("bindingsTelegramDetailsDescription")}</p>
                   <CompactDiagnosticsGrid
@@ -1251,6 +1290,179 @@ async function readOptionalView(viewName: string): Promise<OptionalViewData> {
   if (result.error)
     return { rows: [], unavailableReason: result.error.message };
   return { rows: (result.data ?? []) as Row[], unavailableReason: null };
+}
+
+async function readAdsMultiAccountReadiness(): Promise<OptionalJsonData> {
+  const result = await supabase.rpc(
+    "build_ads_multi_account_readiness" as never,
+    { p_workspace_id: WORKSPACE_ID } as never,
+  );
+  if (result.error) {
+    return { payload: null, unavailableReason: result.error.message };
+  }
+  return { payload: toObject(result.data), unavailableReason: null };
+}
+
+function AdsBindingReadinessSummary({
+  readiness,
+}: {
+  readiness: OptionalJsonData | undefined;
+}) {
+  const { t, lang } = useI18n();
+  if (!readiness) return null;
+  if (readiness.unavailableReason || !readiness.payload) {
+    return <ReadinessUnavailableNotice />;
+  }
+  const payload = readiness.payload;
+  const summary = readObject(payload, "summary");
+  return (
+    <div className="mt-4 rounded-md border border-border/70 bg-card/60 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold">
+            {t("bindingsAdsReadinessTitle")}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t("bindingsAdsReadinessDescription")}
+          </p>
+        </div>
+        <Badge
+          variant={readinessBadgeVariant(readString(payload, "overall_status"))}
+        >
+          {formatStatus(
+            readString(payload, "overall_status") || "unknown",
+            lang,
+          )}
+        </Badge>
+      </div>
+      <CompactDiagnosticsGrid
+        cards={[
+          {
+            title: t("bindingsReadinessTotalAccounts"),
+            value: formatCount(readNumber(summary, "total_accounts")),
+          },
+          {
+            title: t("bindingsReadinessBoundAccounts"),
+            value: formatCount(readNumber(summary, "bound_accounts")),
+          },
+          {
+            title: t("bindingsReadinessUnboundAccounts"),
+            value: formatCount(readNumber(summary, "unbound_accounts")),
+          },
+          {
+            title: t("bindingsReadinessNeedsAttention"),
+            value: formatCount(readNumber(summary, "needs_attention_count")),
+          },
+        ]}
+      />
+    </div>
+  );
+}
+
+function BindingGapsPanel({
+  readiness,
+}: {
+  readiness: OptionalJsonData | undefined;
+}) {
+  const { t } = useI18n();
+  if (!readiness) return null;
+  if (readiness.unavailableReason || !readiness.payload) {
+    return <ReadinessUnavailableNotice />;
+  }
+  const gapRows = readArray(readiness.payload, "binding_gaps");
+  return (
+    <div className="mb-4 rounded-md border border-border/70 bg-muted/20 p-4">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="text-sm font-semibold">
+            {t("bindingsBindingGapsTitle")}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            {t("bindingsBindingGapsDescription")}
+          </p>
+        </div>
+      </div>
+      {gapRows.length > 0 ? (
+        <GenericDataTable
+          rows={gapRows}
+          columns={[
+            "gap_type",
+            "platform",
+            "external_account_name",
+            "external_account_id",
+            "message",
+            "next_action",
+          ]}
+        />
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          {t("bindingsNoBindingGaps")}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ReadinessUnavailableNotice() {
+  const { t } = useI18n();
+  return (
+    <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+      {t("bindingsAdsReadinessUnavailable")}
+    </div>
+  );
+}
+
+function toObject(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function readObject(
+  payload: Record<string, unknown>,
+  key: string,
+): Record<string, unknown> {
+  return toObject(payload[key]) ?? {};
+}
+
+function readArray(payload: Record<string, unknown>, key: string): Row[] {
+  const value = payload[key];
+  return Array.isArray(value)
+    ? value
+        .filter(
+          (item) =>
+            item && typeof item === "object" && !Array.isArray(item),
+        )
+        .map((item) => item as Row)
+    : [];
+}
+
+function readNumber(
+  payload: Record<string, unknown>,
+  key: string,
+): number | null {
+  const value = payload[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function readString(payload: Record<string, unknown>, key: string): string {
+  const value = payload[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function formatCount(value: number | null) {
+  return value === null ? "—" : value;
+}
+
+function readinessBadgeVariant(
+  status: string,
+): "secondary" | "destructive" | "outline" {
+  const normalized = status.toLowerCase();
+  if (["ready", "production_ready", "ok", "healthy"].includes(normalized))
+    return "secondary";
+  if (["error", "failed", "blocked"].includes(normalized))
+    return "destructive";
+  return "outline";
 }
 
 type SelectOption = {
