@@ -119,6 +119,9 @@ describe("AI ads context backend contract", () => {
     expect(diagnosticsMigrationSource).toContain("ad_traffic_raw");
     expect(diagnosticsMigrationSource).toContain("facts_ads_daily_by_platform");
     expect(diagnosticsMigrationSource).toContain("latest_ad_sync_run_logs_by_platform");
+    expect(diagnosticsMigrationSource).toContain("source_readiness");
+    expect(diagnosticsMigrationSource).toContain("overall_status");
+    expect(diagnosticsMigrationSource).toContain("production_validation_possible");
     expect(diagnosticsMigrationSource).toContain("regexp_replace");
     expect(diagnosticsMigrationSource).toContain("[redacted]");
     expect(diagnosticsMigrationSource).not.toMatch(/select \*/i);
@@ -158,6 +161,34 @@ describe("AI ads context backend contract", () => {
     expect(compactLatestFailedBlock).toContain("left(regexp_replace(coalesce(error_message, '')");
   });
 
+  it("includes explicit ads source readiness codes", () => {
+    for (const readinessCode of [
+      "connected_no_production_data",
+      "connected_with_imported_fallback",
+      "production_data_ready",
+      "needs_real_ad_account",
+      "platform_permission_or_access_blocked",
+      "not_connected",
+    ]) {
+      expect(diagnosticsMigrationSource).toContain(readinessCode);
+    }
+
+    for (const readinessField of [
+      "has_connections",
+      "has_accounts",
+      "has_bindings",
+      "has_api_raw_rows",
+      "has_imported_fallback_rows",
+      "has_facts_rows",
+      "has_fresh_data",
+      "likely_test_or_empty_accounts",
+      "production_validation_possible",
+      "next_action",
+    ]) {
+      expect(diagnosticsMigrationSource).toContain(readinessField);
+    }
+  });
+
   it("includes explicit ads pipeline blocker codes", () => {
     for (const blockerCode of [
       "no_active_connections",
@@ -182,6 +213,7 @@ describe("AI ads context backend contract", () => {
     expect(diagnosticsAiContextMigrationSource).not.toContain("p_context_scope");
     expect(diagnosticsAiContextMigrationSource).toContain("public.build_ads_pipeline_diagnostics(p_workspace_id, p_date_from, p_date_to)");
     expect(diagnosticsAiContextMigrationSource).toContain("'pipeline_diagnostics', v_pipeline_diagnostics");
+    expect(diagnosticsAiContextMigrationSource).toContain("'source_readiness', coalesce(v_pipeline_diagnostics->'source_readiness', '{}'::jsonb)");
     expect(diagnosticsAiContextMigrationSource).toContain("'first_blocker_code'");
     expect(diagnosticsAiContextMigrationSource).toContain("'first_blocker_message'");
     expect(diagnosticsAiContextMigrationSource).toContain("'platform_blockers'");

@@ -159,6 +159,7 @@ begin
     ),
     'health', v_health,
     'pipeline_diagnostics', v_pipeline_diagnostics,
+    'source_readiness', coalesce(v_pipeline_diagnostics->'source_readiness', '{}'::jsonb),
     'first_blocker_code', v_pipeline_diagnostics->>'first_blocker_code',
     'first_blocker_message', v_pipeline_diagnostics->>'first_blocker_message',
     'platform_blockers', coalesce(v_pipeline_diagnostics->'platform_blockers', '[]'::jsonb),
