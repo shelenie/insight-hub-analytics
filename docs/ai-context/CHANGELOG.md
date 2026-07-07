@@ -3,8 +3,9 @@
 ### Changed
 
 - Polished AdsConnectors → Ad accounts readiness UI into a compact summary card with friendly status, total/bound/unbound/needs-attention counters, and a short next action.
-- Moved detailed platform readiness and binding gaps into an expandable details section so the main active bound ad account cards are no longer pushed down by diagnostic tables.
+- Moved detailed platform readiness and binding gaps into an expandable details section so the main Real accounts cards are no longer pushed down by diagnostic tables.
 - Added Ukrainian and English friendly labels for key multi-account readiness and binding-gap status codes.
+- Kept “Real accounts” as the label for accounts that truly exist on Meta Ads, Google Ads, or TikTok Ads, while documenting that they can still be test/non-spending accounts created for site development.
 
 ### Notes
 

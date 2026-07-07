@@ -108,6 +108,8 @@ const copy = {
     bindingGaps: "Прогалини привʼязок",
     noBindingGaps: "Прогалин привʼязок не виявлено.",
     readinessNextActionFallback: "Перевірте непривʼязані акаунти у Звʼязках даних → Ad accounts; write actions залишаються майбутньою роботою.",
+    accountsNeedBindingLabel: "акаунти потребують привʼязки",
+    accountNeedsBindingLabel: "акаунт потребує привʼязки",
     googleNeedsAccess: "Google Ads: OAuth підключено, але синхронізація очікує доступ Google Ads API / Basic Access.",
     tiktokNoDataYetAttention: "TikTok Ads: синхронізація працює, але тестовий рекламний акаунт поки без даних.",
     facebookLeadFormsAttention: "Facebook Lead Ads: форми не знайдені. Sync і webhook перевірені, але реальні ліди з’являться після наявності форм/подій.",
@@ -200,7 +202,7 @@ const copy = {
     adAccountsStatusFilterAll: "Усі",
     adAccountsNoRealExplain: "Реальні рекламні акаунти з’являться після OAuth-підключення та першої синхронізації акаунтів. Нижче можуть бути службові тестові прив’язки.",
     accountSection: "Акаунт",
-    realAccountsSection: "Активні привʼязані акаунти",
+    realAccountsSection: "Реальні акаунти",
     testAccountsSection: "Тестові та архівні прив’язки",
     serviceTestBinding: "Службова тестова прив’язка",
     technicalId: "Технічний ID",
@@ -329,8 +331,8 @@ const copy = {
       archived: "Архівовано",
       production_ready: "Готово до роботи",
       partially_bound: "Частково привʼязано",
-      accounts_discovered_no_bindings: "Акаунти знайдено, привʼязок немає",
-      active_account_without_binding: "Активний акаунт без привʼязки",
+      accounts_discovered_no_bindings: "Акаунти знайдені, але не привʼязані",
+      active_account_without_binding: "Потрібна привʼязка",
       ambiguous_primary_binding: "Потрібно уточнити основну привʼязку",
       binding_without_scope: "Привʼязка без клієнта/проєкту/воронки",
       inactive_account_with_active_binding: "Неактивний акаунт має активну привʼязку",
@@ -418,6 +420,8 @@ const copy = {
     bindingGaps: "Binding gaps",
     noBindingGaps: "No binding gaps detected.",
     readinessNextActionFallback: "Review unbound accounts in Bindings → Ad accounts; write actions remain future work.",
+    accountsNeedBindingLabel: "accounts need binding",
+    accountNeedsBindingLabel: "account needs binding",
     googleNeedsAccess: "Google Ads: OAuth is connected, but sync is waiting for Google Ads API / Basic Access.",
     tiktokNoDataYetAttention: "TikTok Ads: sync works, but the test ad account has no data yet.",
     facebookLeadFormsAttention: "Facebook Lead Ads: no forms found. Sync and webhook are verified; real leads will appear after forms/events exist.",
@@ -510,7 +514,7 @@ const copy = {
     adAccountsStatusFilterAll: "All",
     adAccountsNoRealExplain: "Real ad accounts will appear after OAuth connection and the first account sync. Service test bindings may appear below.",
     accountSection: "Account",
-    realAccountsSection: "Active bound accounts",
+    realAccountsSection: "Real accounts",
     testAccountsSection: "Test and archived bindings",
     serviceTestBinding: "Service test binding",
     technicalId: "Technical ID",
@@ -638,9 +642,9 @@ const copy = {
       error: "Error",
       archived: "Archived",
       production_ready: "Ready for production",
-      partially_bound: "Partially bound",
-      accounts_discovered_no_bindings: "Accounts found, no bindings",
-      active_account_without_binding: "Active account without binding",
+      partially_bound: "Partially linked",
+      accounts_discovered_no_bindings: "Accounts found, not linked",
+      active_account_without_binding: "Needs binding",
       ambiguous_primary_binding: "Primary binding needs review",
       binding_without_scope: "Binding has no client/project/funnel",
       inactive_account_with_active_binding: "Inactive account has an active binding",
@@ -1323,17 +1327,36 @@ function CompactReadinessMetric({ label, value }: { label: string; value: string
 }
 
 function getReadinessNextAction(readiness: OptionalJsonData | undefined, ui: Copy): string {
+  const bindingGapSummary = buildBindingGapSummary(readiness, ui);
+  if (bindingGapSummary) return bindingGapSummary;
+
   const payload = readiness?.payload;
   if (!payload || readiness?.unavailableReason) return ui.readinessNextActionFallback;
   const direct = readString(payload, "next_action");
   if (direct) return direct;
-  const gaps = readArray(payload, "binding_gaps");
-  const firstGapAction = gaps.map((gap) => readString(gap, "next_action")).find(Boolean);
-  if (firstGapAction) return firstGapAction;
-  const summary = readObject(payload, "summary");
-  const unbound = readNumber(summary, "unbound_accounts") ?? 0;
-  if (unbound > 0) return ui.readinessNextActionFallback;
   return ui.noCriticalActions;
+}
+
+function buildBindingGapSummary(readiness: OptionalJsonData | undefined, ui: Copy): string | null {
+  const payload = readiness?.payload;
+  if (!payload || readiness?.unavailableReason) return null;
+  const summary = readObject(payload, "summary");
+  const gaps = readArray(payload, "binding_gaps");
+  const unbound = readNumber(summary, "unbound_accounts") ?? gaps.length;
+  if (unbound <= 0 && gaps.length === 0) return null;
+
+  const targets = uniqueValues(
+    gaps
+      .map((gap) => readString(gap, "platform") ?? readString(gap, "external_account_name") ?? readString(gap, "external_account_id"))
+      .filter(Boolean)
+      .map((value) => friendlyStatus(value, ui)),
+  );
+  const label = unbound === 1 ? ui.accountNeedsBindingLabel : ui.accountsNeedBindingLabel;
+  return targets.length > 0 ? `${formatMetric(unbound)} ${label}: ${targets.join(", ")}.` : `${formatMetric(unbound)} ${label}.`;
+}
+
+function uniqueValues(values: string[]): string[] {
+  return [...new Set(values)].slice(0, 4);
 }
 
 function readArray(payload: Record<string, unknown>, key: string): Row[] {
@@ -2310,6 +2333,8 @@ function getPlatformSyncInsight(platform: ConnectorKey, data: AdsConnectorsData 
 
 function buildAttentionItems(insights: Record<ConnectorKey, PlatformSyncInsight>, data: AdsConnectorsData | undefined, ui: Copy): string[] {
   const items: string[] = [];
+  const bindingGapSummary = buildBindingGapSummary(data?.multiAccountReadiness, ui);
+  if (bindingGapSummary) items.push(bindingGapSummary);
   if (insights.google.latestFailure) items.push(`Google Ads: ${formatSyncFailureNote(insights.google.latestFailure, ui)}`);
   else if (!insights.google.hasVerifiedSync && !insights.google.hasDataRows) items.push(ui.googleNeedsAccess);
 

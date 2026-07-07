@@ -20,7 +20,10 @@ describe("AdsConnectors multi-account readiness UI", () => {
     expect(source).not.toContain('path="/ads-readiness"');
   });
 
-  it("uses a compact Ad accounts readiness summary before the account cards", () => {
+  it("preserves the Real accounts label and uses a compact Ad accounts readiness summary before the account cards", () => {
+    expect(source).toContain('realAccountsSection: "Реальні акаунти"');
+    expect(source).toContain('realAccountsSection: "Real accounts"');
+    expect(source).not.toContain('realAccountsSection: "Active bound accounts"');
     const adAccountsTab = source.slice(source.indexOf('<TabsContent value="ad-accounts"'), source.indexOf('<TabsContent value="sync"'));
     expect(adAccountsTab).toContain("<MultiAccountAdAccountsSummary");
     expect(adAccountsTab.indexOf("<MultiAccountAdAccountsSummary")).toBeLessThan(adAccountsTab.indexOf("<AdAccountsTable"));
@@ -36,27 +39,35 @@ describe("AdsConnectors multi-account readiness UI", () => {
     expect(source).not.toContain("function MultiAccountReadinessPanel");
   });
 
-  it("reads counters from the nested summary payload", () => {
+  it("reads Overview counters from the nested summary payload", () => {
     expect(source).toContain('const summary = readObject(payload, "summary");');
     expect(source).toContain('readNumber(summary, "total_accounts") ?? fallbackAccountCount');
     expect(source).toContain('readNumber(summary, "bound_accounts")');
     expect(source).toContain('readNumber(summary, "unbound_accounts")');
     expect(source).toContain('readNumber(summary, "needs_attention_count")');
-    expect(source).toContain('const unbound = readNumber(summary, "unbound_accounts") ?? 0;');
+    expect(source).toContain('const unbound = readNumber(summary, "unbound_accounts") ?? gaps.length;');
     expect(source).not.toContain('readNumber(payload, "total_accounts")');
     expect(source).not.toContain('readNumber(payload, "bound_accounts")');
     expect(source).not.toContain('readNumber(payload, "unbound_accounts")');
     expect(source).not.toContain('readNumber(payload, "needs_attention_count")');
   });
 
+  it("includes binding gaps and unbound accounts in Overview needs-attention logic", () => {
+    expect(source).toContain("const bindingGapSummary = buildBindingGapSummary(data?.multiAccountReadiness, ui);");
+    expect(source).toContain("if (bindingGapSummary) items.push(bindingGapSummary);");
+    expect(source).toContain('readNumber(summary, "unbound_accounts") ?? gaps.length');
+    expect(source).toContain('readString(gap, "platform") ?? readString(gap, "external_account_name") ?? readString(gap, "external_account_id")');
+    expect(source).toContain("return targets.length > 0 ? `${formatMetric(unbound)} ${label}: ${targets.join(", ")}.` : `${formatMetric(unbound)} ${label}.`;");
+  });
+
   it("has friendly readiness and binding-gap labels in Ukrainian and English", () => {
     for (const label of [
       'partially_bound: "Частково привʼязано"',
-      'accounts_discovered_no_bindings: "Акаунти знайдено, привʼязок немає"',
-      'active_account_without_binding: "Активний акаунт без привʼязки"',
-      'partially_bound: "Partially bound"',
-      'accounts_discovered_no_bindings: "Accounts found, no bindings"',
-      'active_account_without_binding: "Active account without binding"',
+      'accounts_discovered_no_bindings: "Акаунти знайдені, але не привʼязані"',
+      'active_account_without_binding: "Потрібна привʼязка"',
+      'partially_bound: "Partially linked"',
+      'accounts_discovered_no_bindings: "Accounts found, not linked"',
+      'active_account_without_binding: "Needs binding"',
     ]) {
       expect(source).toContain(label);
     }
