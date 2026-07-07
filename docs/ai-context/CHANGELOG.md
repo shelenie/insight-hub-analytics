@@ -6,6 +6,16 @@ Meaningful changes for Internal Analytics Workspace.
 
 ---
 
+## 2026-07-07 — AI Marketing Analyst Backend Path Audit
+
+### Added
+
+- Added a read-only AI Marketing Analyst backend path audit covering ads sync functions, scheduled sync orchestration, raw-to-fact expectations, AI ads context views, `ai-helper-run` ads scopes, why the current workspace has zero AI-ready ads metrics, required backend fixes, proposed context architecture, recommended next PRs, and risks.
+
+### Notes
+
+- Documentation-only change. No production code, migrations, RLS policies, Edge Function contracts, Supabase schema objects, or frontend behavior were changed.
+
 ## 2026-07-07 — AI Assistant ChatGPT-Style Start Screen
 
 ### Changed

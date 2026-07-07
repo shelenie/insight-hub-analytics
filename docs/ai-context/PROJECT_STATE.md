@@ -13,6 +13,11 @@ New ChatGPT/Codex/Claude/Cursor sessions should read this file first.
 The AI Assistant empty state was refined further toward a modern ChatGPT/Claude-style start screen. The heavy dashboard-card frame was removed from the primary empty canvas, the welcome block and suggested marketing prompts were tightened to fit the first screen in one normal laptop viewport, the composer is now a compact floating chat input that auto-expands only for longer multiline prompts, and starter prompts now sit under the composer and disappear after the first interaction. Response history remains hidden from the primary UI. No backend logic, RPC calls, Supabase schema, RLS policies, routes, permission logic, database tables/views, analysis mode backend mappings, Edge Function name, or `ai-helper-run` request/response contract were changed.
 
 
+
+## Verified Local Audit — 2026-07-07 AI Marketing Analyst Backend Path
+
+A read-only audit documented why the AI Assistant currently has no real ads performance data for workspace `5ebbe435-fd79-44c3-834e-642e8fba00dc` despite existing connector/account/binding records. The observed blocker is that `facts_ads_daily`, `v_ai_ads_daily_context`, and `v_ai_ads_anomaly_candidates` all have zero rows, so ads-scoped `ai-helper-run` requests cannot answer marketing performance questions from real metrics. The repo contains reusable Edge Function foundations for Meta, Google Ads, TikTok, scheduled sync orchestration, fact rebuild calls, and AI ads context delegation, but the local migration set does not define the raw ads tables/RPCs, `facts_ads_daily`, AI context views, `rebuild_ads_daily_facts`, or `build_ai_ads_context`. No production code, migrations, RLS policies, or Edge Function contracts were changed. See `docs/audits/ai-marketing-analyst-backend-path-audit.md`.
+
 ## Project
 
 Name: Internal Analytics Workspace
