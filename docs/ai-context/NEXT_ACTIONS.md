@@ -6,6 +6,13 @@ Current next actions for Internal Analytics Workspace.
 
 ---
 
+
+## Updated — 2026-07-07 AI Ads Context Fallback
+
+1. Deploy and verify the new `build_ai_ads_context` migration in Supabase against workspace `5ebbe435-fd79-44c3-834e-642e8fba00dc`, confirming facts-empty/unified-available context returns `source_layer_used = v_unified_ads_performance_daily` with the imported 2026-04-01 to 2026-05-05 date range and freshness warning.
+2. Keep real platform sync fixes separate: Google Ads permissions, TikTok 30-day span chunking, and Meta/TikTok zero-row sync investigation remain follow-up work and were not changed here.
+3. Once fresh API facts are available, verify `build_ai_ads_context` returns to the primary `facts_ads_daily` source without fallback.
+
 2026-07-07 update: AI Assistant empty-state refinement is complete. The page now feels closer to a ChatGPT/Claude-style start screen with a lighter centered canvas, compact floating composer that expands only for longer input, tighter suggested prompt chips under the composer that disappear after first interaction, and first-screen spacing designed to fit a normal laptop viewport. Response history remains hidden from the primary UI. No backend/RPC/RLS/schema/route/permission/Edge Function contract changes were made. Next step remains Imports / Data Health micro-polish only if needed, then backend AI-assisted mapping audit.
 
 
