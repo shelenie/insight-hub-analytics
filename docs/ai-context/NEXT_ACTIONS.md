@@ -1,3 +1,10 @@
+## 2026-07-07 — Ads Source Readiness Follow-up
+
+1. Deploy and verify the `source_readiness` diagnostics with the current workspace, confirming test/empty Google Ads, Meta Ads, and TikTok Ads accounts report `connected_no_production_data`, `connected_with_imported_fallback`, `needs_real_ad_account`, or `platform_permission_or_access_blocked` as appropriate rather than being treated only as broken production sync.
+2. Continue using historical imported fallback ads data for AI analysis until real platform data exists.
+3. Defer real Google/Meta/TikTok sync behavior fixes until real ad accounts or imported current platform data with spend/leads are available for validation.
+4. Keep frontend UI, OAuth flows, sync schedules, RLS, secrets/token storage, and `ai-helper-run` request/response contract unchanged unless a separate approved task requires them.
+
 ## Updated — 2026-07-07 Ads Pipeline Diagnostics Production Hotfix Mirror
 
 1. Deploy/confirm the GitHub migration mirror matches the already-applied Supabase production hotfix for `build_ads_pipeline_diagnostics(uuid, date, date)`, especially `ad_traffic_raw.day` date-column detection and the returned `raw_data_state.ad_traffic_raw.date_column`.

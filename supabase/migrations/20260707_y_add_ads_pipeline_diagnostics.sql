@@ -25,6 +25,13 @@ declare
   v_latest_success jsonb := '[]'::jsonb;
   v_latest_failed jsonb := '[]'::jsonb;
   v_platform_blockers jsonb := '[]'::jsonb;
+  v_source_readiness jsonb := '{}'::jsonb;
+  v_readiness_status text := 'not_connected';
+  v_readiness_message text := 'No active ad platform connections were found for this workspace.';
+  v_readiness_next_action text := 'Connect Google Ads, Meta Ads, or TikTok Ads before validating ads source readiness.';
+  v_likely_test_or_empty_accounts boolean := false;
+  v_production_validation_possible boolean := false;
+  v_has_fresh_data boolean := false;
   v_first_blocker_code text := 'ready';
   v_first_blocker_message text := 'Ads pipeline has configured connections and AI-ready ads context.';
   v_has_connections boolean := false;
@@ -225,7 +232,51 @@ begin
       into v_has_tiktok_range;
   end if;
 
+  v_has_fresh_data := v_latest_metric_date is not null and v_latest_metric_date >= current_date - 7;
   v_is_stale := v_latest_metric_date is not null and v_latest_metric_date < current_date - 7;
+  v_likely_test_or_empty_accounts := v_has_connections and v_has_accounts and not v_has_raw and not v_has_facts;
+  v_production_validation_possible := v_has_fresh_data and (v_has_raw or v_has_facts);
+
+  if v_has_google_permission then
+    v_readiness_status := 'platform_permission_or_access_blocked';
+    v_readiness_message := 'Ad connectors are present, but at least one platform returned a permission or access error. Treat this as source readiness for the current non-production account, not as proof that production sync code is broken.';
+    v_readiness_next_action := 'Validate permissions with a real production ad account that has spend/leads before prioritizing platform sync fixes.';
+  elsif v_production_validation_possible then
+    v_readiness_status := 'production_data_ready';
+    v_readiness_message := 'Fresh raw API or facts ads data is available, so production ads metrics can be validated.';
+    v_readiness_next_action := 'Use fresh ads facts/API rows for current performance analysis and continue normal monitoring.';
+  elsif v_has_connections and v_has_fallback and not v_has_facts then
+    v_readiness_status := 'connected_with_imported_fallback';
+    v_readiness_message := 'Ad connectors are technically prepared, but API facts are empty. Historical imported fallback data is available for AI analysis.';
+    v_readiness_next_action := 'Analyze historical/imported ads data now; connect real ad accounts or import current files before validating current platform sync performance.';
+  elsif v_has_connections and v_has_accounts and v_has_bindings and not v_has_raw and not v_has_facts then
+    v_readiness_status := 'connected_no_production_data';
+    v_readiness_message := 'Connections, accounts, and optional bindings exist, but API/raw/fact metrics are empty. This is expected for test or empty ad accounts.';
+    v_readiness_next_action := 'Connect real Google/Meta/TikTok ad accounts with spend/leads, or import platform files, before treating empty syncs as production pipeline failures.';
+  elsif v_has_connections then
+    v_readiness_status := 'needs_real_ad_account';
+    v_readiness_message := 'A platform connection exists, but production metrics cannot be validated until a real ad account with spend/leads is connected and bound.';
+    v_readiness_next_action := 'Add or bind real production ad accounts before debugging production sync behavior.';
+  else
+    v_readiness_status := 'not_connected';
+    v_readiness_message := 'No active ad platform connections were found for this workspace.';
+    v_readiness_next_action := 'Connect Google Ads, Meta Ads, or TikTok Ads before validating ads source readiness.';
+  end if;
+
+  v_source_readiness := jsonb_build_object(
+    'overall_status', v_readiness_status,
+    'has_connections', v_has_connections,
+    'has_accounts', v_has_accounts,
+    'has_bindings', v_has_bindings,
+    'has_api_raw_rows', v_has_raw,
+    'has_imported_fallback_rows', v_has_fallback,
+    'has_facts_rows', v_has_facts,
+    'has_fresh_data', v_has_fresh_data,
+    'likely_test_or_empty_accounts', v_likely_test_or_empty_accounts,
+    'production_validation_possible', v_production_validation_possible,
+    'message', v_readiness_message,
+    'next_action', v_readiness_next_action
+  );
 
   if not v_has_connections then
     v_first_blocker_code := 'no_active_connections';
@@ -289,6 +340,7 @@ begin
       'latest_successful_run_by_platform', v_latest_success,
       'latest_failed_run_by_platform', v_latest_failed
     ),
+    'source_readiness', v_source_readiness,
     'blocker_diagnosis', jsonb_build_object(
       'first_blocker_code', v_first_blocker_code,
       'first_blocker_message', v_first_blocker_message,

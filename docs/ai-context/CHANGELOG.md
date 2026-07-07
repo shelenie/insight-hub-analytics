@@ -1,3 +1,19 @@
+## 2026-07-07 — Ads Source Readiness Diagnostics
+
+### Added
+
+- Added `source_readiness` to `build_ads_pipeline_diagnostics` beside the existing blocker diagnosis so empty/test ad account states are not confused with broken production sync.
+- Added stable source readiness statuses: `not_connected`, `needs_real_ad_account`, `connected_no_production_data`, `connected_with_imported_fallback`, `platform_permission_or_access_blocked`, and `production_data_ready`.
+- Extended `build_ai_ads_context` to include `source_readiness` from pipeline diagnostics without changing the function signature or `ai-helper-run` request/response contract.
+- Added source-level tests for readiness fields/codes, AI context inclusion, unchanged contracts/signatures, and no token/secret field exposure.
+
+### Notes
+
+- Google Ads, Meta Ads, and TikTok Ads connectors in this project are currently test/empty/non-production or not validated with real spend/leads.
+- Real Google/Meta/TikTok platform sync fixes are intentionally deferred until real ad accounts or real platform data are available for validation.
+- Historical imported fallback data remains available for AI analysis even when current API facts are empty.
+- No frontend UI, OAuth flows, sync behavior/schedules, RLS, or secrets/token storage changed.
+
 ## 2026-07-07 — Ads Pipeline Diagnostics Production Hotfix Mirror
 
 ### Changed
