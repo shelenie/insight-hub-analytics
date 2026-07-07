@@ -6,6 +6,21 @@ Meaningful changes for Internal Analytics Workspace.
 
 ---
 
+## 2026-07-07 — AI Assistant ChatGPT-Style Start Screen
+
+### Changed
+
+- Refined the AI Assistant empty state toward a clean ChatGPT/Claude-style start screen with a lightweight centered chat canvas instead of a heavy dashboard-card frame.
+- Tightened first-screen spacing so the page title/subtitle, welcome icon/title/body, suggested prompts, compact composer, and one safety note are designed to fit in one normal laptop viewport.
+- Changed the composer into a compact floating chat input that starts around one line tall, auto-expands only for longer multiline input, caps height around 176px, and scrolls internally beyond that.
+- Kept suggested marketing prompts visually lighter and compact while preserving the existing prompt texts.
+- Kept response history hidden from the primary UI.
+
+### Notes
+
+- Frontend-only change. No backend logic, RPC calls, Supabase schema, RLS policies, routes, permission logic, database tables/views, existing analysis mode backend mappings, Edge Function name, or `ai-helper-run` request/response contract were changed.
+
+
 ## 2026-07-06 — AI Assistant Simplified Chat Surface
 
 Changed:

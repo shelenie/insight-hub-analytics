@@ -8,6 +8,11 @@ New ChatGPT/Codex/Claude/Cursor sessions should read this file first.
 
 ---
 
+## Verified Local Change — 2026-07-07 AI Assistant ChatGPT-Style Start Screen
+
+The AI Assistant empty state was refined further toward a modern ChatGPT/Claude-style start screen. The heavy dashboard-card frame was removed from the primary empty canvas, the welcome block and suggested marketing prompts were tightened to fit the first screen in one normal laptop viewport, and the composer is now a compact floating chat input that auto-expands only for longer multiline prompts. Response history remains hidden from the primary UI. No backend logic, RPC calls, Supabase schema, RLS policies, routes, permission logic, database tables/views, analysis mode backend mappings, Edge Function name, or `ai-helper-run` request/response contract were changed.
+
+
 ## Project
 
 Name: Internal Analytics Workspace
