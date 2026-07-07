@@ -1,3 +1,16 @@
+## 2026-07-07 — AdsConnectors Ad Accounts Live Review Polish
+
+### Changed
+
+- Polished the existing AdsConnectors → Ad accounts UI after live review.
+- Compacted the status filter into an inline toolbar while preserving the compact readiness summary and Real accounts wording.
+- Replaced expanded readiness technical tables with readable platform readiness and binding-gap cards/lists.
+- Added frontend-only friendly localized display mapping for common backend readiness messages.
+
+### Notes
+
+- Backend contracts were not changed: no Supabase schema, RLS, RPC contracts, OAuth, sync behavior, Edge Functions, or `ai-helper-run` changes.
+
 ## 2026-07-07 — AdsConnectors Ad Accounts Readiness UX Polish
 
 ### Changed

@@ -1,3 +1,9 @@
+## Next Actions — 2026-07-07 AdsConnectors Ad Accounts Polish
+
+- Verify `/ads-connectors?tab=ad-accounts` in a browser after deployment to confirm the compact status toolbar fits on desktop and stacks compactly on mobile.
+- Confirm expanded readiness details are readable cards/lists in Ukrainian and English and no longer look like raw/debug tables.
+- Keep backend contracts unchanged; any actual binding fixes should remain in Bindings / future write-action work.
+
 ## 2026-07-07 AdsConnectors Ad Accounts Readiness UX Polish
 
 - Verify `/ads-connectors?tab=ad-accounts` against production `build_ads_multi_account_readiness` output to confirm the compact summary appears above Real accounts cards and detailed readiness/gaps stay collapsed by default.

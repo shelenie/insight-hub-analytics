@@ -64,6 +64,7 @@ const TAB_KEYS: TabKey[] = ["overview", "connections", "ad-accounts", "sync", "f
 
 const copy = {
   uk: {
+    lang: "uk",
     pageTitle: "Рекламні конектори",
     pageSubtitle: "Операційний стан підключень, рекламних акаунтів і синхронізації.",
     authRequired: "Потрібен вхід",
@@ -104,8 +105,12 @@ const copy = {
     needsAttentionCount: "Потребують уваги",
     platformReadiness: "Готовність за платформами",
     readinessDetailsTitle: "Деталі готовності акаунтів",
-    readinessDetailsDescription: "Платформні стани та прогалини привʼязок для технічної перевірки. Виправлення виконуються у Звʼязках даних → Ad accounts.",
+    readinessDetailsDescription: "Стислий огляд стану платформ і прогалин привʼязок. Виправлення виконуються у Звʼязках даних → Ad accounts.",
     bindingGaps: "Прогалини привʼязок",
+    accountNameLabel: "Назва акаунта",
+    externalAccountIdLabel: "Зовнішній ID",
+    gapTypeLabel: "Тип проблеми",
+    messageLabel: "Повідомлення",
     noBindingGaps: "Прогалин привʼязок не виявлено.",
     readinessNextActionFallback: "Перевірте непривʼязані акаунти у Звʼязках даних → Ad accounts; write actions залишаються майбутньою роботою.",
     accountsNeedBindingLabel: "акаунти потребують привʼязки",
@@ -196,7 +201,7 @@ const copy = {
     adAccountsDescription: "Прив’язки акаунтів до клієнтів, проєктів і воронок.",
     adAccountsAllExplain: "За замовчуванням показані лише активні прив’язки. Архівні та призупинені прив’язки доступні через фільтр.",
     adAccountsTestExplain: "Ці записи потрібні для перевірки сценаріїв. Вони не підтверджують реальний акаунт платформи.",
-    adAccountsStatusFilterLabel: "Фільтр статусу",
+    adAccountsStatusFilterLabel: "Статус",
     adAccountsStatusFilterActive: "Активні",
     adAccountsStatusFilterArchived: "Архівні/призупинені",
     adAccountsStatusFilterAll: "Усі",
@@ -376,6 +381,7 @@ const copy = {
     },
   },
   en: {
+    lang: "en",
     pageTitle: "Ads connectors",
     pageSubtitle: "Operational status for connections, ad accounts, and sync.",
     authRequired: "Sign-in required",
@@ -416,8 +422,12 @@ const copy = {
     needsAttentionCount: "Needs attention",
     platformReadiness: "Platform readiness",
     readinessDetailsTitle: "Account readiness details",
-    readinessDetailsDescription: "Platform states and binding gaps for technical review. Fixes stay in Bindings → Ad accounts.",
+    readinessDetailsDescription: "Readable platform states and binding gaps. Fixes stay in Bindings → Ad accounts.",
     bindingGaps: "Binding gaps",
+    accountNameLabel: "Account name",
+    externalAccountIdLabel: "External ID",
+    gapTypeLabel: "Gap type",
+    messageLabel: "Message",
     noBindingGaps: "No binding gaps detected.",
     readinessNextActionFallback: "Review unbound accounts in Bindings → Ad accounts; write actions remain future work.",
     accountsNeedBindingLabel: "accounts need binding",
@@ -508,7 +518,7 @@ const copy = {
     adAccountsDescription: "Account bindings to clients, projects, and funnels.",
     adAccountsAllExplain: "Only active bindings are shown by default. Archived and paused bindings are available through the filter.",
     adAccountsTestExplain: "These records are used for scenario checks. They do not confirm a real platform account.",
-    adAccountsStatusFilterLabel: "Status filter",
+    adAccountsStatusFilterLabel: "Status",
     adAccountsStatusFilterActive: "Active",
     adAccountsStatusFilterArchived: "Archived/paused",
     adAccountsStatusFilterAll: "All",
@@ -1302,17 +1312,65 @@ function MultiAccountAdAccountsSummary({ readiness, ui, fallbackAccountCount }: 
       <details className="mt-3 rounded-md border border-border/60 bg-muted/20 p-3 text-xs">
         <summary className="cursor-pointer font-medium text-muted-foreground">{ui.readinessDetailsTitle}</summary>
         <p className="mt-2 text-muted-foreground">{ui.readinessDetailsDescription}</p>
-        <div className="mt-3 grid gap-4 xl:grid-cols-2">
+        <div className="mt-3 grid gap-3">
           <div>
             <p className="mb-2 font-semibold uppercase tracking-wide text-muted-foreground">{ui.platformReadiness}</p>
-            <GenericDataTable rows={platformRows} columns={["platform", "readiness_status", "accounts_count", "bound_accounts_count", "unbound_accounts_count", "next_action"]} ui={ui} maxRows={10} />
+            <PlatformReadinessCards rows={platformRows} ui={ui} />
           </div>
           <div>
             <p className="mb-2 font-semibold uppercase tracking-wide text-muted-foreground">{ui.bindingGaps}</p>
-            {gapRows.length > 0 ? <GenericDataTable rows={gapRows} columns={["gap_type", "platform", "external_account_name", "external_account_id", "message", "next_action"]} ui={ui} maxRows={10} /> : <p className="text-sm text-muted-foreground">{ui.noBindingGaps}</p>}
+            {gapRows.length > 0 ? <BindingGapCards rows={gapRows} ui={ui} /> : <p className="text-sm text-muted-foreground">{ui.noBindingGaps}</p>}
           </div>
         </div>
       </details>
+    </div>
+  );
+}
+
+function PlatformReadinessCards({ rows, ui }: { rows: Row[]; ui: Copy }) {
+  if (rows.length === 0) return <p className="text-sm text-muted-foreground">{ui.emptyFields}</p>;
+  return (
+    <div className="grid gap-2">
+      {rows.slice(0, 10).map((row, index) => (
+        <article key={`platform-readiness-${index}-${String(row.platform ?? "platform")}`} className="rounded-md border border-border/60 bg-background/70 p-3">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold text-foreground">{formatReadinessDisplay(row.platform, ui)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{ui.totalAccounts}: {formatMetric(readNumber(row, "accounts_count"))}</p>
+            </div>
+            <StatusPill tone={readinessTone(readString(row, "readiness_status"))}>{formatReadinessValue(readString(row, "readiness_status"), ui)}</StatusPill>
+          </div>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
+            <span className="rounded-full bg-muted/60 px-2 py-1">{ui.boundAccounts}: {formatMetric(readNumber(row, "bound_accounts_count"))}</span>
+            <span className="rounded-full bg-muted/60 px-2 py-1">{ui.unboundAccounts}: {formatMetric(readNumber(row, "unbound_accounts_count"))}</span>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-muted-foreground"><span className="font-medium text-foreground">{ui.nextAction}:</span> {formatFriendlyBackendText(readString(row, "next_action"), ui)}</p>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+function BindingGapCards({ rows, ui }: { rows: Row[]; ui: Copy }) {
+  return (
+    <div className="grid gap-2">
+      {rows.slice(0, 10).map((row, index) => (
+        <article key={`binding-gap-${index}-${String(row.external_account_id ?? row.gap_type ?? "gap")}`} className="rounded-md border border-border/60 bg-background/70 p-3">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <p className="text-sm font-semibold text-foreground">{formatReadinessDisplay(row.platform, ui)}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{ui.accountNameLabel}: {formatReadinessDisplay(row.external_account_name, ui)}</p>
+            </div>
+            <StatusPill tone="warning">{formatReadinessDisplay(row.gap_type, ui)}</StatusPill>
+          </div>
+          <div className="mt-2 grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
+            <p><span className="font-medium text-foreground">{ui.externalAccountIdLabel}:</span> {formatReadinessDisplay(row.external_account_id, ui)}</p>
+            <p><span className="font-medium text-foreground">{ui.gapTypeLabel}:</span> {formatReadinessDisplay(row.gap_type, ui)}</p>
+          </div>
+          <p className="mt-2 text-xs leading-5 text-muted-foreground"><span className="font-medium text-foreground">{ui.messageLabel}:</span> {formatFriendlyBackendText(readString(row, "message"), ui)}</p>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground"><span className="font-medium text-foreground">{ui.nextAction}:</span> {formatFriendlyBackendText(readString(row, "next_action"), ui)}</p>
+        </article>
+      ))}
     </div>
   );
 }
@@ -1333,7 +1391,7 @@ function getReadinessNextAction(readiness: OptionalJsonData | undefined, ui: Cop
   const payload = readiness?.payload;
   if (!payload || readiness?.unavailableReason) return ui.readinessNextActionFallback;
   const direct = readString(payload, "next_action");
-  if (direct) return direct;
+  if (direct) return formatFriendlyBackendText(direct, ui);
   return ui.noCriticalActions;
 }
 
@@ -1382,6 +1440,31 @@ function readinessTone(status: string | null): Tone {
 
 function formatReadinessValue(value: string | null, ui: Copy): string {
   return value ? friendlyStatus(value, ui) : ui.noDataYet;
+}
+
+function formatReadinessDisplay(value: unknown, ui: Copy): string {
+  const text = typeof value === "string" ? value : value == null ? "" : String(value);
+  return text ? friendlyStatus(text, ui) : "—";
+}
+
+function formatFriendlyBackendText(value: string | null, ui: Copy): string {
+  if (!value) return ui.noCriticalActions;
+  const normalized = value.trim().toLowerCase();
+  const localizedMessages: Record<UiLang, Record<string, string>> = {
+    uk: {
+      "active ad account has no active binding.": "Активний рекламний акаунт ще не привʼязаний.",
+      "bind the account to the correct client, project, or funnel.": "Привʼяжіть акаунт до правильного клієнта, проєкту або воронки.",
+      "no platform binding action required.": "Дія не потрібна.",
+      "review and bind each active ad account to the correct agency scope.": "Перевірте й привʼяжіть активні акаунти до правильного рівня.",
+    },
+    en: {
+      "active ad account has no active binding.": "Active ad account is not bound yet.",
+      "bind the account to the correct client, project, or funnel.": "Bind the account to the correct client, project, or funnel.",
+      "no platform binding action required.": "No action required.",
+      "review and bind each active ad account to the correct agency scope.": "Review and bind active accounts to the correct scope.",
+    },
+  };
+  return localizedMessages[ui.lang]?.[normalized] ?? value;
 }
 
 async function readAdPlatformConnections(): Promise<OptionalViewData> {
@@ -1570,15 +1653,16 @@ function AdAccountsTable({ data, ui, timestampDisplayMode, timezoneName }: { dat
 
   return (
     <div className="space-y-5">
-      <div className="rounded-lg border border-border/70 bg-muted/20 p-3 text-sm text-muted-foreground">
-        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-          <div>
+      <div className="text-sm text-muted-foreground">
+        <div className="flex flex-col gap-2 rounded-md bg-muted/20 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0">
             <p>{ui.adAccountsAllExplain}</p>
             {testRows.length > 0 ? <p className="mt-1 text-xs">{ui.adAccountsTestExplain}</p> : null}
             {realRows.length === 0 ? <p className="mt-1 text-xs">{ui.adAccountsNoRealExplain}</p> : null}
           </div>
-          <div className="flex shrink-0 flex-col gap-1.5">
-            <span className="text-xs font-medium text-muted-foreground">{ui.adAccountsStatusFilterLabel}</span>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="sr-only">{ui.adAccountsStatusFilterLabel}</span>
+            <span aria-hidden="true" className="text-xs font-medium text-muted-foreground">{ui.adAccountsStatusFilterLabel}:</span>
             <div className="flex rounded-lg border border-border/70 bg-background/70 p-1">
               <Button type="button" size="sm" variant={statusFilter === "active" ? "secondary" : "ghost"} className="h-7 px-2.5 text-xs" onClick={() => setStatusFilter("active")}>{ui.adAccountsStatusFilterActive}</Button>
               <Button type="button" size="sm" variant={statusFilter === "archived" ? "secondary" : "ghost"} className="h-7 px-2.5 text-xs" onClick={() => setStatusFilter("archived")}>{ui.adAccountsStatusFilterArchived}</Button>
