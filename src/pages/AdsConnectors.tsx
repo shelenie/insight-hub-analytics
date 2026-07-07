@@ -103,6 +103,8 @@ const copy = {
     unboundAccounts: "Без привʼязки",
     needsAttentionCount: "Потребують уваги",
     platformReadiness: "Готовність за платформами",
+    readinessDetailsTitle: "Деталі готовності акаунтів",
+    readinessDetailsDescription: "Платформні стани та прогалини привʼязок для технічної перевірки. Виправлення виконуються у Звʼязках даних → Ad accounts.",
     bindingGaps: "Прогалини привʼязок",
     noBindingGaps: "Прогалин привʼязок не виявлено.",
     readinessNextActionFallback: "Перевірте непривʼязані акаунти у Звʼязках даних → Ad accounts; write actions залишаються майбутньою роботою.",
@@ -198,7 +200,7 @@ const copy = {
     adAccountsStatusFilterAll: "Усі",
     adAccountsNoRealExplain: "Реальні рекламні акаунти з’являться після OAuth-підключення та першої синхронізації акаунтів. Нижче можуть бути службові тестові прив’язки.",
     accountSection: "Акаунт",
-    realAccountsSection: "Реальні акаунти",
+    realAccountsSection: "Активні привʼязані акаунти",
     testAccountsSection: "Тестові та архівні прив’язки",
     serviceTestBinding: "Службова тестова прив’язка",
     technicalId: "Технічний ID",
@@ -325,6 +327,14 @@ const copy = {
       failed: "Помилка",
       error: "Помилка",
       archived: "Архівовано",
+      production_ready: "Готово до роботи",
+      partially_bound: "Частково привʼязано",
+      accounts_discovered_no_bindings: "Акаунти знайдено, привʼязок немає",
+      active_account_without_binding: "Активний акаунт без привʼязки",
+      ambiguous_primary_binding: "Потрібно уточнити основну привʼязку",
+      binding_without_scope: "Привʼязка без клієнта/проєкту/воронки",
+      inactive_account_with_active_binding: "Неактивний акаунт має активну привʼязку",
+      connection_without_discovered_accounts: "Підключення без знайдених акаунтів",
     },
     columnLabels: {
       platform: "Платформа",
@@ -403,6 +413,8 @@ const copy = {
     unboundAccounts: "Unbound accounts",
     needsAttentionCount: "Needs attention",
     platformReadiness: "Platform readiness",
+    readinessDetailsTitle: "Account readiness details",
+    readinessDetailsDescription: "Platform states and binding gaps for technical review. Fixes stay in Bindings → Ad accounts.",
     bindingGaps: "Binding gaps",
     noBindingGaps: "No binding gaps detected.",
     readinessNextActionFallback: "Review unbound accounts in Bindings → Ad accounts; write actions remain future work.",
@@ -498,7 +510,7 @@ const copy = {
     adAccountsStatusFilterAll: "All",
     adAccountsNoRealExplain: "Real ad accounts will appear after OAuth connection and the first account sync. Service test bindings may appear below.",
     accountSection: "Account",
-    realAccountsSection: "Real accounts",
+    realAccountsSection: "Active bound accounts",
     testAccountsSection: "Test and archived bindings",
     serviceTestBinding: "Service test binding",
     technicalId: "Technical ID",
@@ -625,6 +637,14 @@ const copy = {
       failed: "Failed",
       error: "Error",
       archived: "Archived",
+      production_ready: "Ready for production",
+      partially_bound: "Partially bound",
+      accounts_discovered_no_bindings: "Accounts found, no bindings",
+      active_account_without_binding: "Active account without binding",
+      ambiguous_primary_binding: "Primary binding needs review",
+      binding_without_scope: "Binding has no client/project/funnel",
+      inactive_account_with_active_binding: "Inactive account has an active binding",
+      connection_without_discovered_accounts: "Connection has no discovered accounts",
     },
     columnLabels: {
       platform: "Platform",
@@ -1099,7 +1119,7 @@ export default function AdsConnectors() {
             <TabsContent value="ad-accounts" className="mt-1">
               <SectionCard title={ui.adAccountsTitle} description={ui.adAccountsDescription}>
                 <div className="space-y-4">
-                  <MultiAccountReadinessPanel readiness={query.data?.multiAccountReadiness} ui={ui} />
+                  <MultiAccountAdAccountsSummary readiness={query.data?.multiAccountReadiness} ui={ui} fallbackAccountCount={realAccountRows.length} />
                   <AdAccountsTable data={query.data?.adBindings} ui={ui} timestampDisplayMode={timezoneDisplayMode} timezoneName={timezoneName ?? undefined} />
                 </div>
               </SectionCard>
@@ -1249,25 +1269,55 @@ function MultiAccountOverview({ readiness, ui, fallbackAccountCount }: { readine
   );
 }
 
-function MultiAccountReadinessPanel({ readiness, ui }: { readiness: OptionalJsonData | undefined; ui: Copy }) {
+function MultiAccountAdAccountsSummary({ readiness, ui, fallbackAccountCount }: { readiness: OptionalJsonData | undefined; ui: Copy; fallbackAccountCount: number }) {
   if (!readiness) return null;
   if (readiness.unavailableReason || !readiness.payload) return <WarningNotice>{ui.readinessUnavailable}</WarningNotice>;
-  const platformRows = readArray(readiness.payload, "platforms");
-  const gapRows = readArray(readiness.payload, "binding_gaps");
+
+  const payload = readiness.payload;
+  const summary = readObject(payload, "summary");
+  const platformRows = readArray(payload, "platforms");
+  const gapRows = readArray(payload, "binding_gaps");
+
   return (
-    <div className="rounded-lg border border-border/70 bg-card/50 p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm font-semibold">{ui.multiAccountReadinessTitle}</p>
-        <StatusPill tone={readinessTone(readString(readiness.payload, "overall_status"))}>{formatReadinessValue(readString(readiness.payload, "overall_status"), ui)}</StatusPill>
+    <div className="rounded-lg border border-border/70 bg-card/50 p-3">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold">{ui.multiAccountReadinessTitle}</p>
+            <StatusPill tone={readinessTone(readString(payload, "overall_status"))}>{formatReadinessValue(readString(payload, "overall_status"), ui)}</StatusPill>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">{ui.nextAction}: {getReadinessNextAction(readiness, ui)}</p>
+        </div>
+        <div className="grid shrink-0 grid-cols-2 gap-2 text-xs sm:grid-cols-4 lg:min-w-[520px]">
+          <CompactReadinessMetric label={ui.totalAccounts} value={formatMetric(readNumber(summary, "total_accounts") ?? fallbackAccountCount)} />
+          <CompactReadinessMetric label={ui.boundAccounts} value={formatMetric(readNumber(summary, "bound_accounts"))} />
+          <CompactReadinessMetric label={ui.unboundAccounts} value={formatMetric(readNumber(summary, "unbound_accounts"))} />
+          <CompactReadinessMetric label={ui.needsAttentionCount} value={formatMetric(readNumber(summary, "needs_attention_count"))} />
+        </div>
       </div>
-      <div className="mt-3">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{ui.platformReadiness}</p>
-        <GenericDataTable rows={platformRows} columns={["platform", "readiness_status", "accounts_count", "bound_accounts_count", "unbound_accounts_count", "next_action"]} ui={ui} maxRows={10} />
-      </div>
-      <div className="mt-4">
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{ui.bindingGaps}</p>
-        {gapRows.length > 0 ? <GenericDataTable rows={gapRows} columns={["gap_type", "platform", "external_account_name", "external_account_id", "message", "next_action"]} ui={ui} maxRows={10} /> : <p className="text-sm text-muted-foreground">{ui.noBindingGaps}</p>}
-      </div>
+      <details className="mt-3 rounded-md border border-border/60 bg-muted/20 p-3 text-xs">
+        <summary className="cursor-pointer font-medium text-muted-foreground">{ui.readinessDetailsTitle}</summary>
+        <p className="mt-2 text-muted-foreground">{ui.readinessDetailsDescription}</p>
+        <div className="mt-3 grid gap-4 xl:grid-cols-2">
+          <div>
+            <p className="mb-2 font-semibold uppercase tracking-wide text-muted-foreground">{ui.platformReadiness}</p>
+            <GenericDataTable rows={platformRows} columns={["platform", "readiness_status", "accounts_count", "bound_accounts_count", "unbound_accounts_count", "next_action"]} ui={ui} maxRows={10} />
+          </div>
+          <div>
+            <p className="mb-2 font-semibold uppercase tracking-wide text-muted-foreground">{ui.bindingGaps}</p>
+            {gapRows.length > 0 ? <GenericDataTable rows={gapRows} columns={["gap_type", "platform", "external_account_name", "external_account_id", "message", "next_action"]} ui={ui} maxRows={10} /> : <p className="text-sm text-muted-foreground">{ui.noBindingGaps}</p>}
+          </div>
+        </div>
+      </details>
+    </div>
+  );
+}
+
+function CompactReadinessMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-md border border-border/60 bg-background/60 px-3 py-2">
+      <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm font-semibold text-foreground">{value}</p>
     </div>
   );
 }
