@@ -20,10 +20,11 @@ describe("AdsConnectors multi-account readiness UI", () => {
     expect(source).not.toContain('path="/ads-readiness"');
   });
 
-  it("preserves the Real accounts label and uses a compact Ad accounts readiness summary before the account cards", () => {
+  it("preserves Real accounts wording and uses a compact Ad accounts readiness summary before the account cards", () => {
     expect(source).toContain('realAccountsSection: "Реальні акаунти"');
     expect(source).toContain('realAccountsSection: "Real accounts"');
-    expect(source).not.toContain('realAccountsSection: "Active bound accounts"');
+    expect(source).toContain('realAccount: "Реальний акаунт"');
+    expect(source).toContain('realAccount: "Real account"');
     const adAccountsTab = source.slice(source.indexOf('<TabsContent value="ad-accounts"'), source.indexOf('<TabsContent value="sync"'));
     expect(adAccountsTab).toContain("<MultiAccountAdAccountsSummary");
     expect(adAccountsTab.indexOf("<MultiAccountAdAccountsSummary")).toBeLessThan(adAccountsTab.indexOf("<AdAccountsTable"));
@@ -58,6 +59,14 @@ describe("AdsConnectors multi-account readiness UI", () => {
     expect(source).toContain('readNumber(summary, "unbound_accounts") ?? gaps.length');
     expect(source).toContain('readString(gap, "platform") ?? readString(gap, "external_account_name") ?? readString(gap, "external_account_id")');
     expect(source).toContain("return targets.length > 0 ? `${formatMetric(unbound)} ${label}: ${targets.join(", ")}.` : `${formatMetric(unbound)} ${label}.`;");
+  });
+
+  it("uses non-production-safe operational readiness wording", () => {
+    expect(source).toContain('operationalChecklist: "Операційна готовність"');
+    expect(source).toContain('operationalChecklist: "Operational readiness"');
+    expect(source).toContain('production_ready: "Ready for operation"');
+    expect(source).not.toContain('operationalChecklist: "Production readiness"');
+    expect(source).not.toContain('production_ready: "Ready for production"');
   });
 
   it("has friendly readiness and binding-gap labels in Ukrainian and English", () => {
