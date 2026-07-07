@@ -4,9 +4,9 @@
 
 - Polished AdsConnectors Overview and Ad accounts readiness UI into compact business-readable summaries with friendly status, total/bound/unbound/needs-attention counters, and specific binding-gap next actions.
 - Surfaced binding gaps/unbound accounts as first-class Needs attention items while keeping TikTok no-data and Facebook Lead Ads no-forms guidance.
-- Moved detailed platform readiness and binding gaps into an expandable details section so active bound account cards are no longer pushed down by diagnostic tables.
+- Moved detailed platform readiness and binding gaps into an expandable details section so Real accounts cards are no longer pushed down by diagnostic tables.
 - Added Ukrainian and English friendly labels for key multi-account readiness and binding-gap status codes.
-- Replaced “Production readiness” with “Operational readiness” and softened “Real accounts” to active bound accounts for non-production/test account safety.
+- Replaced “Production readiness” with “Operational readiness” while preserving “Real accounts” for ad accounts that truly exist on Meta Ads, Google Ads, or TikTok Ads even when they have no spend/campaign data yet.
 
 ### Notes
 

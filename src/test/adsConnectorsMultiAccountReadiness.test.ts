@@ -20,13 +20,11 @@ describe("AdsConnectors multi-account readiness UI", () => {
     expect(source).not.toContain('path="/ads-readiness"');
   });
 
-  it("softens Real accounts wording and uses a compact Ad accounts readiness summary before the account cards", () => {
-    expect(source).toContain('realAccountsSection: "Активні привʼязані акаунти"');
-    expect(source).toContain('realAccountsSection: "Active bound accounts"');
-    expect(source).toContain('realAccount: "Активний привʼязаний акаунт"');
-    expect(source).toContain('realAccount: "Active bound account"');
-    expect(source).not.toContain('realAccountsSection: "Реальні акаунти"');
-    expect(source).not.toContain('realAccountsSection: "Real accounts"');
+  it("preserves Real accounts wording and uses a compact Ad accounts readiness summary before the account cards", () => {
+    expect(source).toContain('realAccountsSection: "Реальні акаунти"');
+    expect(source).toContain('realAccountsSection: "Real accounts"');
+    expect(source).toContain('realAccount: "Реальний акаунт"');
+    expect(source).toContain('realAccount: "Real account"');
     const adAccountsTab = source.slice(source.indexOf('<TabsContent value="ad-accounts"'), source.indexOf('<TabsContent value="sync"'));
     expect(adAccountsTab).toContain("<MultiAccountAdAccountsSummary");
     expect(adAccountsTab.indexOf("<MultiAccountAdAccountsSummary")).toBeLessThan(adAccountsTab.indexOf("<AdAccountsTable"));

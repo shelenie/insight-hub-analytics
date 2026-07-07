@@ -1,8 +1,8 @@
 ## 2026-07-07 AdsConnectors Ad Accounts Readiness UX Polish
 
-- Verify `/ads-connectors?tab=ad-accounts` against production `build_ads_multi_account_readiness` output to confirm the compact summary appears above active bound account cards and detailed readiness/gaps stay collapsed by default.
+- Verify `/ads-connectors?tab=ad-accounts` against production `build_ads_multi_account_readiness` output to confirm the compact summary appears above Real accounts cards and detailed readiness/gaps stay collapsed by default.
 - Keep Bindings as the remediation surface for binding gaps; AdsConnectors remains read-only guidance for account/source/sync readiness.
-- Keep softened non-production-safe labels such as “Operational readiness” and “Active bound accounts”; Bindings remains the place to actually fix binding gaps.
+- Keep non-production-safe “Operational readiness” wording while preserving “Real accounts” for real platform accounts; Bindings remains the place to actually fix binding gaps.
 
 ## Updated — 2026-07-07 Bindings Ads Binding Gap Readiness
 
