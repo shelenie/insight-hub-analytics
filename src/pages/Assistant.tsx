@@ -124,7 +124,12 @@ function StarterPrompts({ t, onPrompt, disabled }: { t: (key: TranslationKey) =>
 
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
-  return <div className={`flex w-full ${isUser ? "justify-end" : "justify-start"}`}><div className={`max-w-full rounded-2xl px-4 py-3 text-sm sm:max-w-[82%] ${isUser ? "rounded-tr-sm bg-primary text-primary-foreground" : "rounded-tl-sm border bg-card shadow-sm"}`}><p className="mb-1 text-[11px] opacity-75">{message.contextLabel}</p>{isUser ? <p className="whitespace-pre-wrap">{message.text}</p> : <AiAnswer text={message.text} />}</div></div>;
+
+  if (isUser) {
+    return <div className="flex w-full justify-end"><div className="max-w-[82%] rounded-2xl rounded-tr-sm bg-primary px-4 py-3 text-sm text-primary-foreground"><p className="mb-1 text-[11px] opacity-75">{message.contextLabel}</p><p className="whitespace-pre-wrap">{message.text}</p></div></div>;
+  }
+
+  return <div className="flex w-full justify-start"><div className="w-full rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm"><p className="mb-1 text-[11px] opacity-75">{message.contextLabel}</p><AiAnswer text={message.text} /></div></div>;
 }
 
 function getAnswerText(payload: Record<string, unknown>, fallback: string) {

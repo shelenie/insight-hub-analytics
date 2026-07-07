@@ -89,8 +89,11 @@ describe("AI Assistant chat UI", () => {
     expect(source).toContain('<div className={`${CHAT_COLUMN_CLASS} space-y-3`}>');
     expect(source).toContain('<div className={`${CHAT_COLUMN_CLASS} mt-4 sm:mt-5`}>');
     expect(source).toContain('<div className={CHAT_COLUMN_CLASS}><FriendlyError');
-    expect(source).toContain('return <div className={`flex w-full ${isUser ? "justify-end" : "justify-start"}`}>');
+    expect(source).toContain('return <div className="flex w-full justify-start"><div className="w-full rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm">');
+    expect(source).toContain('return <div className="flex w-full justify-end"><div className="max-w-[82%] rounded-2xl rounded-tr-sm bg-primary');
     expect(source).not.toContain('items-start gap-3');
+    expect(source).not.toContain('sm:max-w-[82%]');
+    expect(source).not.toContain('max-w-full rounded-2xl px-4 py-3 text-sm sm:max-w-[82%]');
     expect(source).not.toContain('max-w-3xl sm:mt-5');
   });
 

@@ -11,7 +11,7 @@ Meaningful changes for Internal Analytics Workspace.
 
 ### Changed
 
-- Fixed AI Assistant chat-mode alignment so user messages, assistant responses, loading/error states, composer, starter prompts, and the safety note share one centered chat column.
+- Fixed AI Assistant chat-mode alignment so user messages, full-width assistant response cards, loading/error states, composer, starter prompts, and the safety note share one centered chat column.
 - Cleaned composer focus styling by removing the textarea's separate visible border/focus ring and applying focus treatment to the outer rounded composer container.
 - Added explicit localized New chat / Новий чат action that clears current in-memory messages, prompt, and visible error state, returning to the starter screen while preserving the selected analysis mode.
 
