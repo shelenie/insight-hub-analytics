@@ -28,6 +28,14 @@
 
 ---
 
+
+## 2026-07-07 — Ads Multi-Account Readiness Diagnostics Follow-Up
+
+1. Deploy/verify `build_ads_multi_account_readiness(uuid)` in Supabase and confirm it reports the observed production shape: Meta has multiple discovered accounts with one binding, Google Ads has one discovered account with multiple bindings, and TikTok has a discovered account with no binding.
+2. Add an admin/source-management UI surface that displays `multi_account_readiness` platform/account rows and binding gaps so operators can bind each real ad account to the correct client/project/funnel.
+3. Keep real Google/Meta/TikTok live platform sync fixes deferred until real production accounts/data are available.
+4. Keep frontend UI, OAuth, live sync behavior, RLS, secrets/token storage, `build_ai_ads_context` signature, and `ai-helper-run` contract unchanged unless separately approved.
+
 # NEXT_ACTIONS.md
 
 ## Purpose

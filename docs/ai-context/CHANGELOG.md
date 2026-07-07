@@ -87,6 +87,23 @@ Meaningful changes for Internal Analytics Workspace.
 ---
 
 
+## 2026-07-07 — Ads Multi-Account Readiness Diagnostics
+
+### Added
+
+- Added read-only Supabase RPC `build_ads_multi_account_readiness(uuid)` to describe multi-account ads onboarding and binding readiness for agency workflows where one platform connection can expose many ad accounts.
+- Added stable readiness status codes, summary counts, per-platform details, per-account binding state, and binding gap detection for unbound active accounts, ambiguous primary bindings, bindings without client/project/funnel scope, inactive accounts with active bindings, and platform connections with no discovered accounts.
+- Extended `build_ads_pipeline_diagnostics` to include `multi_account_readiness` without changing its signature.
+- Added source-level tests for function existence, read-only behavior, required JSON shape, readiness codes, multi-account/unbound/scope-less binding detection, token/secret avoidance, unchanged RPC signatures, and unchanged `ai-helper-run` contract.
+
+### Notes
+
+- Multi-account provider support is now explicitly visible in backend diagnostics.
+- The next UI step can display account binding readiness in admin/source management.
+- Real Google/Meta/TikTok platform sync fixes remain deferred until real production accounts/data are available.
+- No frontend UI, OAuth, live platform sync, RLS, Edge Function contracts, `build_ai_ads_context` signature, or `ai-helper-run` request/response contract changed.
+
+
 ## 2026-07-07 — AI Helper Senior Performance Marketing Analyst Prompt
 
 ### Changed

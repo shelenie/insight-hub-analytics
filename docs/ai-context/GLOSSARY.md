@@ -151,3 +151,17 @@ Must not invent analytics.
 ## Audit Log
 
 Record of important actions: who did what, when, target object, old/new values.
+
+---
+
+## Multi-Account Ads Readiness
+
+Diagnostic state showing whether one ad platform connection has discovered one or many ad accounts and whether each active account is bound to the correct agency scope.
+
+---
+
+## Binding Gap
+
+A diagnostic item showing that an ad account or binding needs operator attention before production reporting is reliable, such as an active unbound account, ambiguous primary binding, binding with no client/project/funnel, inactive account with active binding, or connected platform with no discovered accounts.
+
+---
