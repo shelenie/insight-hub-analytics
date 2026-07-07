@@ -1,3 +1,21 @@
+## 2026-07-07 — Bindings Ads Binding Gap Readiness
+
+### Changed
+
+- Wired read-only Ads multi-account binding readiness into the existing `/bindings` page without adding a page, route, sidebar item, top-level tab, Imports placement, or duplicating AdsConnectors.
+- Added a compact Overview readiness card that reads `overall_status` and nested `summary` counters from `build_ads_multi_account_readiness(uuid)`.
+- Added a read-only Binding gaps section in the existing Ad accounts tab showing `gap_type`, `platform`, `external_account_name`, `external_account_id`, `message`, and `next_action` from `payload.binding_gaps`.
+- Added raw readiness payload diagnostics inside the existing Health technical-details pattern.
+- Added graceful readiness-only unavailable states so existing binding management continues if the RPC fails.
+- Added source tests covering the RPC call, existing-tab-only placement, no new navigation, nested summary counters, binding gaps rows, and unavailable state.
+
+### Notes
+
+- AdsConnectors shows source/account/sync readiness; Bindings now shows binding gaps where admins manage ad account bindings.
+- This is still read-only gap guidance. Actual one-click fix actions remain future work.
+- Real platform sync fixes remain deferred until real ad accounts/data are available.
+- No Supabase schema, RLS, OAuth, sync behavior, Edge Functions, imports page, ads connector write logic, or binding-create-or-update contract changed.
+
 ## 2026-07-07 — AdsConnectors Readiness Summary Shape Fix
 
 ### Fixed
