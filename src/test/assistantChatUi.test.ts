@@ -73,11 +73,21 @@ describe("AI Assistant chat UI", () => {
   it("renders a lightweight compact composer as the primary action", () => {
     expect(source).not.toContain("<SectionCard");
     expect(source).not.toContain('min-h-[72vh]');
+    expect(source).not.toContain('min-h-[calc(100vh-10rem)]');
     expect(source).toContain('ref={textareaRef}');
     expect(source).toContain('rows={1}');
     expect(source).toContain('!min-h-12 max-h-44 resize-none overflow-y-auto');
     expect(source).toContain('Math.min(textarea.scrollHeight, 176)');
     expect(source).toContain('size="icon"');
+  });
+
+  it("keeps starter prompts below the composer and hides them after interaction", () => {
+    expect(source).toContain('const showStarterPrompts = messages.length === 0 && !run.isPending;');
+    expect(source).toContain('{showStarterPrompts ? <StarterPrompts t={t} onPrompt={submitPrompt} disabled={runDisabled} /> : null}');
+    expect(source.indexOf('<Textarea ref={textareaRef}')).toBeLessThan(source.indexOf('<StarterPrompts'));
+    expect(source).toContain('onClick={() => onPrompt(t(key))}');
+    expect(source).toContain('disabled={disabled}');
+    expect(source).not.toContain('onPrompt={(value) => setPrompt(value)}');
   });
 
   it("keeps backend contract and does not add unsupported fake action labels", () => {
