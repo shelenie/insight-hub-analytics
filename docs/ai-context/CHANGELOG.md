@@ -6,6 +6,20 @@ Meaningful changes for Internal Analytics Workspace.
 
 ---
 
+## 2026-07-06 — AI Assistant Simplified Chat Surface
+
+Changed:
+
+- Simplified the AI Assistant main screen into one clean ChatGPT/Claude-style chat surface with a centered welcome state, suggested prompt cards, bottom composer, and compact analysis mode selector.
+- Hid response history from the primary AI Assistant UI until a proper chat/session history UX is designed.
+- Updated the Ukrainian and English welcome copy and safety note to the approved simplified wording.
+- Kept the existing marketing suggested prompts and analysis mode backend mappings, with Full overview as the default and no visible Auto context.
+- Updated assistant UI tests for hidden history UI, approved UK/EN copy, suggested prompts, unsupported action labels, and the unchanged `ai-helper-run` request body mapping.
+
+Safety / scope:
+
+- Frontend-only change. No backend logic, RPC calls, Supabase schema, RLS policies, routes, permission logic, database tables/views, Edge Function name, or `ai-helper-run` request/response contract were changed.
+
 ## 2026-07-06 — AI Assistant Visual Micro-Polish
 
 Changed:

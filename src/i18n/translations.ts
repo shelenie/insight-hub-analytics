@@ -452,13 +452,13 @@ export const translations = {
     en: "AI assistant for performance marketing: analyzes ads, CPL, campaigns, leads, data quality, and prepares insights for teams and clients.",
   },
   assistantSafetyNote: {
-    uk: "AI дає пояснення й рекомендації. Він не змінює дані без підтвердження та окремого backend-flow.",
-    en: "AI provides explanations and recommendations. It does not change data without confirmation and a separate backend flow.",
+    uk: "AI дає пояснення й рекомендації, але не змінює дані без підтвердження.",
+    en: "AI provides explanations and recommendations, but does not change data without confirmation.",
   },
-  assistantWelcomeTitle: { uk: "Що розібрати в маркетингових показниках?", en: "What should we investigate in marketing performance?" },
+  assistantWelcomeTitle: { uk: "Що хочете проаналізувати?", en: "What would you like to analyze?" },
   assistantWelcome: {
-    uk: "Я аналізую рекламу, ліди, CPL, конверсії, імпорти та якість даних, щоб показати, що просіло, чому це могло статися і що команді варто перевірити далі.",
-    en: "I analyze ads, leads, CPL, conversions, imports, and data quality to show what dropped, why it may have happened, and what the team should check next.",
+    uk: "Я допоможу знайти просідання, проблеми з рекламою, якістю даних і підготувати висновки для команди або клієнта.",
+    en: "I can help find performance drops, ad issues, data quality problems, and prepare insights for the team or client.",
   },
   assistantComposerPlaceholder: {
     uk: "Напишіть питання про рекламу, імпорти, якість даних, мапінг, сповіщення або аномалії…",

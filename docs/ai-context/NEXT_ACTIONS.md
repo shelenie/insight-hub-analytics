@@ -9,6 +9,9 @@ Current next actions for Internal Analytics Workspace.
 ## Current Priority
 
 
+
+2026-07-06 update: AI Assistant main screen simplification is complete. The page now presents one clean chat surface with a centered welcome state, suggested marketing prompt cards, a bottom composer, compact analysis mode selector, and one muted safety note. Response history is hidden from the primary UI until a proper chat/session history UX is designed. No backend/RPC/RLS/schema/route/permission/Edge Function contract changes were made. Next step remains Imports / Data Health micro-polish only if needed, then backend AI-assisted mapping audit.
+
 2026-07-06 update: Final AI Assistant layout polish is complete. Chat is the primary surface, History is secondary/collapsed by default with at most three latest items shown when opened, the safety note is lighter near the welcome/composer, and analysis modes are marketing-oriented. No backend/RPC/RLS/schema/route/permission/Edge Function contract changes were made. Next step remains Imports / Data Health micro-polish only if needed, then backend AI-assisted mapping audit.
 
 Continue verification of user management, Supabase security, and dashboard metric definitions before feature expansion.
