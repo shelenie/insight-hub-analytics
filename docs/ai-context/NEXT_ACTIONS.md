@@ -1,3 +1,10 @@
+## Updated — 2026-07-07 Imported Ads Facts Production Hotfix Mirror
+
+1. Treat the imported ads facts backfill as deployed and production-verified for the historical imported range: 240 rows were read and 240 rows were inserted/upserted into `facts_ads_daily` for 2026-04-01 through 2026-05-05.
+2. Remember that imported historical facts use `platform = other` due to the production `facts_ads_daily_platform_check`; use the deterministic `fact_key` prefix `imported:` to identify imported-backfill facts.
+3. Use `facts_ads_daily` as the primary AI ads context source for this historical imported window because production now reports `source_layer_used = facts_ads_daily` and `fallback_used = false`.
+4. Keep real Google/Meta/TikTok live platform sync fixes deferred until real platform accounts/data are available; do not change frontend UI, OAuth, live sync, RLS, Edge Function contracts, `build_ai_ads_context` signature, or `ai-helper-run` contracts for this follow-up.
+
 ## 2026-07-07 — Imported Ads Facts Backfill Follow-up
 
 1. Deploy the `rebuild_imported_ads_facts(uuid, date, date)` migration to Supabase and run it for the target workspace/date range containing historical imported ads data.

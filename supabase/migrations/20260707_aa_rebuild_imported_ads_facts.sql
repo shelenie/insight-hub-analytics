@@ -85,7 +85,7 @@ begin
     select
       workspace_id,
       metric_date::date as insight_date,
-      'imported'::text as platform,
+      'other'::text as platform,
       'campaign'::text as level,
       campaign_name::text as campaign_name,
       ('imported:' || metric_date::date::text || ':' || md5(coalesce(campaign_name::text, '')))::text as fact_key,
@@ -111,6 +111,7 @@ begin
   v_effective_date_to := coalesce(p_date_to, v_last_metric_date);
 
   v_warnings := v_warnings || jsonb_build_array('Imported reach was mapped to impressions because imported fallback source does not expose impressions.');
+  v_warnings := v_warnings || jsonb_build_array('Imported historical rows are stored with platform=other because facts_ads_daily only allows known platform codes or other.');
 
   if v_rows_read = 0 then
     return jsonb_build_object(
