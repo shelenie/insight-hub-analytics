@@ -1,3 +1,17 @@
+## 2026-07-07 — Imported Ads Facts Backfill
+
+### Added
+
+- Added additive Supabase RPC `rebuild_imported_ads_facts(uuid, date, date)` to rebuild historical imported ads performance from `v_unified_ads_performance_daily` into `facts_ads_daily` without requiring live Google/Meta/TikTok production accounts.
+- Added deterministic imported `fact_key` generation and `ON CONFLICT (workspace_id, fact_key)` upserts so repeated workspace/date backfills update instead of duplicating facts.
+- Added source-level tests for the imported source read path, `facts_ads_daily` fact-key upsert path, workspace/date scoping, JSON summary fields, unchanged `build_ai_ads_context` signature, unchanged `ai-helper-run` contract, and no truncate/delete/global destructive cleanup.
+
+### Notes
+
+- AI context already prefers `facts_ads_daily` when facts exist, so no `build_ai_ads_context` signature or Edge Function contract change was needed.
+- This path is for historical imported ads data and does not change OAuth, live sync behavior, tokens/secrets, frontend routes, or RLS.
+- Real Google/Meta/TikTok sync fixes remain deferred until real production accounts/data are available.
+
 ## 2026-07-07 — Ads Source Readiness Diagnostics
 
 ### Added
