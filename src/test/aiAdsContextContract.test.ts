@@ -126,6 +126,9 @@ describe("AI ads context backend contract", () => {
     expect(diagnosticsMigrationSource).not.toContain("refresh_token,");
     expect(diagnosticsMigrationSource).not.toContain("client_secret,");
     expect(diagnosticsMigrationSource).not.toContain("service_role_key");
+    expect(diagnosticsMigrationSource).not.toContain("completed_at");
+    expect(diagnosticsMigrationSource).not.toContain("updated_at");
+    expect(diagnosticsMigrationSource).toContain("coalesce(finished_at, started_at, created_at) desc nulls last");
   });
 
   it("includes explicit ads pipeline blocker codes", () => {

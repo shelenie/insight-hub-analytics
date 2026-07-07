@@ -153,7 +153,7 @@ begin
   if to_regclass('public.ad_sync_run_logs') is not null then
     execute $q$
       with runs as (
-        select platform, status, date_from, date_to, rows_received, rows_inserted, rows_updated, rows_failed, error_message, row_number() over (partition by platform::text order by coalesce(finished_at, completed_at, started_at, created_at, updated_at) desc nulls last) as rn
+        select platform, status, date_from, date_to, rows_received, rows_inserted, rows_updated, rows_failed, error_message, row_number() over (partition by platform::text order by coalesce(finished_at, started_at, created_at) desc nulls last) as rn
         from public.ad_sync_run_logs
         where workspace_id = $1
       )
@@ -173,7 +173,7 @@ begin
 
     execute $q$
       with runs as (
-        select platform, date_from, date_to, rows_received, rows_inserted, row_number() over (partition by platform::text order by coalesce(finished_at, completed_at, started_at, created_at, updated_at) desc nulls last) as rn
+        select platform, date_from, date_to, rows_received, rows_inserted, row_number() over (partition by platform::text order by coalesce(finished_at, started_at, created_at) desc nulls last) as rn
         from public.ad_sync_run_logs
         where workspace_id = $1 and status::text = 'success'
       )
@@ -183,7 +183,7 @@ begin
 
     execute $q$
       with runs as (
-        select platform, date_from, date_to, error_message, row_number() over (partition by platform::text order by coalesce(finished_at, completed_at, started_at, created_at, updated_at) desc nulls last) as rn
+        select platform, date_from, date_to, error_message, row_number() over (partition by platform::text order by coalesce(finished_at, started_at, created_at) desc nulls last) as rn
         from public.ad_sync_run_logs
         where workspace_id = $1 and status::text in ('failed', 'error')
       )
