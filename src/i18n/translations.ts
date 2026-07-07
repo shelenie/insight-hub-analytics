@@ -465,6 +465,7 @@ export const translations = {
     en: "Ask about ads, imports, data quality, mapping, alerts, or anomalies…",
   },
   assistantSend: { uk: "Надіслати", en: "Send" },
+  assistantNewChat: { uk: "Новий чат", en: "New chat" },
   assistantSending: { uk: "Надсилаємо…", en: "Sending…" },
   assistantThinking: { uk: "AI аналізує підготовлені дані…", en: "AI is reviewing prepared data…" },
   assistantError: { uk: "Не вдалося отримати відповідь. Спробуйте ще раз або перевірте доступність AI-помічника.", en: "Could not get an answer. Try again or check AI helper availability." },

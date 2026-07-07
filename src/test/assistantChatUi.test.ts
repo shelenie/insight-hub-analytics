@@ -77,12 +77,39 @@ describe("AI Assistant chat UI", () => {
     expect(source).toContain('ref={textareaRef}');
     expect(source).toContain('rows={1}');
     expect(source).toContain('!min-h-12 max-h-44 resize-none overflow-y-auto');
+    expect(source).toContain('border-0 bg-transparent');
+    expect(source).toContain('outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 focus-visible:ring-0');
+    expect(source).toContain('focus-within:ring-2 focus-within:ring-primary/20');
     expect(source).toContain('Math.min(textarea.scrollHeight, 176)');
     expect(source).toContain('size="icon"');
   });
 
+  it("uses one centered chat column for messages, loading, errors, composer, and safety note", () => {
+    expect(source).toContain('const CHAT_COLUMN_CLASS = "mx-auto w-full max-w-4xl";');
+    expect(source).toContain('<div className={`${CHAT_COLUMN_CLASS} space-y-3`}>');
+    expect(source).toContain('<div className={`${CHAT_COLUMN_CLASS} mt-4 sm:mt-5`}>');
+    expect(source).toContain('<div className={CHAT_COLUMN_CLASS}><FriendlyError');
+    expect(source).toContain('return <div className="flex w-full justify-start"><div className="w-full rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm">');
+    expect(source).toContain('return <div className="flex w-full justify-end"><div className="max-w-[82%] rounded-2xl rounded-tr-sm bg-primary');
+    expect(source).not.toContain('items-start gap-3');
+    expect(source).not.toContain('sm:max-w-[82%]');
+    expect(source).not.toContain('max-w-full rounded-2xl px-4 py-3 text-sm sm:max-w-[82%]');
+    expect(source).not.toContain('max-w-3xl sm:mt-5');
+  });
+
+  it("adds a localized in-page New chat reset action without adding history UI", () => {
+    expect(translations.assistantNewChat.uk).toBe("Новий чат");
+    expect(translations.assistantNewChat.en).toBe("New chat");
+    expect(source).toContain('const resetChat = () => {');
+    expect(source).toContain('setMessages([]);');
+    expect(source).toContain('setPrompt("");');
+    expect(source).toContain('run.reset();');
+    expect(source).toContain('const showNewChat = messages.length > 0 || prompt.trim().length > 0 || Boolean(run.error);');
+    expect(source).toContain('onClick={resetChat}>{t("assistantNewChat")}');
+  });
+
   it("keeps starter prompts below the composer and hides them after interaction", () => {
-    expect(source).toContain('const showStarterPrompts = messages.length === 0 && !run.isPending;');
+    expect(source).toContain('const showStarterPrompts = messages.length === 0 && !run.isPending && prompt.trim().length === 0;');
     expect(source).toContain('{showStarterPrompts ? <StarterPrompts t={t} onPrompt={submitPrompt} disabled={runDisabled} /> : null}');
     expect(source.indexOf('<Textarea ref={textareaRef}')).toBeLessThan(source.indexOf('<StarterPrompts'));
     expect(source).toContain('onClick={() => onPrompt(t(key))}');
@@ -92,8 +119,8 @@ describe("AI Assistant chat UI", () => {
 
   it("keeps backend contract and does not add unsupported fake action labels", () => {
     expect(source).toContain('supabase.functions.invoke("ai-helper-run"');
-    expect(source).toContain("request_type: selectedOption.requestType");
-    expect(source).toContain("context_scope: selectedOption.contextScope");
+    expect(source).toContain("request_type: option.requestType");
+    expect(source).toContain("context_scope: option.contextScope");
     expect(source).not.toMatch(/auto-map|approve mapping|fix data|create bindings|run sync|change users|change role|invite user|update binding/i);
   });
 });

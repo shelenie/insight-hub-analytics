@@ -7,6 +7,18 @@ Meaningful changes for Internal Analytics Workspace.
 ---
 
 
+## 2026-07-07 — AI Assistant Chat Mode Alignment
+
+### Changed
+
+- Fixed AI Assistant chat-mode alignment so user messages, full-width assistant response cards, loading/error states, composer, starter prompts, and the safety note share one centered chat column.
+- Cleaned composer focus styling by removing the textarea's separate visible border/focus ring and applying focus treatment to the outer rounded composer container.
+- Added explicit localized New chat / Новий чат action that clears current in-memory messages, prompt, and visible error state, returning to the starter screen while preserving the selected analysis mode.
+
+### Notes
+
+- Persistent chat history was not implemented yet.
+- Frontend-only change. No backend logic, RPC calls, Supabase schema, RLS policies, routes, permission logic, database tables/views, existing analysis mode backend mappings, Edge Function name, or `ai-helper-run` request/response contract were changed.
 ## 2026-07-07 — AI Ads Context Fallback and RPC Contract Fix
 
 ### Changed
