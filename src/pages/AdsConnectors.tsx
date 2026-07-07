@@ -36,7 +36,8 @@ import { formatOperationalTimestamp, getTimezoneDisplayLabel, type TimezoneDispl
 type Primitive = string | number | boolean | null;
 type Row = Record<string, Primitive | Primitive[] | Record<string, unknown>>;
 type OptionalViewData = { rows: Row[]; unavailableReason: string | null };
-type AdsConnectorsData = Record<string, OptionalViewData>;
+type OptionalJsonData = { payload: Record<string, unknown> | null; unavailableReason: string | null };
+type AdsConnectorsData = Record<string, OptionalViewData> & { multiAccountReadiness?: OptionalJsonData };
 type ConnectorKey = "meta" | "google" | "tiktok";
 type ConnectorState = { loading: boolean; error: string | null };
 type TabKey = "overview" | "connections" | "ad-accounts" | "sync" | "facebook-lead-ads" | "diagnostics";
@@ -94,6 +95,17 @@ const copy = {
     nextAction: "Наступна дія",
     nextActionDescription: "Перевірити рекламні акаунти та прив’язати їх до проєктів/воронок у розділі Звʼязки даних.",
     nextActionGoogle: "Google Ads: очікуємо Basic Access / доступ до Google Ads API.",
+    multiAccountReadinessTitle: "Готовність рекламних акаунтів",
+    readinessUnavailable: "Готовність акаунтів тимчасово недоступна; показуємо наявні дані конекторів.",
+    overallStatus: "Загальний статус",
+    totalAccounts: "Усього акаунтів",
+    boundAccounts: "Привʼязані",
+    unboundAccounts: "Без привʼязки",
+    needsAttentionCount: "Потребують уваги",
+    platformReadiness: "Готовність за платформами",
+    bindingGaps: "Прогалини привʼязок",
+    noBindingGaps: "Прогалин привʼязок не виявлено.",
+    readinessNextActionFallback: "Перевірте непривʼязані акаунти у Звʼязках даних → Ad accounts; write actions залишаються майбутньою роботою.",
     googleNeedsAccess: "Google Ads: OAuth підключено, але синхронізація очікує доступ Google Ads API / Basic Access.",
     tiktokNoDataYetAttention: "TikTok Ads: синхронізація працює, але тестовий рекламний акаунт поки без даних.",
     facebookLeadFormsAttention: "Facebook Lead Ads: форми не знайдені. Sync і webhook перевірені, але реальні ліди з’являться після наявності форм/подій.",
@@ -383,6 +395,17 @@ const copy = {
     nextAction: "Next action",
     nextActionDescription: "Check ad accounts and link them to projects/funnels in Data links.",
     nextActionGoogle: "Google Ads: waiting for Basic Access / Google Ads API access.",
+    multiAccountReadinessTitle: "Ad account readiness",
+    readinessUnavailable: "Account readiness is temporarily unavailable; showing existing connector data.",
+    overallStatus: "Overall status",
+    totalAccounts: "Total accounts",
+    boundAccounts: "Bound accounts",
+    unboundAccounts: "Unbound accounts",
+    needsAttentionCount: "Needs attention",
+    platformReadiness: "Platform readiness",
+    bindingGaps: "Binding gaps",
+    noBindingGaps: "No binding gaps detected.",
+    readinessNextActionFallback: "Review unbound accounts in Bindings → Ad accounts; write actions remain future work.",
     googleNeedsAccess: "Google Ads: OAuth is connected, but sync is waiting for Google Ads API / Basic Access.",
     tiktokNoDataYetAttention: "TikTok Ads: sync works, but the test ad account has no data yet.",
     facebookLeadFormsAttention: "Facebook Lead Ads: no forms found. Sync and webhook are verified; real leads will appear after forms/events exist.",
@@ -687,8 +710,9 @@ export default function AdsConnectors() {
     queryKey: ["ads-connectors-workspace", WORKSPACE_ID],
     enabled: Boolean(session),
     queryFn: async () => {
-      const [readiness, snapshot, adBindings, adPlatformConnections, syncRules, syncDue, adsSummary, adsDaily, adsAnomalies, fbHealth, fbForms, fbLeads, fbSyncRuns] = await Promise.all([
+      const [readiness, multiAccountReadiness, snapshot, adBindings, adPlatformConnections, syncRules, syncDue, adsSummary, adsDaily, adsAnomalies, fbHealth, fbForms, fbLeads, fbSyncRuns] = await Promise.all([
         readOptionalView("v_production_backend_readiness"),
+        readAdsMultiAccountReadiness(),
         readOptionalView("v_production_backend_snapshot"),
         readOptionalView("v_ad_account_bindings"),
         readAdPlatformConnections(),
@@ -703,7 +727,7 @@ export default function AdsConnectors() {
         readOptionalView("v_facebook_lead_sync_runs_recent"),
       ]);
 
-      return { readiness, snapshot, adBindings, adPlatformConnections, syncRules, syncDue, adsSummary, adsDaily, adsAnomalies, fbHealth, fbForms, fbLeads, fbSyncRuns };
+      return { readiness, multiAccountReadiness, snapshot, adBindings, adPlatformConnections, syncRules, syncDue, adsSummary, adsDaily, adsAnomalies, fbHealth, fbForms, fbLeads, fbSyncRuns };
     },
   });
 
@@ -954,6 +978,9 @@ export default function AdsConnectors() {
                   <StatusCard label={ui.adAccountsKpi} value={overviewAdAccountsStatus} helper={realAccountRows.length > 0 ? ui.adAccountsHelper : undefined} />
                   <StatusCard label={ui.syncData} value={overviewSyncStatus} helper={realSyncDataAvailable ? ui.syncCheckedNoRows : ui.syncVerifiedNoRows} />
                 </div>
+                <div className="mt-4">
+                  <MultiAccountOverview readiness={query.data?.multiAccountReadiness} ui={ui} fallbackAccountCount={realAccountRows.length} />
+                </div>
                 <div className="mt-4 rounded-lg border border-border/70 bg-background/60 p-4">
                   <p className="text-sm font-semibold">{ui.operationalChecklist}</p>
                   <div className="mt-3 grid gap-2 md:grid-cols-2">
@@ -981,8 +1008,7 @@ export default function AdsConnectors() {
                   </div>
                   <div className="rounded-lg border border-border/70 bg-background/60 p-4 text-sm">
                     <p className="font-semibold">{ui.nextAction}</p>
-                    <p className="mt-2 text-xs leading-5 text-muted-foreground">{ui.nextActionDescription}</p>
-                    <p className="mt-2 text-xs leading-5 text-muted-foreground">{ui.nextActionGoogle}</p>
+                    <p className="mt-2 text-xs leading-5 text-muted-foreground">{getReadinessNextAction(query.data?.multiAccountReadiness, ui)}</p>
                   </div>
                 </div>
               </SectionCard>
@@ -1072,7 +1098,10 @@ export default function AdsConnectors() {
 
             <TabsContent value="ad-accounts" className="mt-1">
               <SectionCard title={ui.adAccountsTitle} description={ui.adAccountsDescription}>
-                <AdAccountsTable data={query.data?.adBindings} ui={ui} timestampDisplayMode={timezoneDisplayMode} timezoneName={timezoneName ?? undefined} />
+                <div className="space-y-4">
+                  <MultiAccountReadinessPanel readiness={query.data?.multiAccountReadiness} ui={ui} />
+                  <AdAccountsTable data={query.data?.adBindings} ui={ui} timestampDisplayMode={timezoneDisplayMode} timezoneName={timezoneName ?? undefined} />
+                </div>
               </SectionCard>
             </TabsContent>
 
@@ -1184,6 +1213,95 @@ async function readOptionalView(viewName: string): Promise<OptionalViewData> {
   const result = await supabase.from(viewName).select("*").eq("workspace_id", WORKSPACE_ID).limit(200);
   if (result.error) return { rows: [], unavailableReason: result.error.message };
   return { rows: ((result.data ?? []) as Row[]), unavailableReason: null };
+}
+
+
+async function readAdsMultiAccountReadiness(): Promise<OptionalJsonData> {
+  const result = await supabase.rpc("build_ads_multi_account_readiness" as never, { p_workspace_id: WORKSPACE_ID } as never);
+  if (result.error) return { payload: null, unavailableReason: result.error.message };
+  return { payload: toObject(result.data), unavailableReason: null };
+}
+
+function MultiAccountOverview({ readiness, ui, fallbackAccountCount }: { readiness: OptionalJsonData | undefined; ui: Copy; fallbackAccountCount: number }) {
+  if (!readiness) return null;
+  if (readiness.unavailableReason || !readiness.payload) {
+    return <WarningNotice>{ui.readinessUnavailable}</WarningNotice>;
+  }
+
+  const payload = readiness.payload;
+  return (
+    <div className="rounded-lg border border-border/70 bg-card/50 p-4">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold">{ui.multiAccountReadinessTitle}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{ui.nextAction}: {getReadinessNextAction(readiness, ui)}</p>
+        </div>
+        <StatusPill tone={readinessTone(readString(payload, "overall_status"))}>{formatReadinessValue(readString(payload, "overall_status"), ui)}</StatusPill>
+      </div>
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <MetricCard label={ui.totalAccounts} value={formatMetric(readNumber(payload, "total_accounts") ?? fallbackAccountCount)} />
+        <MetricCard label={ui.boundAccounts} value={formatMetric(readNumber(payload, "bound_accounts"))} />
+        <MetricCard label={ui.unboundAccounts} value={formatMetric(readNumber(payload, "unbound_accounts"))} />
+        <MetricCard label={ui.needsAttentionCount} value={formatMetric(readNumber(payload, "needs_attention_count"))} />
+      </div>
+    </div>
+  );
+}
+
+function MultiAccountReadinessPanel({ readiness, ui }: { readiness: OptionalJsonData | undefined; ui: Copy }) {
+  if (!readiness) return null;
+  if (readiness.unavailableReason || !readiness.payload) return <WarningNotice>{ui.readinessUnavailable}</WarningNotice>;
+  const platformRows = readArray(readiness.payload, "platforms");
+  const gapRows = readArray(readiness.payload, "binding_gaps");
+  return (
+    <div className="rounded-lg border border-border/70 bg-card/50 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-semibold">{ui.multiAccountReadinessTitle}</p>
+        <StatusPill tone={readinessTone(readString(readiness.payload, "overall_status"))}>{formatReadinessValue(readString(readiness.payload, "overall_status"), ui)}</StatusPill>
+      </div>
+      <div className="mt-3">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{ui.platformReadiness}</p>
+        <GenericDataTable rows={platformRows} columns={["platform", "readiness_status", "accounts_count", "bound_accounts_count", "unbound_accounts_count", "next_action"]} ui={ui} maxRows={10} />
+      </div>
+      <div className="mt-4">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{ui.bindingGaps}</p>
+        {gapRows.length > 0 ? <GenericDataTable rows={gapRows} columns={["gap_type", "platform", "external_account_name", "external_account_id", "message", "next_action"]} ui={ui} maxRows={10} /> : <p className="text-sm text-muted-foreground">{ui.noBindingGaps}</p>}
+      </div>
+    </div>
+  );
+}
+
+function getReadinessNextAction(readiness: OptionalJsonData | undefined, ui: Copy): string {
+  const payload = readiness?.payload;
+  if (!payload || readiness?.unavailableReason) return ui.readinessNextActionFallback;
+  const direct = readString(payload, "next_action");
+  if (direct) return direct;
+  const gaps = readArray(payload, "binding_gaps");
+  const firstGapAction = gaps.map((gap) => readString(gap, "next_action")).find(Boolean);
+  if (firstGapAction) return firstGapAction;
+  const unbound = readNumber(payload, "unbound_accounts") ?? 0;
+  if (unbound > 0) return ui.readinessNextActionFallback;
+  return ui.noCriticalActions;
+}
+
+function readArray(payload: Record<string, unknown>, key: string): Row[] {
+  const value = payload[key];
+  return Array.isArray(value) ? value.filter(isObject).map((item) => item as Row) : [];
+}
+
+function readNumber(payload: Record<string, unknown>, key: string): number | null {
+  const value = payload[key];
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function readinessTone(status: string | null): Tone {
+  if (!status) return "muted";
+  if (["ready", "production_ready", "ok"].includes(status)) return "success";
+  return "warning";
+}
+
+function formatReadinessValue(value: string | null, ui: Copy): string {
+  return value ? friendlyStatus(value, ui) : ui.noDataYet;
 }
 
 async function readAdPlatformConnections(): Promise<OptionalViewData> {
@@ -1616,6 +1734,12 @@ function DiagnosticsPanel({ data, connectorState, ui, timestampDisplayMode, time
         <DiagnosticStatusCard title={ui.anomalyCandidates} text={ui.anomaliesAfterPerformance} />
       </div>
 
+      {data?.multiAccountReadiness?.payload ? (
+        <DeveloperDetails title={`${ui.multiAccountReadinessTitle} — ${ui.technicalDetails}`}>
+          <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-muted/50 p-2 text-xs text-muted-foreground">{formatTechnicalDetails(data.multiAccountReadiness.payload, timestampDisplayMode, timezoneName)}</pre>
+        </DeveloperDetails>
+      ) : null}
+
       <IssuesPanel data={data} connectorState={connectorState} ui={ui} />
     </div>
   );
@@ -1860,7 +1984,8 @@ function friendlyStatus(value: unknown, ui: Copy): string {
   return ui.statusLabels[normalized as keyof typeof ui.statusLabels] ?? String(value).replace(/_/g, " ");
 }
 
-function toObject(value: unknown): Record<string, unknown> { return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : {}; }
+function toObject(value: unknown): Record<string, unknown> { return isObject(value) ? value : {}; }
+function isObject(value: unknown): value is Record<string, unknown> { return typeof value === "object" && value !== null && !Array.isArray(value); }
 function readString(row: Row | Record<string, unknown> | undefined, key: string): string | null { const value = row?.[key]; return typeof value === "string" ? value : null; }
 
 function getLastThirtyDaysRange() {

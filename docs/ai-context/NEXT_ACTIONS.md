@@ -1,3 +1,9 @@
+## Updated — 2026-07-07 AdsConnectors Multi-Account Readiness
+
+- Verify the existing `/ads-connectors` Overview, Ad accounts, and Diagnostics tabs against production `build_ads_multi_account_readiness` output.
+- Keep actual binding management in `/bindings`; do not add AdsConnectors write actions until the write workflow is explicitly designed.
+- Defer real Google/Meta/TikTok sync fixes until real ad accounts/data are available.
+
 ## Updated — 2026-07-07 Imported Ads Facts Production Hotfix Mirror
 
 1. Treat the imported ads facts backfill as deployed and production-verified for the historical imported range: 240 rows were read and 240 rows were inserted/upserted into `facts_ads_daily` for 2026-04-01 through 2026-05-05.
