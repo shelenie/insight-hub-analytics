@@ -428,26 +428,19 @@ async function buildAdsContext(params: {
   dateTo: string | null;
   platform: string | null;
 }) {
-  const attempts = [
-    {
-      p_workspace_id: params.workspaceId,
-      p_context_scope: params.contextScope,
-      p_date_from: params.dateFrom,
-      p_date_to: params.dateTo,
-      p_platform: params.platform,
-    },
-    {
-      p_workspace_id: params.workspaceId,
-      p_context_scope: params.contextScope,
-    },
-  ];
+  const payload = {
+    p_workspace_id: params.workspaceId,
+    p_date_from: params.dateFrom,
+    p_date_to: params.dateTo,
+    p_platform: params.platform,
+  };
 
-  for (const payload of attempts) {
-    const { data, error } = await params.supabaseAdmin.rpc("build_ai_ads_context", payload);
-    if (!error) return data;
+  const { data, error } = await params.supabaseAdmin.rpc("build_ai_ads_context", payload);
+  if (error) {
+    throw new Error(`build_ai_ads_context failed: ${error.message}`);
   }
 
-  throw new Error("build_ai_ads_context failed for known signatures.");
+  return data;
 }
 
 async function buildImportContext(params: {
