@@ -31,15 +31,20 @@ describe("AI Assistant chat UI", () => {
     expect(translations.assistantPromptTeamPriorities.uk).toBe("Дай пріоритети для команди на сьогодні");
     expect(translations.assistantPromptTeamPriorities.en).toBe("Give the team priorities for today");
     expect(translations.assistantTechnicalDetails.uk).toBe("Технічні деталі");
-    expect(translations.assistantTechnicalDetails.en).toBe("Technical details");
+    expect(translations.assistantWelcomeTitle.uk).toBe("Що хочете проаналізувати?");
+    expect(translations.assistantWelcomeTitle.en).toBe("What would you like to analyze?");
+    expect(translations.assistantWelcome.uk).toBe("Я допоможу знайти просідання, проблеми з рекламою, якістю даних і підготувати висновки для команди або клієнта.");
+    expect(translations.assistantWelcome.en).toBe("I can help find performance drops, ad issues, data quality problems, and prepare insights for the team or client.");
   });
 
-  it("hides Auto as a context option, defaults to full overview, and keeps history secondary", () => {
+  it("hides visible history UI and Auto context while defaulting to full overview", () => {
     expect(source).not.toMatch(/labelKey:\s*"[^"]*Auto"/);
     expect(source).toContain('useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextFullOverview")');
-    expect(source).toContain('rows.slice(0, 3)');
-    expect(source).toContain("function HistoryPanel");
-    expect(source).toContain("<details className=");
+    expect(source).not.toContain("function HistoryPanel");
+    expect(source).not.toContain("function HistoryList");
+    expect(source).not.toContain("assistantHistoryToggle");
+    expect(source).not.toContain("v_ai_helper_requests_recent");
+    expect(source).not.toContain("<details className=");
     expect(source).not.toContain("xl:grid-cols-[minmax(0,1fr)_20rem]");
   });
   it("uses the requested analysis mode label and marketing-oriented order", () => {
@@ -69,6 +74,6 @@ describe("AI Assistant chat UI", () => {
     expect(source).toContain('supabase.functions.invoke("ai-helper-run"');
     expect(source).toContain("request_type: selectedOption.requestType");
     expect(source).toContain("context_scope: selectedOption.contextScope");
-    expect(source).not.toMatch(/auto-map|approve|fix data|update binding|sync connector|change role|invite user/i);
+    expect(source).not.toMatch(/auto-map|approve mapping|fix data|create bindings|run sync|change users|change role|invite user|update binding/i);
   });
 });

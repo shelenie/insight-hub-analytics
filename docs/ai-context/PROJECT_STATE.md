@@ -76,6 +76,13 @@ Do not add unrelated tools unless Olena explicitly confirms them.
 ---
 
 
+## Verified Local Change — 2026-07-06 AI Assistant Simplified Chat Surface
+
+The AI Assistant main screen has been simplified into one clean ChatGPT/Claude-style chat surface. The visible primary UI now focuses on the DashboardLayout page title/subtitle, centered welcome state, suggested prompt cards, bottom composer, one compact analysis mode selector, and one muted safety note. Response history is hidden from the primary UI until a proper chat/session history UX is designed. The existing suggested marketing prompts and analysis mode backend mappings remain in place, Full overview remains the default, and no visible Auto context was added. No backend logic, RPC calls, Supabase schema, RLS policies, routes, permission logic, database tables/views, Edge Function name, or `ai-helper-run` request/response contract were changed.
+
+---
+
+
 ## Verified Local Change — 2026-07-06 AI Assistant Visual Micro-Polish
 
 Small frontend-only AI Assistant visual polish after the chat-first layout is complete. The response history trigger now lives inside the chat card header as a secondary compact control, and the opened history dropdown remains attached to that trigger with a compact max-height scroll area, at most three latest items, and technical details still collapsed. The empty welcome state uses tighter vertical spacing so prompts and composer feel closer on the first screen, and the Ukrainian/English assistant subtitle now uses the approved performance-marketing wording. No suggested prompts, analysis mode backend mappings, backend logic, RPC calls, Supabase schema, RLS policies, routes, permission logic, database tables/views, Edge Function name, or `ai-helper-run` request/response contract were changed.
