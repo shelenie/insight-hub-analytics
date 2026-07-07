@@ -11,10 +11,12 @@ describe("AdsConnectors ad account status filter", () => {
     expect(source).toContain("matchesAdAccountBindingStatusFilter(row, statusFilter)");
   });
 
-  it("provides explicit archived/paused and all filter options", () => {
+  it("provides explicit archived/paused and all dropdown options", () => {
     expect(source).toContain('type AdAccountBindingStatusFilter = "active" | "archived" | "all";');
-    expect(source).toContain('setStatusFilter("archived")');
-    expect(source).toContain('setStatusFilter("all")');
+    expect(source).toContain('<Select value={statusFilter}');
+    expect(source).toContain('<SelectItem value="active">{ui.adAccountsStatusFilterActive}</SelectItem>');
+    expect(source).toContain('<SelectItem value="archived">{ui.adAccountsStatusFilterArchived}</SelectItem>');
+    expect(source).toContain('<SelectItem value="all">{ui.adAccountsStatusFilterAll}</SelectItem>');
     expect(source).toContain("isArchivedOrPausedAccount(row)");
   });
 

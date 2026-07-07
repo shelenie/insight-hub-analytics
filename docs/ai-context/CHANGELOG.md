@@ -1,3 +1,13 @@
+## 2026-07-07 — AdsConnectors Status Filter Dropdown Alignment
+
+### Changed
+
+- Updated AdsConnectors → Ad accounts to use the same inline status Select/dropdown pattern as Bindings / Mapping → Ad accounts instead of segmented status buttons.
+
+### Notes
+
+- Backend contracts remain unchanged.
+
 ## 2026-07-07 — AdsConnectors Ad Accounts Live Review Polish
 
 ### Changed

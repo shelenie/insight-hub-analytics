@@ -44,14 +44,21 @@ describe("AdsConnectors multi-account readiness UI", () => {
     expect(source).not.toContain("function MultiAccountReadinessPanel");
   });
 
-  it("compacts the status filter toolbar and removes the heavy visible Status filter label", () => {
+  it("uses the Bindings-style Select dropdown for the status filter", () => {
+    const adAccountsTable = source.slice(source.indexOf("function AdAccountsTable"), source.indexOf("function AdAccountSection"));
     expect(source).not.toContain('adAccountsStatusFilterLabel: "Фільтр статусу"');
     expect(source).not.toContain('adAccountsStatusFilterLabel: "Status filter"');
     expect(source).toContain('adAccountsStatusFilterLabel: "Статус"');
     expect(source).toContain('adAccountsStatusFilterLabel: "Status"');
-    expect(source).toContain('className="sr-only"');
-    expect(source).toContain('aria-hidden="true" className="text-xs font-medium text-muted-foreground"');
-    expect(source).toContain('variant={statusFilter === "active" ? "secondary" : "ghost"}');
+    expect(adAccountsTable).toContain('{ui.adAccountsStatusFilterLabel}:');
+    expect(adAccountsTable).toContain('<Select value={statusFilter}');
+    expect(adAccountsTable).toContain('<SelectTrigger id="ads-connectors-ad-account-status-filter"');
+    expect(adAccountsTable).toContain('<SelectItem value="active">{ui.adAccountsStatusFilterActive}</SelectItem>');
+    expect(adAccountsTable).toContain('<SelectItem value="archived">{ui.adAccountsStatusFilterArchived}</SelectItem>');
+    expect(adAccountsTable).toContain('<SelectItem value="all">{ui.adAccountsStatusFilterAll}</SelectItem>');
+    expect(adAccountsTable).not.toContain('variant={statusFilter === "active" ? "secondary" : "ghost"}');
+    expect(adAccountsTable).not.toContain('variant={statusFilter === "archived" ? "secondary" : "ghost"}');
+    expect(adAccountsTable).not.toContain('variant={statusFilter === "all" ? "secondary" : "ghost"}');
   });
 
   it("reads Overview counters from the nested summary payload", () => {

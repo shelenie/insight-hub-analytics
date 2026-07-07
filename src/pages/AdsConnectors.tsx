@@ -1660,14 +1660,20 @@ function AdAccountsTable({ data, ui, timestampDisplayMode, timezoneName }: { dat
             {testRows.length > 0 ? <p className="mt-1 text-xs">{ui.adAccountsTestExplain}</p> : null}
             {realRows.length === 0 ? <p className="mt-1 text-xs">{ui.adAccountsNoRealExplain}</p> : null}
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <span className="sr-only">{ui.adAccountsStatusFilterLabel}</span>
-            <span aria-hidden="true" className="text-xs font-medium text-muted-foreground">{ui.adAccountsStatusFilterLabel}:</span>
-            <div className="flex rounded-lg border border-border/70 bg-background/70 p-1">
-              <Button type="button" size="sm" variant={statusFilter === "active" ? "secondary" : "ghost"} className="h-7 px-2.5 text-xs" onClick={() => setStatusFilter("active")}>{ui.adAccountsStatusFilterActive}</Button>
-              <Button type="button" size="sm" variant={statusFilter === "archived" ? "secondary" : "ghost"} className="h-7 px-2.5 text-xs" onClick={() => setStatusFilter("archived")}>{ui.adAccountsStatusFilterArchived}</Button>
-              <Button type="button" size="sm" variant={statusFilter === "all" ? "secondary" : "ghost"} className="h-7 px-2.5 text-xs" onClick={() => setStatusFilter("all")}>{ui.adAccountsStatusFilterAll}</Button>
-            </div>
+          <div className="flex shrink-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+            <label className="text-xs font-medium text-muted-foreground sm:whitespace-nowrap" htmlFor="ads-connectors-ad-account-status-filter">
+              {ui.adAccountsStatusFilterLabel}:
+            </label>
+            <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as AdAccountBindingStatusFilter)}>
+              <SelectTrigger id="ads-connectors-ad-account-status-filter" className="h-9 w-full bg-background text-xs sm:w-[14.5rem] sm:shrink-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="active">{ui.adAccountsStatusFilterActive}</SelectItem>
+                <SelectItem value="archived">{ui.adAccountsStatusFilterArchived}</SelectItem>
+                <SelectItem value="all">{ui.adAccountsStatusFilterAll}</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
       </div>

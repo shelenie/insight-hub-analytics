@@ -1,3 +1,7 @@
+## Verified Local Change — 2026-07-07 AdsConnectors Status Filter Dropdown Alignment
+
+AdsConnectors → Ad accounts now uses the same compact inline status Select/dropdown pattern as Bindings / Mapping → Ad accounts. The visible label remains localized as “Статус:” / “Status:”, the existing active/archived/all filtering logic and values are preserved, and the segmented button group was removed. Backend contracts were not changed.
+
 ## Verified Local Change — 2026-07-07 AdsConnectors Ad Accounts Live Review Polish
 
 AdsConnectors → Ad accounts was polished after live review with frontend-only changes. The status filter was compacted into an inline toolbar that keeps the active/archived/all control without the heavy visible “Status filter” label. Expanded readiness details now render readable platform readiness and binding-gap cards/lists instead of wide technical tables, with localized labels and frontend-only friendly display copy for common backend readiness messages. The compact readiness summary, “Real accounts” / “Real account” wording, binding-gap next action, collapsed-by-default details, and no-fake-write-action behavior remain unchanged. Backend contracts were not changed: no Supabase schema, RLS, RPC contracts, OAuth, sync behavior, Edge Functions, or `ai-helper-run` changes.

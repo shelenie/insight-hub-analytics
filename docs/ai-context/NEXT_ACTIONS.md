@@ -1,3 +1,7 @@
+## Next Actions — 2026-07-07 AdsConnectors Status Filter Dropdown Alignment
+
+- Verify `/ads-connectors?tab=ad-accounts` against the Bindings / Mapping → Ad accounts status filter pattern to confirm the dropdown alignment and mobile stacking match expectations.
+
 ## Next Actions — 2026-07-07 AdsConnectors Ad Accounts Polish
 
 - Verify `/ads-connectors?tab=ad-accounts` in a browser after deployment to confirm the compact status toolbar fits on desktop and stacks compactly on mobile.
