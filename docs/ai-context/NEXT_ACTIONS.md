@@ -17,8 +17,8 @@ Current next actions for Internal Analytics Workspace.
 
 ## Updated — 2026-07-07 AI Ads Context Fallback
 
-1. Deploy and verify the new `build_ai_ads_context` migration in Supabase against workspace `5ebbe435-fd79-44c3-834e-642e8fba00dc`, confirming facts-empty/unified-available context returns `source_layer_used = v_unified_ads_performance_daily` with the imported 2026-04-01 to 2026-05-05 date range and freshness warning.
-2. Keep real platform sync fixes separate: Google Ads permissions, TikTok 30-day span chunking, and Meta/TikTok zero-row sync investigation remain follow-up work and were not changed here.
+1. Deploy and verify the new ads pipeline diagnostics migrations in Supabase against workspace `5ebbe435-fd79-44c3-834e-642e8fba00dc`, confirming `build_ads_pipeline_diagnostics` and `build_ai_ads_context.pipeline_diagnostics` identify the first broken stage across connection/account/binding/raw/fact/AI context layers.
+2. Fix the known current ads pipeline blockers before judging AI answer quality: Google Ads `PERMISSION_DENIED`, Meta/TikTok successful zero-row syncs, empty `facts_ads_daily`, and fallback-only historical imported ads data; OAuth credentials, frontend UI, routes, and sync schedules were not changed here.
 3. Once fresh API facts are available, verify `build_ai_ads_context` returns to the primary `facts_ads_daily` source without fallback.
 
 2026-07-07 update: AI Assistant empty-state refinement is complete. The page now feels closer to a ChatGPT/Claude-style start screen with a lighter centered canvas, compact floating composer that expands only for longer input, tighter suggested prompt chips under the composer that disappear after first interaction, and first-screen spacing designed to fit a normal laptop viewport. Response history remains hidden from the primary UI. No backend/RPC/RLS/schema/route/permission/Edge Function contract changes were made. Next step remains Imports / Data Health micro-polish only if needed, then backend AI-assisted mapping audit.
@@ -57,7 +57,7 @@ Continue verification of user management, Supabase security, and dashboard metri
 
 Recommended remaining PR order before backend AI-assisted mapping work:
 
-1. AI Marketing Analyst backend path follow-up: add or document source-of-truth DDL for raw ads tables/RPCs, `facts_ads_daily`, `rebuild_ads_daily_facts`, AI ads context views, and `build_ai_ads_context`; then add safe diagnostics for connection → raw → fact → AI-context readiness.
+1. AI Marketing Analyst backend path follow-up: deploy/verify ads pipeline diagnostics, then add or document source-of-truth DDL for raw ads tables/RPCs, `facts_ads_daily`, `rebuild_ads_daily_facts`, AI ads context views, and `build_ai_ads_context`.
 2. AI Assistant frontend polish only: route visible copy through UK/EN i18n, clarify that it uses prepared/verified data, improve no-access/loading/error states, and keep existing `ai-helper-run` contract unchanged.
 3. Imports / Data Health micro-polish if needed: refine labels/empty states for rejected rows, mapping review, alerts, and safe links to Data Bindings / Telegram / Ads Connectors without changing queries or actions.
 4. Users & Access backend-contract PR: verify/create safe read model, invitations, member lifecycle action RPCs, audit events, first-superadmin/bootstrap rules, and deployed RLS before any management UI.

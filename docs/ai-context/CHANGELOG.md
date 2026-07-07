@@ -1,3 +1,17 @@
+
+## 2026-07-07
+
+### Added
+
+- Added safe backend Ads Pipeline Diagnostics through a read-only Supabase RPC, `build_ads_pipeline_diagnostics`, summarizing connection/account/binding state, raw ads rows, imported ads rows, facts, AI context views, latest sync runs, sanitized sync errors, first blocker code/message, and platform blockers.
+- Extended `build_ai_ads_context` to include `pipeline_diagnostics`, `first_blocker_code`, `first_blocker_message`, and `platform_blockers` without changing the existing function signature or the `ai-helper-run` request/response contract.
+- Added source-level tests proving the diagnostics migration exists, avoids token/secret fields, includes blocker codes, preserves the ads context RPC signature, and keeps the AI helper contract unchanged.
+
+### Notes
+
+- Known current ads pipeline blockers remain Google Ads `PERMISSION_DENIED`, Meta/TikTok successful zero-row syncs, empty `facts_ads_daily`, and fallback-only historical imported data through unified ads performance views.
+- No OAuth credentials, access tokens, service role keys, RLS weakening, frontend UI, routes, sync schedules, platform API credentials, or user permission model behavior were changed.
+
 # CHANGELOG.md
 
 ## Purpose
