@@ -6,7 +6,7 @@ Current next actions for Internal Analytics Workspace.
 
 ---
 
-2026-07-07 update: AI Assistant empty-state refinement is complete. The page now feels closer to a ChatGPT/Claude-style start screen with a lighter centered canvas, compact floating composer that expands only for longer input, tighter suggested prompt chips, and first-screen spacing designed to fit a normal laptop viewport. Response history remains hidden from the primary UI. No backend/RPC/RLS/schema/route/permission/Edge Function contract changes were made. Next step remains Imports / Data Health micro-polish only if needed, then backend AI-assisted mapping audit.
+2026-07-07 update: AI Assistant empty-state refinement is complete. The page now feels closer to a ChatGPT/Claude-style start screen with a lighter centered canvas, compact floating composer that expands only for longer input, tighter suggested prompt chips under the composer that disappear after first interaction, and first-screen spacing designed to fit a normal laptop viewport. Response history remains hidden from the primary UI. No backend/RPC/RLS/schema/route/permission/Edge Function contract changes were made. Next step remains Imports / Data Health micro-polish only if needed, then backend AI-assisted mapping audit.
 
 
 ## Current Priority

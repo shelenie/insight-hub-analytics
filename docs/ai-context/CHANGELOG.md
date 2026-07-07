@@ -13,7 +13,7 @@ Meaningful changes for Internal Analytics Workspace.
 - Refined the AI Assistant empty state toward a clean ChatGPT/Claude-style start screen with a lightweight centered chat canvas instead of a heavy dashboard-card frame.
 - Tightened first-screen spacing so the page title/subtitle, welcome icon/title/body, suggested prompts, compact composer, and one safety note are designed to fit in one normal laptop viewport.
 - Changed the composer into a compact floating chat input that starts around one line tall, auto-expands only for longer multiline input, caps height around 176px, and scrolls internally beyond that.
-- Kept suggested marketing prompts visually lighter and compact while preserving the existing prompt texts.
+- Moved suggested marketing prompts under the composer, made them visually lighter and compact, preserved the existing prompt texts, and hide them after the first prompt/message interaction.
 - Kept response history hidden from the primary UI.
 
 ### Notes
