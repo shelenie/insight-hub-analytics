@@ -9,6 +9,12 @@ New ChatGPT/Codex/Claude/Cursor sessions should read this file first.
 ---
 
 
+## Verified Local Change — 2026-07-07 AI Helper Senior Performance Marketing Analyst Prompt
+
+The `ai-helper-run` prompt and response framework was upgraded from a generic internal analytics assistant into a Senior Performance Marketing Analyst for a performance agency. The system prompt now combines CMO-style campaign diagnosis with CFO-style budget and unit-economics discipline, keeps Ukrainian as the default answer language, requires use of only the provided JSON context, forbids invented metrics/periods/campaigns/clients/revenue/ROAS/causes, and explicitly calls out stale, fallback/imported, missing, or incomplete data. Ads-context responses now have a structured data-status, performance-diagnosis, CMO lens, CFO lens, client-ready summary, and prioritized next-actions framework, while non-ads contexts remain safe and are not forced into ads/CPL sections. No database schema, RLS policies, database tables/views, RPC signatures, Edge Function name, `ai-helper-run` request/response contract, auth/workspace role checks, OAuth, sync logic, frontend UI, routes, or chat history/session architecture were changed.
+---
+
+
 ## Verified Local Change — 2026-07-07 AI Assistant Chat Mode Alignment
 
 The AI Assistant chat mode was aligned around one centered frontend-only chat column shared by message rows, assistant full-width answer cards, assistant loading/error states, the compact composer, starter prompts, and the safety note. Composer focus styling now lives on the outer rounded container so the textarea no longer shows a separate inner focus border/ring. A subtle in-page New chat / Новий чат action now clears only the current in-memory messages, prompt, and visible error state to return to the clean starter screen while preserving the selected analysis mode. Persistent chat history was not implemented. No backend logic, RPC calls, Supabase schema, RLS policies, routes, permission logic, database tables/views, existing analysis mode backend mappings, Edge Function name, or `ai-helper-run` request/response contract were changed.
