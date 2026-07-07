@@ -8,6 +8,11 @@ New ChatGPT/Codex/Claude/Cursor sessions should read this file first.
 
 ---
 
+
+## Verified Local Change — 2026-07-07 AI Ads Context Fallback
+
+AI Ads backend context now keeps the existing frontend request-type/context-scope contract while fixing the `ai-helper-run` RPC payload sent to `build_ai_ads_context`: the Edge Function now passes only `p_workspace_id`, `p_date_from`, `p_date_to`, and `p_platform`, matching the current database function signature. A new reversible Supabase migration updates `build_ai_ads_context` so facts-based ads context remains primary, but when `facts_ads_daily`/AI ads facts are empty it falls back to `v_unified_ads_performance_daily` and `v_unified_ads_performance_summary` imported data. The returned context includes `source_layer_used`, data freshness metadata, health, summaries/top campaigns, anomaly candidates when available, and notes warning when the latest metric date is older than seven days. Follow-up correction aligned date columns with the real Supabase schema: facts/AI daily context use `insight_date`, while unified imported ads data uses `metric_date`. No RLS policies, auth/workspace role checks, Supabase secrets, OAuth flows, real API sync behavior, frontend UI, routes, unsupported AI action behavior, or chat history/session architecture were changed.
+
 ## Verified Local Change — 2026-07-07 AI Assistant ChatGPT-Style Start Screen
 
 The AI Assistant empty state was refined further toward a modern ChatGPT/Claude-style start screen. The heavy dashboard-card frame was removed from the primary empty canvas, the welcome block and suggested marketing prompts were tightened to fit the first screen in one normal laptop viewport, the composer is now a compact floating chat input that auto-expands only for longer multiline prompts, and starter prompts now sit under the composer and disappear after the first interaction. Response history remains hidden from the primary UI. No backend logic, RPC calls, Supabase schema, RLS policies, routes, permission logic, database tables/views, analysis mode backend mappings, Edge Function name, or `ai-helper-run` request/response contract were changed.
