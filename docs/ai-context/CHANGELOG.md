@@ -1,3 +1,17 @@
+## 2026-07-07 — AdsConnectors Ad Accounts Readiness UX Polish
+
+### Changed
+
+- Polished AdsConnectors → Ad accounts readiness UI into a compact summary card with friendly status, total/bound/unbound/needs-attention counters, and a short next action.
+- Moved detailed platform readiness and binding gaps into an expandable details section so the main Real accounts cards are no longer pushed down by diagnostic tables.
+- Added Ukrainian and English friendly labels for key multi-account readiness and binding-gap status codes.
+- Kept “Real accounts” as the label for accounts that truly exist on Meta Ads, Google Ads, or TikTok Ads, while documenting that they can still be test/non-spending accounts created for site development.
+
+### Notes
+
+- Bindings remains the place for fixing binding gaps.
+- Frontend-only change; no Supabase schema, RLS, RPC contracts, OAuth, sync behavior, Edge Functions, ai-helper-run, routes, sidebar, top-level tabs, Bindings page, or Imports page changed.
+
 ## 2026-07-07 — Bindings Ads Binding Gap Readiness
 
 ### Changed
@@ -104,8 +118,6 @@
 - Secondary observed issues: Meta/TikTok latest successful syncs returned 0 rows, `facts_ads_daily` remains empty, and AI uses historical imported fallback data.
 - No frontend UI, OAuth flows, sync execution behavior, RLS, Edge Function contracts, or `ai-helper-run` request/response contract changed.
 
-
-## 2026-07-07
 
 ### Added
 
