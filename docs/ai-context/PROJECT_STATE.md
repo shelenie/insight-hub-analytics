@@ -1,3 +1,7 @@
+## Verified Local Change — 2026-07-07 Ads Pipeline Diagnostics Production Hotfix Mirror
+
+The repository now mirrors the Supabase production hotfix for `build_ads_pipeline_diagnostics(uuid, date, date)`: diagnostics no longer assume `public.ad_traffic_raw.metric_date`, dynamically use `metric_date`, `day`, then `insight_date` when present, and count workspace rows without date filtering when no supported date column exists. The returned `raw_data_state.ad_traffic_raw` JSON includes `date_column`, so production diagnostics now works with the real `ad_traffic_raw.day` schema. `latest_failed_run_by_platform` was verified to emit valid JSON key/value pairs for `platform`, `date_from`, `date_to`, and sanitized `error_message`. First live blocker detected remains `google_ads_permission_denied`; secondary observed issues are Meta/TikTok latest successful syncs returning 0 rows, `facts_ads_daily` remaining empty, and AI answers relying on historical imported fallback data. No frontend UI, OAuth flows, sync execution behavior, RLS, Edge Function contracts, or `ai-helper-run` request/response contract changed.
+
 
 ## Verified Local Change — 2026-07-07 Ads Pipeline Diagnostics
 

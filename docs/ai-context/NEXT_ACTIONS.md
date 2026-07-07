@@ -1,3 +1,12 @@
+## Updated — 2026-07-07 Ads Pipeline Diagnostics Production Hotfix Mirror
+
+1. Deploy/confirm the GitHub migration mirror matches the already-applied Supabase production hotfix for `build_ads_pipeline_diagnostics(uuid, date, date)`, especially `ad_traffic_raw.day` date-column detection and the returned `raw_data_state.ad_traffic_raw.date_column`.
+2. Resolve the first live blocker detected by diagnostics: Google Ads `google_ads_permission_denied`.
+3. Investigate secondary observed ads pipeline issues: Meta/TikTok latest successful syncs returned 0 rows, `facts_ads_daily` remains empty, and AI currently uses historical imported fallback data until fresh API facts are available.
+4. Keep this follow-up limited to the diagnostics migration/source and docs/tests; do not change frontend UI, OAuth flows, sync execution behavior, RLS, Edge Function contracts, or the `ai-helper-run` request/response contract.
+
+---
+
 # NEXT_ACTIONS.md
 
 ## Purpose

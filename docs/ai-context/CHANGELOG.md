@@ -1,3 +1,19 @@
+## 2026-07-07 — Ads Pipeline Diagnostics Production Hotfix Mirror
+
+### Changed
+
+- Mirrored the production hotfix for `build_ads_pipeline_diagnostics(uuid, date, date)` so `ad_traffic_raw` diagnostics dynamically detect the date column in priority order: `metric_date`, `day`, then `insight_date`.
+- Added `date_column` to the returned `raw_data_state.ad_traffic_raw` JSON and kept a no-date-column fallback that counts workspace rows without date filtering.
+- Verified `latest_failed_run_by_platform` JSON includes valid key/value pairs for `platform`, `date_from`, `date_to`, and sanitized `error_message`.
+- Added source-level tests for the production `ad_traffic_raw.day` schema support, no hardcoded date filter dependency on `metric_date`, `date_column`, and failed-run JSON fields.
+
+### Notes
+
+- Production diagnostics now works with the real `ad_traffic_raw.day` schema.
+- First live blocker detected: `google_ads_permission_denied`.
+- Secondary observed issues: Meta/TikTok latest successful syncs returned 0 rows, `facts_ads_daily` remains empty, and AI uses historical imported fallback data.
+- No frontend UI, OAuth flows, sync execution behavior, RLS, Edge Function contracts, or `ai-helper-run` request/response contract changed.
+
 
 ## 2026-07-07
 

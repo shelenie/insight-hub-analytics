@@ -131,6 +131,26 @@ describe("AI ads context backend contract", () => {
     expect(diagnosticsMigrationSource).toContain("coalesce(finished_at, started_at, created_at) desc nulls last");
   });
 
+  it("detects the ad_traffic_raw date column dynamically for production day schema", () => {
+    const trafficRawBlock = diagnosticsMigrationSource.match(/if to_regclass\('public\.ad_traffic_raw'\) is not null then[\s\S]*?v_has_raw := v_has_raw/)?.[0] ?? "";
+
+    expect(trafficRawBlock).toContain("information_schema.columns");
+    expect(trafficRawBlock).toContain("('metric_date', 1)");
+    expect(trafficRawBlock).toContain("('day', 2)");
+    expect(trafficRawBlock).toContain("('insight_date', 3)");
+    expect(trafficRawBlock).toContain("date_column");
+    expect(trafficRawBlock).toContain("where workspace_id = $1");
+    expect(trafficRawBlock).not.toContain("metric_date >= $2");
+    expect(trafficRawBlock).not.toContain("metric_date <= $3");
+  });
+
+  it("keeps latest failed sync diagnostics JSON fields paired correctly", () => {
+    const latestFailedBlock = diagnosticsMigrationSource.match(/with runs as \(\n        select platform, date_from, date_to, error_message[\s\S]*?into v_latest_failed using p_workspace_id;/)?.[0] ?? "";
+
+    expect(latestFailedBlock).toContain("jsonb_build_object('platform', platform::text, 'date_from', date_from, 'date_to', date_to, 'error_message'");
+    expect(latestFailedBlock).toContain("left(regexp_replace(coalesce(error_message, '')");
+  });
+
   it("includes explicit ads pipeline blocker codes", () => {
     for (const blockerCode of [
       "no_active_connections",
