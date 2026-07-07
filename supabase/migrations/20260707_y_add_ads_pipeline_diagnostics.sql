@@ -341,6 +341,7 @@ begin
       'latest_failed_run_by_platform', v_latest_failed
     ),
     'source_readiness', v_source_readiness,
+    'multi_account_readiness', public.build_ads_multi_account_readiness(p_workspace_id),
     'blocker_diagnosis', jsonb_build_object(
       'first_blocker_code', v_first_blocker_code,
       'first_blocker_message', v_first_blocker_message,
