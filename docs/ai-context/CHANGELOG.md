@@ -1,3 +1,10 @@
+## 2026-07-07 — AdsConnectors Readiness Summary Shape Fix
+
+### Fixed
+
+- Fixed AdsConnectors multi-account readiness summary cards to read account counters from the backend payload `summary` object instead of top-level fields.
+- Kept platform rows from `platforms`, binding gaps from `binding_gaps`, and the existing no-new-navigation/read-only behavior unchanged.
+
 ## 2026-07-07 — AdsConnectors Multi-Account Readiness UI
 
 ### Changed

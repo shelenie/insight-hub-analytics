@@ -1229,6 +1229,7 @@ function MultiAccountOverview({ readiness, ui, fallbackAccountCount }: { readine
   }
 
   const payload = readiness.payload;
+  const summary = readObject(payload, "summary");
   return (
     <div className="rounded-lg border border-border/70 bg-card/50 p-4">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -1239,10 +1240,10 @@ function MultiAccountOverview({ readiness, ui, fallbackAccountCount }: { readine
         <StatusPill tone={readinessTone(readString(payload, "overall_status"))}>{formatReadinessValue(readString(payload, "overall_status"), ui)}</StatusPill>
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard label={ui.totalAccounts} value={formatMetric(readNumber(payload, "total_accounts") ?? fallbackAccountCount)} />
-        <MetricCard label={ui.boundAccounts} value={formatMetric(readNumber(payload, "bound_accounts"))} />
-        <MetricCard label={ui.unboundAccounts} value={formatMetric(readNumber(payload, "unbound_accounts"))} />
-        <MetricCard label={ui.needsAttentionCount} value={formatMetric(readNumber(payload, "needs_attention_count"))} />
+        <MetricCard label={ui.totalAccounts} value={formatMetric(readNumber(summary, "total_accounts") ?? fallbackAccountCount)} />
+        <MetricCard label={ui.boundAccounts} value={formatMetric(readNumber(summary, "bound_accounts"))} />
+        <MetricCard label={ui.unboundAccounts} value={formatMetric(readNumber(summary, "unbound_accounts"))} />
+        <MetricCard label={ui.needsAttentionCount} value={formatMetric(readNumber(summary, "needs_attention_count"))} />
       </div>
     </div>
   );
@@ -1279,7 +1280,8 @@ function getReadinessNextAction(readiness: OptionalJsonData | undefined, ui: Cop
   const gaps = readArray(payload, "binding_gaps");
   const firstGapAction = gaps.map((gap) => readString(gap, "next_action")).find(Boolean);
   if (firstGapAction) return firstGapAction;
-  const unbound = readNumber(payload, "unbound_accounts") ?? 0;
+  const summary = readObject(payload, "summary");
+  const unbound = readNumber(summary, "unbound_accounts") ?? 0;
   if (unbound > 0) return ui.readinessNextActionFallback;
   return ui.noCriticalActions;
 }
@@ -1287,6 +1289,11 @@ function getReadinessNextAction(readiness: OptionalJsonData | undefined, ui: Cop
 function readArray(payload: Record<string, unknown>, key: string): Row[] {
   const value = payload[key];
   return Array.isArray(value) ? value.filter(isObject).map((item) => item as Row) : [];
+}
+
+function readObject(payload: Record<string, unknown>, key: string): Record<string, unknown> {
+  const value = payload[key];
+  return isObject(value) ? value : {};
 }
 
 function readNumber(payload: Record<string, unknown>, key: string): number | null {

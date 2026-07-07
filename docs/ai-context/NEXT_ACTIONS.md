@@ -1,3 +1,8 @@
+## Updated — 2026-07-07 AdsConnectors Readiness Summary Shape
+
+- Re-test `/ads-connectors` against production `build_ads_multi_account_readiness` to confirm nested `summary` counters render correctly.
+- Keep actual binding-gap write workflows deferred to a future explicit design in `/bindings`.
+
 ## Updated — 2026-07-07 AdsConnectors Multi-Account Readiness
 
 - Verify the existing `/ads-connectors` Overview, Ad accounts, and Diagnostics tabs against production `build_ads_multi_account_readiness` output.
