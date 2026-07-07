@@ -17,7 +17,7 @@ declare
   v_active_bound_accounts jsonb := '[]'::jsonb;
   v_binding_counts jsonb := '[]'::jsonb;
   v_raw_insights jsonb := '[]'::jsonb;
-  v_traffic_raw jsonb := jsonb_build_object('rows', 0, 'first_metric_date', null, 'last_metric_date', null);
+  v_traffic_raw jsonb := jsonb_build_object('rows', 0, 'first_metric_date', null, 'last_metric_date', null, 'date_column', null);
   v_facts jsonb := '[]'::jsonb;
   v_ai_daily jsonb := jsonb_build_object('rows', 0, 'first_context_date', null, 'last_context_date', null);
   v_ai_anomalies jsonb := jsonb_build_object('rows', 0, 'first_context_date', null, 'last_context_date', null);
@@ -40,6 +40,7 @@ declare
   v_is_stale boolean := false;
   v_latest_metric_date date;
   v_sql text;
+  v_ad_traffic_raw_date_column text;
 begin
   if to_regclass('public.ad_platform_connections') is not null then
     execute $q$
@@ -106,11 +107,36 @@ begin
   end if;
 
   if to_regclass('public.ad_traffic_raw') is not null then
-    execute $q$
-      select jsonb_build_object('rows', count(*)::bigint, 'first_metric_date', min(metric_date)::date, 'last_metric_date', max(metric_date)::date)
-      from public.ad_traffic_raw
-      where workspace_id = $1 and ($2 is null or metric_date >= $2) and ($3 is null or metric_date <= $3)
-    $q$ into v_traffic_raw using p_workspace_id, p_date_from, p_date_to;
+    select c.column_name
+      into v_ad_traffic_raw_date_column
+    from (values ('metric_date', 1), ('day', 2), ('insight_date', 3)) as c(column_name, priority)
+    where exists (
+      select 1
+      from information_schema.columns isc
+      where isc.table_schema = 'public'
+        and isc.table_name = 'ad_traffic_raw'
+        and isc.column_name = c.column_name
+    )
+    order by c.priority
+    limit 1;
+
+    if v_ad_traffic_raw_date_column is not null then
+      v_sql := format(
+        'select jsonb_build_object(''rows'', count(*)::bigint, ''first_metric_date'', min(%1$I)::date, ''last_metric_date'', max(%1$I)::date, ''date_column'', %2$L)
+         from public.ad_traffic_raw
+         where workspace_id = $1 and ($2 is null or %1$I >= $2) and ($3 is null or %1$I <= $3)',
+        v_ad_traffic_raw_date_column,
+        v_ad_traffic_raw_date_column
+      );
+      execute v_sql into v_traffic_raw using p_workspace_id, p_date_from, p_date_to;
+    else
+      execute $q$
+        select jsonb_build_object('rows', count(*)::bigint, 'first_metric_date', null, 'last_metric_date', null, 'date_column', null)
+        from public.ad_traffic_raw
+        where workspace_id = $1
+      $q$ into v_traffic_raw using p_workspace_id;
+    end if;
+
     v_has_raw := v_has_raw or coalesce((v_traffic_raw->>'rows')::bigint, 0) > 0;
   end if;
 
