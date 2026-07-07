@@ -40,10 +40,11 @@ Continue verification of user management, Supabase security, and dashboard metri
 
 Recommended remaining PR order before backend AI-assisted mapping work:
 
-1. AI Assistant frontend polish only: route visible copy through UK/EN i18n, clarify that it uses prepared/verified data, improve no-access/loading/error states, and keep existing `ai-helper-run` contract unchanged.
-2. Imports / Data Health micro-polish if needed: refine labels/empty states for rejected rows, mapping review, alerts, and safe links to Data Bindings / Telegram / Ads Connectors without changing queries or actions.
-3. Users & Access backend-contract PR: verify/create safe read model, invitations, member lifecycle action RPCs, audit events, first-superadmin/bootstrap rules, and deployed RLS before any management UI.
-4. Users & Access frontend PR only after step 3: read-only member list first, then invite/deactivate/role-change UI only through verified backend contracts.
+1. AI Marketing Analyst backend path follow-up: add or document source-of-truth DDL for raw ads tables/RPCs, `facts_ads_daily`, `rebuild_ads_daily_facts`, AI ads context views, and `build_ai_ads_context`; then add safe diagnostics for connection → raw → fact → AI-context readiness.
+2. AI Assistant frontend polish only: route visible copy through UK/EN i18n, clarify that it uses prepared/verified data, improve no-access/loading/error states, and keep existing `ai-helper-run` contract unchanged.
+3. Imports / Data Health micro-polish if needed: refine labels/empty states for rejected rows, mapping review, alerts, and safe links to Data Bindings / Telegram / Ads Connectors without changing queries or actions.
+4. Users & Access backend-contract PR: verify/create safe read model, invitations, member lifecycle action RPCs, audit events, first-superadmin/bootstrap rules, and deployed RLS before any management UI.
+5. Users & Access frontend PR only after step 4: read-only member list first, then invite/deactivate/role-change UI only through verified backend contracts.
 
 Future admin page: Users & Access / Користувачі й доступи. Purpose: invite users by email, assign workspace roles, deactivate access, and audit changes. Treat this as a separate security-sensitive admin feature that requires backend/RLS/RPC/audit contract verification before UI implementation.
 
