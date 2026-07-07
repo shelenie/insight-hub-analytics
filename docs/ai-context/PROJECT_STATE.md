@@ -8,6 +8,11 @@ New ChatGPT/Codex/Claude/Cursor sessions should read this file first.
 
 ---
 
+
+## Verified Local Change — 2026-07-07 AI Assistant Chat Mode Alignment
+
+The AI Assistant chat mode was aligned around one centered frontend-only chat column shared by message rows, assistant loading/error states, the compact composer, starter prompts, and the safety note. Composer focus styling now lives on the outer rounded container so the textarea no longer shows a separate inner focus border/ring. A subtle in-page New chat / Новий чат action now clears only the current in-memory messages, prompt, and visible error state to return to the clean starter screen while preserving the selected analysis mode. Persistent chat history was not implemented. No backend logic, RPC calls, Supabase schema, RLS policies, routes, permission logic, database tables/views, existing analysis mode backend mappings, Edge Function name, or `ai-helper-run` request/response contract were changed.
+
 ## Verified Local Change — 2026-07-07 AI Assistant ChatGPT-Style Start Screen
 
 The AI Assistant empty state was refined further toward a modern ChatGPT/Claude-style start screen. The heavy dashboard-card frame was removed from the primary empty canvas, the welcome block and suggested marketing prompts were tightened to fit the first screen in one normal laptop viewport, the composer is now a compact floating chat input that auto-expands only for longer multiline prompts, and starter prompts now sit under the composer and disappear after the first interaction. Response history remains hidden from the primary UI. No backend logic, RPC calls, Supabase schema, RLS policies, routes, permission logic, database tables/views, analysis mode backend mappings, Edge Function name, or `ai-helper-run` request/response contract were changed.
