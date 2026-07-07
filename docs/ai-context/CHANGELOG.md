@@ -1,3 +1,25 @@
+## 2026-07-07 — AdsConnectors Readiness Summary Shape Fix
+
+### Fixed
+
+- Fixed AdsConnectors multi-account readiness summary cards to read account counters from the backend payload `summary` object instead of top-level fields.
+- Kept platform rows from `platforms`, binding gaps from `binding_gaps`, and the existing no-new-navigation/read-only behavior unchanged.
+
+## 2026-07-07 — AdsConnectors Multi-Account Readiness UI
+
+### Changed
+
+- Wired the existing AdsConnectors page to the backend `build_ads_multi_account_readiness` RPC.
+- Added read-only readiness metrics to the existing Overview tab and compact platform/binding-gap readiness details above the existing Ad accounts table.
+- Added the raw multi-account readiness payload to Diagnostics only inside the existing developer-details pattern.
+
+### Notes
+
+- No new tab, route, navigation item, Imports admin surface, or separate Admin panel was added.
+- Bindings remains the place for actual binding management.
+- Write actions for fixing binding gaps remain future work.
+- Real platform sync fixes remain deferred until real ad accounts/data are available.
+
 ## 2026-07-07 — Imported Ads Facts Production Hotfix Mirror
 
 ### Changed
