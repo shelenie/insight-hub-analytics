@@ -7,6 +7,22 @@ Meaningful changes for Internal Analytics Workspace.
 ---
 
 
+## 2026-07-07 — AI Helper Senior Performance Marketing Analyst Prompt
+
+### Changed
+
+- Upgraded `ai-helper-run` from a generic internal analytics assistant prompt to a Senior Performance Marketing Analyst framework for a performance agency.
+- Added CMO-style campaign diagnosis guidance and CFO-style budget/unit-economics guidance for ads-context answers.
+- Added explicit response rules for stale, fallback/imported, missing, or incomplete data, including avoiding last-7-days trend claims when context freshness does not support them.
+- Extended OpenAI `response_requirements` with the marketing analyst role, CMO/CFO/data-quality lenses, Ukrainian section guidance, and constraints against invented revenue, ROAS, client/funnel attribution, or unsupported actions.
+- Added source-text tests for the prompt framework, response requirements, RPC payload shape, and unchanged `ai-helper-run` request/response contract.
+
+### Notes
+
+- No database schema, RLS policies, database tables/views, RPC signatures, Edge Function name, `ai-helper-run` request/response contract, auth/workspace role checks, OAuth, sync logic, frontend UI, routes, or chat history/session architecture were changed.
+---
+
+
 ## 2026-07-07 — AI Assistant Chat Mode Alignment
 
 ### Changed

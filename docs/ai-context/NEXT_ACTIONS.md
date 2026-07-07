@@ -7,6 +7,14 @@ Current next actions for Internal Analytics Workspace.
 ---
 
 
+## Updated — 2026-07-07 AI Helper Senior Performance Marketing Analyst Prompt
+
+1. Review the upgraded `ai-helper-run` Senior Performance Marketing Analyst prompt in staging with ads contexts that use both primary `facts_ads_daily` data and fallback/imported unified ads data.
+2. Verify assistant answers clearly separate known data from hypotheses, mention stale/fallback/imported data when present, and avoid last-7-days conclusions when freshness is false.
+3. Keep future improvements prompt/playbook-only unless a separate approved PR changes backend contracts; this PR made no database schema, RLS, RPC signature, frontend UI, route, OAuth, sync logic, or chat history changes.
+---
+
+
 ## Updated — 2026-07-07 AI Ads Context Fallback
 
 1. Deploy and verify the new `build_ai_ads_context` migration in Supabase against workspace `5ebbe435-fd79-44c3-834e-642e8fba00dc`, confirming facts-empty/unified-available context returns `source_layer_used = v_unified_ads_performance_daily` with the imported 2026-04-01 to 2026-05-05 date range and freshness warning.
