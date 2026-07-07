@@ -3,6 +3,8 @@ import { readFileSync } from "node:fs";
 
 const edgeFunctionSource = readFileSync("supabase/functions/ai-helper-run/index.ts", "utf8");
 const migrationSource = readFileSync("supabase/migrations/20260707_fix_ai_ads_context_fallback.sql", "utf8");
+const diagnosticsMigrationSource = readFileSync("supabase/migrations/20260707_y_add_ads_pipeline_diagnostics.sql", "utf8");
+const diagnosticsAiContextMigrationSource = readFileSync("supabase/migrations/20260707_z_extend_ai_ads_context_with_diagnostics.sql", "utf8");
 
 describe("AI ads context backend contract", () => {
   it("calls build_ai_ads_context without unsupported p_context_scope", () => {
@@ -103,5 +105,58 @@ describe("AI ads context backend contract", () => {
     expect(topCampaignsBlock).toContain("v_daily_date_column");
     expect(topCampaignsBlock).toContain("min(%1$I) as first_date");
     expect(topCampaignsBlock).toContain("max(%1$I) as last_date");
+  });
+
+  it("adds a safe ads pipeline diagnostics RPC without exposing token or secret fields", () => {
+    expect(diagnosticsMigrationSource).toContain("create or replace function public.build_ads_pipeline_diagnostics");
+    expect(diagnosticsMigrationSource).toContain("returns jsonb");
+    expect(diagnosticsMigrationSource).toContain("set search_path = public");
+    expect(diagnosticsMigrationSource).toContain("grant execute on function public.build_ads_pipeline_diagnostics(uuid, date, date) to authenticated");
+    expect(diagnosticsMigrationSource).toContain("active_platform_connections_by_platform");
+    expect(diagnosticsMigrationSource).toContain("ad_accounts_by_platform");
+    expect(diagnosticsMigrationSource).toContain("account_binding_counts");
+    expect(diagnosticsMigrationSource).toContain("ad_raw_insights_by_platform");
+    expect(diagnosticsMigrationSource).toContain("ad_traffic_raw");
+    expect(diagnosticsMigrationSource).toContain("facts_ads_daily_by_platform");
+    expect(diagnosticsMigrationSource).toContain("latest_ad_sync_run_logs_by_platform");
+    expect(diagnosticsMigrationSource).toContain("regexp_replace");
+    expect(diagnosticsMigrationSource).toContain("[redacted]");
+    expect(diagnosticsMigrationSource).not.toMatch(/select \*/i);
+    expect(diagnosticsMigrationSource).not.toContain("access_token,");
+    expect(diagnosticsMigrationSource).not.toContain("refresh_token,");
+    expect(diagnosticsMigrationSource).not.toContain("client_secret,");
+    expect(diagnosticsMigrationSource).not.toContain("service_role_key");
+    expect(diagnosticsMigrationSource).not.toContain("completed_at");
+    expect(diagnosticsMigrationSource).not.toContain("updated_at");
+    expect(diagnosticsMigrationSource).toContain("coalesce(finished_at, started_at, created_at) desc nulls last");
+  });
+
+  it("includes explicit ads pipeline blocker codes", () => {
+    for (const blockerCode of [
+      "no_active_connections",
+      "no_ad_accounts",
+      "no_account_bindings",
+      "no_raw_ads_rows",
+      "raw_rows_exist_but_facts_empty",
+      "ai_context_empty",
+      "google_ads_permission_denied",
+      "tiktok_date_range_too_large",
+      "platform_success_zero_rows",
+      "stale_ads_data",
+      "ready_with_fallback_only",
+      "ready",
+    ]) {
+      expect(diagnosticsMigrationSource).toContain(blockerCode);
+    }
+  });
+
+  it("extends build_ai_ads_context with diagnostics while preserving its signature", () => {
+    expect(diagnosticsAiContextMigrationSource).toContain("create or replace function public.build_ai_ads_context(\n  p_workspace_id uuid,\n  p_date_from date default null,\n  p_date_to date default null,\n  p_platform text default null\n)");
+    expect(diagnosticsAiContextMigrationSource).not.toContain("p_context_scope");
+    expect(diagnosticsAiContextMigrationSource).toContain("public.build_ads_pipeline_diagnostics(p_workspace_id, p_date_from, p_date_to)");
+    expect(diagnosticsAiContextMigrationSource).toContain("'pipeline_diagnostics', v_pipeline_diagnostics");
+    expect(diagnosticsAiContextMigrationSource).toContain("'first_blocker_code'");
+    expect(diagnosticsAiContextMigrationSource).toContain("'first_blocker_message'");
+    expect(diagnosticsAiContextMigrationSource).toContain("'platform_blockers'");
   });
 });
