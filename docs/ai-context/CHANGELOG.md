@@ -1,3 +1,23 @@
+## 2026-07-07 — Imported Ads Facts Production Hotfix Mirror
+
+### Changed
+
+- Mirrored the Supabase production hotfix for `rebuild_imported_ads_facts(uuid, date, date)` so imported historical rows are stored in `facts_ads_daily` with `platform = other` instead of `platform = imported`, matching the production `facts_ads_daily_platform_check` allowed values.
+- Kept deterministic imported fact keys in the form `imported:{metric_date}:{md5(campaign_name)}`, `ON CONFLICT (workspace_id, fact_key)`, explicit `level = campaign`, and imported reach mapped to `impressions`.
+- Added/kept the returned warning that imported historical rows are stored with `platform=other` because `facts_ads_daily` only allows known platform codes or `other`.
+- Updated source-level tests to assert `other` platform storage, reject `imported` platform storage, retain imported fact keys, preserve campaign/impressions/idempotency behavior, and avoid destructive statements.
+
+### Production result
+
+- Production backfill succeeded with `status = ok`, `rows_read = 240`, and `rows_inserted_or_upserted = 240`.
+- `facts_ads_daily` now has imported historical facts for 2026-04-01 to 2026-05-05.
+- AI ads context now uses `facts_ads_daily` as the primary source for historical imported ads (`source_layer_used = facts_ads_daily`, `fallback_used = false`).
+- Real Google/Meta/TikTok platform sync fixes remain deferred until real accounts/data are available.
+
+### Notes
+
+- No frontend UI, OAuth, live platform sync, RLS, Edge Function contracts, `build_ai_ads_context` signature, or `ai-helper-run` request/response contract changed.
+
 ## 2026-07-07 — Imported Ads Facts Backfill
 
 ### Added

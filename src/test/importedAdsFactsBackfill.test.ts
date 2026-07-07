@@ -33,12 +33,20 @@ describe("imported ads facts backfill migration", () => {
     expect(migration).toContain("v_source_layer_used text := 'v_unified_ads_performance_daily'");
     expect(migration).toContain("from public.v_unified_ads_performance_daily");
     expect(migration).toContain("metric_date::date as insight_date");
-    expect(migration).toContain("'imported'::text as platform");
+    expect(migration).toContain("'other'::text as platform");
+    expect(migration).not.toContain("'imported'::text as platform");
     expect(migration).toContain("group by workspace_id, metric_date::date, campaign_name::text");
     expect(migration).toContain("sum(coalesce(spend, 0))::numeric as spend");
     expect(migration).toContain("sum(coalesce(clicks, 0))::integer as clicks");
     expect(migration).toContain("sum(coalesce(leads, 0))::integer as leads");
     expect(migration).toContain("sum(coalesce(reach, 0))::integer as impressions");
+  });
+
+  it("stores imported historical facts as platform other while retaining imported fact keys", () => {
+    expect(migration).toContain("'other'::text as platform");
+    expect(migration).not.toContain("'imported'::text as platform");
+    expect(migration).toContain("('imported:' || metric_date::date::text || ':' || md5(coalesce(campaign_name::text, '')))::text as fact_key");
+    expect(migration).toContain("Imported historical rows are stored with platform=other because facts_ads_daily only allows known platform codes or other.");
   });
 
   it("writes/upserts into facts_ads_daily idempotently using the production fact_key key", () => {
