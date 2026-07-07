@@ -1,8 +1,7 @@
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Bot, Send, Sparkles, User } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { SectionCard } from "@/components/dashboard/SectionCard";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -44,6 +43,7 @@ export default function Assistant() {
   const { t } = useI18n();
   const [selected, setSelected] = useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextFullOverview");
   const [prompt, setPrompt] = useState("");
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const selectedOption = useMemo(() => OPTIONS.find((o) => o.labelKey === selected) ?? OPTIONS[0], [selected]);
   const run = useMutation({ mutationFn: async (submittedPrompt: string) => {
@@ -55,6 +55,13 @@ export default function Assistant() {
   } });
 
   const canUseAi = capabilities.can_use_ai_helper;
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 176)}px`;
+  }, [prompt]);
+
   const runDisabled = !session || run.isPending || roleLoading || !canUseAi;
   const submitPrompt = (value = prompt) => {
     const submittedPrompt = value.trim();
@@ -65,33 +72,31 @@ export default function Assistant() {
   };
 
   return <DashboardLayout title={t("assistantTitle")} subtitle={t("assistantSubtitle")}>
-    <div className="mx-auto flex max-w-6xl flex-col gap-3">
-      <SectionCard className="min-h-[72vh]" contentClassName="flex min-h-[72vh] flex-col p-0">
-        <div className="flex-1 space-y-4 overflow-y-auto p-4 sm:p-5 lg:p-6">
+    <div className="mx-auto flex min-h-[calc(100vh-10rem)] max-w-5xl flex-col px-1">
+      <div className="flex flex-1 flex-col justify-start pt-3 sm:pt-5 lg:pt-7">
+        <div className="space-y-4">
           {messages.length === 0 ? <Welcome t={t} onPrompt={(value) => setPrompt(value)} /> : messages.map((message) => <MessageBubble key={message.id} message={message} />)}
-          {run.isPending ? <div className="flex items-start gap-3"><div className="rounded-full bg-primary/10 p-2 text-primary"><Bot className="h-4 w-4" /></div><div className="rounded-2xl rounded-tl-sm border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">{t("assistantThinking")}</div></div> : null}
+          {run.isPending ? <div className="flex items-start gap-3"><div className="rounded-full bg-primary/10 p-2 text-primary"><Bot className="h-4 w-4" /></div><div className="rounded-2xl rounded-tl-sm bg-muted/50 px-4 py-3 text-sm text-muted-foreground shadow-sm">{t("assistantThinking")}</div></div> : null}
           {run.error ? <FriendlyError message={t("assistantError")} technical={run.error.message} /> : null}
-          {!roleLoading && !canUseAi ? <p className="rounded-md border bg-muted/40 p-3 text-sm text-muted-foreground">{t("assistantNoAccess")}</p> : null}
+          {!roleLoading && !canUseAi ? <p className="rounded-2xl bg-muted/50 p-3 text-sm text-muted-foreground shadow-sm">{t("assistantNoAccess")}</p> : null}
         </div>
-        <div className="sticky bottom-0 border-t border-border/60 bg-background/95 p-4 shadow-sm backdrop-blur sm:p-5">
-          <div className="mx-auto max-w-4xl">
-            <div className="rounded-3xl border bg-card p-2 shadow-sm focus-within:border-primary/50">
-              <Textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} className="min-h-20 resize-none border-0 bg-transparent shadow-none focus-visible:ring-0" placeholder={t("assistantComposerPlaceholder")} onKeyDown={(event) => { if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) submitPrompt(); }} />
-              <div className="flex flex-col gap-2 px-2 pb-1 sm:flex-row sm:items-center sm:justify-between">
-                <Select value={selected} onValueChange={(v: (typeof OPTIONS)[number]["labelKey"]) => setSelected(v)}><SelectTrigger aria-label={t("assistantContextLabel")} className="h-8 w-full rounded-full text-xs sm:w-[14rem]"><SelectValue /></SelectTrigger><SelectContent>{OPTIONS.map((o) => <SelectItem key={`${o.requestType}-${o.contextScope}-${o.labelKey}`} value={o.labelKey}>{t(o.labelKey)}</SelectItem>)}</SelectContent></Select>
-                <Button className="shrink-0 rounded-full" onClick={() => submitPrompt()} disabled={runDisabled || !prompt.trim()}><Send className="mr-2 h-4 w-4" />{run.isPending ? t("assistantSending") : t("assistantSend")}</Button>
-              </div>
+        <div className="mx-auto mt-5 w-full max-w-3xl sm:mt-6">
+          <div className="rounded-[1.75rem] border border-border/50 bg-card/95 p-2 shadow-lg shadow-foreground/5 ring-1 ring-foreground/5 transition focus-within:border-primary/30 focus-within:ring-primary/15">
+            <Textarea ref={textareaRef} value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={1} className="!min-h-12 max-h-44 resize-none overflow-y-auto border-0 bg-transparent px-3 py-3 text-base leading-6 shadow-none focus-visible:ring-0 sm:text-sm" placeholder={t("assistantComposerPlaceholder")} onKeyDown={(event) => { if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) submitPrompt(); }} />
+            <div className="flex items-center justify-between gap-2 px-1 pb-1 pt-1">
+              <Select value={selected} onValueChange={(v: (typeof OPTIONS)[number]["labelKey"]) => setSelected(v)}><SelectTrigger aria-label={t("assistantContextLabel")} className="h-8 max-w-[13rem] rounded-full border-border/60 bg-background/80 px-3 text-xs shadow-none"><SelectValue /></SelectTrigger><SelectContent>{OPTIONS.map((o) => <SelectItem key={`${o.requestType}-${o.contextScope}-${o.labelKey}`} value={o.labelKey}>{t(o.labelKey)}</SelectItem>)}</SelectContent></Select>
+              <Button size="icon" className="h-9 w-9 shrink-0 rounded-full" aria-label={run.isPending ? t("assistantSending") : t("assistantSend")} onClick={() => submitPrompt()} disabled={runDisabled || !prompt.trim()}><Send className="h-4 w-4" /></Button>
             </div>
-            <p className="mt-2 px-2 text-center text-xs text-muted-foreground">{t("assistantSafetyNote")}</p>
           </div>
+          <p className="mt-2 px-2 text-center text-xs text-muted-foreground">{t("assistantSafetyNote")}</p>
         </div>
-      </SectionCard>
+      </div>
     </div>
   </DashboardLayout>;
 }
 
 function Welcome({ t, onPrompt }: { t: (key: TranslationKey) => string; onPrompt: (value: string) => void }) {
-  return <div className="mx-auto flex min-h-[42vh] max-w-3xl flex-col items-center justify-center py-6 text-center sm:py-8 lg:py-10"><div className="mb-3 rounded-full bg-primary/10 p-3 text-primary"><Sparkles className="h-6 w-6" /></div><h2 className="text-2xl font-semibold">{t("assistantWelcomeTitle")}</h2><p className="mt-2 max-w-2xl text-sm text-muted-foreground">{t("assistantWelcome")}</p><div className="mt-6 grid w-full gap-2 sm:grid-cols-2">{PROMPT_KEYS.map((key) => <button key={key} type="button" onClick={() => onPrompt(t(key))} className="rounded-xl border bg-card p-3 text-left text-sm font-medium transition hover:border-primary/50 hover:bg-primary/5">{t(key)}</button>)}</div></div>;
+  return <div className="mx-auto flex max-w-3xl flex-col items-center justify-start text-center"><div className="mb-3 rounded-full bg-primary/10 p-3 text-primary shadow-sm"><Sparkles className="h-6 w-6" /></div><h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("assistantWelcomeTitle")}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{t("assistantWelcome")}</p><div className="mt-5 grid w-full gap-2 sm:grid-cols-2">{PROMPT_KEYS.map((key) => <button key={key} type="button" onClick={() => onPrompt(t(key))} className="rounded-2xl border border-border/50 bg-card/70 px-4 py-2.5 text-left text-sm font-medium shadow-sm shadow-foreground/5 transition hover:border-primary/40 hover:bg-primary/5 hover:shadow-md">{t(key)}</button>)}</div></div>;
 }
 
 function MessageBubble({ message }: { message: ChatMessage }) {

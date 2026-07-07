@@ -70,6 +70,16 @@ describe("AI Assistant chat UI", () => {
     expect(translations.assistantContextMappingReview.en).toBe("Mapping");
   });
 
+  it("renders a lightweight compact composer as the primary action", () => {
+    expect(source).not.toContain("<SectionCard");
+    expect(source).not.toContain('min-h-[72vh]');
+    expect(source).toContain('ref={textareaRef}');
+    expect(source).toContain('rows={1}');
+    expect(source).toContain('!min-h-12 max-h-44 resize-none overflow-y-auto');
+    expect(source).toContain('Math.min(textarea.scrollHeight, 176)');
+    expect(source).toContain('size="icon"');
+  });
+
   it("keeps backend contract and does not add unsupported fake action labels", () => {
     expect(source).toContain('supabase.functions.invoke("ai-helper-run"');
     expect(source).toContain("request_type: selectedOption.requestType");
