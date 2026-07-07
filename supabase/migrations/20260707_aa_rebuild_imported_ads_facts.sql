@@ -1,19 +1,5 @@
 begin;
 
--- Optional idempotency guard for environments where facts_ads_daily already exists.
--- The guarded DO block is additive and no-ops when the table/schema is not present locally.
-do $$
-begin
-  if to_regclass('public.facts_ads_daily') is not null
-     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'facts_ads_daily' and column_name = 'workspace_id')
-     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'facts_ads_daily' and column_name = 'insight_date')
-     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'facts_ads_daily' and column_name = 'platform')
-     and exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'facts_ads_daily' and column_name = 'campaign_name') then
-    create unique index if not exists facts_ads_daily_imported_backfill_uniq
-      on public.facts_ads_daily (workspace_id, insight_date, platform, campaign_name) nulls not distinct;
-  end if;
-end $$;
-
 create or replace function public.rebuild_imported_ads_facts(
   p_workspace_id uuid,
   p_date_from date default null,
@@ -71,7 +57,7 @@ begin
 
   select array_agg(required_column order by required_column)
     into v_required_missing
-  from unnest(array['workspace_id','insight_date','platform','campaign_name','spend','clicks','leads','reach']) as required_column
+  from unnest(array['workspace_id','insight_date','platform','level','campaign_name','fact_key','spend','clicks','leads','impressions']) as required_column
   where not exists (
     select 1
     from information_schema.columns c
@@ -100,11 +86,13 @@ begin
       workspace_id,
       metric_date::date as insight_date,
       'imported'::text as platform,
+      'campaign'::text as level,
       campaign_name::text as campaign_name,
+      ('imported:' || metric_date::date::text || ':' || md5(coalesce(campaign_name::text, '')))::text as fact_key,
       sum(coalesce(spend, 0))::numeric as spend,
-      sum(coalesce(clicks, 0))::numeric as clicks,
-      sum(coalesce(leads, 0))::numeric as leads,
-      sum(coalesce(reach, 0))::numeric as reach,
+      sum(coalesce(clicks, 0))::integer as clicks,
+      sum(coalesce(leads, 0))::integer as leads,
+      sum(coalesce(reach, 0))::integer as impressions,
       sum(coalesce(source_rows_count, 0))::bigint as source_rows_count,
       min(metric_date)::date as first_metric_date,
       max(metric_date)::date as last_metric_date
@@ -121,6 +109,8 @@ begin
 
   v_effective_date_from := coalesce(p_date_from, v_first_metric_date);
   v_effective_date_to := coalesce(p_date_to, v_last_metric_date);
+
+  v_warnings := v_warnings || jsonb_build_array('Imported reach was mapped to impressions because imported fallback source does not expose impressions.');
 
   if v_rows_read = 0 then
     return jsonb_build_object(
@@ -141,30 +131,34 @@ begin
       workspace_id,
       insight_date,
       platform,
+      level,
       campaign_name,
+      fact_key,
       spend,
       clicks,
       leads,
-      reach,
+      impressions,
       updated_at
     )
     select
       workspace_id,
       insight_date,
       platform,
+      level,
       campaign_name,
+      fact_key,
       spend,
       clicks,
       leads,
-      reach,
+      impressions,
       now()
     from tmp_imported_ads_facts_backfill
-    on conflict (workspace_id, insight_date, platform, campaign_name)
+    on conflict (workspace_id, fact_key)
     do update set
       spend = excluded.spend,
       clicks = excluded.clicks,
       leads = excluded.leads,
-      reach = excluded.reach,
+      impressions = excluded.impressions,
       updated_at = now()
   $sql$;
 

@@ -1,7 +1,7 @@
 ## 2026-07-07 — Imported Ads Facts Backfill Follow-up
 
 1. Deploy the `rebuild_imported_ads_facts(uuid, date, date)` migration to Supabase and run it for the target workspace/date range containing historical imported ads data.
-2. Verify `facts_ads_daily` receives imported historical rows and that `build_ai_ads_context.source_layer_used` switches to `facts_ads_daily` once facts are populated.
+2. Verify `facts_ads_daily` receives imported historical rows with deterministic `fact_key`, explicit `level = campaign`, and imported reach mapped to `impressions` and that `build_ai_ads_context.source_layer_used` switches to `facts_ads_daily` once facts are populated.
 3. Keep real Google/Meta/TikTok sync fixes deferred until real production ad accounts/data are available; this imported backfill path does not validate live platform sync.
 4. Continue avoiding frontend UI, OAuth, live sync behavior, RLS, secrets/token storage, and `ai-helper-run` contract changes unless separately approved.
 

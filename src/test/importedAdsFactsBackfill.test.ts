@@ -36,16 +36,33 @@ describe("imported ads facts backfill migration", () => {
     expect(migration).toContain("'imported'::text as platform");
     expect(migration).toContain("group by workspace_id, metric_date::date, campaign_name::text");
     expect(migration).toContain("sum(coalesce(spend, 0))::numeric as spend");
-    expect(migration).toContain("sum(coalesce(clicks, 0))::numeric as clicks");
-    expect(migration).toContain("sum(coalesce(leads, 0))::numeric as leads");
+    expect(migration).toContain("sum(coalesce(clicks, 0))::integer as clicks");
+    expect(migration).toContain("sum(coalesce(leads, 0))::integer as leads");
+    expect(migration).toContain("sum(coalesce(reach, 0))::integer as impressions");
   });
 
-  it("writes/upserts into facts_ads_daily idempotently", () => {
+  it("writes/upserts into facts_ads_daily idempotently using the production fact_key key", () => {
     expect(migration).toContain("insert into public.facts_ads_daily");
-    expect(migration).toContain("on conflict (workspace_id, insight_date, platform, campaign_name)");
+    expect(migration).toContain("fact_key");
+    expect(migration).toContain("('imported:' || metric_date::date::text || ':' || md5(coalesce(campaign_name::text, '')))::text as fact_key");
+    expect(migration).toContain("on conflict (workspace_id, fact_key)");
     expect(migration).toContain("do update set");
-    expect(migration).toContain("create unique index if not exists facts_ads_daily_imported_backfill_uniq");
-    expect(migration).toContain("nulls not distinct");
+    expect(migration).not.toContain("facts_ads_daily_imported_backfill_uniq");
+    expect(migration).not.toContain("on conflict (workspace_id, insight_date, platform, campaign_name)");
+  });
+
+  it("inserts explicit campaign level and maps imported reach into production impressions", () => {
+    expect(migration).toContain("'campaign'::text as level");
+    expect(migration).toContain("level,");
+    expect(migration).toContain("impressions,");
+    expect(migration).toContain("impressions = excluded.impressions");
+    expect(migration).toContain("Imported reach was mapped to impressions because imported fallback source does not expose impressions.");
+
+    const insertBlock = migration.match(/insert into public\.facts_ads_daily \([\s\S]*?\)\n {4}select/)?.[0] ?? "";
+    expect(insertBlock).not.toContain("reach");
+    expect(migration).toContain("sum(coalesce(clicks, 0))::integer as clicks");
+    expect(migration).toContain("sum(coalesce(leads, 0))::integer as leads");
+    expect(migration).toContain("sum(coalesce(reach, 0))::integer as impressions");
   });
 
   it("is workspace-scoped and date-range scoped everywhere", () => {
@@ -64,6 +81,8 @@ describe("imported ads facts backfill migration", () => {
     expect(migration).not.toContain("client_secret");
     expect(migration).not.toContain("service_role_key");
     expect(migration).not.toContain("oauth");
+    expect(migration).not.toMatch(/\btruncate\b/i);
+    expect(migration).not.toMatch(/\bdelete\s+from\b/i);
   });
 
   it("keeps build_ai_ads_context signature unchanged and already facts-primary", () => {
