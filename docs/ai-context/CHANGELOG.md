@@ -1,3 +1,15 @@
+## 2026-07-08 — AdsConnectors Real Account Visibility Semantics
+
+### Changed
+
+- Updated AdsConnectors → Ad accounts so Real accounts means discovered real platform accounts, not only active bound account rows.
+- Unbound real accounts are now visible in the main Real accounts section with Needs binding while binding gaps remain read-only diagnostics in collapsed readiness details.
+- Renamed the bound-only Overview KPI from Ready accounts / Готові акаунти to Bound accounts / Привʼязані акаунти.
+
+### Notes
+
+- Frontend-only change. Backend contracts were not changed: no Supabase schema, RLS, RPC contracts, Edge Functions, OAuth, sync behavior, routes, sidebar, Bindings page, Imports page, or write actions changed.
+
 ## 2026-07-07 — AdsConnectors Status Filter Dropdown Alignment
 
 ### Changed

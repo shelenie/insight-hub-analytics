@@ -86,7 +86,7 @@ const copy = {
     overviewTitle: "Операційний огляд",
     overviewSubtitle: "Короткий статус готовності підключень, акаунтів і даних для синхронізації.",
     connectionStatus: "Стан підключень",
-    adAccountsKpi: "Готові акаунти",
+    adAccountsKpi: "Привʼязані акаунти",
     syncData: "Дані синхронізації",
     connectionStatusHelper: "Meta Ads і TikTok Ads підключені. Facebook Lead Ads працює через Meta Ads.",
     adAccountsHelper: "Meta Ads готовий. TikTok підключено без даних. Google Ads очікує API.",
@@ -216,6 +216,9 @@ const copy = {
     archived: "Архівовано",
     testPlaceholder: "Тестова прив’язка",
     realAccount: "Реальний акаунт",
+    bound: "Привʼязаний",
+    needsBinding: "Потрібна привʼязка",
+    unboundRealAccountHelper: "Акаунт існує на рекламній платформі, але ще не привʼязаний до клієнта, проєкту або воронки.",
     bindingScope: "Прив’язка",
     accountStatus: "Статус",
     testAccountNote: "Це тестова прив’язка. Вона не підтверджує реальний акаунт на рекламній платформі.",
@@ -403,7 +406,7 @@ const copy = {
     overviewTitle: "Operational overview",
     overviewSubtitle: "A concise readiness summary for connections, accounts, and synced data.",
     connectionStatus: "Connection status",
-    adAccountsKpi: "Ready accounts",
+    adAccountsKpi: "Bound accounts",
     syncData: "Sync data",
     connectionStatusHelper: "Meta Ads and TikTok Ads are connected. Facebook Lead Ads works through Meta Ads.",
     adAccountsHelper: "Meta Ads is ready. TikTok is connected without data. Google Ads is waiting for API access.",
@@ -533,6 +536,9 @@ const copy = {
     archived: "Archived",
     testPlaceholder: "Test binding",
     realAccount: "Real account",
+    bound: "Bound",
+    needsBinding: "Needs binding",
+    unboundRealAccountHelper: "This account exists on the ad platform but is not bound to a client, project, or funnel yet.",
     bindingScope: "Binding",
     accountStatus: "Status",
     testAccountNote: "This is a test binding. It does not confirm a real ad platform account.",
@@ -1134,7 +1140,7 @@ export default function AdsConnectors() {
               <SectionCard title={ui.adAccountsTitle} description={ui.adAccountsDescription}>
                 <div className="space-y-4">
                   <MultiAccountAdAccountsSummary readiness={query.data?.multiAccountReadiness} ui={ui} fallbackAccountCount={realAccountRows.length} />
-                  <AdAccountsTable data={query.data?.adBindings} ui={ui} timestampDisplayMode={timezoneDisplayMode} timezoneName={timezoneName ?? undefined} />
+                  <AdAccountsTable data={query.data?.adBindings} readiness={query.data?.multiAccountReadiness} ui={ui} timestampDisplayMode={timezoneDisplayMode} timezoneName={timezoneName ?? undefined} />
                 </div>
               </SectionCard>
             </TabsContent>
@@ -1640,16 +1646,16 @@ function ConnectorCard({
   );
 }
 
-function AdAccountsTable({ data, ui, timestampDisplayMode, timezoneName }: { data: OptionalViewData | undefined; ui: Copy } & TimezoneFormattingOptions) {
+function AdAccountsTable({ data, readiness, ui, timestampDisplayMode, timezoneName }: { data: OptionalViewData | undefined; readiness: OptionalJsonData | undefined; ui: Copy } & TimezoneFormattingOptions) {
   const [statusFilter, setStatusFilter] = useState<AdAccountBindingStatusFilter>("active");
 
   if (!data) return <p className="text-sm text-muted-foreground">{ui.dataUnavailable}</p>;
   if (data.unavailableReason) return <UnavailableMessage reason={data.unavailableReason} ui={ui} />;
-  if (data.rows.length === 0) return <p className="text-sm text-muted-foreground">{ui.adAccountsEmpty}</p>;
 
-  const visibleRows = data.rows.filter((row) => matchesAdAccountBindingStatusFilter(row, statusFilter));
-  const realRows = visibleRows.filter((row) => !isTestOrArchivedAccount(row)).sort(sortAdAccountsForDisplay);
-  const testRows = visibleRows.filter(isTestOrArchivedAccount).sort(sortAdAccountsForDisplay);
+  const realPlatformRows = buildRealPlatformAccountRows(data.rows, readiness);
+  const visibleRealRows = realPlatformRows.filter((row) => matchesRealPlatformAccountStatusFilter(row, statusFilter)).sort(sortAdAccountsForDisplay);
+  const visibleBindingRows = data.rows.filter((row) => matchesAdAccountBindingStatusFilter(row, statusFilter));
+  const testRows = visibleBindingRows.filter(isTestOrArchivedAccount).sort(sortAdAccountsForDisplay);
 
   return (
     <div className="space-y-5">
@@ -1658,7 +1664,7 @@ function AdAccountsTable({ data, ui, timestampDisplayMode, timezoneName }: { dat
           <div className="min-w-0">
             <p>{ui.adAccountsAllExplain}</p>
             {testRows.length > 0 ? <p className="mt-1 text-xs">{ui.adAccountsTestExplain}</p> : null}
-            {realRows.length === 0 ? <p className="mt-1 text-xs">{ui.adAccountsNoRealExplain}</p> : null}
+            {visibleRealRows.length === 0 ? <p className="mt-1 text-xs">{ui.adAccountsNoRealExplain}</p> : null}
           </div>
           <div className="flex shrink-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
             <label className="text-xs font-medium text-muted-foreground sm:whitespace-nowrap" htmlFor="ads-connectors-ad-account-status-filter">
@@ -1678,8 +1684,8 @@ function AdAccountsTable({ data, ui, timestampDisplayMode, timezoneName }: { dat
         </div>
       </div>
 
-      <AdAccountSection title={ui.realAccountsSection} emptyText={realRows.length === 0 ? ui.adAccountsNoRealExplain : undefined}>
-        {realRows.length > 0 ? realRows.map((row, index) => <AdAccountCard key={`real-${index}-${String(row.external_account_id ?? row.id ?? "account")}`} row={row} ui={ui} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />) : null}
+      <AdAccountSection title={ui.realAccountsSection} emptyText={visibleRealRows.length === 0 ? ui.adAccountsNoRealExplain : undefined}>
+        {visibleRealRows.length > 0 ? visibleRealRows.map((row, index) => <AdAccountCard key={`real-${index}-${String(row.external_account_id ?? row.id ?? "account")}`} row={row} ui={ui} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />) : null}
       </AdAccountSection>
 
       {testRows.length > 0 ? (
@@ -1709,10 +1715,11 @@ function AdAccountCard({ row, ui, compact = false, timestampDisplayMode, timezon
   const testBinding = hasTestBindingMarker(row);
   const archived = isArchivedAccount(row);
   const testOrArchived = testBinding || archived;
-  const activeRealAccount = !testOrArchived && isActiveAccountBinding(row);
+  const activeRealAccount = !testOrArchived && isRealPlatformAccountBound(row);
+  const unboundRealAccount = !testOrArchived && !activeRealAccount;
   const mappingStatus = activeRealAccount ? ui.statusLabels.confirmed : row.mapping_status;
-  const bindingStatus = archived ? ui.archived : activeRealAccount ? ui.statusLabels.active : row.binding_status;
-  const accountNote = testBinding ? ui.testAccountNote : archived ? ui.archivedAccountNote : ui.realAccountHelper;
+  const bindingStatus = archived ? ui.archived : activeRealAccount ? ui.bound : ui.needsBinding;
+  const accountNote = testBinding ? ui.testAccountNote : archived ? ui.archivedAccountNote : unboundRealAccount ? ui.unboundRealAccountHelper : ui.realAccountHelper;
   const technicalAccountId = row.external_account_id ?? row.ad_account_name;
 
   return (
@@ -1729,9 +1736,17 @@ function AdAccountCard({ row, ui, compact = false, timestampDisplayMode, timezon
         </div>
         <div className="flex flex-wrap justify-end gap-2">
           <StatusPill tone={testOrArchived ? "warning" : "success"}>{testOrArchived ? ui.testPlaceholder : ui.realAccount}</StatusPill>
+          {!testOrArchived ? <StatusPill tone={activeRealAccount ? "success" : "warning"}>{activeRealAccount ? ui.bound : ui.needsBinding}</StatusPill> : null}
           {archived ? <StatusPill tone="muted">{ui.archived}</StatusPill> : null}
         </div>
       </div>
+
+      {!testOrArchived && row.external_account_name ? (
+        <div className="mt-4 rounded-md bg-muted/30 px-3 py-2">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{ui.accountNameLabel}</p>
+          <p className="mt-1 break-words text-sm font-medium text-foreground">{formatValue(row.external_account_name, ui, timestampDisplayMode ?? "utc", timezoneName)}</p>
+        </div>
+      ) : null}
 
       <div className={cn(
         compact ? "mt-3 rounded-md px-2.5 py-1.5" : "mt-4 rounded-md px-3 py-2",
@@ -1750,11 +1765,15 @@ function AdAccountCard({ row, ui, compact = false, timestampDisplayMode, timezon
       <div className={cn("grid lg:grid-cols-2", compact ? "mt-3 gap-3" : "mt-4 gap-4")}>
         <div>
           <p className="mb-2 text-xs font-semibold text-muted-foreground">{ui.bindingSection}</p>
-          <div className={cn("grid sm:grid-cols-3 lg:grid-cols-1", compact ? "gap-1.5" : "gap-2")}>
-            <AccountField label={ui.columnLabels.client_name} value={row.client_name} ui={ui} compact={compact} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
-            <AccountField label={ui.columnLabels.project_name} value={row.project_name} ui={ui} compact={compact} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
-            <AccountField label={ui.columnLabels.funnel_name} value={row.funnel_name} ui={ui} compact={compact} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
-          </div>
+          {unboundRealAccount ? (
+            <p className="rounded-md bg-muted/30 px-3 py-2 text-xs leading-5 text-muted-foreground">{ui.unboundRealAccountHelper}</p>
+          ) : (
+            <div className={cn("grid sm:grid-cols-3 lg:grid-cols-1", compact ? "gap-1.5" : "gap-2")}>
+              <AccountField label={ui.columnLabels.client_name} value={row.client_name} ui={ui} compact={compact} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
+              <AccountField label={ui.columnLabels.project_name} value={row.project_name} ui={ui} compact={compact} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
+              <AccountField label={ui.columnLabels.funnel_name} value={row.funnel_name} ui={ui} compact={compact} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
+            </div>
+          )}
         </div>
         <div>
           <p className="mb-2 text-xs font-semibold text-muted-foreground">{ui.statusSection}</p>
@@ -2255,6 +2274,50 @@ function matchesAdAccountBindingStatusFilter(row: Row, filter: AdAccountBindingS
   return true;
 }
 
+function matchesRealPlatformAccountStatusFilter(row: Row, filter: AdAccountBindingStatusFilter) {
+  if (filter === "active") return !isArchivedOrPausedAccount(row);
+  if (filter === "archived") return isArchivedOrPausedAccount(row);
+  return true;
+}
+
+function buildRealPlatformAccountRows(bindingRows: Row[], readiness: OptionalJsonData | undefined): Row[] {
+  const byAccount = new Map<string, Row>();
+  const addAccount = (row: Row, priority: "binding" | "readiness" | "gap") => {
+    const platform = readString(row, "platform");
+    const externalAccountId = readString(row, "external_account_id") ?? readString(row, "ad_account_id");
+    if (!platform || !externalAccountId) return;
+    const key = `${platform.toLowerCase()}::${externalAccountId}`;
+    const existing = byAccount.get(key);
+    if (existing && isRealPlatformAccountBound(existing) && priority !== "binding") return;
+    if (existing && priority === "gap") return;
+    byAccount.set(key, {
+      ...existing,
+      ...row,
+      platform,
+      external_account_id: externalAccountId,
+      external_account_name: readString(row, "external_account_name") ?? readString(row, "ad_account_name") ?? readString(existing, "external_account_name") ?? readString(existing, "ad_account_name"),
+      binding_status: priority === "binding" ? row.binding_status : (readString(existing, "binding_status") ?? "needs_binding"),
+      mapping_status: priority === "binding" ? row.mapping_status : (readString(existing, "mapping_status") ?? "needs_binding"),
+    });
+  };
+
+  bindingRows
+    .filter((row) => !isTestOrArchivedAccount(row) && isActiveAccountBinding(row))
+    .forEach((row) => addAccount(row, "binding"));
+
+  const payload = readiness?.payload;
+  if (payload && !readiness.unavailableReason) {
+    readArray(payload, "accounts")
+      .filter((row) => !isTestOrArchivedAccount(row))
+      .forEach((row) => addAccount(row, "readiness"));
+    readArray(payload, "binding_gaps")
+      .filter((row) => !hasTestBindingMarker(row))
+      .forEach((row) => addAccount(row, "gap"));
+  }
+
+  return [...byAccount.values()];
+}
+
 function hasTestBindingMarker(row: Row) {
   const values = [
     row.external_account_id,
@@ -2280,6 +2343,10 @@ function hasTestBindingMarker(row: Row) {
 
 function isActiveAccountBinding(row: Row) {
   return String(row.binding_status ?? row.status ?? "").toLowerCase() === "active";
+}
+
+function isRealPlatformAccountBound(row: Row) {
+  return isActiveAccountBinding(row) || Boolean(row.binding_id || row.client_id || row.project_id || row.funnel_id || row.client_name || row.project_name || row.funnel_name);
 }
 
 function sortAdAccountsForDisplay(a: Row, b: Row) {
