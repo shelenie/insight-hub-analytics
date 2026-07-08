@@ -670,6 +670,10 @@ export default function Bindings() {
               </TabsList>
             </div>
 
+            <p className="rounded-md border border-border/70 bg-muted/25 px-3 py-2 text-sm text-muted-foreground">
+              {t("bindingsPageScopeNote")}
+            </p>
+
             {message || (!roleLoading && (!canManage || roleError)) ? (
               <div className="space-y-1">
                 {message ? (
@@ -1315,6 +1319,11 @@ function AdsBindingReadinessSummary({
   }
   const payload = readiness.payload;
   const summary = readObject(payload, "summary");
+  const gapRows = readArray(payload, "binding_gaps");
+  const unboundCount = readNumber(summary, "unbound_accounts") ?? gapRows.length;
+  const platforms = uniquePlatformLabels(gapRows);
+  const platformText = platforms.length ? platforms.join(", ") : "—";
+  const summaryTemplate = unboundCount === 1 ? t("bindingsAdsNeedBindingSummaryOne") : t("bindingsAdsNeedBindingSummary");
   return (
     <div className="mt-4 rounded-md border border-border/70 bg-card/60 p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -1322,39 +1331,22 @@ function AdsBindingReadinessSummary({
           <p className="text-sm font-semibold">
             {t("bindingsAdsReadinessTitle")}
           </p>
+          <p className="mt-1 text-sm text-foreground">
+            {unboundCount > 0
+              ? interpolate(summaryTemplate, {
+                  count: formatCount(unboundCount),
+                  platforms: platformText,
+                })
+              : t("bindingsAdsNoBindingGapsSummary")}
+          </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {t("bindingsAdsReadinessDescription")}
           </p>
         </div>
-        <Badge
-          variant={readinessBadgeVariant(readString(payload, "overall_status"))}
-        >
-          {formatStatus(
-            readString(payload, "overall_status") || "unknown",
-            lang,
-          )}
+        <Badge variant={unboundCount > 0 ? "outline" : "secondary"}>
+          {unboundCount > 0 ? t("bindingsGapNeedsBinding") : formatStatus(readString(payload, "overall_status") || "ok", lang)}
         </Badge>
       </div>
-      <CompactDiagnosticsGrid
-        cards={[
-          {
-            title: t("bindingsReadinessTotalAccounts"),
-            value: formatCount(readNumber(summary, "total_accounts")),
-          },
-          {
-            title: t("bindingsReadinessBoundAccounts"),
-            value: formatCount(readNumber(summary, "bound_accounts")),
-          },
-          {
-            title: t("bindingsReadinessUnboundAccounts"),
-            value: formatCount(readNumber(summary, "unbound_accounts")),
-          },
-          {
-            title: t("bindingsReadinessNeedsAttention"),
-            value: formatCount(readNumber(summary, "needs_attention_count")),
-          },
-        ]}
-      />
     </div>
   );
 }
@@ -1383,23 +1375,50 @@ function BindingGapsPanel({
         </div>
       </div>
       {gapRows.length > 0 ? (
-        <GenericDataTable
-          rows={gapRows}
-          columns={[
-            "gap_type",
-            "platform",
-            "external_account_name",
-            "external_account_id",
-            "message",
-            "next_action",
-          ]}
-        />
+        <div className="space-y-3">
+          {gapRows.map((row, index) => {
+            const platform = formatPlatform(asText(row.platform) || "—");
+            const accountName = asText(row.external_account_name) || "—";
+            const accountId = asText(row.external_account_id) || "—";
+            return (
+              <div key={`${platform}-${accountId}-${index}`} className="rounded-md border border-border/70 bg-background p-3">
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <p className="text-sm font-medium">{platform}</p>
+                    <p className="mt-1 text-sm text-foreground">{accountName}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">{accountId}</p>
+                  </div>
+                  <Badge variant="outline">{t("bindingsGapNeedsBinding")}</Badge>
+                </div>
+                <p className="mt-3 text-sm text-muted-foreground">{t("bindingsGapFriendlyMessage")}</p>
+                <p className="mt-1 text-xs font-medium text-foreground">{t("bindingsGapNextStep")}</p>
+              </div>
+            );
+          })}
+        </div>
       ) : (
         <p className="text-sm text-muted-foreground">
           {t("bindingsNoBindingGaps")}
         </p>
       )}
     </div>
+  );
+}
+
+function uniquePlatformLabels(rows: Row[]) {
+  return Array.from(
+    new Set(
+      rows
+        .map((row) => formatPlatform(asText(row.platform)))
+        .filter((value) => value.length > 0),
+    ),
+  );
+}
+
+function interpolate(template: string, values: Record<string, string | number>) {
+  return Object.entries(values).reduce(
+    (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
+    template,
   );
 }
 
