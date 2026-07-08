@@ -33,6 +33,39 @@ describe("AdsConnectors multi-account readiness UI", () => {
     expect(source).toContain("grid shrink-0 grid-cols-2 gap-2 text-xs sm:grid-cols-4");
   });
 
+
+  it("derives Real accounts from active bindings, readiness accounts, and binding gaps", () => {
+    expect(source).toContain("function buildRealPlatformAccountRows");
+    expect(source).toContain("readArray(payload, \"accounts\")");
+    expect(source).toContain("readArray(payload, \"binding_gaps\")");
+    expect(source).toContain("const key = `${platform.toLowerCase()}::${externalAccountId}`;");
+    expect(source).toContain("if (existing && isRealPlatformAccountBound(existing) && priority !== \"binding\") return;");
+    expect(source).toContain("<AdAccountsTable data={query.data?.adBindings} readiness={query.data?.multiAccountReadiness}");
+  });
+
+  it("renders unbound TikTok-style real platform accounts in Real accounts with Needs binding", () => {
+    expect(source).toContain("external_account_name");
+    expect(source).toContain('needsBinding: "Потрібна привʼязка"');
+    expect(source).toContain('needsBinding: "Needs binding"');
+    expect(source).toContain('unboundRealAccountHelper: "Акаунт існує на рекламній платформі, але ще не привʼязаний до клієнта, проєкту або воронки."');
+    expect(source).toContain('unboundRealAccountHelper: "This account exists on the ad platform but is not bound to a client, project, or funnel yet."');
+    expect(source).toContain("isRealPlatformAccountBound(row)");
+  });
+
+  it("keeps archived placeholder TikTok bindings out of main Real accounts unless tied to a real platform account", () => {
+    expect(source).toContain(".filter((row) => !isTestOrArchivedAccount(row) && isActiveAccountBinding(row))");
+    expect(source).toContain(".filter((row) => !hasTestBindingMarker(row))");
+    expect(source).toContain("testRows = visibleBindingRows.filter(isTestOrArchivedAccount)");
+    expect(source).toContain("{ui.testAccountsSection}");
+  });
+
+  it("renames the bound-only Overview KPI away from Ready accounts", () => {
+    expect(source).toContain('adAccountsKpi: "Привʼязані акаунти"');
+    expect(source).toContain('adAccountsKpi: "Bound accounts"');
+    expect(source).not.toContain('adAccountsKpi: "Готові акаунти"');
+    expect(source).not.toContain('adAccountsKpi: "Ready accounts"');
+  });
+
   it("keeps details collapsed and replaces wide readiness tables with readable cards/lists", () => {
     expect(readinessSummary).toContain("<details");
     expect(readinessSummary).toContain("{ui.readinessDetailsTitle}");

@@ -1,3 +1,9 @@
+## Next Actions — 2026-07-08 AdsConnectors Real Account Visibility Semantics
+
+- Verify `/ads-connectors?tab=ad-accounts` against production readiness data to confirm Google Ads and Meta Ads bound accounts plus unbound Meta Ads / Olena Shepel and TikTok Ads / Insight Hub Test Advertiser all appear in Real accounts.
+- Keep binding gaps read-only diagnostics in AdsConnectors; actual binding changes remain in Bindings / future explicitly designed write actions.
+- Keep backend contracts unchanged unless a separate approved task changes Supabase schema, RLS, RPC contracts, Edge Functions, OAuth, or sync behavior.
+
 ## Next Actions — 2026-07-07 AdsConnectors Status Filter Dropdown Alignment
 
 - Verify `/ads-connectors?tab=ad-accounts` against the Bindings / Mapping → Ad accounts status filter pattern to confirm the dropdown alignment and mobile stacking match expectations.

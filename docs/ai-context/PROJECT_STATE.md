@@ -1,3 +1,7 @@
+## Verified Local Change — 2026-07-08 AdsConnectors Real Account Visibility Semantics
+
+AdsConnectors → Ad accounts now treats Real accounts / Реальні акаунти as discovered real platform ad accounts rather than only active bound binding rows. The frontend derives and dedupes platform accounts from existing binding rows, `multiAccountReadiness.accounts`, and `multiAccountReadiness.binding_gaps`, prioritizing active binding details when present while still rendering unbound real accounts such as the live TikTok Ads advertiser with Needs binding / Потрібна привʼязка. Binding gaps remain read-only diagnostics in collapsed readiness details, and archived/test/service placeholder bindings remain in Test and archived bindings. The Overview bound-only KPI is now labeled Bound accounts / Привʼязані акаунти instead of Ready accounts / Готові акаунти. Backend contracts were not changed: no Supabase schema, RLS, RPC contracts, Edge Functions, OAuth, sync behavior, routes, sidebar, Bindings page, Imports page, or write actions changed.
+
 ## Verified Local Change — 2026-07-07 AdsConnectors Status Filter Dropdown Alignment
 
 AdsConnectors → Ad accounts now uses the same compact inline status Select/dropdown pattern as Bindings / Mapping → Ad accounts. The visible label remains localized as “Статус:” / “Status:”, the existing active/archived/all filtering logic and values are preserved, and the segmented button group was removed. Backend contracts were not changed.
