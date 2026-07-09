@@ -1,3 +1,15 @@
+## 2026-07-09 — Conservative AI Ads Live API Interpretation
+
+### Fixed
+
+- Made `ads_context_status.source_interpretation.live_api_health_claim_allowed` and `uses_live_api_data` conservative so fresh `facts_ads_daily` rows alone do not imply live ad API health.
+- Required production-ready/readiness-validated API raw data, non-test/non-empty account state, non-`other` platform filter, and facts not interpreted as imported history before allowing live API health claims.
+- Expanded imported-data interpretation to include unified fallback, `platform=other`, selected imported-history facts, and `connected_with_imported_fallback`.
+
+### Notes
+
+- Backend safety fix only; no RPC signature, returned-field removal, nested diagnostics shape, frontend pages/routes/sidebar, RLS, table schemas, or request payloads changed.
+
 ## 2026-07-09 — Normalized AI Ads Context Guidance
 
 ### Changed

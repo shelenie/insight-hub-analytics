@@ -14,6 +14,7 @@ as $$
 declare
   v_generated_at timestamptz := now();
   v_fact_rows bigint := 0;
+  v_other_fact_rows bigint := 0;
   v_unified_rows bigint := 0;
   v_first_available date;
   v_last_available date;
@@ -40,6 +41,11 @@ declare
   v_data_availability_status text := 'no_ads_data_available';
   v_source_readiness_status text;
   v_likely_test_or_empty_accounts boolean := false;
+  v_production_validation_possible boolean := false;
+  v_has_api_raw_rows boolean := false;
+  v_selected_facts_are_imported_history boolean := false;
+  v_uses_imported_data boolean := false;
+  v_live_api_health_claim_allowed boolean := false;
   v_can_analyze_available_period boolean := false;
   v_can_analyze_last_7_days boolean := false;
 begin
@@ -54,6 +60,15 @@ begin
                and ($2 is null or insight_date >= $2)
                and ($3 is null or insight_date <= $3)' || v_platform_clause
       into v_fact_rows, v_first_available, v_last_available
+      using p_workspace_id, p_date_from, p_date_to, p_platform;
+
+    execute 'select count(*)
+             from public.facts_ads_daily
+             where workspace_id = $1
+               and platform = ''other''
+               and ($2 is null or insight_date >= $2)
+               and ($3 is null or insight_date <= $3)' || v_platform_clause
+      into v_other_fact_rows
       using p_workspace_id, p_date_from, p_date_to, p_platform;
   end if;
 
@@ -152,6 +167,20 @@ begin
   v_source_readiness_status := coalesce(v_pipeline_diagnostics->'source_readiness'->>'overall_status', v_pipeline_diagnostics->'source_readiness'->>'status', v_pipeline_diagnostics->>'source_readiness_status');
   v_likely_test_or_empty_accounts := coalesce(v_pipeline_diagnostics->'source_readiness'->>'likely_test_or_empty_accounts', 'false')::boolean
     or coalesce(v_pipeline_diagnostics->'source_readiness'->>'production_validation_possible', 'true')::boolean = false;
+  v_production_validation_possible := coalesce(v_pipeline_diagnostics->'source_readiness'->>'production_validation_possible', 'false')::boolean;
+  v_has_api_raw_rows := coalesce(v_pipeline_diagnostics->'source_readiness'->>'has_api_raw_rows', 'false')::boolean;
+  v_selected_facts_are_imported_history := v_fact_rows > 0 and v_other_fact_rows = v_fact_rows;
+  v_uses_imported_data := v_source_layer_used = 'v_unified_ads_performance_daily'
+    or lower(coalesce(p_platform, '')) = 'other'
+    or v_selected_facts_are_imported_history
+    or coalesce(v_source_readiness_status, '') = 'connected_with_imported_fallback';
+  v_live_api_health_claim_allowed := v_source_layer_used = 'facts_ads_daily'
+    and v_fact_rows > 0
+    and coalesce(v_is_fresh, false)
+    and (v_source_readiness_status = 'production_data_ready' or (v_production_validation_possible and v_has_api_raw_rows))
+    and not v_likely_test_or_empty_accounts
+    and lower(coalesce(p_platform, '')) <> 'other'
+    and not v_selected_facts_are_imported_history;
   v_can_analyze_available_period := v_first_available is not null and v_last_available is not null and (v_fact_rows > 0 or v_unified_rows > 0);
   v_can_analyze_last_7_days := v_can_analyze_available_period and coalesce(v_is_fresh, false);
 
@@ -175,10 +204,11 @@ begin
     ),
     'source_interpretation', jsonb_build_object(
       'source_layer_used', v_source_layer_used,
-      'uses_imported_data', v_source_layer_used = 'v_unified_ads_performance_daily' or (v_source_layer_used = 'facts_ads_daily' and v_fact_rows > 0 and coalesce(v_is_fresh, false) = false),
-      'uses_live_api_data', v_source_layer_used = 'facts_ads_daily' and v_fact_rows > 0 and coalesce(v_is_fresh, false),
+      'uses_imported_data', v_uses_imported_data,
+      'uses_live_api_data', v_live_api_health_claim_allowed,
       'platform_other_means_imported_history', true,
-      'live_api_health_claim_allowed', v_source_layer_used = 'facts_ads_daily' and v_fact_rows > 0 and coalesce(v_is_fresh, false),
+      'selected_facts_are_imported_history', v_selected_facts_are_imported_history,
+      'live_api_health_claim_allowed', v_live_api_health_claim_allowed,
       'platform_semantics', jsonb_build_object(
         'other', 'platform=other can represent imported historical ads facts; it is not a live ad network and should be described to users as imported historical ads data.'
       )

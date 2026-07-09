@@ -36,6 +36,28 @@ describe("normalized AI ads context guidance", () => {
     expect(migrationSource).toContain("it is not a live ad network");
   });
 
+  it("keeps live API health claims conservative and not based only on fresh facts", () => {
+    expect(migrationSource).toContain("v_live_api_health_claim_allowed := v_source_layer_used = 'facts_ads_daily'");
+    expect(migrationSource).toContain("and v_fact_rows > 0");
+    expect(migrationSource).toContain("and coalesce(v_is_fresh, false)");
+    expect(migrationSource).toContain("v_source_readiness_status = 'production_data_ready'");
+    expect(migrationSource).toContain("v_production_validation_possible and v_has_api_raw_rows");
+    expect(migrationSource).toContain("and not v_likely_test_or_empty_accounts");
+    expect(migrationSource).toContain("and lower(coalesce(p_platform, '')) <> 'other'");
+    expect(migrationSource).toContain("and not v_selected_facts_are_imported_history");
+    expect(migrationSource).toContain("'live_api_health_claim_allowed', v_live_api_health_claim_allowed");
+    expect(migrationSource).not.toContain("'live_api_health_claim_allowed', v_source_layer_used = 'facts_ads_daily' and v_fact_rows > 0 and coalesce(v_is_fresh, false)");
+  });
+
+  it("treats platform other and imported fallback as imported data", () => {
+    expect(migrationSource).toContain("v_uses_imported_data := v_source_layer_used = 'v_unified_ads_performance_daily'");
+    expect(migrationSource).toContain("or lower(coalesce(p_platform, '')) = 'other'");
+    expect(migrationSource).toContain("or v_selected_facts_are_imported_history");
+    expect(migrationSource).toContain("or coalesce(v_source_readiness_status, '') = 'connected_with_imported_fallback'");
+    expect(migrationSource).toContain("'uses_imported_data', v_uses_imported_data");
+    expect(migrationSource).toContain("'selected_facts_are_imported_history', v_selected_facts_are_imported_history");
+  });
+
   it("hardens the ads prompt around status, historical data, live API claims, and bindings", () => {
     expect(edgeFunctionSource).toContain("check context.ads_context_status before any campaign performance analysis");
     expect(edgeFunctionSource).toContain("Do not say 'no data' when data_freshness.fact_ads_rows > 0");

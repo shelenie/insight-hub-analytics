@@ -1,3 +1,8 @@
+## Next Action — After Conservative AI Ads Live API Interpretation
+
+- After deployment, verify an AI ads context with fresh imported `platform=other` facts keeps `live_api_health_claim_allowed = false` and describes the data as imported historical ads facts.
+- Verify a real live API context only allows live API health claims when source readiness is production-ready or production validation is possible with API raw rows.
+
 ## Next Action — After Normalized AI Ads Context Guidance
 
 - Deploy the new `normalize_ai_ads_context_guidance` Supabase migration and verify `build_ai_ads_context` returns `ads_context_status`, top-level `multi_account_readiness`, and top-level `binding_gaps` while preserving nested `pipeline_diagnostics`.
