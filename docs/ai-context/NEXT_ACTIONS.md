@@ -1,3 +1,10 @@
+## Updated — 2026-07-09 AdsConnectors Diagnostics Compact Admin Overview
+
+- Diagnostics normal view has been polished into a compact admin overview: Ads data context is a full-width metric summary, while Daily snapshots and Anomaly candidates use responsive two-column cards with three-row previews.
+- Raw diagnostics remain in technical details only.
+- Imported/`other` platform values are displayed with friendly labels in normal UI.
+- Backend contracts were not changed; keep any future diagnostics work frontend-only unless explicitly approved.
+
 ## Updated — 2026-07-09 AdsConnectors Diagnostics UI Polish and Binding Terminology
 
 1. Verify `/ads-connectors?tab=diagnostics` in desktop light mode and dark mode for Ukrainian and English to confirm cards/lists are readable and normal UI has no horizontal raw-table scroll.
