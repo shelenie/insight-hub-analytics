@@ -1,3 +1,16 @@
+## 2026-07-09 — Normalized AI Ads Context Guidance
+
+### Changed
+
+- Added normalized `ads_context_status` to `build_ai_ads_context` for data availability, analysis-window, source-interpretation, readiness, binding-gap, and required-mention guidance.
+- Promoted `multi_account_readiness` and `binding_gaps` to top-level AI ads context fields while preserving the existing nested `pipeline_diagnostics.multi_account_readiness` diagnostics contract.
+- Added explicit platform semantics that `platform=other` represents imported historical ads facts, not a live ad network.
+- Hardened the `ai-helper-run` ads prompt so answers must check data availability/freshness/source readiness/binding status before analysis, avoid unsafe "no data" wording when historical/imported/fallback data exists, and avoid live API health claims unless allowed.
+
+### Notes
+
+- Backend AI context and Edge Function prompt only. No frontend pages, AdsConnectors, Bindings, routes, sidebar, UI components, request payload shape, RPC signature, nested diagnostics shape, RLS policies, or table schemas were changed.
+
 ## 2026-07-09 — AdsConnectors Diagnostics Compact Admin Overview
 
 ### Changed

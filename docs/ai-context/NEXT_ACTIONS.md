@@ -1,3 +1,9 @@
+## Next Action — After Normalized AI Ads Context Guidance
+
+- Deploy the new `normalize_ai_ads_context_guidance` Supabase migration and verify `build_ai_ads_context` returns `ads_context_status`, top-level `multi_account_readiness`, and top-level `binding_gaps` while preserving nested `pipeline_diagnostics`.
+- Run an AI Assistant ads prompt against a workspace with imported historical ads facts and confirm the answer mentions available period, source layer, freshness/last-7-days eligibility, source readiness, and binding gaps before analysis.
+- Continue to preserve the existing diagnostics contract; future improvements should be additive and should not change frontend routes/sidebar or the existing request payload shape unless explicitly approved.
+
 ## Updated — 2026-07-09 AdsConnectors Diagnostics Compact Admin Overview
 
 - Diagnostics normal view has been polished into a compact admin overview: Ads data context is a full-width metric summary, while Daily snapshots and Anomaly candidates use responsive two-column cards with three-row previews.
