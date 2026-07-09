@@ -28,6 +28,7 @@ import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { DeveloperDetails } from "@/components/common/DeveloperDetails";
+import { OPERATIONAL_SUBNAV_TRIGGER_CLASS } from "@/components/common/navigationStyles";
 import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
 import { useTimezonePreference } from "@/hooks/useTimezonePreference";
@@ -45,8 +46,6 @@ type ActiveConnectionDetails = { id: string; displayName: string | null; lastCon
 type SyncRunState = { loading: boolean; error: string | null; success: string | null; details: Record<string, unknown> | null };
 type AdAccountBindingStatusFilter = "active" | "archived" | "all";
 
-const ADS_SUBNAV_TRIGGER_CLASS =
-  "h-10 whitespace-nowrap rounded-lg border border-transparent px-4 text-sm font-semibold transition-all hover:border-primary/30 hover:bg-primary/10 hover:text-primary data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm";
 type Tone = "success" | "warning" | "muted";
 type PlatformConnectionState = { label: string; currentState?: string; note?: string; tone: Tone; details?: string[]; availableItems?: readonly string[]; todoItems?: readonly string[]; activeConnection?: ActiveConnectionDetails | null };
 type PlatformSyncInsight = { hasDataRows: boolean; hasVerifiedSync: boolean; latestFailure: string | null; hasRealAccount: boolean };
@@ -1002,12 +1001,12 @@ export default function AdsConnectors() {
           <Tabs value={activeTab} onValueChange={selectTab} className="space-y-2">
             <div className="overflow-x-auto rounded-xl border border-border/70 bg-muted/30 px-2 py-2 shadow-sm">
               <TabsList className="inline-flex h-auto w-max min-w-full items-center justify-start gap-1.5 bg-transparent p-0 text-muted-foreground">
-                <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="overview">{ui.tabs.overview}</TabsTrigger>
-                <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="connections">{ui.tabs.connections}</TabsTrigger>
-                <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="ad-accounts">{ui.tabs.adAccounts}</TabsTrigger>
-                <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="sync">{ui.tabs.sync}</TabsTrigger>
-                <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="facebook-lead-ads">{ui.tabs.facebookLeadAds}</TabsTrigger>
-                <TabsTrigger className={ADS_SUBNAV_TRIGGER_CLASS} value="diagnostics">{ui.tabs.diagnostics}</TabsTrigger>
+                <TabsTrigger className={OPERATIONAL_SUBNAV_TRIGGER_CLASS} value="overview">{ui.tabs.overview}</TabsTrigger>
+                <TabsTrigger className={OPERATIONAL_SUBNAV_TRIGGER_CLASS} value="connections">{ui.tabs.connections}</TabsTrigger>
+                <TabsTrigger className={OPERATIONAL_SUBNAV_TRIGGER_CLASS} value="ad-accounts">{ui.tabs.adAccounts}</TabsTrigger>
+                <TabsTrigger className={OPERATIONAL_SUBNAV_TRIGGER_CLASS} value="sync">{ui.tabs.sync}</TabsTrigger>
+                <TabsTrigger className={OPERATIONAL_SUBNAV_TRIGGER_CLASS} value="facebook-lead-ads">{ui.tabs.facebookLeadAds}</TabsTrigger>
+                <TabsTrigger className={OPERATIONAL_SUBNAV_TRIGGER_CLASS} value="diagnostics">{ui.tabs.diagnostics}</TabsTrigger>
               </TabsList>
             </div>
 
