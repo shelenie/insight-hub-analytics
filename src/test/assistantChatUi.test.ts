@@ -49,11 +49,11 @@ describe("AI Assistant chat UI", () => {
 
     expect(source).not.toContain("xl:grid-cols-[minmax(0,1fr)_20rem]");
   });
-  it("uses advanced analysis mode label and marketing-oriented order", () => {
+  it("keeps analysis mode labels for hidden developer controls and marketing-oriented order", () => {
     expect(translations.assistantContextLabel.uk).toBe("Режим аналізу");
     expect(translations.assistantContextLabel.en).toBe("Analysis mode");
     expect(translations.assistantAdvancedContext.uk).toBe("Змінити контекст");
-    expect(translations.assistantManualOverride.en).toBe("Manual testing override");
+    expect(translations.assistantManualOverride.uk).toBe("Ручний режим лише для тестування");
     const optionsBlock = source.slice(source.indexOf("const OPTIONS = ["), source.indexOf("] as const satisfies readonly ContextOption[];"));
     const optionLabels = Array.from(optionsBlock.matchAll(/labelKey: "([^"]+)"/g)).map((match) => match[1]);
     expect(optionLabels.slice(0, 10)).toEqual([
@@ -86,8 +86,11 @@ describe("AI Assistant chat UI", () => {
     expect(source).toContain('focus-within:ring-2 focus-within:ring-primary/20');
     expect(source).toContain('Math.min(textarea.scrollHeight, 176)');
     expect(source).toContain('size="icon"');
-    expect(source).toContain('<summary className="cursor-pointer list-none');
-    expect(source).toContain('disabled={!manualOverrideEnabled}');
+    expect(source).toContain('className="h-9 w-9 shrink-0 rounded-full"');
+    expect(source).toContain('rounded-2xl border border-border/40 bg-card/95');
+    expect(source).not.toContain('rounded-[1.75rem]');
+    expect(source).not.toContain('<summary className="cursor-pointer list-none');
+    expect(source).not.toContain('disabled={!manualOverrideEnabled}');
   });
 
   it("uses one centered chat column for messages, loading, errors, composer, and safety note", () => {
@@ -97,6 +100,9 @@ describe("AI Assistant chat UI", () => {
     expect(source).toContain('<div className={CHAT_COLUMN_CLASS}><FriendlyError');
     expect(source).toContain('return <div className="flex w-full justify-start"><div className="w-full rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm">');
     expect(source).toContain('return <div className="flex w-full justify-end"><div className="max-w-[82%] rounded-2xl rounded-tr-sm bg-primary');
+    expect(source).toContain('inline-flex rounded-full bg-muted/70 px-2.5 py-1 text-[11px] text-muted-foreground');
+    expect(source).toContain('mt-2 text-[10px] text-primary-foreground/65');
+    expect(source).not.toContain('<p className="mb-1 text-[11px] opacity-75">{message.contextLabel}</p><p className="whitespace-pre-wrap">{message.text}</p>');
     expect(source).not.toContain('items-start gap-3');
     expect(source).not.toContain('sm:max-w-[82%]');
     expect(source).not.toContain('max-w-full rounded-2xl px-4 py-3 text-sm sm:max-w-[82%]');
@@ -111,7 +117,7 @@ describe("AI Assistant chat UI", () => {
     expect(source).toContain('setPrompt("");');
     expect(source).toContain('run.reset();');
     expect(source).toContain('const showNewChat = messages.length > 0 || prompt.trim().length > 0 || Boolean(run.error);');
-    expect(source).toContain('onClick={resetChat}>{t("assistantNewChat")}');
+    expect(source).toContain('actions={showNewChat ? <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={resetChat}>{t("assistantNewChat")}</Button> : null}');
   });
 
   it("keeps starter prompts below the composer and hides them after interaction", () => {
@@ -148,16 +154,19 @@ describe("AI Assistant smart routing and answer UX", () => {
     expect(source).toContain("ads_anomaly_explanation");
   });
 
-  it("keeps manual override only as an advanced control", () => {
+  it("hides manual context override from normal composer UI", () => {
     expect(source).toContain("if (manualOverrideEnabled) return selectedOption");
-    expect(source).toContain("assistantAdvancedContext");
-    expect(source).toContain("assistantManualOverride");
-    expect(source).toContain("disabled={!manualOverrideEnabled}");
+    expect(source).toContain("const SHOW_ASSISTANT_DEV_CONTROLS = false");
+    expect(source).not.toContain("assistantAdvancedContext");
+    expect(source).not.toContain("assistantManualOverride");
+    expect(source).not.toContain("disabled={!manualOverrideEnabled}");
+    expect(source).not.toContain("SelectTrigger");
   });
 
   it("shows resolved context badges and copy actions for assistant answers", () => {
     expect(source).toContain("assistantContextPrefix");
     expect(source).toContain("assistantAutoContextPrefix");
+    expect(translations.assistantAutoContextPrefix.uk).toBe("Автоконтекст");
     expect(source).toContain("navigator.clipboard.writeText(message.text)");
     expect(source).toContain("assistantCopy");
     expect(source).toContain("assistantCopied");
