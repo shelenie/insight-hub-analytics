@@ -1,3 +1,7 @@
+## Verified Local Change — 2026-07-09 AdsConnectors Diagnostics UI Polish and Binding Terminology
+
+AdsConnectors now restores binding terminology to Bound / Unbound / Partially bound / Needs binding in English and Привʼязано / Без привʼязки / Частково привʼязано / Потрібна привʼязка in Ukrainian. The Diagnostics tab normal view was redesigned from cramped raw tables into readable admin-first cards/lists: an explanation card, compact ads data context summary, daily context list, and anomaly candidate list with localized labels. Raw diagnostics and wide technical tables remain available only inside collapsed DeveloperDetails / technical details. Frontend only: no Supabase schema, RLS, RPC contracts, Edge Functions, OAuth, sync behavior, routes, sidebar, backend values, data fetching, or write actions changed.
+
 ## Verified Local Follow-up — 2026-07-09 AdsConnectors Shared Operational Notice Completion
 
 AdsConnectors no longer keeps page-local StatusPill, WarningNotice, or InfoNotice implementations for reusable operational status UI. Remaining warning/info/success/muted notices, badges, status dots, and attention surfaces now use the shared operational status layer, including the new info surface tone. Bindings behavior remains unchanged, including gap cards, Bind account / Привʼязати акаунт, drawer prefill, warning summary, and manual bind flow. Frontend only: no Supabase schema, RLS, RPC contracts, Edge Functions, OAuth, sync behavior, routes, sidebar, backend values, data fetching, or write actions changed.

@@ -1,3 +1,9 @@
+## Updated — 2026-07-09 AdsConnectors Diagnostics UI Polish and Binding Terminology
+
+1. Verify `/ads-connectors?tab=diagnostics` in desktop light mode and dark mode for Ukrainian and English to confirm cards/lists are readable and normal UI has no horizontal raw-table scroll.
+2. Confirm raw diagnostics remain available only inside technical details and that admin-facing copy uses Bound / Partially bound / Needs binding terminology.
+3. Keep backend contracts unchanged; this polish did not change Supabase schema, RLS, RPC contracts, Edge Functions, OAuth, sync behavior, routes, sidebar, backend values, data fetching, or write actions.
+
 ## Updated — 2026-07-09 AdsConnectors Shared Operational Notice Completion
 
 1. Verify `/ads-connectors` warning/info/success/muted operational notices and badges still match the previous visible behavior after deployment.

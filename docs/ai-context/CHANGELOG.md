@@ -1,3 +1,16 @@
+## 2026-07-09 — AdsConnectors Diagnostics UI Polish and Binding Terminology
+
+### Changed
+
+- Standardized AdsConnectors binding terminology back to Bound / Unbound / Partially bound / Needs binding and Ukrainian equivalents, including `partially_bound` display copy.
+- Polished AdsConnectors → Diagnostics from raw side-by-side tables into admin-readable cards/lists for ads data context, daily context, and anomaly candidates.
+- Kept raw diagnostics and full technical payloads behind collapsed DeveloperDetails / technical details.
+- Localized diagnostics labels for Ukrainian and English normal UI.
+
+### Notes
+
+- Backend contracts were not changed: no Supabase schema, RLS, RPC contracts, Edge Functions, OAuth, sync behavior, routes, sidebar, data fetching, backend values, or write actions changed.
+
 ## 2026-07-09 — AdsConnectors Shared Operational Notice Completion
 
 ### Changed
