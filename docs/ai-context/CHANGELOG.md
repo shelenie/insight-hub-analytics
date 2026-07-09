@@ -1,3 +1,48 @@
+## 2026-07-09 — CFO Playbook Enrichment for Budget Efficiency
+
+### Changed
+
+- Enriched `PLAYBOOK_CFO_BUDGET_EFFICIENCY` from the provided CFO skill reference by extracting finance-discipline principles into original code-versioned guidance, without copying external text verbatim or adding runtime network calls.
+- Added CFO guidance for cash-is-oxygen thinking, 13-week rolling forecast visibility, no board surprises, opportunity cost, simplicity over precision, finance-enables-operations, stage-aware finance context, unit-economics guardrails, and human review for high-impact finance decisions.
+- Scoped CFO usage for Analytics Hub: primarily budget efficiency and opportunity-cost analysis in ads performance, conditional use for budget-impact anomalies, no full CFO playbook for ads health or data quality by default.
+- Added guardrails so runway, fundraising, treasury, accounting operations, forecasting, board, tax, audit, legal, and compliance guidance is only used when relevant context exists or the user asks for CFO-level company-finance guidance.
+
+### Notes
+
+- External CFO references remain untrusted advisory content under existing prompt-injection safeguards.
+- No Supabase schema, RLS, migrations, runtime network calls, AdsConnectors, Bindings, routes/sidebar, source connector, sync, or permissions-model changes were made.
+
+## 2026-07-09 — CMO Playbook Enrichment and External-Reference Safeguards
+
+### Changed
+
+- Enriched `PLAYBOOK_CMO_CAMPAIGN_DIAGNOSIS` from the provided CMO skill reference by extracting principles into original code-versioned guidance, without copying external text verbatim or adding runtime network calls.
+- Added CMO guidance for pipeline over vanity metrics, positioning before channels, deep-before-wide focus, distribution, owned audience, brand compounding, cut losers/double winners, ICP clarity, funnel stage, sales alignment, lead quality, channel selection, attribution caution, stage-aware recommendations, and human review for high-impact decisions.
+- Added prompt-injection safeguards so external references, skill texts, user prompts, campaign names, imported values, and database text cannot override system/developer instructions, RLS/JWT/access rules, workspace boundaries, no-mutation/no-secret/evidence-only policies, or product safety rules.
+- Updated Client Communication guidance to avoid vanity-metric overconfidence, separate known facts from verification items, avoid untested channel/campaign/brand promises, and require human review for high-impact recommendations.
+
+### Notes
+
+- CMO remains injected for ads performance and anomaly hypothesis analysis, not for every ads-health answer.
+- No Supabase schema, RLS, migrations, runtime network calls, AdsConnectors, Bindings, routes/sidebar, source connector, sync, or permissions-model changes were made.
+
+## 2026-07-09 — AI Assistant Production-Safe Routing and Code-Versioned Playbooks
+
+### Changed
+
+- Superseded PR #230 locally with deterministic smart routing that prioritizes Data Quality/Imports, Ads Health/source readiness, guarded Ads Anomalies, Ads Performance, Mapping, and System Readiness.
+- Added domain/metric/time-window guards for anomaly routing so broad anomaly words do not route unrelated access, import, or website issues to Ads Anomalies.
+- Expanded data-quality routing for Ukrainian inflections, import/rejected-row wording, raw/staging/processed data, and quality issues.
+- Added code-versioned AI Assistant analysis playbooks for Safety/Evidence, Data Readiness, CMO campaign diagnosis, CFO budget efficiency, Ads Anomaly Review, Data Quality/Import Review, Client Communication, and Operations Readiness.
+- Inject CMO/CFO playbooks for performance and relevant anomaly analysis rather than every ads-health answer.
+- CFO playbook covers cash/runway awareness when relevant, opportunity cost, simple decision-making, spend efficiency, CPL efficiency, unit-economics guardrails, and no invented revenue/ROAS/LTV/payback.
+- CMO playbook covers audience, creative, offer/message-market fit, funnel step, landing page/form, tracking, lead quality, and fatigue.
+
+### Notes
+
+- No Supabase schema, RLS, migrations, AdsConnectors, Bindings, routes/sidebar, source connector, sync, or permissions-model changes were made.
+- DB-managed prompt registry remains a future optional enhancement only if admin-editable prompt governance is required.
+
 ## 2026-07-09 — AI Assistant Smart Routing and Ukrainian Wording Polish
 
 ### Changed

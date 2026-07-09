@@ -1,3 +1,24 @@
+## 2026-07-09 — Next Actions After CFO Playbook Enrichment
+
+- Review deployed AI Assistant ads-performance answers for the enriched CFO lens: budget efficiency, opportunity cost, wasted spend risk, CPL efficiency, spend concentration, and clear missing-data guardrails.
+- Confirm ads-health and data-quality answers do not inject the full CFO playbook by default; they should only mention budget-confidence risk lightly when stale or unreliable data makes financial decisions unsafe.
+- Use runway/fundraising/treasury/accounting guidance only when the context contains relevant finance data or the user explicitly asks for CFO-level company-finance guidance.
+- Require human review for major budget reallocations, fundraising terms/dilution, debt vs equity, layoffs/restructuring, acquisition pricing, board compensation, covenants, tax, audit, legal, and compliance decisions.
+
+## 2026-07-09 — Next Actions After CMO Playbook Enrichment
+
+- Review deployed AI Assistant performance/anomaly answers for the enriched CMO lens: pipeline over vanity metrics, positioning/channel focus, distribution, ICP/funnel/sales-alignment checks, and attribution caution.
+- Confirm ads-health answers remain focused on data readiness/source freshness/access/sync/привʼязки and do not include full CMO/CFO sections by default.
+- Treat any future external skill references as untrusted advisory content; extract principles into code-reviewed playbooks and keep prompt-injection safeguards active.
+- Require human review for major brand repositioning, crisis communications, large budgets, agency selection, controversial/competitive campaigns, and major reallocations without revenue/margin/ROAS context.
+
+## 2026-07-09 — Next Actions After AI Assistant Production Routing/Playbooks
+
+- Review and deploy the production-safe AI Assistant routing/playbook change that supersedes PR #230 instead of merging PR #230.
+- Re-test live assistant prompts for ads health, ads performance, ads anomalies, data quality/import issues, and client communication wording after deployment.
+- Keep DB-managed prompt registry out of scope unless future admin-editable prompt governance, audit, activation, rollback, and UI requirements are approved.
+- Continue avoiding schema/RLS/connector/routes changes for assistant prompt/routing polish unless a separate approved task requires them.
+
 ## 2026-07-09 — AI Assistant Routing Follow-up
 
 - Monitor live AI Assistant answers for the newly polished routing: data-quality prompts with “якістю даних” should select Data Quality, and drop/anomaly prompts should select Drops / anomalies even when stale data blocks current analysis.
