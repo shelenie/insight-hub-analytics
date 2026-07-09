@@ -28,6 +28,8 @@ import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { DeveloperDetails } from "@/components/common/DeveloperDetails";
+import { OperationalNotice, OperationalStatusDot, OperationalStatusSurface, StatusBadge } from "@/components/common/OperationalStatus";
+import { operationalStatusTextClasses } from "@/components/common/statusStyles";
 import { OPERATIONAL_SUBNAV_TRIGGER_CLASS } from "@/components/common/navigationStyles";
 import { useI18n } from "@/i18n/I18nProvider";
 import { cn } from "@/lib/utils";
@@ -974,7 +976,7 @@ export default function AdsConnectors() {
           {!roleLoading && !canManage ? <p className="text-xs text-muted-foreground">{ui.noManageAccess}</p> : null}
           {!roleLoading && roleError ? <p className="text-xs text-muted-foreground">{ui.roleUnavailable}</p> : null}
           {isMetaOauthSuccess && !oauthSuccessDismissed ? (
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-100">
+            <OperationalNotice tone="success" className="rounded-lg p-4 text-sm">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
                   <p className="font-semibold">{ui.oauthSuccessTitle}</p>
@@ -985,10 +987,10 @@ export default function AdsConnectors() {
                   <Button type="button" size="sm" variant="ghost" onClick={() => dismissOauthBanner("success")}>{ui.dismiss}</Button>
                 </div>
               </div>
-            </div>
+            </OperationalNotice>
           ) : null}
           {isMetaOauthError && !oauthErrorDismissed ? (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+            <OperationalNotice tone="warning" className="rounded-lg p-4 text-sm">
               <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
                   <p className="font-semibold">{ui.oauthErrorTitle}</p>
@@ -996,7 +998,7 @@ export default function AdsConnectors() {
                 </div>
                 <Button type="button" size="sm" variant="ghost" onClick={() => dismissOauthBanner("error")}>{ui.dismiss}</Button>
               </div>
-            </div>
+            </OperationalNotice>
           ) : null}
           <Tabs value={activeTab} onValueChange={selectTab} className="space-y-2">
             <div className="overflow-x-auto rounded-xl border border-border/70 bg-muted/30 px-2 py-2 shadow-sm">
@@ -1030,12 +1032,11 @@ export default function AdsConnectors() {
                   </div>
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-2">
-                  <div className={cn(
-                    "rounded-lg border p-4 text-sm",
-                    attentionItems.length > 0
-                      ? "border-amber-200 bg-amber-50/70 text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/20 dark:text-amber-100"
-                      : "border-emerald-200 bg-emerald-50/70 text-emerald-950 dark:border-emerald-900/60 dark:bg-emerald-950/20 dark:text-emerald-100",
-                  )}>
+                  <OperationalStatusSurface
+                    tone={attentionItems.length > 0 ? "warning" : "success"}
+                    withTextTone
+                    className="rounded-lg p-4 text-sm"
+                  >
                     <p className="font-semibold">{ui.needsAttention}</p>
                     {attentionItems.length > 0 ? (
                       <ul className="mt-2 list-disc space-y-1 pl-5 text-xs leading-5">
@@ -1044,7 +1045,7 @@ export default function AdsConnectors() {
                     ) : (
                       <p className="mt-2 text-xs leading-5">{ui.noCriticalActions}</p>
                     )}
-                  </div>
+                  </OperationalStatusSurface>
                   <div className="rounded-lg border border-border/70 bg-background/60 p-4 text-sm">
                     <p className="font-semibold">{ui.nextAction}</p>
                     <p className="mt-2 text-xs leading-5 text-muted-foreground">{getReadinessNextAction(query.data?.multiAccountReadiness, ui)}</p>
@@ -1116,7 +1117,7 @@ export default function AdsConnectors() {
                         {activeMetaConnection ? <p className="mt-1 text-muted-foreground">{ui.facebookLeadVerifiedNote}</p> : null}
                         {activeMetaConnection ? <p className="mt-1 text-muted-foreground">{ui.facebookLeadFormsMissingNote}</p> : null}
                       </div>
-                      <StatusPill tone={activeMetaConnection ? "warning" : "muted"}>{ui.stateManagedThroughMeta}</StatusPill>
+                      <StatusBadge tone={activeMetaConnection ? "warning" : "muted"}>{ui.stateManagedThroughMeta}</StatusBadge>
                     </div>
                     <div className="mt-3 grid gap-2 text-xs text-muted-foreground">
                       <p><span className="font-medium text-foreground">{ui.currentState}:</span> {activeMetaConnection ? ui.metaConnectedState : ui.facebookLeadAvailableAfterMeta}</p>
@@ -1147,7 +1148,7 @@ export default function AdsConnectors() {
             <TabsContent value="sync" className="mt-1">
               <SectionCard title={ui.scheduledTitle} description={ui.scheduledDescription}>
                 <div className="space-y-3">
-                  {hasTestArchivedOrUnverifiedAccounts ? <WarningNotice>{ui.scheduledWarning}</WarningNotice> : <InfoNotice>{ui.scheduledInfo}</InfoNotice>}
+                  {hasTestArchivedOrUnverifiedAccounts ? <OperationalNotice tone="warning">{ui.scheduledWarning}</OperationalNotice> : <OperationalNotice tone="info">{ui.scheduledInfo}</OperationalNotice>}
                   <div className="flex flex-col gap-1 sm:items-end">
                     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                       <label className="text-xs font-medium text-muted-foreground" htmlFor="ads-sync-timezone-mode">{ui.timezoneLabel}</label>
@@ -1175,7 +1176,7 @@ export default function AdsConnectors() {
                       {syncRunState.loading ? ui.runningSync : ui.runSyncCheck}
                     </Button>
                     <p className="mt-2 text-xs text-muted-foreground">{ui.syncSubmitNote}</p>
-                    {syncRunState.success && <p className="mt-2 text-xs text-emerald-700">{syncRunState.success}</p>}
+                    {syncRunState.success && <p className={cn("mt-2 text-xs", operationalStatusTextClasses.success)}>{syncRunState.success}</p>}
                     {syncRunState.error && <p className="mt-2 text-xs text-destructive">{ui.syncError} {syncRunState.error}</p>}
                     {syncRunState.details ? <p className="mt-2 text-xs text-muted-foreground">{ui.detailsDebug}</p> : null}
                     <DeveloperDetails title={ui.technicalDetails}>{syncRunState.details ? <pre className="mt-2 overflow-x-auto rounded bg-background p-2 text-xs text-muted-foreground">{formatTechnicalDetails(syncRunState.details, timezoneDisplayMode, timezoneName ?? undefined)}</pre> : null}</DeveloperDetails>
@@ -1202,7 +1203,7 @@ export default function AdsConnectors() {
                     {facebookLeadSyncState.loading ? ui.fbRunningLeadSync : ui.fbRunLeadSync}
                   </Button>
                   <p className="mt-2 text-xs text-muted-foreground">{ui.fbSyncSubmitNote}</p>
-                  {facebookLeadSyncState.success && <p className="mt-2 text-xs text-emerald-700">{facebookLeadSyncState.success}</p>}
+                  {facebookLeadSyncState.success && <p className={cn("mt-2 text-xs", operationalStatusTextClasses.success)}>{facebookLeadSyncState.success}</p>}
                   {facebookLeadSyncState.error && <p className="mt-2 text-xs text-destructive">{facebookLeadSyncState.error}</p>}
                   {facebookLeadSyncState.details ? <p className="mt-2 text-xs text-muted-foreground">{ui.detailsDebug}</p> : null}
                   <DeveloperDetails title={ui.technicalDetails}>{facebookLeadSyncState.details ? <pre className="mt-2 overflow-x-auto rounded bg-background p-2 text-xs text-muted-foreground">{formatTechnicalDetails(facebookLeadSyncState.details, timezoneDisplayMode, timezoneName ?? undefined)}</pre> : null}</DeveloperDetails>
@@ -1264,7 +1265,7 @@ async function readAdsMultiAccountReadiness(): Promise<OptionalJsonData> {
 function MultiAccountOverview({ readiness, ui, fallbackAccountCount }: { readiness: OptionalJsonData | undefined; ui: Copy; fallbackAccountCount: number }) {
   if (!readiness) return null;
   if (readiness.unavailableReason || !readiness.payload) {
-    return <WarningNotice>{ui.readinessUnavailable}</WarningNotice>;
+    return <OperationalNotice tone="warning">{ui.readinessUnavailable}</OperationalNotice>;
   }
 
   const payload = readiness.payload;
@@ -1276,7 +1277,7 @@ function MultiAccountOverview({ readiness, ui, fallbackAccountCount }: { readine
           <p className="text-sm font-semibold">{ui.multiAccountReadinessTitle}</p>
           <p className="mt-1 text-xs text-muted-foreground">{ui.nextAction}: {getReadinessNextAction(readiness, ui)}</p>
         </div>
-        <StatusPill tone={readinessTone(readString(payload, "overall_status"))}>{formatReadinessValue(readString(payload, "overall_status"), ui)}</StatusPill>
+        <StatusBadge tone={readinessTone(readString(payload, "overall_status"))}>{formatReadinessValue(readString(payload, "overall_status"), ui)}</StatusBadge>
       </div>
       <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard label={ui.totalAccounts} value={formatMetric(readNumber(summary, "total_accounts") ?? fallbackAccountCount)} />
@@ -1290,7 +1291,7 @@ function MultiAccountOverview({ readiness, ui, fallbackAccountCount }: { readine
 
 function MultiAccountAdAccountsSummary({ readiness, ui, fallbackAccountCount }: { readiness: OptionalJsonData | undefined; ui: Copy; fallbackAccountCount: number }) {
   if (!readiness) return null;
-  if (readiness.unavailableReason || !readiness.payload) return <WarningNotice>{ui.readinessUnavailable}</WarningNotice>;
+  if (readiness.unavailableReason || !readiness.payload) return <OperationalNotice tone="warning">{ui.readinessUnavailable}</OperationalNotice>;
 
   const payload = readiness.payload;
   const summary = readObject(payload, "summary");
@@ -1303,7 +1304,7 @@ function MultiAccountAdAccountsSummary({ readiness, ui, fallbackAccountCount }: 
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-semibold">{ui.multiAccountReadinessTitle}</p>
-            <StatusPill tone={readinessTone(readString(payload, "overall_status"))}>{formatReadinessValue(readString(payload, "overall_status"), ui)}</StatusPill>
+            <StatusBadge tone={readinessTone(readString(payload, "overall_status"))}>{formatReadinessValue(readString(payload, "overall_status"), ui)}</StatusBadge>
           </div>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">{ui.nextAction}: {getReadinessNextAction(readiness, ui)}</p>
         </div>
@@ -1343,7 +1344,7 @@ function PlatformReadinessCards({ rows, ui }: { rows: Row[]; ui: Copy }) {
               <p className="text-sm font-semibold text-foreground">{formatReadinessDisplay(row.platform, ui)}</p>
               <p className="mt-1 text-xs text-muted-foreground">{ui.totalAccounts}: {formatMetric(readNumber(row, "accounts_count"))}</p>
             </div>
-            <StatusPill tone={readinessTone(readString(row, "readiness_status"))}>{formatReadinessValue(readString(row, "readiness_status"), ui)}</StatusPill>
+            <StatusBadge tone={readinessTone(readString(row, "readiness_status"))}>{formatReadinessValue(readString(row, "readiness_status"), ui)}</StatusBadge>
           </div>
           <div className="mt-2 flex flex-wrap gap-2 text-xs text-muted-foreground">
             <span className="rounded-full bg-muted/60 px-2 py-1">{ui.boundAccounts}: {formatMetric(readNumber(row, "bound_accounts_count"))}</span>
@@ -1366,7 +1367,7 @@ function BindingGapCards({ rows, ui }: { rows: Row[]; ui: Copy }) {
               <p className="text-sm font-semibold text-foreground">{formatReadinessDisplay(row.platform, ui)}</p>
               <p className="mt-1 text-xs text-muted-foreground">{ui.accountNameLabel}: {formatReadinessDisplay(row.external_account_name, ui)}</p>
             </div>
-            <StatusPill tone="warning">{formatReadinessDisplay(row.gap_type, ui)}</StatusPill>
+            <StatusBadge tone="warning">{formatReadinessDisplay(row.gap_type, ui)}</StatusBadge>
           </div>
           <div className="mt-2 grid gap-1.5 text-xs text-muted-foreground sm:grid-cols-2">
             <p><span className="font-medium text-foreground">{ui.externalAccountIdLabel}:</span> {formatReadinessDisplay(row.external_account_id, ui)}</p>
@@ -1489,35 +1490,6 @@ async function readAdPlatformConnections(): Promise<OptionalViewData> {
   return { rows: ((result.data ?? []) as Row[]), unavailableReason: null };
 }
 
-function StatusPill({ tone, children }: { tone: Tone; children: ReactNode }) {
-  return (
-    <span className={cn(
-      "shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium",
-      tone === "success" && "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200",
-      tone === "warning" && "bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200",
-      tone === "muted" && "bg-muted text-muted-foreground",
-    )}>
-      {children}
-    </span>
-  );
-}
-
-function WarningNotice({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
-      {children}
-    </div>
-  );
-}
-
-function InfoNotice({ children }: { children: ReactNode }) {
-  return (
-    <div className="rounded-md border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-900 dark:border-sky-900/60 dark:bg-sky-950/30 dark:text-sky-200">
-      {children}
-    </div>
-  );
-}
-
 function StatusCard({ label, value, helper }: { label: string; value: string; helper?: string }) {
   return (
     <div className="rounded-lg border border-border/70 bg-card/60 p-4">
@@ -1532,7 +1504,7 @@ function ReadinessStep({ label, value, tone }: { label: string; value?: string; 
   return (
     <div className="rounded-lg border border-border/70 bg-background p-3 text-sm">
       <div className="flex items-center gap-2">
-        <span className={cn("h-2 w-2 rounded-full", tone === "success" && "bg-emerald-500", tone === "warning" && "bg-amber-500", tone === "muted" && "bg-muted-foreground/40")} />
+        <OperationalStatusDot tone={tone} />
         <p className="font-medium">{label}</p>
       </div>
       {value ? <p className="mt-1 text-xs text-muted-foreground">{value}</p> : null}
@@ -1583,7 +1555,7 @@ function ConnectorCard({
           <p className="font-semibold leading-none">{name}</p>
           <p className="mt-2 text-sm leading-5 text-muted-foreground">{description}</p>
         </div>
-        <StatusPill tone={stateTone}>{stateText}</StatusPill>
+        <StatusBadge tone={stateTone}>{stateText}</StatusBadge>
       </div>
       <div className="mt-4 grid gap-3 text-xs text-muted-foreground">
         <div className="rounded-lg bg-muted/30 p-3">
@@ -1595,7 +1567,7 @@ function ConnectorCard({
             {details.map((detail) => <p className="rounded-md bg-background/70 px-3 py-2" key={detail}>{detail}</p>)}
           </div>
         ) : null}
-        {helperNote ? <WarningNotice>{helperNote}</WarningNotice> : null}
+        {helperNote ? <OperationalNotice tone="warning">{helperNote}</OperationalNotice> : null}
         <div className="rounded-md bg-muted/40 p-3">
           <p className="font-medium text-foreground">{connected ? ui.availableNow : ui.safety}</p>
           {connected && availableItems?.length ? (
@@ -1734,9 +1706,9 @@ function AdAccountCard({ row, ui, compact = false, timestampDisplayMode, timezon
           {testOrArchived ? <p className="mt-1.5 text-sm font-semibold text-foreground">{ui.serviceTestBinding}</p> : null}
         </div>
         <div className="flex flex-wrap justify-end gap-2">
-          <StatusPill tone={testOrArchived ? "warning" : "success"}>{testOrArchived ? ui.testPlaceholder : ui.realAccount}</StatusPill>
-          {!testOrArchived ? <StatusPill tone={activeRealAccount ? "success" : "warning"}>{activeRealAccount ? ui.bound : ui.needsBinding}</StatusPill> : null}
-          {archived ? <StatusPill tone="muted">{ui.archived}</StatusPill> : null}
+          <StatusBadge tone={testOrArchived ? "warning" : "success"}>{testOrArchived ? ui.testPlaceholder : ui.realAccount}</StatusBadge>
+          {!testOrArchived ? <StatusBadge tone={activeRealAccount ? "success" : "warning"}>{activeRealAccount ? ui.bound : ui.needsBinding}</StatusBadge> : null}
+          {archived ? <StatusBadge tone="muted">{ui.archived}</StatusBadge> : null}
         </div>
       </div>
 
@@ -1786,7 +1758,7 @@ function AdAccountCard({ row, ui, compact = false, timestampDisplayMode, timezon
       </div>
 
       <div className={cn("mt-auto", compact ? "pt-3" : "pt-4")}>
-        {testOrArchived ? <WarningNotice>{accountNote}</WarningNotice> : <p className="text-xs text-muted-foreground">{accountNote}</p>}
+        {testOrArchived ? <OperationalNotice tone="warning">{accountNote}</OperationalNotice> : <p className="text-xs text-muted-foreground">{accountNote}</p>}
       </div>
     </article>
   );
@@ -1868,9 +1840,9 @@ function GenericDataTable({ rows, columns, ui, markPlaceholders = false, maxRows
                     <td key={`${index}-${column}`} className={cn("px-2 py-2 align-top text-foreground", timestampColumn ? "min-w-[9rem] whitespace-nowrap" : "max-w-[180px]")}>
                       <span className={cn(timestampColumn && timestampDisplayMode ? "whitespace-nowrap" : "break-words")}>{formatTableValue(row[column], column, ui, timestampDisplayMode, timezoneName)}</span>
                       {placeholder && column === "external_account_id" ? (
-                        <span className="mt-1 inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-medium text-amber-900 dark:bg-amber-950/50 dark:text-amber-200">
+                        <StatusBadge tone="warning" className="mt-1">
                           {ui.testPlaceholder}
-                        </span>
+                        </StatusBadge>
                       ) : null}
                     </td>
                   );
@@ -1957,7 +1929,7 @@ function IssuesPanel({ data, connectorState, ui }: { data: AdsConnectorsData | u
       {!hasIssues ? <p className="text-sm text-muted-foreground">{ui.noIssues}</p> : null}
       <div className="space-y-3">
         {issues.map((issue) => (
-          <div key={issue.dedupeKey} className={cn("rounded-lg border p-3 text-sm", issue.tone === "warning" ? "border-amber-200 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/20" : "border-border/70 bg-card/60")}>
+          <OperationalStatusSurface key={issue.dedupeKey} tone={issue.tone === "warning" ? "warning" : "neutral"} className="rounded-lg p-3 text-sm">
             <p className="font-semibold">{issue.title}</p>
             <p className={cn("mt-1", issue.tone === "error" ? "text-destructive" : "text-muted-foreground")}>{issue.description}</p>
             {issue.actions ? (
@@ -1973,7 +1945,7 @@ function IssuesPanel({ data, connectorState, ui }: { data: AdsConnectorsData | u
                 <pre className="mt-2 overflow-x-auto whitespace-pre-wrap rounded bg-muted/50 p-2 text-xs text-muted-foreground">{issue.details}</pre>
               </DeveloperDetails>
             ) : null}
-          </div>
+          </OperationalStatusSurface>
         ))}
       </div>
     </div>

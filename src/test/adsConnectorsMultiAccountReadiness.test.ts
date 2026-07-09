@@ -10,6 +10,14 @@ const navigationStylesSource = readFileSync(
   resolve(process.cwd(), "src/components/common/navigationStyles.ts"),
   "utf8",
 );
+const operationalStatusSource = readFileSync(
+  resolve(process.cwd(), "src/components/common/OperationalStatus.tsx"),
+  "utf8",
+);
+const statusStylesSource = readFileSync(
+  resolve(process.cwd(), "src/components/common/statusStyles.ts"),
+  "utf8",
+);
 const adAccountsTab = source.slice(
   source.indexOf('<TabsContent value="ad-accounts"'),
   source.indexOf('<TabsContent value="sync"'),
@@ -29,12 +37,30 @@ describe("AdsConnectors multi-account readiness UI", () => {
     expect(source).toContain("snapshot");
   });
 
-  it("uses the shared operational subnav trigger style instead of a local ADS constant", () => {
+  it("uses shared operational subnav and status helpers instead of local status components", () => {
     expect(navigationStylesSource).toContain(
       "OPERATIONAL_SUBNAV_TRIGGER_CLASS",
     );
+    expect(operationalStatusSource).toContain("function OperationalNotice");
+    expect(operationalStatusSource).toContain("function StatusBadge");
+    expect(operationalStatusSource).toContain(
+      "function OperationalStatusSurface",
+    );
+    expect(statusStylesSource).toContain("info:");
+    expect(statusStylesSource).toContain("border-sky-200 bg-sky-50/70");
     expect(source).toContain("OPERATIONAL_SUBNAV_TRIGGER_CLASS");
+    expect(source).toContain("OperationalNotice");
+    expect(source).toContain("StatusBadge");
+    expect(source).toContain("OperationalStatusSurface");
     expect(source).not.toContain("const ADS_SUBNAV_TRIGGER_CLASS");
+    expect(source).not.toContain("function StatusPill");
+    expect(source).not.toContain("function WarningNotice");
+    expect(source).not.toContain("function InfoNotice");
+    expect(source).not.toContain("border-amber-200");
+    expect(source).not.toContain("bg-amber-50");
+    expect(source).not.toContain("border-sky-200");
+    expect(source).not.toContain("bg-sky-50");
+    expect(source).not.toContain("bg-emerald-50");
   });
 
   it("keeps readiness on existing tabs without adding route, tab, or navigation", () => {
