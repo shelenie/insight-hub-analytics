@@ -1,3 +1,9 @@
+## Updated — 2026-07-09 Bindings Needs-Binding Warning State
+
+1. Re-check `/bindings` in Ukrainian and English to confirm needs-binding states read visually as amber action-needed warnings, not neutral statuses.
+2. Keep the direct gap-card binding drawer flow unchanged and continue treating AdsConnectors as the operational status surface.
+3. Keep backend contracts unchanged unless a separately approved follow-up designs additional write automation.
+
 ## Updated — 2026-07-09 Bindings Gap Card Direct Binding Action
 
 1. Verify `/bindings?tab=ad-account` against production readiness output to confirm account-gap cards can open the existing create binding drawer with the matched ad account preselected.

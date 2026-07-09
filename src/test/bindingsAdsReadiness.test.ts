@@ -62,6 +62,29 @@ describe("Bindings ads multi-account readiness", () => {
   });
 
 
+
+  it("uses amber warning styling for needs-binding badges and surfaces", () => {
+    expect(bindingsSource).toContain('NEEDS_BINDING_WARNING_BADGE_CLASS');
+    expect(bindingsSource).toContain('border-amber-200 bg-amber-50 text-amber-900');
+    expect(bindingsSource).toContain('dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200');
+    expect(bindingsSource).toContain('NEEDS_BINDING_WARNING_SURFACE_CLASS');
+    expect(bindingsSource).toContain('border-amber-200 bg-amber-50/70');
+    expect(bindingsSource).toContain('unboundCount > 0');
+    expect(bindingsSource).toContain('<NeedsBindingWarningBadge label={t("bindingsGapNeedsBinding")} />');
+    expect(bindingsSource).not.toContain('<Badge variant={unboundCount > 0 ? "outline" : "secondary"}>');
+    expect(bindingsSource).not.toContain('<Badge variant="outline">{t("bindingsGapNeedsBinding")}</Badge>');
+  });
+
+  it("keeps warning state localized without backend codes in normal UI", () => {
+    expect(translationsSource).toContain('Потрібна привʼязка');
+    expect(translationsSource).toContain('Needs binding');
+    const normalUiSource = bindingsSource.slice(bindingsSource.indexOf('function AdsBindingReadinessSummary'), bindingsSource.indexOf('function ReadinessUnavailableNotice'));
+    expect(normalUiSource).not.toContain('partially_bound');
+    expect(normalUiSource).not.toContain('partially bound');
+    expect(normalUiSource).not.toContain('active_account_without_binding');
+    expect(normalUiSource).not.toContain('accounts_discovered_no_bindings');
+  });
+
   it("opens the existing create drawer from matched binding-gap cards without inventing targets", () => {
     expect(bindingsSource).toContain('function findMatchingAdAccountId(');
     expect(bindingsSource).toContain('asText(row.platform).toLowerCase() === normalizedPlatform');

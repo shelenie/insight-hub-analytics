@@ -48,6 +48,11 @@ import type { Lang, TranslationKey } from "@/i18n/translations";
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 const ADS_SUBNAV_TRIGGER_CLASS =
   "h-10 whitespace-nowrap rounded-lg border border-transparent px-4 text-sm font-semibold transition-all hover:border-primary/30 hover:bg-primary/10 hover:text-primary data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm";
+const NEEDS_BINDING_WARNING_BADGE_CLASS =
+  "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200";
+const NEEDS_BINDING_WARNING_SURFACE_CLASS =
+  "border-amber-200 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/20";
+
 const EMPTY_AD_FORM = {
   ad_account_id: "",
   client_id: "",
@@ -1340,7 +1345,14 @@ function AdsBindingReadinessSummary({
   const platformText = platforms.length ? platforms.join(", ") : "—";
   const summaryTemplate = unboundCount === 1 ? t("bindingsAdsNeedBindingSummaryOne") : t("bindingsAdsNeedBindingSummary");
   return (
-    <div className="mt-4 rounded-md border border-border/70 bg-card/60 p-4">
+    <div
+      className={cn(
+        "mt-4 rounded-md border p-4",
+        unboundCount > 0
+          ? NEEDS_BINDING_WARNING_SURFACE_CLASS
+          : "border-border/70 bg-card/60",
+      )}
+    >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-sm font-semibold">
@@ -1358,9 +1370,13 @@ function AdsBindingReadinessSummary({
             {t("bindingsAdsReadinessDescription")}
           </p>
         </div>
-        <Badge variant={unboundCount > 0 ? "outline" : "secondary"}>
-          {unboundCount > 0 ? t("bindingsGapNeedsBinding") : formatStatus(readString(payload, "overall_status") || "ok", lang)}
-        </Badge>
+        {unboundCount > 0 ? (
+          <NeedsBindingWarningBadge label={t("bindingsGapNeedsBinding")} />
+        ) : (
+          <Badge variant="secondary">
+            {formatStatus(readString(payload, "overall_status") || "ok", lang)}
+          </Badge>
+        )}
       </div>
     </div>
   );
@@ -1386,7 +1402,14 @@ function BindingGapsPanel({
   }
   const gapRows = readArray(readiness.payload, "binding_gaps");
   return (
-    <div className="mb-4 rounded-md border border-border/70 bg-muted/20 p-4">
+    <div
+      className={cn(
+        "mb-4 rounded-md border p-4",
+        gapRows.length > 0
+          ? NEEDS_BINDING_WARNING_SURFACE_CLASS
+          : "border-border/70 bg-muted/20",
+      )}
+    >
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
           <p className="text-sm font-semibold">
@@ -1412,14 +1435,17 @@ function BindingGapsPanel({
             );
             const actionDisabled = !session || !canManage || !matchedAdAccountId;
             return (
-              <div key={`${platform}-${accountId}-${index}`} className="rounded-md border border-border/70 bg-background p-3">
+              <div
+                key={`${platform}-${accountId}-${index}`}
+                className="rounded-md border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-900/60 dark:bg-amber-950/20"
+              >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <p className="text-sm font-medium">{platform}</p>
                     <p className="mt-1 text-sm text-foreground">{accountName}</p>
                     <p className="mt-0.5 text-xs text-muted-foreground">{accountId}</p>
                   </div>
-                  <Badge variant="outline">{t("bindingsGapNeedsBinding")}</Badge>
+                  <NeedsBindingWarningBadge label={t("bindingsGapNeedsBinding")} />
                 </div>
                 <p className="mt-3 text-sm text-muted-foreground">{t("bindingsGapFriendlyMessage")}</p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -1453,6 +1479,14 @@ function BindingGapsPanel({
         </p>
       )}
     </div>
+  );
+}
+
+function NeedsBindingWarningBadge({ label }: { label: string }) {
+  return (
+    <Badge variant="outline" className={NEEDS_BINDING_WARNING_BADGE_CLASS}>
+      {label}
+    </Badge>
   );
 }
 

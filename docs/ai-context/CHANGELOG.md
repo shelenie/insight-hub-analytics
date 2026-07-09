@@ -1,3 +1,15 @@
+## 2026-07-09 — Bindings Needs-Binding Warning State
+
+### Changed
+
+- Updated Bindings needs-binding badges from neutral outline styling to reusable amber warning styling.
+- Applied subtle warning surfaces to the Overview ad-account summary and Ad accounts gap area/cards when binding gaps exist.
+- Kept the working Bind account / Привʼязати акаунт drawer flow from PR #222 unchanged.
+
+### Notes
+
+- Frontend-only follow-up. No backend contracts, routes, sidebar, AdsConnectors page, sync behavior, import pipeline, or binding-create/update flow changed.
+
 ## 2026-07-09 — Bindings Gap Card Direct Binding Action
 
 ### Changed
