@@ -1,3 +1,15 @@
+## Updated — 2026-07-09 AdsConnectors Shared Operational Notice Completion
+
+1. Verify `/ads-connectors` warning/info/success/muted operational notices and badges still match the previous visible behavior after deployment.
+2. Reuse shared operational status components for warning, info, success, and muted states instead of creating page-local status/notice helpers.
+3. Keep backend contracts unchanged; this follow-up did not change Supabase schema, RLS, RPC contracts, Edge Functions, OAuth, sync behavior, routes, sidebar, data fetching, or write actions.
+
+## Updated — 2026-07-09 Shared Operational UI Styles
+
+1. Verify `/ads-connectors` and `/bindings` in Ukrainian and English after deployment to confirm shared operational badges, warning surfaces, compact summaries, and subnav triggers match the previous UI behavior.
+2. Reuse shared status badge/surface and operational subnav helpers for future operational UI work instead of defining local Tailwind status classes in page files.
+3. Keep backend contracts unchanged; this refactor intentionally did not change Supabase schema, RLS, RPC contracts, Edge Functions, OAuth, sync behavior, routes, sidebar, data fetching, or write actions.
+
 ## Updated — 2026-07-09 Bindings Needs-Binding Warning State
 
 1. Re-check `/bindings` in Ukrainian and English to confirm needs-binding states read visually as amber action-needed warnings, not neutral statuses.

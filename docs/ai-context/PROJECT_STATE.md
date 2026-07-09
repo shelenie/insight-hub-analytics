@@ -1,3 +1,11 @@
+## Verified Local Follow-up — 2026-07-09 AdsConnectors Shared Operational Notice Completion
+
+AdsConnectors no longer keeps page-local StatusPill, WarningNotice, or InfoNotice implementations for reusable operational status UI. Remaining warning/info/success/muted notices, badges, status dots, and attention surfaces now use the shared operational status layer, including the new info surface tone. Bindings behavior remains unchanged, including gap cards, Bind account / Привʼязати акаунт, drawer prefill, warning summary, and manual bind flow. Frontend only: no Supabase schema, RLS, RPC contracts, Edge Functions, OAuth, sync behavior, routes, sidebar, backend values, data fetching, or write actions changed.
+
+## Verified Local Change — 2026-07-09 Shared Operational UI Styles
+
+AdsConnectors and Bindings now share operational UI styling instead of duplicating page-local Tailwind status strings. Badge variants now cover success, warning, info, and muted operational states; shared status surfaces/cards cover warning, success, neutral, and muted states; and both AdsConnectors and Bindings use the shared operational subnav trigger style. Bindings needs-binding warning badges/surfaces still render as amber action-needed UI, and the existing Bind account / Привʼязати акаунт drawer prefill flow remains unchanged. Frontend only: no Supabase schema, RLS, RPC contracts, Edge Functions, OAuth, sync behavior, routes, sidebar, backend values, data fetching, or write actions changed. Future operational UI work should reuse the shared status badge/surface and subnav helpers instead of defining local Tailwind status classes.
+
 ## Verified Local Follow-up — 2026-07-09 Bindings Needs-Binding Warning State
 
 Bindings → Overview and Bindings → Ad accounts now render accounts that need binding with amber warning badges and subtle warning card/surface styling instead of neutral outline badges. The existing gap-card Bind account / Привʼязати акаунт action, create drawer behavior, matched `ad_account_id` prefill, empty client/project/funnel selections, unmatched disabled fallback, and manual bind flow remain unchanged. Frontend only: no Supabase schema, RLS, RPC contracts, Edge Functions, OAuth, sync behavior, routes, sidebar, AdsConnectors page, backend values, import pipeline, or binding-create/update contract changed.

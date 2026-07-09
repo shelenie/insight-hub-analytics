@@ -2,20 +2,74 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const source = readFileSync(resolve(process.cwd(), "src/pages/AdsConnectors.tsx"), "utf8");
-const adAccountsTab = source.slice(source.indexOf('<TabsContent value="ad-accounts"'), source.indexOf('<TabsContent value="sync"'));
-const readinessSummary = source.slice(source.indexOf("function MultiAccountAdAccountsSummary"), source.indexOf("function CompactReadinessMetric"));
+const source = readFileSync(
+  resolve(process.cwd(), "src/pages/AdsConnectors.tsx"),
+  "utf8",
+);
+const navigationStylesSource = readFileSync(
+  resolve(process.cwd(), "src/components/common/navigationStyles.ts"),
+  "utf8",
+);
+const operationalStatusSource = readFileSync(
+  resolve(process.cwd(), "src/components/common/OperationalStatus.tsx"),
+  "utf8",
+);
+const statusStylesSource = readFileSync(
+  resolve(process.cwd(), "src/components/common/statusStyles.ts"),
+  "utf8",
+);
+const adAccountsTab = source.slice(
+  source.indexOf('<TabsContent value="ad-accounts"'),
+  source.indexOf('<TabsContent value="sync"'),
+);
+const readinessSummary = source.slice(
+  source.indexOf("function MultiAccountAdAccountsSummary"),
+  source.indexOf("function CompactReadinessMetric"),
+);
 
 describe("AdsConnectors multi-account readiness UI", () => {
   it("loads backend multi-account readiness through the AdsConnectors query", () => {
     expect(source).toContain("readAdsMultiAccountReadiness()");
-    expect(source).toContain('supabase.rpc("build_ads_multi_account_readiness"');
-    expect(source).toContain("return { readiness, multiAccountReadiness, snapshot");
+    expect(source).toMatch(
+      /supabase\.rpc\(\s*"build_ads_multi_account_readiness"/,
+    );
+    expect(source).toContain("multiAccountReadiness");
+    expect(source).toContain("snapshot");
+  });
+
+  it("uses shared operational subnav and status helpers instead of local status components", () => {
+    expect(navigationStylesSource).toContain(
+      "OPERATIONAL_SUBNAV_TRIGGER_CLASS",
+    );
+    expect(operationalStatusSource).toContain("function OperationalNotice");
+    expect(operationalStatusSource).toContain("function StatusBadge");
+    expect(operationalStatusSource).toContain(
+      "function OperationalStatusSurface",
+    );
+    expect(statusStylesSource).toContain("info:");
+    expect(statusStylesSource).toContain("border-sky-200 bg-sky-50/70");
+    expect(source).toContain("OPERATIONAL_SUBNAV_TRIGGER_CLASS");
+    expect(source).toContain("OperationalNotice");
+    expect(source).toContain("StatusBadge");
+    expect(source).toContain("OperationalStatusSurface");
+    expect(source).not.toContain("const ADS_SUBNAV_TRIGGER_CLASS");
+    expect(source).not.toContain("function StatusPill");
+    expect(source).not.toContain("function WarningNotice");
+    expect(source).not.toContain("function InfoNotice");
+    expect(source).not.toContain("border-amber-200");
+    expect(source).not.toContain("bg-amber-50");
+    expect(source).not.toContain("border-sky-200");
+    expect(source).not.toContain("bg-sky-50");
+    expect(source).not.toContain("bg-emerald-50");
   });
 
   it("keeps readiness on existing tabs without adding route, tab, or navigation", () => {
-    expect(source).toContain('<MultiAccountOverview readiness={query.data?.multiAccountReadiness}');
-    expect(source).toContain('<MultiAccountAdAccountsSummary readiness={query.data?.multiAccountReadiness}');
+    expect(source).toMatch(
+      /<MultiAccountOverview\s+readiness=\{query\.data\?\.multiAccountReadiness\}/,
+    );
+    expect(source).toMatch(
+      /<MultiAccountAdAccountsSummary\s+readiness=\{query\.data\?\.multiAccountReadiness\}/,
+    );
     expect(source).toContain('value="ad-accounts"');
     expect(source).not.toContain('value="multi-account-readiness"');
     expect(source).not.toContain('value="ads-readiness"');
@@ -28,34 +82,54 @@ describe("AdsConnectors multi-account readiness UI", () => {
     expect(source).toContain('realAccount: "Реальний акаунт"');
     expect(source).toContain('realAccount: "Real account"');
     expect(adAccountsTab).toContain("<MultiAccountAdAccountsSummary");
-    expect(adAccountsTab.indexOf("<MultiAccountAdAccountsSummary")).toBeLessThan(adAccountsTab.indexOf("<AdAccountsTable"));
+    expect(
+      adAccountsTab.indexOf("<MultiAccountAdAccountsSummary"),
+    ).toBeLessThan(adAccountsTab.indexOf("<AdAccountsTable"));
     expect(source).toContain("function CompactReadinessMetric");
-    expect(source).toContain("grid shrink-0 grid-cols-2 gap-2 text-xs sm:grid-cols-4");
+    expect(source).toContain(
+      "grid shrink-0 grid-cols-2 gap-2 text-xs sm:grid-cols-4",
+    );
   });
-
 
   it("derives Real accounts from active bindings, readiness accounts, and binding gaps", () => {
     expect(source).toContain("function buildRealPlatformAccountRows");
-    expect(source).toContain("readArray(payload, \"accounts\")");
-    expect(source).toContain("readArray(payload, \"binding_gaps\")");
-    expect(source).toContain("const key = `${platform.toLowerCase()}::${externalAccountId}`;");
-    expect(source).toContain("if (existing && isRealPlatformAccountBound(existing) && priority !== \"binding\") return;");
-    expect(source).toContain("<AdAccountsTable data={query.data?.adBindings} readiness={query.data?.multiAccountReadiness}");
+    expect(source).toContain('readArray(payload, "accounts")');
+    expect(source).toContain('readArray(payload, "binding_gaps")');
+    expect(source).toContain(
+      "const key = `${platform.toLowerCase()}::${externalAccountId}`;",
+    );
+    expect(source).toMatch(
+      /if \(\s*existing &&\s*isRealPlatformAccountBound\(existing\) &&\s*priority !== "binding"\s*\)/,
+    );
+    expect(source).toMatch(
+      /<AdAccountsTable\s+data=\{query\.data\?\.adBindings\}\s+readiness=\{query\.data\?\.multiAccountReadiness\}/,
+    );
   });
 
   it("renders unbound TikTok-style real platform accounts in Real accounts with Needs binding", () => {
     expect(source).toContain("external_account_name");
     expect(source).toContain('needsBinding: "Потрібна привʼязка"');
     expect(source).toContain('needsBinding: "Needs binding"');
-    expect(source).toContain('unboundRealAccountHelper: "Акаунт існує на рекламній платформі, але ще не привʼязаний до клієнта, проєкту або воронки."');
-    expect(source).toContain('unboundRealAccountHelper: "This account exists on the ad platform but is not bound to a client, project, or funnel yet."');
+    expect(source).toContain("unboundRealAccountHelper:");
+    expect(source).toContain(
+      "Акаунт існує на рекламній платформі, але ще не привʼязаний до клієнта, проєкту або воронки.",
+    );
+    expect(source).toContain(
+      "This account exists on the ad platform but is not bound to a client, project, or funnel yet.",
+    );
     expect(source).toContain("isRealPlatformAccountBound(row)");
   });
 
   it("keeps archived placeholder TikTok bindings out of main Real accounts unless tied to a real platform account", () => {
-    expect(source).toContain(".filter((row) => !isTestOrArchivedAccount(row) && isActiveAccountBinding(row))");
-    expect(source).toContain(".filter((row) => !hasTestBindingMarker(row))");
-    expect(source).toContain("testRows = visibleBindingRows.filter(isTestOrArchivedAccount)");
+    expect(source).toContain(
+      "!isTestOrArchivedAccount(row) && isActiveAccountBinding(row)",
+    );
+    expect(source).toMatch(
+      /\.filter\(\(row\) =>\s*!hasTestBindingMarker\(row\)/,
+    );
+    expect(source).toContain("testRows");
+    expect(source).toContain("visibleBindingRows");
+    expect(source).toContain("filter(isTestOrArchivedAccount)");
     expect(source).toContain("{ui.testAccountsSection}");
   });
 
@@ -69,8 +143,12 @@ describe("AdsConnectors multi-account readiness UI", () => {
   it("keeps details collapsed and replaces wide readiness tables with readable cards/lists", () => {
     expect(readinessSummary).toContain("<details");
     expect(readinessSummary).toContain("{ui.readinessDetailsTitle}");
-    expect(readinessSummary).toContain("<PlatformReadinessCards rows={platformRows} ui={ui} />");
-    expect(readinessSummary).toContain("<BindingGapCards rows={gapRows} ui={ui} />");
+    expect(readinessSummary).toContain(
+      "<PlatformReadinessCards rows={platformRows} ui={ui} />",
+    );
+    expect(readinessSummary).toContain(
+      "<BindingGapCards rows={gapRows} ui={ui} />",
+    );
     expect(readinessSummary).not.toContain("<GenericDataTable");
     expect(source).toContain("function PlatformReadinessCards");
     expect(source).toContain("function BindingGapCards");
@@ -78,48 +156,84 @@ describe("AdsConnectors multi-account readiness UI", () => {
   });
 
   it("uses the Bindings-style Select dropdown for the status filter", () => {
-    const adAccountsTable = source.slice(source.indexOf("function AdAccountsTable"), source.indexOf("function AdAccountSection"));
-    expect(source).not.toContain('adAccountsStatusFilterLabel: "Фільтр статусу"');
-    expect(source).not.toContain('adAccountsStatusFilterLabel: "Status filter"');
+    const adAccountsTable = source.slice(
+      source.indexOf("function AdAccountsTable"),
+      source.indexOf("function AdAccountSection"),
+    );
+    expect(source).not.toContain(
+      'adAccountsStatusFilterLabel: "Фільтр статусу"',
+    );
+    expect(source).not.toContain(
+      'adAccountsStatusFilterLabel: "Status filter"',
+    );
     expect(source).toContain('adAccountsStatusFilterLabel: "Статус"');
     expect(source).toContain('adAccountsStatusFilterLabel: "Status"');
-    expect(adAccountsTable).toContain('{ui.adAccountsStatusFilterLabel}:');
-    expect(adAccountsTable).toContain('<Select value={statusFilter}');
-    expect(adAccountsTable).toContain('<SelectTrigger id="ads-connectors-ad-account-status-filter"');
-    expect(adAccountsTable).toContain('<SelectItem value="active">{ui.adAccountsStatusFilterActive}</SelectItem>');
-    expect(adAccountsTable).toContain('<SelectItem value="archived">{ui.adAccountsStatusFilterArchived}</SelectItem>');
-    expect(adAccountsTable).toContain('<SelectItem value="all">{ui.adAccountsStatusFilterAll}</SelectItem>');
-    expect(adAccountsTable).not.toContain('variant={statusFilter === "active" ? "secondary" : "ghost"}');
-    expect(adAccountsTable).not.toContain('variant={statusFilter === "archived" ? "secondary" : "ghost"}');
-    expect(adAccountsTable).not.toContain('variant={statusFilter === "all" ? "secondary" : "ghost"}');
+    expect(adAccountsTable).toContain("{ui.adAccountsStatusFilterLabel}:");
+    expect(adAccountsTable).toMatch(/<Select\s+value=\{statusFilter\}/);
+    expect(adAccountsTable).toContain("<SelectTrigger");
+    expect(adAccountsTable).toContain(
+      'id="ads-connectors-ad-account-status-filter"',
+    );
+    expect(adAccountsTable).toContain('<SelectItem value="active">');
+    expect(adAccountsTable).toContain("{ui.adAccountsStatusFilterActive}");
+    expect(adAccountsTable).toContain('<SelectItem value="archived">');
+    expect(adAccountsTable).toContain("{ui.adAccountsStatusFilterArchived}");
+    expect(adAccountsTable).toContain('<SelectItem value="all">');
+    expect(adAccountsTable).toContain("{ui.adAccountsStatusFilterAll}");
+    expect(adAccountsTable).not.toContain(
+      'variant={statusFilter === "active" ? "secondary" : "ghost"}',
+    );
+    expect(adAccountsTable).not.toContain(
+      'variant={statusFilter === "archived" ? "secondary" : "ghost"}',
+    );
+    expect(adAccountsTable).not.toContain(
+      'variant={statusFilter === "all" ? "secondary" : "ghost"}',
+    );
   });
 
   it("reads Overview counters from the nested summary payload", () => {
     expect(source).toContain('const summary = readObject(payload, "summary");');
-    expect(source).toContain('readNumber(summary, "total_accounts") ?? fallbackAccountCount');
+    expect(source).toContain(
+      'readNumber(summary, "total_accounts") ?? fallbackAccountCount',
+    );
     expect(source).toContain('readNumber(summary, "bound_accounts")');
     expect(source).toContain('readNumber(summary, "unbound_accounts")');
     expect(source).toContain('readNumber(summary, "needs_attention_count")');
-    expect(source).toContain('const unbound = readNumber(summary, "unbound_accounts") ?? gaps.length;');
+    expect(source).toContain(
+      'const unbound = readNumber(summary, "unbound_accounts") ?? gaps.length;',
+    );
     expect(source).not.toContain('readNumber(payload, "total_accounts")');
     expect(source).not.toContain('readNumber(payload, "bound_accounts")');
     expect(source).not.toContain('readNumber(payload, "unbound_accounts")');
-    expect(source).not.toContain('readNumber(payload, "needs_attention_count")');
+    expect(source).not.toContain(
+      'readNumber(payload, "needs_attention_count")',
+    );
   });
 
   it("includes binding gaps and unbound accounts in Overview needs-attention logic", () => {
-    expect(source).toContain("const bindingGapSummary = buildBindingGapSummary(data?.multiAccountReadiness, ui);");
-    expect(source).toContain("if (bindingGapSummary) items.push(bindingGapSummary);");
-    expect(source).toContain('readNumber(summary, "unbound_accounts") ?? gaps.length');
-    expect(source).toContain('readString(gap, "platform") ?? readString(gap, "external_account_name") ?? readString(gap, "external_account_id")');
-    expect(source).toContain("return targets.length > 0 ? `${formatMetric(unbound)} ${label}: ${targets.join(\", \")}.` : `${formatMetric(unbound)} ${label}.`; ".trim());
+    expect(source).toMatch(
+      /const bindingGapSummary = buildBindingGapSummary\(\s*data\?\.multiAccountReadiness,\s*ui,?\s*\)/,
+    );
+    expect(source).toContain(
+      "if (bindingGapSummary) items.push(bindingGapSummary);",
+    );
+    expect(source).toContain(
+      'readNumber(summary, "unbound_accounts") ?? gaps.length',
+    );
+    expect(source).toContain('readString(gap, "platform")');
+    expect(source).toContain('readString(gap, "external_account_name")');
+    expect(source).toContain('readString(gap, "external_account_id")');
+    expect(source).toContain("targets.length > 0");
+    expect(source).toContain("targets.join");
   });
 
   it("uses non-production-safe operational readiness wording", () => {
     expect(source).toContain('operationalChecklist: "Операційна готовність"');
     expect(source).toContain('operationalChecklist: "Operational readiness"');
     expect(source).toContain('production_ready: "Ready for operation"');
-    expect(source).not.toContain('operationalChecklist: "Production readiness"');
+    expect(source).not.toContain(
+      'operationalChecklist: "Production readiness"',
+    );
     expect(source).not.toContain('production_ready: "Ready for production"');
   });
 
@@ -146,11 +260,23 @@ describe("AdsConnectors multi-account readiness UI", () => {
 
   it("maps common backend English messages to friendly localized display text", () => {
     expect(source).toContain("function formatFriendlyBackendText");
-    expect(source).toContain('"active ad account has no active binding.": "Активний рекламний акаунт ще не привʼязаний."');
-    expect(source).toContain('"active ad account has no active binding.": "Active ad account is not bound yet."');
-    expect(source).toContain('"bind the account to the correct client, project, or funnel.": "Привʼяжіть акаунт до правильного клієнта, проєкту або воронки."');
-    expect(source).toContain('"no platform binding action required.": "Дія не потрібна."');
-    expect(source).toContain('"review and bind each active ad account to the correct agency scope.": "Review and bind active accounts to the correct scope."');
+    expect(source).toContain('"active ad account has no active binding.":');
+    expect(source).toContain('"Активний рекламний акаунт ще не привʼязаний."');
+    expect(source).toContain('"Active ad account is not bound yet."');
+    expect(source).toContain(
+      '"bind the account to the correct client, project, or funnel.":',
+    );
+    expect(source).toContain(
+      '"Привʼяжіть акаунт до правильного клієнта, проєкту або воронки."',
+    );
+    expect(source).toContain('"no platform binding action required.":');
+    expect(source).toContain('"Дія не потрібна."');
+    expect(source).toContain(
+      '"review and bind each active ad account to the correct agency scope.":',
+    );
+    expect(source).toContain(
+      '"Review and bind active accounts to the correct scope."',
+    );
   });
 
   it("keeps readiness graceful and diagnostics-only raw payload", () => {

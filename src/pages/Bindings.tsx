@@ -16,6 +16,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  CompactStatusSummaryCard,
+  OperationalStatusSurface,
+  StatusBadge,
+} from "@/components/common/OperationalStatus";
+import { OPERATIONAL_SUBNAV_TRIGGER_CLASS } from "@/components/common/navigationStyles";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -46,12 +52,6 @@ import { useI18n } from "@/i18n/I18nProvider";
 import type { Lang, TranslationKey } from "@/i18n/translations";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
-const ADS_SUBNAV_TRIGGER_CLASS =
-  "h-10 whitespace-nowrap rounded-lg border border-transparent px-4 text-sm font-semibold transition-all hover:border-primary/30 hover:bg-primary/10 hover:text-primary data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm";
-const NEEDS_BINDING_WARNING_BADGE_CLASS =
-  "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200";
-const NEEDS_BINDING_WARNING_SURFACE_CLASS =
-  "border-amber-200 bg-amber-50/70 dark:border-amber-900/60 dark:bg-amber-950/20";
 
 const EMPTY_AD_FORM = {
   ad_account_id: "",
@@ -637,37 +637,37 @@ export default function Bindings() {
             <div className="overflow-x-auto pb-1">
               <TabsList className="inline-flex h-auto min-w-full justify-start gap-2 rounded-xl border border-border/60 bg-card/70 p-1.5 shadow-sm">
                 <TabsTrigger
-                  className={ADS_SUBNAV_TRIGGER_CLASS}
+                  className={OPERATIONAL_SUBNAV_TRIGGER_CLASS}
                   value="overview"
                 >
                   {t("bindingsTabOverview")}
                 </TabsTrigger>
                 <TabsTrigger
-                  className={ADS_SUBNAV_TRIGGER_CLASS}
+                  className={OPERATIONAL_SUBNAV_TRIGGER_CLASS}
                   value="source"
                 >
                   {t("bindingsTabSources")}
                 </TabsTrigger>
                 <TabsTrigger
-                  className={ADS_SUBNAV_TRIGGER_CLASS}
+                  className={OPERATIONAL_SUBNAV_TRIGGER_CLASS}
                   value="ad-account"
                 >
                   {t("bindingsTabAdAccounts")}
                 </TabsTrigger>
                 <TabsTrigger
-                  className={ADS_SUBNAV_TRIGGER_CLASS}
+                  className={OPERATIONAL_SUBNAV_TRIGGER_CLASS}
                   value="project-data"
                 >
                   {t("bindingsTabProjectData")}
                 </TabsTrigger>
                 <TabsTrigger
-                  className={ADS_SUBNAV_TRIGGER_CLASS}
+                  className={OPERATIONAL_SUBNAV_TRIGGER_CLASS}
                   value="mapping-review"
                 >
                   {t("bindingsTabMappingReview")}
                 </TabsTrigger>
                 <TabsTrigger
-                  className={ADS_SUBNAV_TRIGGER_CLASS}
+                  className={OPERATIONAL_SUBNAV_TRIGGER_CLASS}
                   value="health"
                 >
                   {t("bindingsTabHealth")}
@@ -1340,18 +1340,18 @@ function AdsBindingReadinessSummary({
   const payload = readiness.payload;
   const summary = readObject(payload, "summary");
   const gapRows = readArray(payload, "binding_gaps");
-  const unboundCount = readNumber(summary, "unbound_accounts") ?? gapRows.length;
+  const unboundCount =
+    readNumber(summary, "unbound_accounts") ?? gapRows.length;
   const platforms = uniquePlatformLabels(gapRows);
   const platformText = platforms.length ? platforms.join(", ") : "—";
-  const summaryTemplate = unboundCount === 1 ? t("bindingsAdsNeedBindingSummaryOne") : t("bindingsAdsNeedBindingSummary");
+  const summaryTemplate =
+    unboundCount === 1
+      ? t("bindingsAdsNeedBindingSummaryOne")
+      : t("bindingsAdsNeedBindingSummary");
   return (
-    <div
-      className={cn(
-        "mt-4 rounded-md border p-4",
-        unboundCount > 0
-          ? NEEDS_BINDING_WARNING_SURFACE_CLASS
-          : "border-border/70 bg-card/60",
-      )}
+    <CompactStatusSummaryCard
+      tone={unboundCount > 0 ? "warning" : "neutral"}
+      className="mt-4"
     >
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
@@ -1378,7 +1378,7 @@ function AdsBindingReadinessSummary({
           </Badge>
         )}
       </div>
-    </div>
+    </CompactStatusSummaryCard>
   );
 }
 
@@ -1402,13 +1402,9 @@ function BindingGapsPanel({
   }
   const gapRows = readArray(readiness.payload, "binding_gaps");
   return (
-    <div
-      className={cn(
-        "mb-4 rounded-md border p-4",
-        gapRows.length > 0
-          ? NEEDS_BINDING_WARNING_SURFACE_CLASS
-          : "border-border/70 bg-muted/20",
-      )}
+    <OperationalStatusSurface
+      tone={gapRows.length > 0 ? "warning" : "muted"}
+      className="mb-4 p-4"
     >
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
@@ -1433,21 +1429,31 @@ function BindingGapsPanel({
               platformCode,
               externalAccountId,
             );
-            const actionDisabled = !session || !canManage || !matchedAdAccountId;
+            const actionDisabled =
+              !session || !canManage || !matchedAdAccountId;
             return (
-              <div
+              <OperationalStatusSurface
                 key={`${platform}-${accountId}-${index}`}
-                className="rounded-md border border-amber-200 bg-amber-50/60 p-3 dark:border-amber-900/60 dark:bg-amber-950/20"
+                tone="warning"
+                className="p-3"
               >
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <p className="text-sm font-medium">{platform}</p>
-                    <p className="mt-1 text-sm text-foreground">{accountName}</p>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{accountId}</p>
+                    <p className="mt-1 text-sm text-foreground">
+                      {accountName}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {accountId}
+                    </p>
                   </div>
-                  <NeedsBindingWarningBadge label={t("bindingsGapNeedsBinding")} />
+                  <NeedsBindingWarningBadge
+                    label={t("bindingsGapNeedsBinding")}
+                  />
                 </div>
-                <p className="mt-3 text-sm text-muted-foreground">{t("bindingsGapFriendlyMessage")}</p>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  {t("bindingsGapFriendlyMessage")}
+                </p>
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <Button
                     type="button"
@@ -1469,7 +1475,7 @@ function BindingGapsPanel({
                     </p>
                   )}
                 </div>
-              </div>
+              </OperationalStatusSurface>
             );
           })}
         </div>
@@ -1478,16 +1484,12 @@ function BindingGapsPanel({
           {t("bindingsNoBindingGaps")}
         </p>
       )}
-    </div>
+    </OperationalStatusSurface>
   );
 }
 
 function NeedsBindingWarningBadge({ label }: { label: string }) {
-  return (
-    <Badge variant="outline" className={NEEDS_BINDING_WARNING_BADGE_CLASS}>
-      {label}
-    </Badge>
-  );
+  return <StatusBadge tone="warning">{label}</StatusBadge>;
 }
 
 function findMatchingAdAccountId(
@@ -1515,7 +1517,10 @@ function uniquePlatformLabels(rows: Row[]) {
   );
 }
 
-function interpolate(template: string, values: Record<string, string | number>) {
+function interpolate(
+  template: string,
+  values: Record<string, string | number>,
+) {
   return Object.entries(values).reduce(
     (result, [key, value]) => result.replaceAll(`{${key}}`, String(value)),
     template,
@@ -1549,8 +1554,7 @@ function readArray(payload: Record<string, unknown>, key: string): Row[] {
   return Array.isArray(value)
     ? value
         .filter(
-          (item) =>
-            item && typeof item === "object" && !Array.isArray(item),
+          (item) => item && typeof item === "object" && !Array.isArray(item),
         )
         .map((item) => item as Row)
     : [];
@@ -1579,8 +1583,7 @@ function readinessBadgeVariant(
   const normalized = status.toLowerCase();
   if (["ready", "production_ready", "ok", "healthy"].includes(normalized))
     return "secondary";
-  if (["error", "failed", "blocked"].includes(normalized))
-    return "destructive";
+  if (["error", "failed", "blocked"].includes(normalized)) return "destructive";
   return "outline";
 }
 

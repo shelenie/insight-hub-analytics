@@ -1,3 +1,30 @@
+## 2026-07-09 — AdsConnectors Shared Operational Notice Completion
+
+### Changed
+
+- Migrated AdsConnectors remaining local operational status/notice helpers to the shared status UI layer.
+- Added shared info surface/text/dot support for operational notices and indicators.
+- Replaced local reusable amber/sky/emerald status styling in AdsConnectors with shared StatusBadge, OperationalNotice, OperationalStatusSurface, and OperationalStatusDot usage.
+
+### Notes
+
+- Frontend-only follow-up. No Supabase schema, RLS, RPC contracts, Edge Functions, OAuth, sync behavior, routes, sidebar, backend values, data fetching behavior, or write actions changed.
+- Shared status components should be reused for warning, info, success, and muted operational states.
+
+## 2026-07-09 — Shared Operational UI Styles
+
+### Changed
+
+- Added shared operational Badge variants for success, warning, info, and muted states.
+- Added shared operational status surface/card helpers for warning, success, neutral, muted, and compact summary presentation.
+- Moved the repeated AdsConnectors/Bindings subnav trigger style into a shared navigation style export.
+- Updated AdsConnectors and Bindings to use shared status/subnav styling while preserving current tab behavior and binding actions.
+
+### Notes
+
+- Frontend-only refactor. No Supabase schema, RLS, RPC contracts, Edge Functions, OAuth, sync behavior, routes, sidebar, backend values, data fetching behavior, or write actions changed.
+- Future operational UI work should reuse shared status components/styles rather than defining local Tailwind status classes.
+
 ## 2026-07-09 — Bindings Needs-Binding Warning State
 
 ### Changed
