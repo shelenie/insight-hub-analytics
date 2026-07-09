@@ -1,3 +1,10 @@
+## Updated — 2026-07-09 Bindings Gap Card Direct Binding Action
+
+1. Verify `/bindings?tab=ad-account` against production readiness output to confirm account-gap cards can open the existing create binding drawer with the matched ad account preselected.
+2. Confirm admins still choose client, project, and funnel manually, and unmatched diagnostic gaps show the safe refresh/check-Ads-Connectors helper instead of submitting fake IDs.
+3. Keep AdsConnectors as the operational source/account/sync status page and Bindings as the remediation/action page.
+4. Keep backend contracts unchanged; any future write automation beyond the existing binding-create-or-update flow requires a separate approved design.
+
 ## Updated — 2026-07-08 Bindings Ads Readiness UX Separation
 
 - Verify `/bindings` in Ukrainian and English against production `build_ads_multi_account_readiness` output to confirm Overview shows only the compact actionable Ad accounts summary and Ad accounts shows friendly cards above the existing binding workflow.

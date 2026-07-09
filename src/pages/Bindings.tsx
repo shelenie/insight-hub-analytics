@@ -919,6 +919,21 @@ export default function Bindings() {
 
                   <BindingGapsPanel
                     readiness={query.data?.adsMultiAccountReadiness}
+                    adAccounts={query.data?.adAccounts ?? []}
+                    canManage={canManage}
+                    session={Boolean(session)}
+                    onBindAccount={(adAccountId) => {
+                      setAdFormError("");
+                      setNormalAdFeedback(null);
+                      setAdFormMode("create");
+                      setNormalAdForm({
+                        ad_account_id: adAccountId,
+                        client_id: "",
+                        project_id: "",
+                        funnel_id: "",
+                      });
+                      setAdFormOpen(true);
+                    }}
                   />
                   <AdAccountsBusinessTable
                     rows={filteredAdAccountBindings}
@@ -1353,8 +1368,16 @@ function AdsBindingReadinessSummary({
 
 function BindingGapsPanel({
   readiness,
+  adAccounts,
+  canManage,
+  session,
+  onBindAccount,
 }: {
   readiness: OptionalJsonData | undefined;
+  adAccounts: Row[];
+  canManage: boolean;
+  session: boolean;
+  onBindAccount: (adAccountId: string) => void;
 }) {
   const { t } = useI18n();
   if (!readiness) return null;
@@ -1377,9 +1400,17 @@ function BindingGapsPanel({
       {gapRows.length > 0 ? (
         <div className="space-y-3">
           {gapRows.map((row, index) => {
-            const platform = formatPlatform(asText(row.platform) || "—");
+            const platformCode = asText(row.platform);
+            const externalAccountId = asText(row.external_account_id);
+            const platform = formatPlatform(platformCode || "—");
             const accountName = asText(row.external_account_name) || "—";
-            const accountId = asText(row.external_account_id) || "—";
+            const accountId = externalAccountId || "—";
+            const matchedAdAccountId = findMatchingAdAccountId(
+              adAccounts,
+              platformCode,
+              externalAccountId,
+            );
+            const actionDisabled = !session || !canManage || !matchedAdAccountId;
             return (
               <div key={`${platform}-${accountId}-${index}`} className="rounded-md border border-border/70 bg-background p-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
@@ -1391,7 +1422,27 @@ function BindingGapsPanel({
                   <Badge variant="outline">{t("bindingsGapNeedsBinding")}</Badge>
                 </div>
                 <p className="mt-3 text-sm text-muted-foreground">{t("bindingsGapFriendlyMessage")}</p>
-                <p className="mt-1 text-xs font-medium text-foreground">{t("bindingsGapNextStep")}</p>
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={actionDisabled}
+                    onClick={() => {
+                      if (matchedAdAccountId) onBindAccount(matchedAdAccountId);
+                    }}
+                  >
+                    {t("bindingsGapBindAccountAction")}
+                  </Button>
+                  {!matchedAdAccountId ? (
+                    <p className="max-w-xl text-xs text-muted-foreground">
+                      {t("bindingsGapAccountNotSelectable")}
+                    </p>
+                  ) : (
+                    <p className="text-xs font-medium text-foreground">
+                      {t("bindingsGapNextStep")}
+                    </p>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -1403,6 +1454,21 @@ function BindingGapsPanel({
       )}
     </div>
   );
+}
+
+function findMatchingAdAccountId(
+  adAccounts: Row[],
+  platform: string,
+  externalAccountId: string,
+) {
+  if (!platform || !externalAccountId) return "";
+  const normalizedPlatform = platform.toLowerCase();
+  const matched = filterRows(adAccounts).find(
+    (row) =>
+      asText(row.platform).toLowerCase() === normalizedPlatform &&
+      asText(row.external_account_id) === externalAccountId,
+  );
+  return matched ? entityId(matched, "ad_account_id") : "";
 }
 
 function uniquePlatformLabels(rows: Row[]) {

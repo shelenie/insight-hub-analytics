@@ -1,3 +1,18 @@
+## 2026-07-09 — Bindings Gap Card Direct Binding Action
+
+### Changed
+
+- Added a localized Bind account / Привʼязати акаунт action to Bindings → Ad accounts account-gap cards.
+- Gap actions open the existing ad account binding drawer in create mode and prefill only the matched ad account UUID when platform plus `external_account_id` match an available ad account option.
+- Client, project, and funnel remain empty so admins choose the correct business context.
+- Unmatched diagnostic gaps keep the action disabled and show localized guidance to refresh or check Ads Connectors instead of submitting fake IDs.
+
+### Notes
+
+- AdsConnectors remains the operational status page for ad platform connections, discovered accounts, sync status, and diagnostics.
+- Bindings remains the remediation/action page for binding sources and ad accounts to clients, projects, and funnels.
+- Frontend-only change. No backend contracts were changed: no Supabase schema, RLS, RPC contracts, Edge Functions, OAuth, sync behavior, routes, sidebar, AdsConnectors page, backend values, import pipeline, or binding-create/update flow changed.
+
 ## 2026-07-08 — Bindings Ads Readiness UX Separation
 
 ### Changed

@@ -731,7 +731,9 @@ export const translations = {
   bindingsNoBindingGaps: { uk: "Немає акаунтів, які потрібно привʼязати.", en: "No accounts need binding." },
   bindingsGapNeedsBinding: { uk: "Потрібна привʼязка", en: "Needs binding" },
   bindingsGapFriendlyMessage: { uk: "Акаунт існує в Ads конекторах, але ще не привʼязаний до клієнта, проєкту або воронки.", en: "This account exists in Ads Connectors but is not bound to a client, project, or funnel yet." },
-  bindingsGapNextStep: { uk: "Використайте форму привʼязки нижче.", en: "Use the binding form below." },
+  bindingsGapNextStep: { uk: "Оберіть клієнта, проєкт і воронку у формі.", en: "Choose the client, project, and funnel in the form." },
+  bindingsGapBindAccountAction: { uk: "Привʼязати акаунт", en: "Bind account" },
+  bindingsGapAccountNotSelectable: { uk: "Акаунт знайдено в діагностиці, але його ще не можна вибрати у формі. Оновіть сторінку або перевірте Ads конектори.", en: "The account was found in diagnostics, but it is not selectable in the form yet. Refresh the page or check Ads Connectors." },
   bindingsAdsReadinessUnavailable: { uk: "Готовність привʼязок рекламних акаунтів тимчасово недоступна. Інші звʼязки можна переглядати й редагувати як раніше.", en: "Ad account binding readiness is temporarily unavailable. Other bindings can still be viewed and edited as before." },
   bindingsAdsReadinessTechnicalTitle: { uk: "Технічні деталі готовності рекламних акаунтів", en: "Ad account readiness technical details" },
 

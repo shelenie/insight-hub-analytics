@@ -51,10 +51,44 @@ describe("Bindings ads multi-account readiness", () => {
     expect(bindingsSource).toContain('bindingsGapNeedsBinding');
     expect(bindingsSource).toContain('bindingsGapFriendlyMessage');
     expect(bindingsSource).toContain('bindingsGapNextStep');
+    expect(bindingsSource).toContain('bindingsGapBindAccountAction');
+    expect(bindingsSource).toContain('bindingsGapAccountNotSelectable');
+    expect(translationsSource).toContain('Привʼязати акаунт');
+    expect(translationsSource).toContain('Bind account');
     expect(bindingsSource).toContain('<BindingGapsPanel');
     const adAccountTabSource = bindingsSource.slice(bindingsSource.indexOf('<TabsContent value="ad-account"'), bindingsSource.indexOf('<TabsContent value="project-data"'));
     expect(adAccountTabSource.indexOf('<BindingGapsPanel')).toBeLessThan(adAccountTabSource.indexOf('<AdAccountsBusinessTable'));
     expect(adAccountTabSource.indexOf('<AdAccountsBusinessTable')).toBeLessThan(adAccountTabSource.indexOf('<AdminBindingForm'));
+  });
+
+
+  it("opens the existing create drawer from matched binding-gap cards without inventing targets", () => {
+    expect(bindingsSource).toContain('function findMatchingAdAccountId(');
+    expect(bindingsSource).toContain('asText(row.platform).toLowerCase() === normalizedPlatform');
+    expect(bindingsSource).toContain('asText(row.external_account_id) === externalAccountId');
+    expect(bindingsSource).toContain('onBindAccount={(adAccountId) => {');
+    expect(bindingsSource).toContain('setAdFormMode("create")');
+    expect(bindingsSource).toContain('ad_account_id: adAccountId');
+    expect(bindingsSource).toContain('client_id: ""');
+    expect(bindingsSource).toContain('project_id: ""');
+    expect(bindingsSource).toContain('funnel_id: ""');
+    expect(bindingsSource).toContain('setAdFormOpen(true)');
+  });
+
+  it("keeps unmatched diagnostic gaps safe and non-submitting", () => {
+    expect(bindingsSource).toContain('const actionDisabled = !session || !canManage || !matchedAdAccountId;');
+    expect(bindingsSource).toContain('disabled={actionDisabled}');
+    expect(bindingsSource).toContain('if (matchedAdAccountId) onBindAccount(matchedAdAccountId);');
+    expect(translationsSource).toContain('The account was found in diagnostics, but it is not selectable in the form yet. Refresh the page or check Ads Connectors.');
+    expect(bindingsSource).not.toContain('fake');
+  });
+
+  it("keeps the existing manual create button and binding-create-or-update flow", () => {
+    expect(bindingsSource).toContain('bindingsCreateAdAccountButton');
+    expect(translationsSource).toContain('+ Привʼязати рекламний акаунт');
+    expect(bindingsSource).toContain('setNormalAdForm(EMPTY_AD_FORM)');
+    expect(bindingsSource).toContain('binding_type: "ad_account"');
+    expect(bindingsSource).toContain('"binding-create-or-update"');
   });
 
   it("does not render backend gap codes or backend English messages in normal Bindings UI", () => {
