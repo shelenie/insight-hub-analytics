@@ -1,3 +1,10 @@
+## 2026-07-09 — Next Actions After AI Assistant Production Routing/Playbooks
+
+- Review and deploy the production-safe AI Assistant routing/playbook change that supersedes PR #230 instead of merging PR #230.
+- Re-test live assistant prompts for ads health, ads performance, ads anomalies, data quality/import issues, and client communication wording after deployment.
+- Keep DB-managed prompt registry out of scope unless future admin-editable prompt governance, audit, activation, rollback, and UI requirements are approved.
+- Continue avoiding schema/RLS/connector/routes changes for assistant prompt/routing polish unless a separate approved task requires them.
+
 ## 2026-07-09 — AI Assistant Routing Follow-up
 
 - Monitor live AI Assistant answers for the newly polished routing: data-quality prompts with “якістю даних” should select Data Quality, and drop/anomaly prompts should select Drops / anomalies even when stale data blocks current analysis.

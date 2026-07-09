@@ -1,3 +1,20 @@
+## 2026-07-09 — AI Assistant Production-Safe Routing and Code-Versioned Playbooks
+
+### Changed
+
+- Superseded PR #230 locally with deterministic smart routing that prioritizes Data Quality/Imports, Ads Health/source readiness, guarded Ads Anomalies, Ads Performance, Mapping, and System Readiness.
+- Added domain/metric/time-window guards for anomaly routing so broad anomaly words do not route unrelated access, import, or website issues to Ads Anomalies.
+- Expanded data-quality routing for Ukrainian inflections, import/rejected-row wording, raw/staging/processed data, and quality issues.
+- Added code-versioned AI Assistant analysis playbooks for Safety/Evidence, Data Readiness, CMO campaign diagnosis, CFO budget efficiency, Ads Anomaly Review, Data Quality/Import Review, Client Communication, and Operations Readiness.
+- Inject CMO/CFO playbooks for performance and relevant anomaly analysis rather than every ads-health answer.
+- CFO playbook covers cash/runway awareness when relevant, opportunity cost, simple decision-making, spend efficiency, CPL efficiency, unit-economics guardrails, and no invented revenue/ROAS/LTV/payback.
+- CMO playbook covers audience, creative, offer/message-market fit, funnel step, landing page/form, tracking, lead quality, and fatigue.
+
+### Notes
+
+- No Supabase schema, RLS, migrations, AdsConnectors, Bindings, routes/sidebar, source connector, sync, or permissions-model changes were made.
+- DB-managed prompt registry remains a future optional enhancement only if admin-editable prompt governance is required.
+
 ## 2026-07-09 — AI Assistant Smart Routing and Ukrainian Wording Polish
 
 ### Changed

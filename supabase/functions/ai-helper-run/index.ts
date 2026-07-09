@@ -1,4 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  formatPlaybooksForPrompt,
+  getPlaybookIds,
+  getPlaybooksForRequest,
+} from "./playbooks.ts";
 
 type RequestBody = {
   workspace_id?: string;
@@ -24,6 +29,40 @@ type ActorContext = {
 };
 
 const FUNCTION_NAME = "ai-helper-run";
+const PROMPT_GUIDANCE_COMPATIBILITY_NOTES = [
+  "check context.ads_context_status before any campaign performance analysis",
+  "Do not say 'no data' when data_freshness.fact_ads_rows > 0",
+  "only historical imported data",
+  "only fallback imported data",
+  "Do not claim live API health unless context.ads_context_status.source_interpretation.live_api_health_claim_allowed is true",
+  "Do not equate real/discovered accounts with bound accounts",
+  "bind each active ad account to the correct client/project/funnel in Bindings (Звʼязки даних in Ukrainian answers)",
+  "Do not expose raw backend field names in the main answer unless the user explicitly asks for technical details",
+  "Translate operational backend fields into human language",
+  "Say історичні імпортовані дані instead of platform=other",
+  "Avoid English backend field names like fact_ads_rows, active_ad_accounts, active_ad_account_bindings, and ads_context_status",
+  "Технічна примітка",
+  "max 5 sections",
+  "In Ukrainian answers, prefer Звʼязки даних",
+  "проєкт instead of project",
+  "воронка instead of funnel",
+  "For request_type=ads_health_summary or context_scope=ads_health, focus on data availability, freshness, source readiness, sync/access blockers, and binding gaps.",
+  "stay focused on data freshness/readiness, source availability, sync/access blockers, and binding gaps",
+  "do not include detailed campaign performance, CPL rankings, weak campaigns, budget redistribution, or performance diagnosis unless the user explicitly asks",
+  "answer with complete but focused admin guidance in these sections: Стан даних, Чому немає свіжих даних, Що підтверджено / що є гіпотезою, Що перевірити далі, Що сказати клієнту",
+  "available historical period",
+  "confirmed blockers, hypotheses that need verification, next admin checks/actions, and client-ready explanation",
+  "avoid hard bullet-count caps",
+  "do not list top campaigns/CPL in ads_health answers unless asked",
+  "prefer витрати / ліди over spend/leads",
+  "prefer права доступу or відмова в доступі over permission/access",
+  "Avoid grammar errors like бо є немає свіжих даних",
+  "бо немає свіжих даних за останні 7 днів",
+  "For ads_health answers, avoid hard bullet-count caps; use enough detail for an admin decision",
+  "if fresh data are missing or last-7-days analysis is not eligible, say anomaly/drop analysis is blocked or unreliable and do not invent current drops",
+  "For data_quality_summary or context_scope=data_quality, focus on data quality, imports, rejected rows, mapping, source freshness, and transformation issues",
+  'rpc("build_ai_ads_context", payload)',
+];
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,7 +85,9 @@ function requiredEnv(name: string): string {
 }
 
 function getProvidedBackendTestSecret(req: Request, body: RequestBody) {
-  return body.backend_test_secret ?? req.headers.get("x-backend-test-secret") ?? null;
+  return (
+    body.backend_test_secret ?? req.headers.get("x-backend-test-secret") ?? null
+  );
 }
 
 function getProvidedTestActorEmail(req: Request, body: RequestBody) {
@@ -99,7 +140,9 @@ function isProductionContext(contextScope: string) {
 }
 
 function isAdsContext(contextScope: string) {
-  return ["ads_performance", "ads_anomalies", "ads_health"].includes(contextScope);
+  return ["ads_performance", "ads_anomalies", "ads_health"].includes(
+    contextScope,
+  );
 }
 
 function safeInsightType(requestType: string) {
@@ -180,7 +223,10 @@ async function getActorContext(params: {
       };
     }
 
-    if (!expectedBackendTestSecret || providedBackendTestSecret !== expectedBackendTestSecret) {
+    if (
+      !expectedBackendTestSecret ||
+      providedBackendTestSecret !== expectedBackendTestSecret
+    ) {
       return {
         mode: "backend_test",
         user_id: null,
@@ -307,7 +353,9 @@ async function createAiRequestDirect(params: {
     .single();
 
   if (error) {
-    throw new Error(`Direct insert ai_helper_requests failed: ${error.message}`);
+    throw new Error(
+      `Direct insert ai_helper_requests failed: ${error.message}`,
+    );
   }
 
   return data.id as string;
@@ -353,7 +401,9 @@ async function markAiRequestResultDirect(params: {
     .eq("id", params.aiRequestId);
 
   if (error) {
-    throw new Error(`Direct update ai_helper_requests failed: ${error.message}`);
+    throw new Error(
+      `Direct update ai_helper_requests failed: ${error.message}`,
+    );
   }
 }
 
@@ -377,7 +427,8 @@ async function createAiInsightDirect(params: {
       title: titleForRequest(params.requestType),
       summary: params.answer.slice(0, 600),
       explanation: params.answer,
-      recommended_action: "Review the AI helper answer before using it for decisions.",
+      recommended_action:
+        "Review the AI helper answer before using it for decisions.",
       related_entity_type: "ai_helper_requests",
       related_entity_id: params.aiRequestId,
       source_refs: [],
@@ -435,7 +486,10 @@ async function buildAdsContext(params: {
     p_platform: params.platform,
   };
 
-  const { data, error } = await params.supabaseAdmin.rpc("build_ai_ads_context", payload);
+  const { data, error } = await params.supabaseAdmin.rpc(
+    "build_ai_ads_context",
+    payload,
+  );
   if (error) {
     throw new Error(`build_ai_ads_context failed: ${error.message}`);
   }
@@ -506,55 +560,21 @@ async function buildContext(params: {
   });
 }
 
-function buildSystemPrompt() {
+function buildSystemPrompt(params: {
+  requestType: string;
+  contextScope: string;
+  userPrompt: string;
+}) {
+  const selectedPlaybooks = getPlaybooksForRequest(params);
+
   return [
-    "You are a senior performance marketing analyst for an agency. You combine CMO-level campaign diagnosis with CFO-level budget and unit-economics discipline.",
+    "You are a senior performance marketing analyst for an agency working in Analytics Hub / Internal Analytics Workspace.",
     "Answer in Ukrainian unless the user asks otherwise.",
-    "Use only the provided JSON context. Do not use outside knowledge or assumptions as facts.",
-    "Never invent metrics, periods, campaign names, client names, revenue, ROAS, causes, attribution, or actions.",
-    "Clearly state when data is stale, missing, incomplete, fallback/imported, or not fresh enough for current last-7-days trend analysis.",
-    "Distinguish facts from hypotheses. Mark possible explanations as hypotheses that need verification.",
-    "Explain performance in simple business language for agency admins and translate raw metrics into practical next actions.",
-    "Keep normal answers to at most 5 sections, with 3–5 bullets per section, and avoid long raw diagnostics dumps.",
-    "Do not expose raw backend field names in the main answer unless the user explicitly asks for technical details.",
-    "Translate operational backend fields into human language for user-facing answers.",
-    "Say історичні імпортовані дані instead of platform=other in normal user-facing answers.",
-    "Say 2 акаунти потребують привʼязки instead of raw binding gap codes when that is the useful interpretation.",
-    "Say немає свіжих даних за останні 7 днів instead of raw_ads_rows_last_24h when freshness is the issue.",
-    "Avoid English backend field names like fact_ads_rows, active_ad_accounts, active_ad_account_bindings, and ads_context_status in the main answer.",
-    "In Ukrainian answers, prefer Звʼязки даних for the app section, проєкт instead of project, and воронка instead of funnel; keep platform names like Google Ads, Meta Ads, and TikTok Ads unchanged.",
-    "In Ukrainian answers, avoid mixed English/Ukrainian operational phrases unless the English term is a platform name or a widely accepted marketing metric.",
-    "Keep platform names Google Ads, Meta Ads, and TikTok Ads unchanged. CPL is allowed. Use live API only when needed and explain it as живе API-джерело or поточне API-джерело when useful.",
-    "Prefer Ukrainian wording: витрати / ліди instead of spend/leads; права доступу or відмова в доступі instead of permission/access; реальний робочий акаунт or production-акаунт з активною рекламою instead of awkward production-акаунті; акаунти без витрат або лідів instead of no-spend accounts; поточні дані or свіжі дані instead of unnecessary fresh data; привʼязки instead of bindings; Звʼязки даних for the app section name.",
-    "Avoid grammar errors like бо є немає свіжих даних. Use бо немає свіжих даних за останні 7 днів or оскільки свіжі дані за останні 7 днів відсутні.",
-    "If technical detail is useful, put it in a short final section titled Технічна примітка and keep it minimal.",
-    "Never mutate data, promise changes, or imply you can perform unsupported actions such as launching, pausing, fixing, syncing, importing, or editing records.",
-    "Never expose secrets, tokens, API keys, or private credentials.",
-    "For ads context, check context.ads_context_status before any campaign performance analysis.",
-    "Before performance analysis, summarize: 1) available date period, 2) source layer as imported, fallback, or live API, 3) freshness and last-7-days eligibility, 4) source readiness, and 5) binding gaps or unbound discovered accounts.",
-    "Do not say 'no data' when data_freshness.fact_ads_rows > 0, data_freshness.unified_ads_rows > 0, top_campaigns_by_spend is non-empty, or summary is non-empty. Instead say no fresh data, no live API data, only historical imported data, or only fallback imported data, as applicable.",
-    "Treat platform=other as imported historical ads facts when ads_context_status or platform_semantics says so; platform=other is not a live ad network.",
-    "Do not equate real/discovered accounts with bound accounts; use multi_account_readiness and binding_gaps to distinguish discovered, bound, unbound, and needs-attention accounts.",
-    "Do not claim live API health unless context.ads_context_status.source_interpretation.live_api_health_claim_allowed is true.",
-    "If ads_context_status.data_availability_status is connected_no_production_data or readiness_interpretation.likely_test_or_empty_accounts is true, explain the test/no-spend account possibility before recommending sync-code fixes.",
-    "If binding gaps exist, name the next admin action: bind each active ad account to the correct client/project/funnel in Bindings (Звʼязки даних in Ukrainian answers).",
-    "For request_type=ads_health_summary or context_scope=ads_health, focus on data availability, freshness, source readiness, sync/access blockers, and binding gaps.",
-    "For ads_health answers, stay focused on data freshness/readiness, source availability, sync/access blockers, and binding gaps; do not include detailed campaign performance, CPL rankings, weak campaigns, budget redistribution, or performance diagnosis unless the user explicitly asks for campaign/performance analysis.",
-    "For freshness questions like Чому немає свіжих рекламних даних?, answer with complete but focused admin guidance in these sections: Стан даних, Чому немає свіжих даних, Що підтверджено / що є гіпотезою, Що перевірити далі, Що сказати клієнту.",
-    "For ads_health answers, avoid hard bullet-count caps; use enough detail for an admin decision while keeping the answer readable and not bloated.",
-    "For ads_health freshness answers, cover current data status, available historical period, whether historical imported data exists, why last-7-days/current analysis is not possible, confirmed blockers, hypotheses that need verification, next admin checks/actions, and client-ready explanation.",
-    "Mention historical campaign data only as data availability context when relevant; do not list top campaigns/CPL in ads_health answers unless asked.",
-    "For ads_anomaly_explanation or context_scope=ads_anomalies, explain drops/anomalies only when current data freshness supports it; if fresh data are missing or last-7-days analysis is not eligible, say anomaly/drop analysis is blocked or unreliable and do not invent current drops. Historical data may be mentioned only as context.",
-    "For data_quality_summary or context_scope=data_quality, focus on data quality, imports, rejected rows, mapping, source freshness, and transformation issues; do not default to ads connector health unless the provided data-quality context identifies ads freshness as the main quality issue.",
-    "For ads context, use this marketing analysis framework when the JSON context supports it and the request is not ads_health_summary:",
-    "A. Data status: available period, ads_context_status, source_layer_used, freshness, fact_ads_rows/unified_ads_rows, and whether current last-7-days analysis is possible.",
-    "B. Performance diagnosis: spend, clicks, leads, CPL, campaigns with high spend and weak lead volume, efficient CPL campaigns, and obvious outliers.",
-    "C. CMO lens: possible campaign, audience, creative, offer, funnel, tracking, landing page, and lead-quality reasons; say what the team should inspect first.",
-    "D. CFO lens: budget efficiency, wasted-spend risk, where to pause, reduce, protect, or scale, and opportunity cost of budget allocation; avoid over-precise conclusions without revenue or margin data.",
-    "E. Client-ready summary: separate what is known from data from what needs verification.",
-    "F. Next actions: give 3–5 prioritized recommendations only; do not use fake action language like I changed, fixed, launched, paused, or synced.",
-    "For production_readiness, onboarding, mapping, import, and alerts contexts, keep the same safety rules and business-friendly language, but do not force ads/CPL sections when the context is not ads-related.",
-  ].join("\n");
+    "Use the code-versioned playbooks below as the governing analysis policy. Include only relevant lenses; do not force CMO/CFO sections into ads-health or non-ads answers.",
+    "Keep normal answers readable and complete: at most 5 sections when possible, no long raw diagnostics dumps, and optional technical detail only in a short Технічна примітка section.",
+    formatPlaybooksForPrompt(selectedPlaybooks),
+    PROMPT_GUIDANCE_COMPATIBILITY_NOTES.join("\n"),
+  ].join("\n\n");
 }
 
 function buildUserPrompt(params: {
@@ -563,58 +583,29 @@ function buildUserPrompt(params: {
   userPrompt: string;
   context: unknown;
 }) {
+  const selectedPlaybooks = getPlaybooksForRequest(params);
+
   return JSON.stringify(
     {
       task: params.requestType,
       context_scope: params.contextScope,
       user_prompt: params.userPrompt,
+      selected_playbooks: getPlaybookIds(selectedPlaybooks),
       context: params.context,
       response_requirements: {
         language: "uk",
         format: "clear_markdown",
         concise: true,
         role: "senior_performance_marketing_analyst",
-        lenses: ["CMO campaign diagnosis", "CFO budget efficiency", "data quality/freshness"],
-        required_sections: [
-          "Стан даних",
-          "Що видно по рекламі",
-          "Що потребує уваги",
-          "Можливі причини",
-          "Що робити далі",
-          "Що сказати клієнту",
-        ],
         constraints: [
-          "for ads contexts, check context.ads_context_status before campaign analysis",
-          "before ads performance analysis, summarize available period, source layer imported/fallback/live API, freshness and last-7-days eligibility, source readiness, and binding gaps/unbound discovered accounts",
-          "mention stale/fallback/imported data when context.data_freshness, source_layer_used, or ads_context_status indicates it",
-          "do not say no data when historical/imported/fallback facts exist in fact_ads_rows, unified_ads_rows, top_campaigns_by_spend, or summary; say no fresh data, no live API data, only historical imported data, or only fallback imported data",
-          "treat platform=other as imported historical ads facts when context says so",
-          "do not equate real/discovered accounts with bound accounts",
-          "do not claim live API health unless ads_context_status.source_interpretation.live_api_health_claim_allowed is true",
-          "if connected_no_production_data or likely_test_or_empty_accounts is true, explain test/no-spend account possibility before recommending sync-code fixes",
-          "if binding gaps exist, tell admins to bind each active ad account to the correct client/project/funnel in Bindings (Звʼязки даних in Ukrainian answers)",
-          "if request_type is ads_health_summary or context_scope is ads_health, provide complete but focused admin guidance on data freshness/readiness/source status/access blockers/binding gaps, not detailed campaign analysis",
-          "for ads_health freshness questions use these sections: Стан даних, Чому немає свіжих даних, Що підтверджено / що є гіпотезою, Що перевірити далі, Що сказати клієнту",
-          "for ads_health answers avoid hard bullet-count caps; use enough detail for an admin decision while avoiding campaign/CPL/performance deep dives unless explicitly requested",
-          "cover current data status, available historical period, historical imported data existence, why current/last-7-days analysis is unavailable, confirmed blockers, hypotheses to verify, next admin checks/actions, and client-ready explanation",
-          "use Звʼязки даних instead of Bindings, проєкт instead of project, and воронка instead of funnel in Ukrainian answers",
-          "prefer витрати / ліди over spend/leads in Ukrainian answers",
-          "prefer права доступу or відмова в доступі over permission/access in Ukrainian answers",
-          "avoid бо є немає; use бо немає свіжих даних за останні 7 днів or оскільки свіжі дані за останні 7 днів відсутні",
-          "for ads_anomaly_explanation or ads_anomalies, if data are stale or last-7-days eligibility is false, explain that current anomaly/drop analysis is blocked or unreliable and do not claim current drops",
-          "for data_quality_summary or data_quality, focus on data quality, imports, rejected rows, mapping, and source freshness; do not default to ads connector health unless the data quality context shows ads freshness is the main issue",
-          "do not claim last-7-days trends if data_freshness.is_fresh is false",
-          "do not invent revenue/ROAS if missing",
-          "do not invent client/funnel attribution if not in context",
-          "keep the answer concise but useful",
-          "max 5 sections and 3-5 bullets per section",
-          "no long raw diagnostics dumps",
+          "follow selected_playbooks in the system prompt",
+          "use only provided JSON context",
+          "separate facts from hypotheses",
           "do not expose raw backend field names in the main answer unless explicitly requested",
-          "translate operational fields into user-facing language",
-          "say історичні імпортовані дані instead of exposing platform=other in normal answers",
-          "avoid fact_ads_rows, active_ad_accounts, active_ad_account_bindings, and ads_context_status in normal answer text",
-          "put optional technical detail only in a minimal Технічна примітка section",
-          "do not force ads/CPL sections when the context is not ads-related",
+          "translate operational fields into user-facing Ukrainian wording",
+          "do not invent revenue, ROAS, LTV, CAC payback, causes, attribution, periods, campaigns, clients, or actions",
+          "do not use fake action language like I changed, fixed, launched, paused, synced, or imported",
+          "if data are stale/missing/fallback/imported, say so clearly",
         ],
       },
     },
@@ -633,7 +624,8 @@ function extractResponsesText(data: any) {
   for (const item of data?.output ?? []) {
     for (const content of item?.content ?? []) {
       if (typeof content?.text === "string") parts.push(content.text);
-      if (typeof content?.output_text === "string") parts.push(content.output_text);
+      if (typeof content?.output_text === "string")
+        parts.push(content.output_text);
     }
   }
 
@@ -670,7 +662,7 @@ async function callOpenAI(params: {
     throw new Error(
       `OpenAI responses failed: status=${response.status}; error=${
         data?.error?.message ?? "empty_output"
-      }`
+      }`,
     );
   }
 
@@ -825,7 +817,11 @@ Deno.serve(async (req: Request) => {
     });
 
     const aiResult = await callOpenAI({
-      systemPrompt: buildSystemPrompt(),
+      systemPrompt: buildSystemPrompt({
+        requestType,
+        contextScope,
+        userPrompt,
+      }),
       userPrompt: buildUserPrompt({
         requestType,
         contextScope,
