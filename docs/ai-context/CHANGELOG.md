@@ -1,3 +1,18 @@
+## 2026-07-09 — AI Assistant Production UX Auto-Routing
+
+### Changed
+
+- Added smart AI Assistant context routing so ads freshness/sync/account questions use Ads health, campaign/CPL/spend questions use Ads performance, and anomaly/drop/spike questions use Ads anomalies.
+- Changed the assistant default context to Ads health and removed the always-visible primary composer dropdown dependency.
+- Kept manual context selection as a collapsed advanced/testing override.
+- Added resolved-context badges on chat messages and a copy button for assistant answers.
+- Improved lightweight answer rendering for headings, paragraphs, grouped bullet lists, grouped numbered lists, and bold text.
+- Increased `ai-helper-run` output limit to 2200 tokens and added prompt rules that translate backend diagnostics into user-facing language instead of exposing raw field names in normal answers.
+
+### Notes
+
+- No Supabase schema, RLS, migrations, routes/sidebar, AdsConnectors, Bindings, connectors, sync logic, data mutations, or permissions-model changes were made.
+
 ## 2026-07-09 — Conservative AI Ads Live API Interpretation
 
 ### Fixed

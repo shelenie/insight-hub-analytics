@@ -37,31 +37,35 @@ describe("AI Assistant chat UI", () => {
     expect(translations.assistantWelcome.en).toBe("I can help find performance drops, ad issues, data quality problems, and prepare insights for the team or client.");
   });
 
-  it("hides visible history UI and Auto context while defaulting to full overview", () => {
-    expect(source).not.toMatch(/labelKey:\s*"[^"]*Auto"/);
-    expect(source).toContain('useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextFullOverview")');
+  it("hides visible history UI and defaults to ads health with smart auto-routing", () => {
+    expect(source).toContain('function resolveAssistantContext(prompt: string, selectedOption: ContextOption, manualOverrideEnabled: boolean)');
+    expect(source).toContain('useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextAdsHealth")');
+    expect(source).toContain('const resolvedOption = resolveAssistantContext(submittedPrompt, selectedOption, manualOverrideEnabled);');
+    expect(source).not.toContain('useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextFullOverview")');
     expect(source).not.toContain("function HistoryPanel");
     expect(source).not.toContain("function HistoryList");
     expect(source).not.toContain("assistantHistoryToggle");
     expect(source).not.toContain("v_ai_helper_requests_recent");
-    expect(source).not.toContain("<details className=");
+
     expect(source).not.toContain("xl:grid-cols-[minmax(0,1fr)_20rem]");
   });
-  it("uses the requested analysis mode label and marketing-oriented order", () => {
+  it("uses advanced analysis mode label and marketing-oriented order", () => {
     expect(translations.assistantContextLabel.uk).toBe("Режим аналізу");
     expect(translations.assistantContextLabel.en).toBe("Analysis mode");
+    expect(translations.assistantAdvancedContext.uk).toBe("Змінити контекст");
+    expect(translations.assistantManualOverride.en).toBe("Manual testing override");
     const optionsBlock = source.slice(source.indexOf("const OPTIONS = ["), source.indexOf("] as const satisfies readonly ContextOption[];"));
     const optionLabels = Array.from(optionsBlock.matchAll(/labelKey: "([^"]+)"/g)).map((match) => match[1]);
     expect(optionLabels.slice(0, 10)).toEqual([
-      "assistantContextFullOverview",
+      "assistantContextAdsHealth",
       "assistantContextAdsPerformance",
       "assistantContextAdsAnomalies",
+      "assistantContextFullOverview",
       "assistantContextDataQuality",
       "assistantContextImportStatus",
       "assistantContextMappingReview",
       "assistantContextAlerts",
       "assistantContextClientsFunnels",
-      "assistantContextAdsHealth",
       "assistantContextSystemReadiness",
     ]);
     expect(translations.assistantContextFullOverview.en).toBe("Full overview");
@@ -82,6 +86,8 @@ describe("AI Assistant chat UI", () => {
     expect(source).toContain('focus-within:ring-2 focus-within:ring-primary/20');
     expect(source).toContain('Math.min(textarea.scrollHeight, 176)');
     expect(source).toContain('size="icon"');
+    expect(source).toContain('<summary className="cursor-pointer list-none');
+    expect(source).toContain('disabled={!manualOverrideEnabled}');
   });
 
   it("uses one centered chat column for messages, loading, errors, composer, and safety note", () => {
@@ -122,5 +128,48 @@ describe("AI Assistant chat UI", () => {
     expect(source).toContain("request_type: option.requestType");
     expect(source).toContain("context_scope: option.contextScope");
     expect(source).not.toMatch(/auto-map|approve mapping|fix data|create bindings|run sync|change users|change role|invite user|update binding/i);
+  });
+});
+
+
+describe("AI Assistant smart routing and answer UX", () => {
+  it("routes ads freshness questions to ads health instead of full production by default", () => {
+    expect(source).toContain("свіжих даних");
+    expect(source).toContain("assistantContextAdsHealth");
+    expect(source).toContain("ads_health_summary");
+    expect(source).toContain("ads_health");
+    expect(source).toContain("if (isAds && isFreshness) return option(\"assistantContextAdsHealth\")");
+  });
+
+  it("routes campaign performance and anomaly prompts to specialized ads contexts", () => {
+    expect(source).toContain("if (isAds && isPerformance) return option(\"assistantContextAdsPerformance\")");
+    expect(source).toContain("ads_performance_summary");
+    expect(source).toContain("if (isAds && isAnomaly) return option(\"assistantContextAdsAnomalies\")");
+    expect(source).toContain("ads_anomaly_explanation");
+  });
+
+  it("keeps manual override only as an advanced control", () => {
+    expect(source).toContain("if (manualOverrideEnabled) return selectedOption");
+    expect(source).toContain("assistantAdvancedContext");
+    expect(source).toContain("assistantManualOverride");
+    expect(source).toContain("disabled={!manualOverrideEnabled}");
+  });
+
+  it("shows resolved context badges and copy actions for assistant answers", () => {
+    expect(source).toContain("assistantContextPrefix");
+    expect(source).toContain("assistantAutoContextPrefix");
+    expect(source).toContain("navigator.clipboard.writeText(message.text)");
+    expect(source).toContain("assistantCopy");
+    expect(source).toContain("assistantCopied");
+    expect(translations.assistantCopy.uk).toBe("Скопіювати");
+    expect(translations.assistantCopied.en).toBe("Copied");
+  });
+
+  it("groups markdown bullet and numbered lists in lightweight answer renderer", () => {
+    expect(source).toContain("function parseMarkdownBlocks");
+    expect(source).toContain('previous?.type === "bullets"');
+    expect(source).toContain('previous?.type === "numbers"');
+    expect(source).toContain('className="list-disc space-y-1 pl-5"');
+    expect(source).toContain('className="list-decimal space-y-1 pl-5"');
   });
 });
