@@ -1,3 +1,10 @@
+## 2026-07-09 — Next Actions After CFO Playbook Enrichment
+
+- Review deployed AI Assistant ads-performance answers for the enriched CFO lens: budget efficiency, opportunity cost, wasted spend risk, CPL efficiency, spend concentration, and clear missing-data guardrails.
+- Confirm ads-health and data-quality answers do not inject the full CFO playbook by default; they should only mention budget-confidence risk lightly when stale or unreliable data makes financial decisions unsafe.
+- Use runway/fundraising/treasury/accounting guidance only when the context contains relevant finance data or the user explicitly asks for CFO-level company-finance guidance.
+- Require human review for major budget reallocations, fundraising terms/dilution, debt vs equity, layoffs/restructuring, acquisition pricing, board compensation, covenants, tax, audit, legal, and compliance decisions.
+
 ## 2026-07-09 — Next Actions After CMO Playbook Enrichment
 
 - Review deployed AI Assistant performance/anomaly answers for the enriched CMO lens: pipeline over vanity metrics, positioning/channel focus, distribution, ICP/funnel/sales-alignment checks, and attribution caution.

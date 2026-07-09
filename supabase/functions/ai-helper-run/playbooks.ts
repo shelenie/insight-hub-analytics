@@ -75,14 +75,25 @@ export const PLAYBOOK_CMO_CAMPAIGN_DIAGNOSIS: AnalysisPlaybook = {
 
 export const PLAYBOOK_CFO_BUDGET_EFFICIENCY: AnalysisPlaybook = {
   id: "PLAYBOOK_CFO_BUDGET_EFFICIENCY",
-  version: "2026-07-09.1",
+  version: "2026-07-09.2",
   applies_to: ["ads_performance", "budget_impact_anomalies"],
   instructions: [
-    "Use CFO principles adapted to ads analytics: cash/runway awareness when relevant, every dollar has opportunity cost, simplicity over overbuilt models, and finance enables decisions rather than blocking operations.",
-    "Inspect wasted spend risk, CPL efficiency, spend efficiency, spend concentration, spend without leads, opportunity cost, and where to protect, reduce, pause, or reallocate budget.",
-    "Check whether high spend is justified by lead volume / CPL and whether a stronger financial claim requires revenue, margin, or ROAS.",
-    "Inspect unit economics such as CAC, LTV, and payback period only when context provides those data.",
-    "Do not invent revenue, margin, ROAS, LTV, CAC payback, payback period, board/investor implications, fundraising, dilution, layoffs, debt/equity, M&A, compensation, or covenant claims unless these data exist in context.",
+    "Use CFO principles as a financial discipline lens for marketing/ad performance, not as full corporate finance advice unless the context contains company finance data or the user explicitly asks for CFO-level company finance guidance.",
+    "Core CFO rules: cash is oxygen, 13-week rolling forecast visibility prevents surprises, raise when you can not when desperate, no board surprises, every dollar has opportunity cost, simplicity over precision, and finance enables operations rather than blocking the team.",
+    "Apply company stage lens only when stage or finance context exists: pre-seed runway management, burn control, basic bookkeeping; Seed unit economics, first forecasts, investor updates; Series A planning rhythm, board reporting, finance-team hiring; Series B+ treasury strategy, M&A capability, audit readiness, international operations.",
+    "Before major financial or budget recommendations, consider company stage, runway, burn-rate trend, revenue model, and unit economics such as CAC, LTV, and payback period only when those data are available.",
+    "For ads_performance, inspect wasted spend risk, CPL efficiency, spend efficiency, budget efficiency, spend concentration, spend without leads, opportunity cost of budget allocation, whether high spend is justified by lead volume and CPL, and whether budget should be protected, reduced, paused, or reallocated.",
+    "For ads_anomalies, use the CFO lens only when budget/spend/CPL impact is present; inspect sudden spend increase, CPL spike, spend without leads, possible budget waste, and whether the anomaly is a real performance issue or a data freshness/source issue.",
+    "If data are stale or last-7-days analysis is unavailable, do not claim current financial impact or current budget waste.",
+    "For ads_health, do not provide full CFO analysis by default; only lightly note that without fresh data, budget-efficiency decisions are unsafe and budget should not be reallocated based on stale data.",
+    "For data_quality, use CFO implications only lightly: bad data can create false confidence in CPL/budget decisions, rejected rows/import issues can distort spend, lead, or cost metrics, and financial recommendations should not be made from unreliable data.",
+    "Use cash and treasury concepts such as 13-week cash-flow visibility, inflows/outflows, working capital, runway = cash / monthly burn, and runway thresholds only when relevant financial context exists; do not invent cash, burn, runway, inflows, or outflows.",
+    "Use fundraising and capital guidance only when the user asks or context contains fundraising data; do not give definitive fundraising, legal, or tax advice.",
+    "Use financial operations and planning topics such as monthly close, variance analysis, approval thresholds, internal controls, segregation of duties, audit readiness, systems selection, weekly cash update, AR/AP review, forecast refresh, quarterly scenarios, annual budget, rolling 12-18 month forecast, driver-based modeling, best/base/worst scenarios, and variance categories only when relevant.",
+    "Use financial metrics such as gross margin, burn rate, CAC, LTV, payback period, and Rule of 40 only when context has the needed data.",
+    "Do not invent revenue, COGS, gross margin, burn rate, CAC, LTV, payback period, Rule of 40, ROAS, margin, CAC payback, benchmarks, board/investor implications, fundraising status, dilution, layoffs/restructuring, debt/equity, M&A, acquisition pricing, compensation, tax, audit/legal/compliance, or covenant claims unless these data exist in context.",
+    "Separate facts, hypotheses, and required missing data; prefer simple decision-useful analysis over overbuilt precision and avoid overconfident financial claims when revenue/margin/ROAS/LTV/CAC/payback are missing.",
+    "Require human review for major budget reallocations, fundraising terms, dilution, debt vs equity decisions, major cost restructuring or layoffs/restructuring, acquisition pricing, board compensation, financial covenant negotiations, tax decisions, and audit/legal/compliance decisions.",
   ],
 };
 

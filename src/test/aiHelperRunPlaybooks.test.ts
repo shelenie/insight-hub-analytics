@@ -53,7 +53,7 @@ describe("ai-helper-run code-versioned analysis playbooks", () => {
     expect(playbookSource).toContain("spend efficiency");
     expect(playbookSource).toContain("CPL efficiency");
     expect(playbookSource).toContain(
-      "Do not invent revenue, margin, ROAS, LTV, CAC payback, payback period",
+      "Do not invent revenue, COGS, gross margin, burn rate, CAC, LTV, payback period",
     );
     expect(playbookSource).toContain("audience quality");
     expect(playbookSource).toContain("creative fatigue");
@@ -118,6 +118,72 @@ describe("ai-helper-run code-versioned analysis playbooks", () => {
     expect(playbookSource).toContain("PLAYBOOK_DATA_QUALITY_IMPORT_REVIEW");
     expect(playbookSource).toContain(
       "if (asksClientCommunication) add(PLAYBOOK_CLIENT_COMMUNICATION)",
+    );
+  });
+
+  it("enriches CFO budget efficiency with finance discipline principles", () => {
+    expect(playbookSource).toContain("cash is oxygen");
+    expect(playbookSource).toContain("13-week rolling forecast");
+    expect(playbookSource).toContain("no board surprises");
+    expect(playbookSource).toContain("every dollar has opportunity cost");
+    expect(playbookSource).toContain("simplicity over precision");
+    expect(playbookSource).toContain("finance enables operations");
+    expect(playbookSource).toContain("pre-seed");
+    expect(playbookSource).toContain("Seed unit economics");
+    expect(playbookSource).toContain("Series A");
+    expect(playbookSource).toContain("Series B+");
+    expect(playbookSource).toContain("CAC, LTV, and payback period");
+  });
+
+  it("keeps CFO ads-performance scope and missing-data guardrails", () => {
+    expect(playbookSource).toContain("wasted spend risk");
+    expect(playbookSource).toContain("CPL efficiency");
+    expect(playbookSource).toContain("spend concentration");
+    expect(playbookSource).toContain("opportunity cost of budget allocation");
+    expect(playbookSource).toContain("sudden spend increase");
+    expect(playbookSource).toContain("CPL spike");
+    expect(playbookSource).toContain("spend without leads");
+    expect(playbookSource).toContain("do not claim current financial impact");
+    expect(playbookSource).toContain(
+      "Do not invent revenue, COGS, gross margin, burn rate, CAC, LTV, payback period, Rule of 40, ROAS, margin",
+    );
+    expect(playbookSource).toContain(
+      "avoid overconfident financial claims when revenue/margin/ROAS/LTV/CAC/payback are missing",
+    );
+  });
+
+  it("marks high-impact CFO decisions for human review", () => {
+    expect(playbookSource).toContain(
+      "Require human review for major budget reallocations",
+    );
+    expect(playbookSource).toContain("fundraising terms");
+    expect(playbookSource).toContain("dilution");
+    expect(playbookSource).toContain("debt vs equity");
+    expect(playbookSource).toContain("layoffs/restructuring");
+    expect(playbookSource).toContain("acquisition pricing");
+    expect(playbookSource).toContain("board compensation");
+    expect(playbookSource).toContain("financial covenant negotiations");
+  });
+
+  it("keeps CFO selection conditional outside ads performance", () => {
+    const adsHealthBlock =
+      playbookSource.match(
+        /if \(request\.includes\("ads_health"\)[\s\S]*?else if/,
+      )?.[0] ?? "";
+    const dataQualityBlock =
+      playbookSource.match(
+        /request\.includes\("data_quality"\)[\s\S]*?else if/,
+      )?.[0] ?? "";
+    const adsAnomalyBlock =
+      playbookSource.match(
+        /request\.includes\("ads_anomaly"\)[\s\S]*?else if/,
+      )?.[0] ?? "";
+
+    expect(playbookSource).toContain("add(PLAYBOOK_CFO_BUDGET_EFFICIENCY)");
+    expect(adsHealthBlock).not.toContain("PLAYBOOK_CFO_BUDGET_EFFICIENCY");
+    expect(dataQualityBlock).not.toContain("PLAYBOOK_CFO_BUDGET_EFFICIENCY");
+    expect(adsAnomalyBlock).toContain(
+      "if (budgetImpact) add(PLAYBOOK_CFO_BUDGET_EFFICIENCY)",
     );
   });
 

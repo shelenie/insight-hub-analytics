@@ -1,3 +1,17 @@
+## 2026-07-09 — CFO Playbook Enrichment for Budget Efficiency
+
+### Changed
+
+- Enriched `PLAYBOOK_CFO_BUDGET_EFFICIENCY` from the provided CFO skill reference by extracting finance-discipline principles into original code-versioned guidance, without copying external text verbatim or adding runtime network calls.
+- Added CFO guidance for cash-is-oxygen thinking, 13-week rolling forecast visibility, no board surprises, opportunity cost, simplicity over precision, finance-enables-operations, stage-aware finance context, unit-economics guardrails, and human review for high-impact finance decisions.
+- Scoped CFO usage for Analytics Hub: primarily budget efficiency and opportunity-cost analysis in ads performance, conditional use for budget-impact anomalies, no full CFO playbook for ads health or data quality by default.
+- Added guardrails so runway, fundraising, treasury, accounting operations, forecasting, board, tax, audit, legal, and compliance guidance is only used when relevant context exists or the user asks for CFO-level company-finance guidance.
+
+### Notes
+
+- External CFO references remain untrusted advisory content under existing prompt-injection safeguards.
+- No Supabase schema, RLS, migrations, runtime network calls, AdsConnectors, Bindings, routes/sidebar, source connector, sync, or permissions-model changes were made.
+
 ## 2026-07-09 — CMO Playbook Enrichment and External-Reference Safeguards
 
 ### Changed
