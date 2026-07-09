@@ -1,3 +1,10 @@
+## Updated Next Actions — 2026-07-09 AI Assistant UX Follow-up
+
+- Validate AI Assistant auto-routing in live UI with Ukrainian ads freshness, campaign performance, anomaly, import/data-quality, and mapping prompts.
+- Consider adding compact `ads_context_status` summary chips above assistant answers when the frontend response payload exposes enough structured context.
+- Consider adding optional answer rewrite actions such as “Стисліше” and “Для клієнта” after the core auto-routing/copy/rendering UX is validated.
+- Keep manual context override available as an advanced/testing control, not the main composer workflow.
+
 ## Next Action — After Conservative AI Ads Live API Interpretation
 
 - After deployment, verify an AI ads context with fresh imported `platform=other` facts keeps `live_api_health_claim_allowed = false` and describes the data as imported historical ads facts.

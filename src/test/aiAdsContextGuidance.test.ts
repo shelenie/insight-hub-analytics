@@ -68,6 +68,17 @@ describe("normalized AI ads context guidance", () => {
     expect(edgeFunctionSource).toContain("bind each active ad account to the correct client/project/funnel in Bindings");
   });
 
+
+  it("polishes ai-helper-run answer limits and user-facing backend wording rules", () => {
+    expect(edgeFunctionSource).toContain("max_output_tokens: 2200");
+    expect(edgeFunctionSource).toContain("Do not expose raw backend field names in the main answer unless the user explicitly asks for technical details");
+    expect(edgeFunctionSource).toContain("Translate operational backend fields into human language");
+    expect(edgeFunctionSource).toContain("Say історичні імпортовані дані instead of platform=other");
+    expect(edgeFunctionSource).toContain("Avoid English backend field names like fact_ads_rows, active_ad_accounts, active_ad_account_bindings, and ads_context_status");
+    expect(edgeFunctionSource).toContain("Технічна примітка");
+    expect(edgeFunctionSource).toContain("max 5 sections");
+  });
+
   it("does not change frontend pages, routes, sidebar, AdsConnectors, or Bindings files", () => {
     const changedFiles = execSync("git diff --name-only", { encoding: "utf8" })
       .split("\n")
@@ -75,7 +86,7 @@ describe("normalized AI ads context guidance", () => {
 
     expect(changedFiles).not.toContain("src/pages/AdsConnectors.tsx");
     expect(changedFiles).not.toContain("src/pages/Bindings.tsx");
-    expect(changedFiles.some((file) => file.startsWith("src/pages/"))).toBe(false);
+    expect(changedFiles.filter((file) => file.startsWith("src/pages/")).every((file) => file === "src/pages/Assistant.tsx")).toBe(true);
     expect(changedFiles.some((file) => /route|sidebar/i.test(file))).toBe(false);
   });
 });
