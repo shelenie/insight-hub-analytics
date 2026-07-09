@@ -1,3 +1,18 @@
+## 2026-07-09 — AdsConnectors Diagnostics Compact Admin Overview
+
+### Changed
+
+- Polished AdsConnectors Diagnostics from long diagnostic columns into a compact admin overview.
+- Rendered Ads data context as a full-width compact metric summary instead of a column stretched to match longer lists.
+- Rendered Daily snapshots and Anomaly candidates as responsive cards with compact three-row previews.
+- Displayed backend `platform = other` as friendly Imported data / Імпортовані дані labels in normal UI.
+- Cleaned Diagnostics intro copy and removed awkward Ukrainian mixed wording.
+
+### Notes
+
+- Raw diagnostics remain in collapsed DeveloperDetails / technical details.
+- Frontend-only change; no Supabase schema, RLS, RPC contracts, Edge Functions, OAuth, sync behavior, routes, sidebar, backend values, data fetching, write actions, AdsConnectors tab structure, or Bindings page changed.
+
 ## 2026-07-09 — AdsConnectors Diagnostics UI Polish and Binding Terminology
 
 ### Changed

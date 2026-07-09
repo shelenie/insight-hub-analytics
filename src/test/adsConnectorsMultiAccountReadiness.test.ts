@@ -270,20 +270,38 @@ describe("AdsConnectors multi-account readiness UI", () => {
     expect(source).not.toContain("link status");
   });
 
-  it("renders Diagnostics as compact admin cards and keeps raw tables behind technical details", () => {
+  it("renders Diagnostics as compact admin overview and keeps raw tables behind technical details", () => {
     const diagnosticsPanel = source.slice(
       source.indexOf("function DiagnosticsPanel"),
       source.indexOf("function IssuesPanel"),
     );
     expect(diagnosticsPanel).toContain("ui.diagnosticsIntroTitle");
-    expect(diagnosticsPanel).toContain("<DiagnosticsSummaryCard");
+    expect(diagnosticsPanel).toContain('className="space-y-4"');
+    expect(diagnosticsPanel).toContain('className="grid gap-4 lg:grid-cols-2"');
+    expect(diagnosticsPanel).not.toContain("xl:grid-cols-3");
+    expect(diagnosticsPanel).toContain("<DiagnosticsSummaryCard title={ui.adsContext}");
     expect(diagnosticsPanel).toContain("function AdsContextSummaryCard");
+    expect(diagnosticsPanel).toContain("lg:grid-cols-4");
     expect(diagnosticsPanel).toContain("function DiagnosticsListCard");
     expect(diagnosticsPanel).toContain("function DiagnosticsListItem");
+    expect(diagnosticsPanel).toContain("data.rows.slice(0, 3)");
+    expect(diagnosticsPanel).not.toContain("data.rows.slice(0, 5)");
     expect(diagnosticsPanel).toContain("<DeveloperDetails title={ui.rawDiagnosticsTitle}>");
     expect(diagnosticsPanel.indexOf("<DeveloperDetails title={ui.rawDiagnosticsTitle}>")).toBeLessThan(
       diagnosticsPanel.indexOf("<CompactDataSection"),
     );
+  });
+
+  it("uses polished diagnostics copy and friendly imported platform labels", () => {
+    expect(source).toContain('diagnosticsIntroText: "Короткий адміністративний огляд рекламних даних, денних зрізів і можливих аномалій. Повні технічні дані залишаються в технічних деталях."');
+    expect(source).toContain('diagnosticsIntroText: "A short admin overview of ads data, daily snapshots, and possible anomalies. Full technical payloads remain in technical details."');
+    expect(source).toContain('adsContext: "Контекст рекламних даних"');
+    expect(source).toContain('dailyContext: "Денні зрізи"');
+    expect(source).toContain('adsContext: "Ads data context"');
+    expect(source).toContain('dailyContext: "Daily snapshots"');
+    expect(source).toContain('other: "Імпортовані дані"');
+    expect(source).toContain('other: "Imported data"');
+    expect(source).not.toContain("payload-и");
   });
 
   it("localizes Ukrainian diagnostics labels instead of showing English raw headers in normal UI", () => {

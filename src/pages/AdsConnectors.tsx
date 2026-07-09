@@ -275,9 +275,9 @@ const copy = {
     diagnosticsTitle: "Діагностика",
     diagnosticsDescription: "Контекст реклами, кандидати на аномалії та поточні проблеми.",
     diagnosticsIntroTitle: "Що показує діагностика",
-    diagnosticsIntroText: "Короткий адміністративний огляд контексту рекламних даних, денного контексту й можливих аномалій. Повні технічні payload-и залишаються в технічних деталях.",
-    adsContext: "Контекст реклами",
-    dailyContext: "Щоденний контекст",
+    diagnosticsIntroText: "Короткий адміністративний огляд рекламних даних, денних зрізів і можливих аномалій. Повні технічні дані залишаються в технічних деталях.",
+    adsContext: "Контекст рекламних даних",
+    dailyContext: "Денні зрізи",
     anomalyCandidates: "Кандидати на аномалії",
     dateRange: "Період",
     firstDate: "Перша дата",
@@ -324,6 +324,7 @@ const copy = {
       "tiktok ads": "TikTok Ads",
       facebook_lead_ads: "Facebook Lead Ads",
       "facebook lead ads": "Facebook Lead Ads",
+      other: "Імпортовані дані",
       fb_lead_ads: "Facebook Lead Ads",
       healthy: "Все працює",
       unavailable: "Даних ще немає",
@@ -622,9 +623,9 @@ const copy = {
     diagnosticsTitle: "Diagnostics",
     diagnosticsDescription: "Ads context, anomaly candidates, and current issues.",
     diagnosticsIntroTitle: "What diagnostics shows",
-    diagnosticsIntroText: "A short admin-readable overview of ads data context, daily context, and possible anomalies. Full technical payloads stay in technical details.",
-    adsContext: "Ads context",
-    dailyContext: "Daily context",
+    diagnosticsIntroText: "A short admin overview of ads data, daily snapshots, and possible anomalies. Full technical payloads remain in technical details.",
+    adsContext: "Ads data context",
+    dailyContext: "Daily snapshots",
     anomalyCandidates: "Anomaly candidates",
     dateRange: "Date range",
     firstDate: "First date",
@@ -671,6 +672,7 @@ const copy = {
       "tiktok ads": "TikTok Ads",
       facebook_lead_ads: "Facebook Lead Ads",
       "facebook lead ads": "Facebook Lead Ads",
+      other: "Imported data",
       fb_lead_ads: "Facebook Lead Ads",
       healthy: "Healthy",
       unavailable: "No data yet",
@@ -1940,10 +1942,12 @@ function DiagnosticsPanel({ data, connectorState, ui, timestampDisplayMode, time
           <p className="mt-2 text-sm text-muted-foreground">{ui.diagnosticsEmptyText}</p>
         </div>
       ) : (
-        <div className="grid gap-4 xl:grid-cols-3">
+        <div className="space-y-4">
           <DiagnosticsSummaryCard title={ui.adsContext} data={data?.adsSummary} kind="ads" emptyText={ui.adsContextUnavailable} ui={ui} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
-          <DiagnosticsSummaryCard title={ui.dailyContext} data={data?.adsDaily} kind="daily" emptyText={ui.dailyContextAfterSync} ui={ui} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
-          <DiagnosticsSummaryCard title={ui.anomalyCandidates} data={data?.adsAnomalies} kind="anomaly" emptyText={ui.anomaliesAfterPerformance} ui={ui} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <DiagnosticsSummaryCard title={ui.dailyContext} data={data?.adsDaily} kind="daily" emptyText={ui.dailyContextAfterSync} ui={ui} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
+            <DiagnosticsSummaryCard title={ui.anomalyCandidates} data={data?.adsAnomalies} kind="anomaly" emptyText={ui.anomaliesAfterPerformance} ui={ui} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
+          </div>
         </div>
       )}
 
@@ -1974,7 +1978,7 @@ function DiagnosticsSummaryCard({ title, data, kind, emptyText, ui, timestampDis
   if (data.rows.length === 0) return <DiagnosticStatusCard title={title} text={emptyText} />;
 
   if (kind === "ads") return <AdsContextSummaryCard title={title} rows={data.rows} ui={ui} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />;
-  return <DiagnosticsListCard title={title} rows={data.rows.slice(0, 5)} kind={kind} totalRows={data.rows.length} ui={ui} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />;
+  return <DiagnosticsListCard title={title} rows={data.rows.slice(0, 3)} kind={kind} totalRows={data.rows.length} ui={ui} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />;
 }
 
 function AdsContextSummaryCard({ title, rows, ui, timestampDisplayMode, timezoneName }: { title: string; rows: Row[]; ui: Copy } & TimezoneFormattingOptions) {
@@ -1994,7 +1998,7 @@ function AdsContextSummaryCard({ title, rows, ui, timestampDisplayMode, timezone
 }
 
 function DiagnosticsMetricCard({ title, metrics, ui, timestampDisplayMode, timezoneName }: { title: string; metrics: Array<{ label: string; value: unknown }>; ui: Copy } & TimezoneFormattingOptions) {
-  return <div className="rounded-lg border border-border/70 bg-card/50 p-4 shadow-sm"><p className="text-sm font-semibold">{title}</p><div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">{metrics.map((metric) => <div key={metric.label} className="min-w-0 rounded-md bg-muted/30 px-3 py-2"><p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{metric.label}</p><p className="mt-1 break-words text-sm font-medium text-foreground">{typeof metric.value === 'string' ? metric.value : formatValue(metric.value, ui, timestampDisplayMode ?? 'utc', timezoneName)}</p></div>)}</div></div>;
+  return <div className="rounded-lg border border-border/70 bg-card/50 p-4 shadow-sm"><p className="text-sm font-semibold">{title}</p><div className="mt-3 grid gap-2 sm:grid-cols-2 lg:grid-cols-4">{metrics.map((metric) => <div key={metric.label} className="min-w-0 rounded-md bg-muted/30 px-3 py-2"><p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{metric.label}</p><p className="mt-1 break-words text-sm font-medium text-foreground">{formatValue(metric.value, ui, timestampDisplayMode ?? 'utc', timezoneName)}</p></div>)}</div></div>;
 }
 
 function DiagnosticsListCard({ title, rows, kind, totalRows, ui, timestampDisplayMode, timezoneName }: { title: string; rows: Row[]; kind: "daily" | "anomaly"; totalRows: number; ui: Copy } & TimezoneFormattingOptions) {
@@ -2002,13 +2006,13 @@ function DiagnosticsListCard({ title, rows, kind, totalRows, ui, timestampDispla
 }
 
 function DiagnosticsListItem({ row, kind, ui, timestampDisplayMode, timezoneName }: { row: Row; kind: "daily" | "anomaly"; ui: Copy } & TimezoneFormattingOptions) {
+  const dailyLevel = row.level && String(row.level).toLowerCase() !== "campaign" ? row.level : undefined;
   const fields = kind === "daily"
     ? [
       { label: ui.date, value: row.insight_date ?? row.date ?? row.day },
       { label: ui.columnLabels.platform, value: row.platform },
-      { label: ui.level, value: row.level },
-      { label: ui.accountId, value: row.external_account_id ?? row.account_id },
       { label: ui.campaign, value: row.campaign_name ?? row.campaign },
+      { label: ui.level, value: dailyLevel },
     ]
     : [
       { label: ui.campaign, value: row.campaign_name ?? row.campaign },
@@ -2017,7 +2021,7 @@ function DiagnosticsListItem({ row, kind, ui, timestampDisplayMode, timezoneName
       { label: ui.impressions, value: row.impressions },
       { label: ui.clicks, value: row.clicks },
     ];
-  return <div className="rounded-md border border-border/60 bg-background/70 p-3"><div className="grid gap-2 sm:grid-cols-2">{fields.filter((field) => field.value !== undefined && field.value !== null && field.value !== "").map((field) => <div key={field.label} className="min-w-0"><p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{field.label}</p><p className="mt-0.5 break-words text-sm text-foreground">{formatValue(field.value, ui, timestampDisplayMode ?? 'utc', timezoneName)}</p></div>)}</div></div>;
+  return <div className="rounded-md border border-border/60 bg-background/70 px-3 py-2"><div className="flex flex-wrap gap-x-4 gap-y-1.5">{fields.filter((field) => field.value !== undefined && field.value !== null && field.value !== "").map((field) => <div key={field.label} className="min-w-0"><span className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{field.label}: </span><span className="break-words text-sm text-foreground">{formatValue(field.value, ui, timestampDisplayMode ?? 'utc', timezoneName)}</span></div>)}</div></div>;
 }
 
 function formatDateRange(firstDate: unknown, lastDate: unknown, ui: Copy, timestampDisplayMode?: TimezoneDisplayMode, timezoneName?: string): string {
