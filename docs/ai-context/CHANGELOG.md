@@ -1,3 +1,28 @@
+## 2026-07-09 — Conservative AI Ads Live API Interpretation
+
+### Fixed
+
+- Made `ads_context_status.source_interpretation.live_api_health_claim_allowed` and `uses_live_api_data` conservative so fresh `facts_ads_daily` rows alone do not imply live ad API health.
+- Required production-ready/readiness-validated API raw data, non-test/non-empty account state, non-`other` platform filter, and facts not interpreted as imported history before allowing live API health claims.
+- Expanded imported-data interpretation to include unified fallback, `platform=other`, selected imported-history facts, and `connected_with_imported_fallback`.
+
+### Notes
+
+- Backend safety fix only; no RPC signature, returned-field removal, nested diagnostics shape, frontend pages/routes/sidebar, RLS, table schemas, or request payloads changed.
+
+## 2026-07-09 — Normalized AI Ads Context Guidance
+
+### Changed
+
+- Added normalized `ads_context_status` to `build_ai_ads_context` for data availability, analysis-window, source-interpretation, readiness, binding-gap, and required-mention guidance.
+- Promoted `multi_account_readiness` and `binding_gaps` to top-level AI ads context fields while preserving the existing nested `pipeline_diagnostics.multi_account_readiness` diagnostics contract.
+- Added explicit platform semantics that `platform=other` represents imported historical ads facts, not a live ad network.
+- Hardened the `ai-helper-run` ads prompt so answers must check data availability/freshness/source readiness/binding status before analysis, avoid unsafe "no data" wording when historical/imported/fallback data exists, and avoid live API health claims unless allowed.
+
+### Notes
+
+- Backend AI context and Edge Function prompt only. No frontend pages, AdsConnectors, Bindings, routes, sidebar, UI components, request payload shape, RPC signature, nested diagnostics shape, RLS policies, or table schemas were changed.
+
 ## 2026-07-09 — AdsConnectors Diagnostics Compact Admin Overview
 
 ### Changed
