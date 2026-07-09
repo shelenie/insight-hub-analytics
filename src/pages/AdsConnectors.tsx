@@ -274,9 +274,23 @@ const copy = {
     fbSyncNoDataSuccess: "Синхронізація виконана. Форми та ліди не знайдені.",
     diagnosticsTitle: "Діагностика",
     diagnosticsDescription: "Контекст реклами, кандидати на аномалії та поточні проблеми.",
+    diagnosticsIntroTitle: "Що показує діагностика",
+    diagnosticsIntroText: "Короткий адміністративний огляд контексту рекламних даних, денного контексту й можливих аномалій. Повні технічні payload-и залишаються в технічних деталях.",
     adsContext: "Контекст реклами",
     dailyContext: "Щоденний контекст",
     anomalyCandidates: "Кандидати на аномалії",
+    dateRange: "Період",
+    firstDate: "Перша дата",
+    lastDate: "Остання дата",
+    factRows: "Рядків фактів",
+    spend: "Витрати",
+    date: "Дата",
+    level: "Рівень",
+    accountId: "ID акаунта",
+    campaign: "Кампанія",
+    impressions: "Покази",
+    clicks: "Кліки",
+    rawDiagnosticsTitle: "Сирі діагностичні дані",
     recentIssues: "Останні проблеми",
     diagnosticsEmptyTitle: "Діагностика очікує перші рядки рекламної статистики.",
     diagnosticsEmptyText: "OAuth і синхронізації можуть бути налаштовані, але аналіз аномалій з’явиться після появи spend/clicks/campaign data.",
@@ -349,7 +363,7 @@ const copy = {
     },
     columnLabels: {
       platform: "Платформа",
-      external_account_id: "Зовнішній ID акаунта",
+      external_account_id: "ID акаунта",
       ad_account_name: "Рекламний акаунт",
       client_name: "Клієнт",
       project_name: "Проєкт",
@@ -382,6 +396,19 @@ const copy = {
       failed_leads: "Помилки лідів",
       unprocessed_webhook_events: "Необроблені webhook-події",
       failed_syncs_last_24h: "Помилки синхронізації за 24 год",
+      first_date: "Перша дата",
+      last_date: "Остання дата",
+      fact_rows: "Рядків фактів",
+      spend: "Витрати",
+      insight_date: "Дата",
+      date: "Дата",
+      day: "Дата",
+      level: "Рівень",
+      external_campaign_id: "ID кампанії",
+      campaign_name: "Кампанія",
+      campaign: "Кампанія",
+      impressions: "Покази",
+      clicks: "Кліки",
     },
   },
   en: {
@@ -415,7 +442,7 @@ const copy = {
     syncVerifiedNoRows: "Connectors work; no data yet",
     needsAttention: "Needs attention",
     nextAction: "Next action",
-    nextActionDescription: "Check ad accounts and link them to projects/funnels in Data links.",
+    nextActionDescription: "Check ad accounts and bind them to projects/funnels in Data links.",
     nextActionGoogle: "Google Ads: waiting for Basic Access / Google Ads API access.",
     multiAccountReadinessTitle: "Ad account readiness",
     readinessUnavailable: "Account readiness is temporarily unavailable; showing existing connector data.",
@@ -594,9 +621,23 @@ const copy = {
     fbSyncNoDataSuccess: "Sync completed. Forms and leads were not found.",
     diagnosticsTitle: "Diagnostics",
     diagnosticsDescription: "Ads context, anomaly candidates, and current issues.",
+    diagnosticsIntroTitle: "What diagnostics shows",
+    diagnosticsIntroText: "A short admin-readable overview of ads data context, daily context, and possible anomalies. Full technical payloads stay in technical details.",
     adsContext: "Ads context",
     dailyContext: "Daily context",
     anomalyCandidates: "Anomaly candidates",
+    dateRange: "Date range",
+    firstDate: "First date",
+    lastDate: "Last date",
+    factRows: "Fact rows",
+    spend: "Spend",
+    date: "Date",
+    level: "Level",
+    accountId: "Account ID",
+    campaign: "Campaign",
+    impressions: "Impressions",
+    clicks: "Clicks",
+    rawDiagnosticsTitle: "Raw diagnostics data",
     recentIssues: "Recent issues",
     diagnosticsEmptyTitle: "Diagnostics is waiting for the first ads statistics rows.",
     diagnosticsEmptyText: "OAuth and syncs can be configured, but anomaly analysis will appear after spend/clicks/campaign data is available.",
@@ -659,8 +700,8 @@ const copy = {
       error: "Error",
       archived: "Archived",
       production_ready: "Ready for operation",
-      partially_bound: "Partially linked",
-      accounts_discovered_no_bindings: "Accounts found, not linked",
+      partially_bound: "Partially bound",
+      accounts_discovered_no_bindings: "Accounts found, not bound",
       active_account_without_binding: "Needs binding",
       ambiguous_primary_binding: "Primary binding needs review",
       binding_without_scope: "Binding has no client/project/funnel",
@@ -669,7 +710,7 @@ const copy = {
     },
     columnLabels: {
       platform: "Platform",
-      external_account_id: "External account ID",
+      external_account_id: "Account ID",
       ad_account_name: "Ad account",
       client_name: "Client",
       project_name: "Project",
@@ -702,6 +743,19 @@ const copy = {
       failed_leads: "Failed leads",
       unprocessed_webhook_events: "Unprocessed webhook events",
       failed_syncs_last_24h: "Failed syncs last 24h",
+      first_date: "First date",
+      last_date: "Last date",
+      fact_rows: "Fact rows",
+      spend: "Spend",
+      insight_date: "Date",
+      date: "Date",
+      day: "Date",
+      level: "Level",
+      external_campaign_id: "Campaign ID",
+      campaign_name: "Campaign",
+      campaign: "Campaign",
+      impressions: "Impressions",
+      clicks: "Clicks",
     },
   },
 } as const;
@@ -1875,24 +1929,31 @@ function DiagnosticsPanel({ data, connectorState, ui, timestampDisplayMode, time
 
   return (
     <div className="space-y-4">
+      <div className="rounded-lg border border-border/70 bg-card/60 p-4 shadow-sm">
+        <p className="text-sm font-semibold text-foreground">{ui.diagnosticsIntroTitle}</p>
+        <p className="mt-2 text-sm leading-6 text-muted-foreground">{ui.diagnosticsIntroText}</p>
+      </div>
+
       {!hasDiagnosticRows ? (
         <div className="rounded-lg border border-border/70 bg-card/50 p-4">
           <p className="text-sm font-semibold">{ui.diagnosticsEmptyTitle}</p>
           <p className="mt-2 text-sm text-muted-foreground">{ui.diagnosticsEmptyText}</p>
         </div>
       ) : (
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid gap-4 xl:grid-cols-3">
+          <DiagnosticsSummaryCard title={ui.adsContext} data={data?.adsSummary} kind="ads" emptyText={ui.adsContextUnavailable} ui={ui} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
+          <DiagnosticsSummaryCard title={ui.dailyContext} data={data?.adsDaily} kind="daily" emptyText={ui.dailyContextAfterSync} ui={ui} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
+          <DiagnosticsSummaryCard title={ui.anomalyCandidates} data={data?.adsAnomalies} kind="anomaly" emptyText={ui.anomaliesAfterPerformance} ui={ui} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
+        </div>
+      )}
+
+      <DeveloperDetails title={ui.rawDiagnosticsTitle}>
+        <div className="mt-2 space-y-3">
           <CompactDataSection title={ui.adsContext} data={data?.adsSummary} columns={preferredColumns(data?.adsSummary?.rows)} emptyText={ui.adsContextUnavailable} ui={ui} maxRows={5} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
           <CompactDataSection title={ui.dailyContext} data={data?.adsDaily} columns={preferredColumns(data?.adsDaily?.rows)} emptyText={ui.dailyContextAfterSync} ui={ui} maxRows={5} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
           <CompactDataSection title={ui.anomalyCandidates} data={data?.adsAnomalies} columns={preferredColumns(data?.adsAnomalies?.rows)} emptyText={ui.anomaliesAfterPerformance} ui={ui} maxRows={5} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />
         </div>
-      )}
-
-      <div className="grid gap-3 md:grid-cols-3">
-        <DiagnosticStatusCard title={ui.adsContext} text={ui.adsContextUnavailable} />
-        <DiagnosticStatusCard title={ui.dailyContext} text={ui.dailyContextAfterSync} />
-        <DiagnosticStatusCard title={ui.anomalyCandidates} text={ui.anomaliesAfterPerformance} />
-      </div>
+      </DeveloperDetails>
 
       {data?.multiAccountReadiness?.payload ? (
         <DeveloperDetails title={`${ui.multiAccountReadinessTitle} — ${ui.technicalDetails}`}>
@@ -1905,13 +1966,67 @@ function DiagnosticsPanel({ data, connectorState, ui, timestampDisplayMode, time
   );
 }
 
-function DiagnosticStatusCard({ title, text }: { title: string; text: string }) {
-  return (
-    <div className="rounded-lg border border-border/70 bg-background p-3 text-sm">
-      <p className="font-medium">{title}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{text}</p>
-    </div>
-  );
+function DiagnosticsSummaryCard({ title, data, kind, emptyText, ui, timestampDisplayMode, timezoneName }: { title: string; data: OptionalViewData | undefined; kind: "ads" | "daily" | "anomaly"; emptyText: string; ui: Copy } & TimezoneFormattingOptions) {
+  if (!data) return <DiagnosticStatusCard title={title} text={ui.dataUnavailable} />;
+  if (data.unavailableReason) {
+    return <div className="rounded-lg border border-border/70 bg-card/50 p-4"><p className="text-sm font-semibold">{title}</p><UnavailableMessage reason={data.unavailableReason} ui={ui} /></div>;
+  }
+  if (data.rows.length === 0) return <DiagnosticStatusCard title={title} text={emptyText} />;
+
+  if (kind === "ads") return <AdsContextSummaryCard title={title} rows={data.rows} ui={ui} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />;
+  return <DiagnosticsListCard title={title} rows={data.rows.slice(0, 5)} kind={kind} totalRows={data.rows.length} ui={ui} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />;
+}
+
+function AdsContextSummaryCard({ title, rows, ui, timestampDisplayMode, timezoneName }: { title: string; rows: Row[]; ui: Copy } & TimezoneFormattingOptions) {
+  const first = rows[0] ?? {};
+  const firstDate = findMetric(rows, ["first_date", "min_date", "date_from", "start_date"]);
+  const lastDate = findMetric(rows, ["last_date", "max_date", "date_to", "end_date"]);
+  const facts = findMetric(rows, ["fact_rows", "rows", "row_count", "facts_count"]);
+  const spend = findMetric(rows, ["spend", "total_spend", "cost"]);
+  const platform = first.platform ?? findMetric(rows, ["platform", "source"]);
+  const metrics = [
+    { label: ui.columnLabels.platform, value: platform },
+    { label: ui.dateRange, value: formatDateRange(firstDate, lastDate, ui, timestampDisplayMode, timezoneName) },
+    { label: ui.factRows, value: facts },
+    { label: ui.spend, value: spend },
+  ];
+  return <DiagnosticsMetricCard title={title} metrics={metrics} ui={ui} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />;
+}
+
+function DiagnosticsMetricCard({ title, metrics, ui, timestampDisplayMode, timezoneName }: { title: string; metrics: Array<{ label: string; value: unknown }>; ui: Copy } & TimezoneFormattingOptions) {
+  return <div className="rounded-lg border border-border/70 bg-card/50 p-4 shadow-sm"><p className="text-sm font-semibold">{title}</p><div className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1">{metrics.map((metric) => <div key={metric.label} className="min-w-0 rounded-md bg-muted/30 px-3 py-2"><p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{metric.label}</p><p className="mt-1 break-words text-sm font-medium text-foreground">{typeof metric.value === 'string' ? metric.value : formatValue(metric.value, ui, timestampDisplayMode ?? 'utc', timezoneName)}</p></div>)}</div></div>;
+}
+
+function DiagnosticsListCard({ title, rows, kind, totalRows, ui, timestampDisplayMode, timezoneName }: { title: string; rows: Row[]; kind: "daily" | "anomaly"; totalRows: number; ui: Copy } & TimezoneFormattingOptions) {
+  return <div className="rounded-lg border border-border/70 bg-card/50 p-4 shadow-sm"><p className="text-sm font-semibold">{title}</p><div className="mt-3 space-y-2">{rows.map((row, index) => <DiagnosticsListItem key={`${index}-${String(row.id ?? row.insight_date ?? row.date ?? 'row')}`} row={row} kind={kind} ui={ui} timestampDisplayMode={timestampDisplayMode} timezoneName={timezoneName} />)}</div>{totalRows > rows.length ? <p className="mt-3 text-xs text-muted-foreground">{formatLimitedRows(ui.limitedRows, rows.length, totalRows)}</p> : null}</div>;
+}
+
+function DiagnosticsListItem({ row, kind, ui, timestampDisplayMode, timezoneName }: { row: Row; kind: "daily" | "anomaly"; ui: Copy } & TimezoneFormattingOptions) {
+  const fields = kind === "daily"
+    ? [
+      { label: ui.date, value: row.insight_date ?? row.date ?? row.day },
+      { label: ui.columnLabels.platform, value: row.platform },
+      { label: ui.level, value: row.level },
+      { label: ui.accountId, value: row.external_account_id ?? row.account_id },
+      { label: ui.campaign, value: row.campaign_name ?? row.campaign },
+    ]
+    : [
+      { label: ui.campaign, value: row.campaign_name ?? row.campaign },
+      { label: ui.date, value: row.insight_date ?? row.date ?? row.day },
+      { label: ui.spend, value: row.spend },
+      { label: ui.impressions, value: row.impressions },
+      { label: ui.clicks, value: row.clicks },
+    ];
+  return <div className="rounded-md border border-border/60 bg-background/70 p-3"><div className="grid gap-2 sm:grid-cols-2">{fields.filter((field) => field.value !== undefined && field.value !== null && field.value !== "").map((field) => <div key={field.label} className="min-w-0"><p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{field.label}</p><p className="mt-0.5 break-words text-sm text-foreground">{formatValue(field.value, ui, timestampDisplayMode ?? 'utc', timezoneName)}</p></div>)}</div></div>;
+}
+
+function formatDateRange(firstDate: unknown, lastDate: unknown, ui: Copy, timestampDisplayMode?: TimezoneDisplayMode, timezoneName?: string): string {
+  const first = formatValue(firstDate, ui, timestampDisplayMode ?? "utc", timezoneName);
+  const last = formatValue(lastDate, ui, timestampDisplayMode ?? "utc", timezoneName);
+  if (first === "—" && last === "—") return "—";
+  if (first === last || last === "—") return first;
+  if (first === "—") return last;
+  return `${first} – ${last}`;
 }
 
 function IssuesPanel({ data, connectorState, ui }: { data: AdsConnectorsData | undefined; connectorState: Record<ConnectorKey, ConnectorState>; ui: Copy }) {

@@ -246,13 +246,63 @@ describe("AdsConnectors multi-account readiness UI", () => {
       'externalAccountIdLabel: "Зовнішній ID"',
       'gapTypeLabel: "Тип проблеми"',
       'messageLabel: "Повідомлення"',
-      'partially_bound: "Partially linked"',
-      'accounts_discovered_no_bindings: "Accounts found, not linked"',
+      'partially_bound: "Partially bound"',
+      'accounts_discovered_no_bindings: "Accounts found, not bound"',
       'active_account_without_binding: "Needs binding"',
       'accountNameLabel: "Account name"',
       'externalAccountIdLabel: "External ID"',
       'gapTypeLabel: "Gap type"',
       'messageLabel: "Message"',
+    ]) {
+      expect(source).toContain(label);
+    }
+  });
+
+
+
+  it("keeps binding terminology bound instead of linked", () => {
+    expect(source).toContain('partially_bound: "Partially bound"');
+    expect(source).toContain('partially_bound: "Частково привʼязано"');
+    expect(source).toContain('needsBinding: "Needs binding"');
+    expect(source).not.toContain("Partially linked");
+    expect(source).not.toContain("partially linked");
+    expect(source).not.toContain("linked accounts");
+    expect(source).not.toContain("link status");
+  });
+
+  it("renders Diagnostics as compact admin cards and keeps raw tables behind technical details", () => {
+    const diagnosticsPanel = source.slice(
+      source.indexOf("function DiagnosticsPanel"),
+      source.indexOf("function IssuesPanel"),
+    );
+    expect(diagnosticsPanel).toContain("ui.diagnosticsIntroTitle");
+    expect(diagnosticsPanel).toContain("<DiagnosticsSummaryCard");
+    expect(diagnosticsPanel).toContain("function AdsContextSummaryCard");
+    expect(diagnosticsPanel).toContain("function DiagnosticsListCard");
+    expect(diagnosticsPanel).toContain("function DiagnosticsListItem");
+    expect(diagnosticsPanel).toContain("<DeveloperDetails title={ui.rawDiagnosticsTitle}>");
+    expect(diagnosticsPanel.indexOf("<DeveloperDetails title={ui.rawDiagnosticsTitle}>")).toBeLessThan(
+      diagnosticsPanel.indexOf("<CompactDataSection"),
+    );
+  });
+
+  it("localizes Ukrainian diagnostics labels instead of showing English raw headers in normal UI", () => {
+    for (const label of [
+      'firstDate: "Перша дата"',
+      'lastDate: "Остання дата"',
+      'factRows: "Рядків фактів"',
+      'spend: "Витрати"',
+      'date: "Дата"',
+      'level: "Рівень"',
+      'accountId: "ID акаунта"',
+      'campaign: "Кампанія"',
+      'impressions: "Покази"',
+      'clicks: "Кліки"',
+      'first_date: "Перша дата"',
+      'last_date: "Остання дата"',
+      'fact_rows: "Рядків фактів"',
+      'insight_date: "Дата"',
+      'external_campaign_id: "ID кампанії"',
     ]) {
       expect(source).toContain(label);
     }
