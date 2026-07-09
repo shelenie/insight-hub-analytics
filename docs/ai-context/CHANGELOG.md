@@ -1,3 +1,19 @@
+## 2026-07-09 — AI Assistant Live UX Polish
+
+### Changed
+
+- Removed/hidden the AI Assistant context override popover from the normal composer UX while preserving smart auto-routing.
+- Moved the New chat action to the assistant page header actions area.
+- Made context badges subtle/read-only and stopped presenting the context label as prominent user-bubble text.
+- Aligned the composer input card radius with assistant answer card styling while keeping the send button round.
+- Tightened `ads_health` prompt behavior so answers are complete but focused on data freshness/readiness/source status/access blockers/Звʼязки даних gaps instead of artificially short or detailed campaign/CPL analysis unless requested.
+- Changed the composer autocontext badge to neutral pre-submit wording while preserving resolved context labels on routed messages.
+- Added prompt wording preferences for Ukrainian user-facing answers: Звʼязки даних, проєкт, and воронка.
+
+### Notes
+
+- No Supabase schema, RLS, `build_ai_ads_context`, AdsConnectors, Bindings, routes/sidebar, connectors, sync logic, or permissions model changes were made.
+
 ## 2026-07-09 — AI Assistant Production UX Auto-Routing
 
 ### Changed

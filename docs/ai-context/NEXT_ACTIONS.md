@@ -1,9 +1,15 @@
+## Next Actions Update — 2026-07-09 AI Assistant Live UX Polish
+
+- Verify the deployed AI Assistant with live prompts after this PR: composer should show neutral Autocontext enabled text before submit, routed messages should still show the resolved context after submit, New chat should appear in the page header when there is chat state, and ads-health freshness answers should be complete but focused on readiness/freshness/Звʼязки даних gaps.
+- Keep manual AI context override out of normal user UX unless a future developer-only testing surface is explicitly designed.
+- No Supabase schema/RLS follow-up is needed for this task.
+
 ## Updated Next Actions — 2026-07-09 AI Assistant UX Follow-up
 
 - Validate AI Assistant auto-routing in live UI with Ukrainian ads freshness, campaign performance, anomaly, import/data-quality, and mapping prompts.
 - Consider adding compact `ads_context_status` summary chips above assistant answers when the frontend response payload exposes enough structured context.
 - Consider adding optional answer rewrite actions such as “Стисліше” and “Для клієнта” after the core auto-routing/copy/rendering UX is validated.
-- Keep manual context override available as an advanced/testing control, not the main composer workflow.
+- Manual context override is currently hidden from normal UX; only revisit as a clearly developer-only testing control if needed.
 
 ## Next Action — After Conservative AI Ads Live API Interpretation
 

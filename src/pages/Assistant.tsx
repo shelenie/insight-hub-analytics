@@ -4,7 +4,6 @@ import { Check, Copy, Send, Sparkles } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuth } from "@/auth/AuthProvider";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,6 +20,8 @@ type ContextOption = {
 };
 
 type ChatMessage = { id: string; role: "user" | "assistant"; text: string; contextLabel: string; option: ContextOption; autoRouted?: boolean };
+
+const SHOW_ASSISTANT_DEV_CONTROLS = false;
 
 const OPTIONS = [
   { labelKey: "assistantContextAdsHealth", requestType: "ads_health_summary", contextScope: "ads_health" },
@@ -42,8 +43,8 @@ export default function Assistant() {
   const { session } = useAuth();
   const { capabilities, isLoading: roleLoading } = useWorkspaceRole(WORKSPACE_ID);
   const { t } = useI18n();
-  const [selected, setSelected] = useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextAdsHealth");
-  const [manualOverrideEnabled, setManualOverrideEnabled] = useState(false);
+  const [selected] = useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextAdsHealth");
+  const manualOverrideEnabled = SHOW_ASSISTANT_DEV_CONTROLS && false;
   const [prompt, setPrompt] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -89,11 +90,8 @@ export default function Assistant() {
   const showStarterPrompts = messages.length === 0 && !run.isPending && prompt.trim().length === 0;
   const showNewChat = messages.length > 0 || prompt.trim().length > 0 || Boolean(run.error);
 
-  return <DashboardLayout title={t("assistantTitle")} subtitle={t("assistantSubtitle")}>
+  return <DashboardLayout title={t("assistantTitle")} subtitle={t("assistantSubtitle")} actions={showNewChat ? <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={resetChat}>{t("assistantNewChat")}</Button> : null}>
     <div className="mx-auto flex w-full max-w-5xl flex-col px-1">
-      <div className="mb-3 flex justify-end">
-        {showNewChat ? <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={resetChat}>{t("assistantNewChat")}</Button> : null}
-      </div>
       <div className="flex flex-col justify-start pt-1 sm:pt-2 lg:pt-3">
         <div className={`${CHAT_COLUMN_CLASS} space-y-3`}>
           {messages.length === 0 ? <Welcome t={t} /> : messages.map((message) => <MessageBubble key={message.id} message={message} />)}
@@ -102,18 +100,11 @@ export default function Assistant() {
           {!roleLoading && !canUseAi ? <p className="rounded-2xl bg-muted/50 p-3 text-sm text-muted-foreground shadow-sm">{t("assistantNoAccess")}</p> : null}
         </div>
         <div className={`${CHAT_COLUMN_CLASS} mt-4 sm:mt-5`}>
-          <div className="rounded-[1.75rem] border border-border/40 bg-card/95 p-2 shadow-lg shadow-foreground/5 ring-1 ring-foreground/5 transition focus-within:border-primary/35 focus-within:ring-2 focus-within:ring-primary/20">
+          <div className="rounded-2xl border border-border/40 bg-card/95 p-2 shadow-lg shadow-foreground/5 ring-1 ring-foreground/5 transition focus-within:border-primary/35 focus-within:ring-2 focus-within:ring-primary/20">
             <Textarea ref={textareaRef} value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={1} className="!min-h-12 max-h-44 resize-none overflow-y-auto border-0 bg-transparent px-3 py-3 text-base leading-6 shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 focus-visible:ring-0 sm:text-sm" placeholder={t("assistantComposerPlaceholder")} onKeyDown={(event) => { if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) submitPrompt(); }} />
             <div className="flex items-center justify-between gap-2 px-1 pb-1 pt-1">
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="truncate rounded-full bg-muted px-3 py-1 text-xs text-muted-foreground">{t("assistantAutoRoutingBadge")}: {t(selectedOption.labelKey)}</span>
-                <details className="relative">
-                  <summary className="cursor-pointer list-none rounded-full border border-border/50 bg-background/75 px-3 py-1 text-xs text-muted-foreground hover:bg-muted">{t("assistantAdvancedContext")}</summary>
-                  <div className="absolute bottom-8 left-0 z-20 w-64 rounded-xl border bg-popover p-3 shadow-lg">
-                    <label className="mb-2 flex items-center gap-2 text-xs text-popover-foreground"><input type="checkbox" checked={manualOverrideEnabled} onChange={(event) => setManualOverrideEnabled(event.target.checked)} />{t("assistantManualOverride")}</label>
-                    <Select value={selected} onValueChange={(v: (typeof OPTIONS)[number]["labelKey"]) => setSelected(v)} disabled={!manualOverrideEnabled}><SelectTrigger aria-label={t("assistantContextLabel")} className="h-8 rounded-full border-border/50 bg-background/75 px-3 text-xs shadow-none"><SelectValue /></SelectTrigger><SelectContent>{OPTIONS.map((o) => <SelectItem key={`${o.requestType}-${o.contextScope}-${o.labelKey}`} value={o.labelKey}>{t(o.labelKey)}</SelectItem>)}</SelectContent></Select>
-                  </div>
-                </details>
+                <span className="truncate rounded-full bg-muted/70 px-3 py-1 text-xs text-muted-foreground">{t("assistantAutoRoutingBadge")}</span>
               </div>
               <Button size="icon" className="h-9 w-9 shrink-0 rounded-full" aria-label={run.isPending ? t("assistantSending") : t("assistantSend")} onClick={() => submitPrompt()} disabled={runDisabled || !prompt.trim()}><Send className="h-4 w-4" /></Button>
             </div>
@@ -138,10 +129,10 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
 
   if (isUser) {
-    return <div className="flex w-full justify-end"><div className="max-w-[82%] rounded-2xl rounded-tr-sm bg-primary px-4 py-3 text-sm text-primary-foreground"><p className="mb-1 text-[11px] opacity-75">{message.contextLabel}</p><p className="whitespace-pre-wrap">{message.text}</p></div></div>;
+    return <div className="flex w-full justify-end"><div className="max-w-[82%] rounded-2xl rounded-tr-sm bg-primary px-4 py-3 text-sm text-primary-foreground"><p className="whitespace-pre-wrap">{message.text}</p><p className="mt-2 text-[10px] text-primary-foreground/65">{message.contextLabel}</p></div></div>;
   }
 
-  return <div className="flex w-full justify-start"><div className="w-full rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm"><p className="mb-1 text-[11px] opacity-75">{message.contextLabel}</p><AiAnswer text={message.text} /><AssistantMessageActions message={message} /></div></div>;
+  return <div className="flex w-full justify-start"><div className="w-full rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm"><p className="mb-2 inline-flex rounded-full bg-muted/70 px-2.5 py-1 text-[11px] text-muted-foreground">{message.contextLabel}</p><AiAnswer text={message.text} /><AssistantMessageActions message={message} /></div></div>;
 }
 
 function getAnswerText(payload: Record<string, unknown>, fallback: string) {
