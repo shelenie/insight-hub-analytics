@@ -1,3 +1,15 @@
+## 2026-07-09 — AI Assistant Smart Routing and Ukrainian Wording Polish
+
+### Changed
+
+- Updated AI Assistant smart routing so data quality prompts handle Ukrainian inflected phrases like “якістю даних” and related import/rejected/raw-data wording.
+- Updated drop/anomaly routing so prompts such as “Що просіло за останні 7 днів?” select Ads Anomalies, while stale data still forces the answer to explain that current anomaly/drop analysis is blocked or unreliable.
+- Polished `ai-helper-run` Ukrainian answer guidance to reduce mixed English operational wording such as spend/leads and permission/access, avoid “бо є немає”, and prefer app wording like “Звʼязки даних”.
+
+### Notes
+
+- No Supabase schema, RLS, migrations, AdsConnectors, Bindings, routes/sidebar, source connector, sync, or permissions-model changes were made.
+
 ## 2026-07-09 — AI Assistant Live UX Polish
 
 ### Changed
