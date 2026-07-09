@@ -104,7 +104,7 @@ export default function Assistant() {
             <Textarea ref={textareaRef} value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={1} className="!min-h-12 max-h-44 resize-none overflow-y-auto border-0 bg-transparent px-3 py-3 text-base leading-6 shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 focus-visible:ring-0 sm:text-sm" placeholder={t("assistantComposerPlaceholder")} onKeyDown={(event) => { if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) submitPrompt(); }} />
             <div className="flex items-center justify-between gap-2 px-1 pb-1 pt-1">
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="truncate rounded-full bg-muted/70 px-3 py-1 text-xs text-muted-foreground">{t("assistantAutoRoutingBadge")}: {t(selectedOption.labelKey)}</span>
+                <span className="truncate rounded-full bg-muted/70 px-3 py-1 text-xs text-muted-foreground">{t("assistantAutoRoutingBadge")}</span>
               </div>
               <Button size="icon" className="h-9 w-9 shrink-0 rounded-full" aria-label={run.isPending ? t("assistantSending") : t("assistantSend")} onClick={() => submitPrompt()} disabled={runDisabled || !prompt.trim()}><Send className="h-4 w-4" /></Button>
             </div>

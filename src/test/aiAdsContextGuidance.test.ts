@@ -82,12 +82,17 @@ describe("normalized AI ads context guidance", () => {
     expect(edgeFunctionSource).toContain("воронка instead of funnel");
   });
 
-  it("tightens ads health answers around freshness, readiness, and bindings", () => {
+  it("tightens ads health answers around complete focused freshness, readiness, and bindings guidance", () => {
     expect(edgeFunctionSource).toContain("For request_type=ads_health_summary or context_scope=ads_health, focus on data availability, freshness, source readiness, sync/access blockers, and binding gaps.");
-    expect(edgeFunctionSource).toContain("do not include detailed campaign performance, CPL rankings, weak campaigns, or budget redistribution unless the user explicitly asks");
-    expect(edgeFunctionSource).toContain("answer in 3-4 concise sections: Стан даних, Чому немає свіжих даних, Що перевірити, Що сказати клієнту");
-    expect(edgeFunctionSource).toContain("Keep ads_health answers concise: max 8-12 bullets total.");
-    expect(edgeFunctionSource).toContain("Do not list top campaigns/CPL in ads_health answers unless asked.");
+    expect(edgeFunctionSource).toContain("stay focused on data freshness/readiness, source availability, sync/access blockers, and binding gaps");
+    expect(edgeFunctionSource).toContain("do not include detailed campaign performance, CPL rankings, weak campaigns, budget redistribution, or performance diagnosis unless the user explicitly asks");
+    expect(edgeFunctionSource).toContain("answer with complete but focused admin guidance in these sections: Стан даних, Чому немає свіжих даних, Що підтверджено / що є гіпотезою, Що перевірити далі, Що сказати клієнту");
+    expect(edgeFunctionSource).toContain("available historical period");
+    expect(edgeFunctionSource).toContain("confirmed blockers, hypotheses that need verification, next admin checks/actions, and client-ready explanation");
+    expect(edgeFunctionSource).toContain("avoid hard bullet-count caps");
+    expect(edgeFunctionSource).not.toContain("max 8-12 bullets total");
+    expect(edgeFunctionSource).not.toContain("max 8–12 bullets total");
+    expect(edgeFunctionSource).toContain("do not list top campaigns/CPL in ads_health answers unless asked");
   });
 
   it("does not change frontend pages, routes, sidebar, AdsConnectors, or Bindings files", () => {

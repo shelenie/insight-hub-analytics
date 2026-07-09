@@ -474,7 +474,7 @@ export const translations = {
   assistantContextLabel: { uk: "Режим аналізу", en: "Analysis mode" },
   assistantContextPrefix: { uk: "Контекст", en: "Context" },
   assistantAutoContextPrefix: { uk: "Автоконтекст", en: "Auto context" },
-  assistantAutoRoutingBadge: { uk: "Автоконтекст", en: "Auto context" },
+  assistantAutoRoutingBadge: { uk: "Автоконтекст увімкнено", en: "Auto context enabled" },
   assistantAdvancedContext: { uk: "Змінити контекст", en: "Change context" },
   assistantManualOverride: { uk: "Ручний режим лише для тестування", en: "Manual mode for testing only" },
   assistantCopy: { uk: "Скопіювати", en: "Copy" },

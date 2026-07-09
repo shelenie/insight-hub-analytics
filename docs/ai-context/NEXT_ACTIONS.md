@@ -1,6 +1,6 @@
 ## Next Actions Update — 2026-07-09 AI Assistant Live UX Polish
 
-- Verify the deployed AI Assistant with live prompts after this PR: composer should show only subtle Autocontext, New chat should appear in the page header when there is chat state, and ads-health freshness answers should stay short and readiness-focused.
+- Verify the deployed AI Assistant with live prompts after this PR: composer should show neutral Autocontext enabled text before submit, routed messages should still show the resolved context after submit, New chat should appear in the page header when there is chat state, and ads-health freshness answers should be complete but focused on readiness/freshness/Звʼязки даних gaps.
 - Keep manual AI context override out of normal user UX unless a future developer-only testing surface is explicitly designed.
 - No Supabase schema/RLS follow-up is needed for this task.
 

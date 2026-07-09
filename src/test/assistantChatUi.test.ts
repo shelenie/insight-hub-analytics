@@ -101,6 +101,8 @@ describe("AI Assistant chat UI", () => {
     expect(source).toContain('return <div className="flex w-full justify-start"><div className="w-full rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm">');
     expect(source).toContain('return <div className="flex w-full justify-end"><div className="max-w-[82%] rounded-2xl rounded-tr-sm bg-primary');
     expect(source).toContain('inline-flex rounded-full bg-muted/70 px-2.5 py-1 text-[11px] text-muted-foreground');
+    expect(source).toContain('{t("assistantAutoRoutingBadge")}');
+    expect(source).not.toContain('{t("assistantAutoRoutingBadge")}: {t(selectedOption.labelKey)}');
     expect(source).toContain('mt-2 text-[10px] text-primary-foreground/65');
     expect(source).not.toContain('<p className="mb-1 text-[11px] opacity-75">{message.contextLabel}</p><p className="whitespace-pre-wrap">{message.text}</p>');
     expect(source).not.toContain('items-start gap-3');
@@ -167,6 +169,8 @@ describe("AI Assistant smart routing and answer UX", () => {
     expect(source).toContain("assistantContextPrefix");
     expect(source).toContain("assistantAutoContextPrefix");
     expect(translations.assistantAutoContextPrefix.uk).toBe("Автоконтекст");
+    expect(translations.assistantAutoRoutingBadge.uk).toBe("Автоконтекст увімкнено");
+    expect(translations.assistantAutoRoutingBadge.en).toBe("Auto context enabled");
     expect(source).toContain("navigator.clipboard.writeText(message.text)");
     expect(source).toContain("assistantCopy");
     expect(source).toContain("assistantCopied");
