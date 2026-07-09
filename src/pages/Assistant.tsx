@@ -10,31 +10,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { FriendlyError } from "@/components/common/DeveloperDetails";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { TranslationKey } from "@/i18n/translations";
+import { OPTIONS, resolveAssistantContext, type ContextOption } from "@/lib/assistantRouting";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
-type ContextOption = {
-  labelKey: "assistantContextFullOverview" | "assistantContextAdsPerformance" | "assistantContextAdsAnomalies" | "assistantContextDataQuality" | "assistantContextImportStatus" | "assistantContextMappingReview" | "assistantContextAlerts" | "assistantContextClientsFunnels" | "assistantContextAdsHealth" | "assistantContextSystemReadiness";
-  requestType: string;
-  contextScope: string;
-};
-
-type ChatMessage = { id: string; role: "user" | "assistant"; text: string; contextLabel: string; option: ContextOption; autoRouted?: boolean };
-
 const SHOW_ASSISTANT_DEV_CONTROLS = false;
-
-const OPTIONS = [
-  { labelKey: "assistantContextAdsHealth", requestType: "ads_health_summary", contextScope: "ads_health" },
-  { labelKey: "assistantContextAdsPerformance", requestType: "ads_performance_summary", contextScope: "ads_performance" },
-  { labelKey: "assistantContextAdsAnomalies", requestType: "ads_anomaly_explanation", contextScope: "ads_anomalies" },
-  { labelKey: "assistantContextFullOverview", requestType: "full_production_summary", contextScope: "full_production" },
-  { labelKey: "assistantContextDataQuality", requestType: "data_quality_summary", contextScope: "data_quality" },
-  { labelKey: "assistantContextImportStatus", requestType: "import_health_summary", contextScope: "import_health" },
-  { labelKey: "assistantContextMappingReview", requestType: "mapping_review_summary", contextScope: "mapping_review" },
-  { labelKey: "assistantContextAlerts", requestType: "operational_alerts_summary", contextScope: "operational_alerts" },
-  { labelKey: "assistantContextClientsFunnels", requestType: "onboarding_summary", contextScope: "onboarding" },
-  { labelKey: "assistantContextSystemReadiness", requestType: "production_readiness_summary", contextScope: "production_readiness" },
-] as const satisfies readonly ContextOption[];
 
 const PROMPT_KEYS = ["assistantPromptSevenDayDrop", "assistantPromptCampaignsAttention", "assistantPromptCplIncrease", "assistantPromptDataQuality", "assistantPromptClientSituation", "assistantPromptTeamPriorities"] as const;
 const CHAT_COLUMN_CLASS = "mx-auto w-full max-w-4xl";
@@ -189,27 +169,6 @@ function parseMarkdownBlocks(text: string): MarkdownBlock[] {
   }
 
   return blocks;
-}
-
-function resolveAssistantContext(prompt: string, selectedOption: ContextOption, manualOverrideEnabled: boolean): ContextOption {
-  if (manualOverrideEnabled) return selectedOption;
-  const normalized = prompt.toLowerCase();
-  const hasAny = (patterns: RegExp[]) => patterns.some((pattern) => pattern.test(normalized));
-  const option = (labelKey: ContextOption["labelKey"]) => OPTIONS.find((item) => item.labelKey === labelKey) ?? selectedOption;
-
-  const isAds = hasAny([/реклама|рекламн|кампан|акаунт|акаунти|meta|facebook|google ads|tiktok|cpl|spend|витрати|кліки|ліди|свіжих даних|синхронізація|ads|campaigns?|ad account|fresh data|sync/]);
-  const isFreshness = hasAny([/свіж|синхрон|немає|відсутн|missing|fresh data|sync|live api|готов|прив[ʼ'’]?яз|binding|readiness|account|акаунт|акаунти/]);
-  const isPerformance = hasAny([/performance|ефективн|cpl|spend|витрати|budget|бюджет|leads?|ліди|clicks?|кліки|campaigns?|кампан/]);
-  const isAnomaly = hasAny([/аномал|просіл|просіли|drop|spike|виріс|зрос|дивне|outlier/]);
-  const isImportQuality = hasAny([/import|імпорт|якість даних|data quality|rejected|csv|raw data/]);
-  const isMapping = hasAny([/mapping|мапінг|пол[ея]|fields?|зв[ʼ'’]?язк/]) && !isAds;
-
-  if (isAds && isAnomaly) return option("assistantContextAdsAnomalies");
-  if (isAds && isFreshness) return option("assistantContextAdsHealth");
-  if (isAds && isPerformance) return option("assistantContextAdsPerformance");
-  if (isImportQuality) return option("assistantContextDataQuality");
-  if (isMapping) return option("assistantContextMappingReview");
-  return selectedOption;
 }
 
 function renderBold(text: string) {

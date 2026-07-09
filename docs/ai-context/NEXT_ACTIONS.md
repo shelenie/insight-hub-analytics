@@ -1,3 +1,9 @@
+## 2026-07-09 — AI Assistant Routing Follow-up
+
+- Monitor live AI Assistant answers for the newly polished routing: data-quality prompts with “якістю даних” should select Data Quality, and drop/anomaly prompts should select Drops / anomalies even when stale data blocks current analysis.
+- Continue checking Ukrainian answer wording for mixed operational English; keep platform names and accepted metrics like CPL, but prefer Ukrainian wording for operational concepts.
+- No schema/RLS/connector follow-up is required from this routing polish.
+
 ## Next Actions Update — 2026-07-09 AI Assistant Live UX Polish
 
 - Verify the deployed AI Assistant with live prompts after this PR: composer should show neutral Autocontext enabled text before submit, routed messages should still show the resolved context after submit, New chat should appear in the page header when there is chat state, and ads-health freshness answers should be complete but focused on readiness/freshness/Звʼязки даних gaps.

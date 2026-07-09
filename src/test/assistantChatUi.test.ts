@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { translations } from "@/i18n/translations";
 
 const source = readFileSync("src/pages/Assistant.tsx", "utf8");
+const routingSource = readFileSync("src/lib/assistantRouting.ts", "utf8");
 
 describe("AI Assistant chat UI", () => {
   it("uses i18n keys for primary chat-first visible copy", () => {
@@ -38,7 +39,7 @@ describe("AI Assistant chat UI", () => {
   });
 
   it("hides visible history UI and defaults to ads health with smart auto-routing", () => {
-    expect(source).toContain('function resolveAssistantContext(prompt: string, selectedOption: ContextOption, manualOverrideEnabled: boolean)');
+    expect(routingSource).toContain('function resolveAssistantContext(prompt: string, selectedOption: ContextOption, manualOverrideEnabled: boolean)');
     expect(source).toContain('useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextAdsHealth")');
     expect(source).toContain('const resolvedOption = resolveAssistantContext(submittedPrompt, selectedOption, manualOverrideEnabled);');
     expect(source).not.toContain('useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextFullOverview")');
@@ -54,7 +55,7 @@ describe("AI Assistant chat UI", () => {
     expect(translations.assistantContextLabel.en).toBe("Analysis mode");
     expect(translations.assistantAdvancedContext.uk).toBe("Змінити контекст");
     expect(translations.assistantManualOverride.uk).toBe("Ручний режим лише для тестування");
-    const optionsBlock = source.slice(source.indexOf("const OPTIONS = ["), source.indexOf("] as const satisfies readonly ContextOption[];"));
+    const optionsBlock = routingSource.slice(routingSource.indexOf("const OPTIONS = ["), routingSource.indexOf("] as const satisfies readonly ContextOption[];"));
     const optionLabels = Array.from(optionsBlock.matchAll(/labelKey: "([^"]+)"/g)).map((match) => match[1]);
     expect(optionLabels.slice(0, 10)).toEqual([
       "assistantContextAdsHealth",
@@ -142,22 +143,51 @@ describe("AI Assistant chat UI", () => {
 
 describe("AI Assistant smart routing and answer UX", () => {
   it("routes ads freshness questions to ads health instead of full production by default", () => {
-    expect(source).toContain("свіжих даних");
-    expect(source).toContain("assistantContextAdsHealth");
-    expect(source).toContain("ads_health_summary");
-    expect(source).toContain("ads_health");
-    expect(source).toContain("if (isAds && isFreshness) return option(\"assistantContextAdsHealth\")");
+    expect(routingSource).toContain("свіжих даних");
+    expect(routingSource).toContain("assistantContextAdsHealth");
+    expect(routingSource).toContain("ads_health_summary");
+    expect(routingSource).toContain("ads_health");
+    expect(routingSource).toContain("if (isAds && isFreshness) return option(\"assistantContextAdsHealth\")");
   });
 
   it("routes campaign performance and anomaly prompts to specialized ads contexts", () => {
-    expect(source).toContain("if (isAds && isPerformance) return option(\"assistantContextAdsPerformance\")");
-    expect(source).toContain("ads_performance_summary");
-    expect(source).toContain("if (isAds && isAnomaly) return option(\"assistantContextAdsAnomalies\")");
-    expect(source).toContain("ads_anomaly_explanation");
+    expect(routingSource).toContain("if (isAds && isPerformance) return option(\"assistantContextAdsPerformance\")");
+    expect(routingSource).toContain("ads_performance_summary");
+    expect(routingSource).toContain("if (isAnomaly) return option(\"assistantContextAdsAnomalies\")");
+    expect(routingSource).toContain("ads_anomaly_explanation");
+  });
+
+  it("routes live-tested Ukrainian prompts to the intended assistant contexts", async () => {
+    const { OPTIONS, resolveAssistantContext } = await import("@/lib/assistantRouting");
+    const defaultOption = OPTIONS.find((option) => option.labelKey === "assistantContextAdsHealth") ?? OPTIONS[0];
+    const route = (prompt: string) => resolveAssistantContext(prompt, defaultOption, false).labelKey;
+
+    expect(route("Чому немає свіжих рекламних даних?")).toBe("assistantContextAdsHealth");
+    expect(route("Чому немає даних по рекламі?")).toBe("assistantContextAdsHealth");
+    expect(route("Чому не синхронізуються рекламні дані?")).toBe("assistantContextAdsHealth");
+    expect(route("Які акаунти треба привʼязати?")).toBe("assistantContextAdsHealth");
+    expect(route("Що зі станом рекламних підключень?")).toBe("assistantContextAdsHealth");
+    expect(route("Чому Google Ads не дає дані?")).toBe("assistantContextAdsHealth");
+    expect(route("Чи працює live API?")).toBe("assistantContextAdsHealth");
+
+    expect(route("Які кампанії потребують уваги?")).toBe("assistantContextAdsPerformance");
+    expect(route("Які кампанії мають високий CPL?")).toBe("assistantContextAdsPerformance");
+    expect(route("Де зливаються витрати?")).toBe("assistantContextAdsPerformance");
+    expect(route("Проаналізуй кампанії")).toBe("assistantContextAdsPerformance");
+    expect(route("Які кампанії ефективні?")).toBe("assistantContextAdsPerformance");
+    expect(route("Де поганий CPL?")).toBe("assistantContextAdsPerformance");
+
+    expect(route("Що просіло за останні 7 днів?")).toBe("assistantContextAdsAnomalies");
+    expect(route("останні 7 днів просіло")).toBe("assistantContextAdsAnomalies");
+    expect(route("last 7 days drop")).toBe("assistantContextAdsAnomalies");
+
+    expect(route("Де є проблеми з якістю даних?")).toBe("assistantContextDataQuality");
+    expect(route("Де проблеми з якістю даних?")).toBe("assistantContextDataQuality");
+    expect(route("Проблеми з імпортами")).toBe("assistantContextDataQuality");
   });
 
   it("hides manual context override from normal composer UI", () => {
-    expect(source).toContain("if (manualOverrideEnabled) return selectedOption");
+    expect(routingSource).toContain("if (manualOverrideEnabled) return selectedOption");
     expect(source).toContain("const SHOW_ASSISTANT_DEV_CONTROLS = false");
     expect(source).not.toContain("assistantAdvancedContext");
     expect(source).not.toContain("assistantManualOverride");

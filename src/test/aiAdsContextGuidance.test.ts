@@ -95,6 +95,17 @@ describe("normalized AI ads context guidance", () => {
     expect(edgeFunctionSource).toContain("do not list top campaigns/CPL in ads_health answers unless asked");
   });
 
+  it("adds Ukrainian wording and stale-anomaly guardrails to ai-helper-run prompts", () => {
+    expect(edgeFunctionSource).toContain("prefer витрати / ліди over spend/leads");
+    expect(edgeFunctionSource).toContain("prefer права доступу or відмова в доступі over permission/access");
+    expect(edgeFunctionSource).toContain("Avoid grammar errors like бо є немає свіжих даних");
+    expect(edgeFunctionSource).toContain("бо немає свіжих даних за останні 7 днів");
+    expect(edgeFunctionSource).toContain("For ads_health answers, avoid hard bullet-count caps; use enough detail for an admin decision");
+    expect(edgeFunctionSource).toContain("if fresh data are missing or last-7-days analysis is not eligible, say anomaly/drop analysis is blocked or unreliable and do not invent current drops");
+    expect(edgeFunctionSource).toContain("For data_quality_summary or context_scope=data_quality, focus on data quality, imports, rejected rows, mapping, source freshness, and transformation issues");
+    expect(edgeFunctionSource).toContain("max_output_tokens: 2200");
+  });
+
   it("does not change frontend pages, routes, sidebar, AdsConnectors, or Bindings files", () => {
     const changedFiles = execSync("git diff --name-only", { encoding: "utf8" })
       .split("\n")
