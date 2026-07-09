@@ -1,3 +1,9 @@
+## Updated — 2026-07-08 Bindings Ads Readiness UX Separation
+
+- Verify `/bindings` in Ukrainian and English against production `build_ads_multi_account_readiness` output to confirm Overview shows only the compact actionable Ad accounts summary and Ad accounts shows friendly cards above the existing binding workflow.
+- Keep AdsConnectors as the source/account/sync diagnostics area and Bindings / Mapping as the action area for fixing source/account/client/project/funnel mappings.
+- Keep backend contracts unchanged; any future one-click binding/fix action needs a separate real write-action design and backend/RLS contract review.
+
 ## Next Actions — 2026-07-08 AdsConnectors Real Account Visibility Semantics
 
 - Verify `/ads-connectors?tab=ad-accounts` against production readiness data to confirm Google Ads and Meta Ads bound accounts plus unbound Meta Ads / Olena Shepel and TikTok Ads / Insight Hub Test Advertiser all appear in Real accounts.

@@ -1,3 +1,16 @@
+## 2026-07-08 — Bindings Ads Readiness UX Separation
+
+### Changed
+
+- Clarified Bindings / Mapping as the action area for fixing account/source mappings while keeping AdsConnectors as the source/account/sync status area.
+- Reduced duplicate readiness metrics in Bindings Overview by replacing the full ad readiness counter block with a compact actionable Ad accounts summary.
+- Reworked Bindings → Ad accounts binding gaps into friendly actionable cards shown above the existing binding form/table, without normal-UI backend codes or backend English diagnostic messages.
+- Kept the raw multi-account readiness payload only in Health developer/technical details.
+
+### Notes
+
+- Frontend-only change. Backend contracts were not changed: no Supabase schema, RLS, RPC contracts, Edge Functions, OAuth, sync behavior, routes, sidebar, AdsConnectors page, backend values, or write actions changed.
+
 ## 2026-07-08 — AdsConnectors Real Account Visibility Semantics
 
 ### Changed
