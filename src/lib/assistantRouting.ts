@@ -89,6 +89,28 @@ const matches = (text: string, patterns: RegExp[]) =>
 const normalizePrompt = (prompt: string) =>
   prompt.toLowerCase().replace(/[’']/g, "ʼ").trim();
 
+export function isContinuationPrompt(prompt: string) {
+  return matches(normalizePrompt(prompt), [
+    /(^|\b)продовжи(\b|\s)/,
+    /продовжи попередн(ю|ю свою)? відповідь/,
+    /продовжи відповідь/,
+    /(^|\b)continue(\b|\s|$)/,
+    /continue previous/,
+  ]);
+}
+
+export function resolveAssistantContextWithHistory(
+  prompt: string,
+  selectedOption: ContextOption,
+  manualOverrideEnabled: boolean,
+  previousAssistantOption?: ContextOption | null,
+): ContextOption {
+  if (!manualOverrideEnabled && isContinuationPrompt(prompt) && previousAssistantOption) {
+    return previousAssistantOption;
+  }
+  return resolveAssistantContext(prompt, selectedOption, manualOverrideEnabled);
+}
+
 export function detectAssistantRoutingSignals(prompt: string): SignalMap {
   const text = normalizePrompt(prompt);
 
@@ -183,6 +205,7 @@ export function detectAssistantRoutingSignals(prompt: string): SignalMap {
     /що сказати клієнту/,
     /поясни клієнту/,
     /client update|client-ready/,
+    /send to client|message to client/,
     /для клієнта/,
     /як сформулювати/,
   ]);

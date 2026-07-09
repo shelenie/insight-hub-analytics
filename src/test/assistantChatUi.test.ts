@@ -72,12 +72,11 @@ describe("AI Assistant chat UI", () => {
 
   it("hides visible history UI and defaults to ads health with smart auto-routing", () => {
     expect(routingSource).toContain("export function resolveAssistantContext(");
+    expect(routingSource).toContain("export function resolveAssistantContextWithHistory(");
     expect(source).toContain(
       'useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextAdsHealth")',
     );
-    expect(source).toContain(
-      "const resolvedOption = resolveAssistantContext(submittedPrompt, selectedOption, manualOverrideEnabled);",
-    );
+    expect(source).toContain("resolveAssistantContextWithHistory");
     expect(source).not.toContain(
       'useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextFullOverview")',
     );
@@ -329,6 +328,35 @@ describe("AI Assistant smart routing and answer UX", () => {
     expect(route("Зросла кількість помилок імпорту")).not.toBe(
       "assistantContextAdsAnomalies",
     );
+  });
+
+
+
+  it("sends compact conversation history and reuses previous assistant context for continuation", async () => {
+    const { OPTIONS, resolveAssistantContextWithHistory, isContinuationPrompt } =
+      await import("@/lib/assistantRouting");
+    const defaultOption =
+      OPTIONS.find(
+        (option) => option.labelKey === "assistantContextAdsHealth",
+      ) ?? OPTIONS[0];
+    const previousAnomaly =
+      OPTIONS.find(
+        (option) => option.labelKey === "assistantContextAdsAnomalies",
+      ) ?? OPTIONS[0];
+
+    expect(isContinuationPrompt("продовжи попередню відповідь")).toBe(true);
+    expect(
+      resolveAssistantContextWithHistory(
+        "продовжи попередню відповідь",
+        defaultOption,
+        false,
+        previousAnomaly,
+      ).labelKey,
+    ).toBe("assistantContextAdsAnomalies");
+    expect(source).toContain("conversation_history: conversationHistory");
+    expect(source).toContain("messages.slice(-4).map");
+    expect(source).toContain("request_type: message.option.requestType");
+    expect(source).toContain("context_scope: message.option.contextScope");
   });
 
   it("hides manual context override from normal composer UI", () => {

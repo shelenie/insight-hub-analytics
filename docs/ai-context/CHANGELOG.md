@@ -1,3 +1,17 @@
+## 2026-07-09 — AI Assistant Answer Polish and Continuation
+
+### Changed
+
+- Made the AI Assistant client communication section conditional on explicit client wording requests.
+- Tightened ads health, ads performance, ads anomalies, and data quality answer templates to use at most four focused sections by default and avoid long lists/cutoffs.
+- Added compact frontend conversation history payloads for AI Assistant calls and continuation routing that reuses the previous assistant context when a user asks to continue.
+- Marked conversation history as untrusted input in `ai-helper-run` prompt construction.
+- Added prompt guidance to avoid starting assistant answer bodies with “Контекст: …” because the UI already displays the context label.
+
+### Notes
+
+- No Supabase schema, RLS, migrations, `build_ai_ads_context`, `build_ai_production_context`, AdsConnectors, Bindings, source connectors, sync logic, permissions model, routes, or sidebar changes were made.
+
 ## 2026-07-09 — CFO Playbook Enrichment for Budget Efficiency
 
 ### Changed

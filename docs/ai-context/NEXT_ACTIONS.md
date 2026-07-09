@@ -1,3 +1,9 @@
+## 2026-07-09 — AI Assistant Answer Polish Follow-up
+
+- Verify live AI Assistant responses for the four production prompts and one explicit client-communication prompt after deployment.
+- Confirm continuation prompts continue the visible previous assistant answer instead of restarting analysis.
+- Watch for any remaining answer cutoffs, especially in ads anomalies, and tighten templates further if needed.
+
 ## 2026-07-09 — Next Actions After CFO Playbook Enrichment
 
 - Review deployed AI Assistant ads-performance answers for the enriched CFO lens: budget efficiency, opportunity cost, wasted spend risk, CPL efficiency, spend concentration, and clear missing-data guardrails.
