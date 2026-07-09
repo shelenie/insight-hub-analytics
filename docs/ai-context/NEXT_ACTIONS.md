@@ -148,6 +148,15 @@ Current next actions for Internal Analytics Workspace.
 
 2026-07-07 update: AI Assistant chat-mode alignment and reset polish is complete. Messages, full-width assistant answer cards, loading/error states, composer, starter prompts, and the safety note now share one centered chat column; composer focus styling is handled by the outer rounded container; and an explicit New chat / Новий чат action resets the current in-memory chat back to the starter screen. Persistent chat history remains deferred and no backend/RPC/RLS/schema/route/permission/Edge Function contract changes were made.
 
+
+## Updated — 2026-07-09 AI Ads Context Backend Audit
+
+1. Next backend PR should add an additive normalized `ads_context_status` / answer-guidance layer to `public.build_ai_ads_context` so AI answers reliably mention available period, freshness, imported/fallback status, source readiness, binding gaps, and live API health limitations before campaign analysis.
+2. Copy `pipeline_diagnostics.multi_account_readiness` and compact binding gaps to top-level AI ads context for discoverability; keep existing nested diagnostics and RPC signatures backward-compatible.
+3. Tighten `supabase/functions/ai-helper-run/index.ts` ads prompt so it does not say “no data” when historical imported/fallback data exists, does not confuse real/discovered accounts with bound accounts, explains `platform=other` imported facts, and avoids claiming live API health without fresh validated API/raw/fact data.
+4. Use `docs/ai-context/AI_ADS_CONTEXT_AUDIT.md` as the implementation checklist and prompt regression pack for the next PR.
+---
+
 ## Current Priority
 
 
