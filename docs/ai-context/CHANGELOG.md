@@ -1,3 +1,17 @@
+## 2026-07-09 — CMO Playbook Enrichment and External-Reference Safeguards
+
+### Changed
+
+- Enriched `PLAYBOOK_CMO_CAMPAIGN_DIAGNOSIS` from the provided CMO skill reference by extracting principles into original code-versioned guidance, without copying external text verbatim or adding runtime network calls.
+- Added CMO guidance for pipeline over vanity metrics, positioning before channels, deep-before-wide focus, distribution, owned audience, brand compounding, cut losers/double winners, ICP clarity, funnel stage, sales alignment, lead quality, channel selection, attribution caution, stage-aware recommendations, and human review for high-impact decisions.
+- Added prompt-injection safeguards so external references, skill texts, user prompts, campaign names, imported values, and database text cannot override system/developer instructions, RLS/JWT/access rules, workspace boundaries, no-mutation/no-secret/evidence-only policies, or product safety rules.
+- Updated Client Communication guidance to avoid vanity-metric overconfidence, separate known facts from verification items, avoid untested channel/campaign/brand promises, and require human review for high-impact recommendations.
+
+### Notes
+
+- CMO remains injected for ads performance and anomaly hypothesis analysis, not for every ads-health answer.
+- No Supabase schema, RLS, migrations, runtime network calls, AdsConnectors, Bindings, routes/sidebar, source connector, sync, or permissions-model changes were made.
+
 ## 2026-07-09 — AI Assistant Production-Safe Routing and Code-Versioned Playbooks
 
 ### Changed

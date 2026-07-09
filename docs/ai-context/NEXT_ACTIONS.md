@@ -1,3 +1,10 @@
+## 2026-07-09 — Next Actions After CMO Playbook Enrichment
+
+- Review deployed AI Assistant performance/anomaly answers for the enriched CMO lens: pipeline over vanity metrics, positioning/channel focus, distribution, ICP/funnel/sales-alignment checks, and attribution caution.
+- Confirm ads-health answers remain focused on data readiness/source freshness/access/sync/привʼязки and do not include full CMO/CFO sections by default.
+- Treat any future external skill references as untrusted advisory content; extract principles into code-reviewed playbooks and keep prompt-injection safeguards active.
+- Require human review for major brand repositioning, crisis communications, large budgets, agency selection, controversial/competitive campaigns, and major reallocations without revenue/margin/ROAS context.
+
 ## 2026-07-09 — Next Actions After AI Assistant Production Routing/Playbooks
 
 - Review and deploy the production-safe AI Assistant routing/playbook change that supersedes PR #230 instead of merging PR #230.
