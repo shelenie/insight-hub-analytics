@@ -1,3 +1,23 @@
+## Verified Local Follow-up — 2026-07-10 AI Assistant Client Copy i18n Polish
+
+AI Assistant client-copy block visible copy is now localized through the existing i18n map for both Ukrainian and English. The dedicated client-copy action still copies only the client-ready text, whole-answer copy still uses marker sanitization, and no schema/RLS, Edge Function, routing, conversation-history, drawer, rename/archive, connector, sync, route/sidebar, or permissions behavior changed.
+
+## Verified Local Follow-up — 2026-07-10 AI Assistant Chat History Rename Polish
+
+AI Assistant history drawer now includes localized manual rename controls for chat sessions. Rename keeps deterministic first-prompt titles as the default, updates only the session title, sanitizes leading context labels/client-copy marker lines, ignores empty submissions, and does not change archive behavior, schema/RLS, Edge Functions, routes/sidebar, connectors, sync, or permissions.
+
+## Verified Local Follow-up — 2026-07-10 AI Assistant Chat History Production Polish
+
+AI Assistant chat history polish now localizes all drawer copy through the existing i18n map, formats drawer timestamps with the current app language, derives drawer context labels from persisted request/context metadata when possible, and guards the async first-message session creation path against fast duplicate submits. No Edge Function contract, routing/playbook behavior, AdsConnectors, Bindings, source connectors, sync logic, routes/sidebar, permissions model, or migration shape changed.
+
+## Verified Local Follow-up — 2026-07-10 AI Assistant Chat History Sanitization
+
+AI Assistant persistent chat history now keeps raw assistant text with client-copy markers in saved message rows for faithful reload/rendering, while sanitizing titles, drawer previews, and bounded `conversation_history` text to strip leading `Контекст:` / `Context:` labels and remove raw client-copy marker lines. This preserves `Текст для клієнта` rendering after loading old chats without exposing markers in drawer previews or model continuity context.
+
+## Verified Local Change — 2026-07-10 AI Assistant Persistent Chat History
+
+AI Assistant now has persistent, user-owned Supabase chat sessions and messages. The Assistant header includes a compact `Історія` drawer that lists non-archived chats updated in the last 14 days, groups them by recency, lets users load prior messages, and soft-hides sessions via `archived_at` instead of deleting them. Loaded chats become the active thread, so the existing bounded `conversation_history` and thread metadata flow continues to provide context for follow-up prompts. Assistant response cards no longer show the visible frontend context chip by default, while user bubbles and persisted metadata retain the resolved context/request metadata. Client-copy behavior, whole-answer copy sanitization, deterministic routing/playbooks, AdsConnectors, Bindings, source connectors, sync logic, ads/import data models, `build_ai_ads_context`, and `build_ai_production_context` were not changed. System/outage routing remains a next task.
+
 ## Verified Local Follow-up — 2026-07-10 AI Assistant Whole-Answer Copy Sanitization
 
 AI Assistant whole-answer copy now serializes rendered assistant text without raw `[CLIENT_COPY_START]` / `[CLIENT_COPY_END]` marker lines, while preserving the client-ready text and any internal notes outside the markers. The dedicated `Текст для клієнта` card copy remains unchanged and still copies only the client-ready text. Visual rendering is unchanged, and no Supabase schema, RLS, migrations, connectors, sync logic, permissions model, routes, or sidebar changes were made.

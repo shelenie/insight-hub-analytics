@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseClientCopySegments, serializeAnswerForWholeCopy, stripLeadingContextLabel } from "@/lib/assistantAnswerParsing";
+import { cleanAssistantTextForModelContext, cleanAssistantTextForPreview, parseClientCopySegments, serializeAnswerForWholeCopy, stripLeadingContextLabel } from "@/lib/assistantAnswerParsing";
 
 describe("AI Assistant answer parsing", () => {
   it("strips leading Ukrainian context labels", () => {
@@ -36,5 +36,12 @@ describe("AI Assistant answer parsing", () => {
     expect(serialized).toContain("Client text only");
     expect(serialized).toContain("## Внутрішньо: що перевірити");
     expect(serialized).toContain("- Access");
+  });
+
+  it("cleans model context and previews without raw client markers or leading context labels", () => {
+    const raw = "Контекст: Стан рекламних підключень\n\nIntro\n[CLIENT_COPY_START]\nClient text\n[CLIENT_COPY_END]\nLater Контекст: keep this";
+
+    expect(cleanAssistantTextForModelContext(raw)).toBe("Intro\nClient text\nLater Контекст: keep this");
+    expect(cleanAssistantTextForPreview(raw)).toBe("Intro Client text Later Контекст: keep this");
   });
 });

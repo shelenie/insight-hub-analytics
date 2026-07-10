@@ -1,8 +1,9 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Check, Copy, Send, Sparkles } from "lucide-react";
+import { Archive, Check, Copy, History, Loader2, Send, Sparkles } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/auth/AuthProvider";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
@@ -13,6 +14,7 @@ import type { TranslationKey } from "@/i18n/translations";
 import { OPTIONS, resolveAssistantContextWithHistory, type ContextOption } from "@/lib/assistantRouting";
 import { buildConversationHistory, buildConversationThreadMetadata, type ChatMessage, type ConversationHistoryPayload, type ConversationThreadMetadata } from "@/lib/assistantConversation";
 import { parseClientCopySegments, serializeAnswerForWholeCopy, stripLeadingContextLabel } from "@/lib/assistantAnswerParsing";
+import { createMessagePreview, createRenamedSessionTitle, createSessionTitle, getRecentHistoryCutoff, groupSessionsByRecency, messageFromRow, optionFromPersistedMetadata, type AiChatMessageRow, type AiChatSession } from "@/lib/assistantChatHistory";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
@@ -21,24 +23,138 @@ const SHOW_ASSISTANT_DEV_CONTROLS = false;
 const PROMPT_KEYS = ["assistantPromptSevenDayDrop", "assistantPromptCampaignsAttention", "assistantPromptCplIncrease", "assistantPromptDataQuality", "assistantPromptClientSituation", "assistantPromptTeamPriorities"] as const;
 const CHAT_COLUMN_CLASS = "mx-auto w-full max-w-4xl";
 
+type SupabaseTableQuery = {
+  select: (columns?: string) => SupabaseTableQuery;
+  insert: (values: unknown) => SupabaseTableQuery;
+  update: (values: unknown) => SupabaseTableQuery;
+  eq: (column: string, value: unknown) => SupabaseTableQuery;
+  is: (column: string, value: unknown) => SupabaseTableQuery;
+  gte: (column: string, value: unknown) => SupabaseTableQuery;
+  order: (column: string, options?: { ascending?: boolean }) => SupabaseTableQuery;
+  limit: (count: number) => SupabaseTableQuery;
+  single: () => Promise<{ data: { id: string }; error: Error | null }>;
+  then: PromiseLike<{ data: unknown; error: Error | null }>["then"];
+};
+
+type AssistantHistoryClient = {
+  from: (table: "ai_chat_sessions" | "ai_chat_messages") => SupabaseTableQuery;
+};
+
+const assistantHistoryClient = supabase as unknown as AssistantHistoryClient;
+
 export default function Assistant() {
   const { session } = useAuth();
   const { capabilities, isLoading: roleLoading } = useWorkspaceRole(WORKSPACE_ID);
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [selected] = useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextAdsHealth");
   const manualOverrideEnabled = SHOW_ASSISTANT_DEV_CONTROLS && false;
   const [prompt, setPrompt] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
+  const [sessions, setSessions] = useState<AiChatSession[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+  const [loadingMessages, setLoadingMessages] = useState(false);
   const selectedOption = useMemo(() => OPTIONS.find((o) => o.labelKey === selected) ?? OPTIONS[0], [selected]);
   const activeRunId = useRef(0);
-  const run = useMutation({ mutationFn: async ({ submittedPrompt, option, runId, conversationHistory, threadMetadata }: { submittedPrompt: string; option: ContextOption; runId: number; conversationHistory: ConversationHistoryPayload[]; threadMetadata: ConversationThreadMetadata }) => {
+  const pendingSessionId = useRef<string | null>(null);
+  const isSubmittingRef = useRef(false);
+  const sessionCreationPromiseRef = useRef<Promise<string | null> | null>(null);
+  const loadSessions = useCallback(async () => {
+    if (!session?.user?.id) return;
+    setLoadingSessions(true);
+    const { data, error } = await assistantHistoryClient
+      .from("ai_chat_sessions")
+      .select("id, workspace_id, user_id, title, last_message_preview, last_context_label, last_request_type, last_context_scope, created_at, updated_at, archived_at")
+      .eq("workspace_id", WORKSPACE_ID)
+      .eq("user_id", session.user.id)
+      .is("archived_at", null)
+      .gte("updated_at", getRecentHistoryCutoff())
+      .order("updated_at", { ascending: false })
+      .limit(30);
+    if (error) {
+      console.debug("AI chat history load failed", error);
+    } else {
+      setSessions((data ?? []) as AiChatSession[]);
+    }
+    setLoadingSessions(false);
+  }, [session?.user?.id]);
+
+  useEffect(() => {
+    void loadSessions();
+  }, [loadSessions]);
+
+  const ensureSession = async (submittedPrompt: string): Promise<string | null> => {
+    if (currentSessionId) return currentSessionId;
+    if (sessionCreationPromiseRef.current) return sessionCreationPromiseRef.current;
+    if (!session?.user?.id) return null;
+
+    const creationPromise = assistantHistoryClient
+      .from("ai_chat_sessions")
+      .insert({ workspace_id: WORKSPACE_ID, user_id: session.user.id, title: createSessionTitle(submittedPrompt), last_message_preview: createMessagePreview(submittedPrompt) })
+      .select("id")
+      .single()
+      .then(({ data, error }) => {
+        if (error) {
+          console.debug("AI chat session create failed", error);
+          return null;
+        }
+        setCurrentSessionId(data.id);
+        void loadSessions();
+        return data.id as string;
+      })
+      .finally(() => {
+        sessionCreationPromiseRef.current = null;
+      });
+
+    sessionCreationPromiseRef.current = creationPromise;
+    return creationPromise;
+  };
+
+  const saveChatMessage = async (sessionId: string | null, message: ChatMessage) => {
+    if (!sessionId || !session?.user?.id) return;
+    const { error } = await assistantHistoryClient.from("ai_chat_messages").insert({
+      session_id: sessionId,
+      workspace_id: WORKSPACE_ID,
+      user_id: session.user.id,
+      role: message.role,
+      text: message.text,
+      context_label: message.contextLabel,
+      request_type: message.option.requestType,
+      context_scope: message.option.contextScope,
+      auto_routed: message.autoRouted ?? false,
+    });
+    if (error) console.debug("AI chat message save failed", error);
+  };
+
+  const updateSessionMetadata = async (sessionId: string | null, message: ChatMessage) => {
+    if (!sessionId) return;
+    const { error } = await assistantHistoryClient
+      .from("ai_chat_sessions")
+      .update({
+        updated_at: new Date().toISOString(),
+        last_message_preview: createMessagePreview(message.text),
+        last_context_label: message.contextLabel,
+        last_request_type: message.option.requestType,
+        last_context_scope: message.option.contextScope,
+      })
+      .eq("id", sessionId)
+      .eq("workspace_id", WORKSPACE_ID);
+    if (error) console.debug("AI chat session metadata update failed", error);
+    void loadSessions();
+  };
+
+  const run = useMutation({ mutationFn: async ({ submittedPrompt, option, runId, conversationHistory, threadMetadata, sessionId }: { submittedPrompt: string; option: ContextOption; runId: number; conversationHistory: ConversationHistoryPayload[]; threadMetadata: ConversationThreadMetadata; sessionId: string | null }) => {
     const response = await supabase.functions.invoke("ai-helper-run", { body: { workspace_id: WORKSPACE_ID, request_type: option.requestType, context_scope: option.contextScope, prompt: submittedPrompt, conversation_history: conversationHistory, conversation_thread: threadMetadata } });
     if (response.error) throw response.error;
-    return { payload: (response.data ?? {}) as Record<string, unknown>, option, runId };
-  }, onSuccess: ({ payload, option, runId }) => {
+    return { payload: (response.data ?? {}) as Record<string, unknown>, option, runId, sessionId };
+  }, onSuccess: ({ payload, option, runId, sessionId }) => {
     if (runId !== activeRunId.current) return;
-    setMessages((current) => [...current, { id: `assistant-${Date.now()}`, role: "assistant", text: getAnswerText(payload, t("assistantEmptyAnswer")), contextLabel: `${t("assistantContextPrefix")}: ${t(option.labelKey)}`, option }]);
+    const assistantMessage = { id: `assistant-${Date.now()}`, role: "assistant" as const, text: getAnswerText(payload, t("assistantEmptyAnswer")), contextLabel: `${t("assistantContextPrefix")}: ${t(option.labelKey)}`, option };
+    setMessages((current) => [...current, assistantMessage]);
+    void saveChatMessage(sessionId ?? pendingSessionId.current, assistantMessage);
+    void updateSessionMetadata(sessionId ?? pendingSessionId.current, assistantMessage);
   } });
 
   const canUseAi = capabilities.can_use_ai_helper;
@@ -50,33 +166,98 @@ export default function Assistant() {
   }, [prompt]);
 
   const runDisabled = !session || run.isPending || roleLoading || !canUseAi;
-  const submitPrompt = (value = prompt) => {
+  const submitPrompt = async (value = prompt) => {
     const submittedPrompt = value.trim();
-    if (!submittedPrompt || runDisabled) return;
-    const runId = activeRunId.current + 1;
-    activeRunId.current = runId;
-    const previousAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant") ?? null;
-    const previousAssistantOption = previousAssistantMessage?.option ?? null;
-    const resolvedOption = resolveAssistantContextWithHistory(submittedPrompt, selectedOption, manualOverrideEnabled, previousAssistantOption);
-    const conversationHistory = buildConversationHistory(messages, t);
-    const threadMetadata = buildConversationThreadMetadata(messages, previousAssistantMessage, t);
-    const autoRouted = !manualOverrideEnabled && resolvedOption.labelKey !== selectedOption.labelKey;
-    setMessages((current) => [...current, { id: `user-${Date.now()}`, role: "user", text: submittedPrompt, contextLabel: `${autoRouted ? t("assistantAutoContextPrefix") : t("assistantContextPrefix")}: ${t(resolvedOption.labelKey)}`, option: resolvedOption, autoRouted }]);
-    setPrompt("");
-    run.mutate({ submittedPrompt, option: resolvedOption, runId, conversationHistory, threadMetadata });
+    if (!submittedPrompt || runDisabled || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    try {
+      const runId = activeRunId.current + 1;
+      activeRunId.current = runId;
+      const previousAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant") ?? null;
+      const previousAssistantOption = previousAssistantMessage?.option ?? null;
+      const resolvedOption = resolveAssistantContextWithHistory(submittedPrompt, selectedOption, manualOverrideEnabled, previousAssistantOption);
+      const conversationHistory = buildConversationHistory(messages, t);
+      const threadMetadata = buildConversationThreadMetadata(messages, previousAssistantMessage, t);
+      const autoRouted = !manualOverrideEnabled && resolvedOption.labelKey !== selectedOption.labelKey;
+      const userMessage = { id: `user-${Date.now()}`, role: "user" as const, text: submittedPrompt, contextLabel: `${autoRouted ? t("assistantAutoContextPrefix") : t("assistantContextPrefix")}: ${t(resolvedOption.labelKey)}`, option: resolvedOption, autoRouted };
+      setMessages((current) => [...current, userMessage]);
+      setPrompt("");
+      const sessionId = await ensureSession(submittedPrompt);
+      pendingSessionId.current = sessionId;
+      void saveChatMessage(sessionId, userMessage);
+      run.mutate({ submittedPrompt, option: resolvedOption, runId, conversationHistory, threadMetadata, sessionId });
+    } finally {
+      isSubmittingRef.current = false;
+    }
   };
 
   const resetChat = () => {
     activeRunId.current += 1;
     setMessages([]);
+    setCurrentSessionId(null);
+    pendingSessionId.current = null;
+    sessionCreationPromiseRef.current = null;
+    isSubmittingRef.current = false;
     setPrompt("");
     run.reset();
+  };
+
+
+
+  const loadChatSession = async (sessionId: string) => {
+    setLoadingMessages(true);
+    const { data, error } = await assistantHistoryClient
+      .from("ai_chat_messages")
+      .select("id, session_id, workspace_id, user_id, role, text, context_label, request_type, context_scope, auto_routed, created_at")
+      .eq("session_id", sessionId)
+      .eq("workspace_id", WORKSPACE_ID)
+      .order("created_at", { ascending: true });
+    if (error) {
+      console.debug("AI chat messages load failed", error);
+    } else {
+      setMessages(((data ?? []) as AiChatMessageRow[]).map((row) => messageFromRow(row, t)));
+      setCurrentSessionId(sessionId);
+      pendingSessionId.current = sessionId;
+      setIsHistoryDrawerOpen(false);
+      run.reset();
+    }
+    setLoadingMessages(false);
+  };
+
+  const archiveChatSession = async (sessionId: string) => {
+    const { error } = await assistantHistoryClient
+      .from("ai_chat_sessions")
+      .update({ archived_at: new Date().toISOString() })
+      .eq("id", sessionId)
+      .eq("workspace_id", WORKSPACE_ID);
+    if (error) {
+      console.debug("AI chat archive failed", error);
+      return;
+    }
+    setSessions((current) => current.filter((item) => item.id !== sessionId));
+    if (currentSessionId === sessionId) resetChat();
+  };
+
+  const renameChatSession = async (sessionId: string, title: string) => {
+    const nextTitle = createRenamedSessionTitle(title);
+    if (!nextTitle) return;
+    const { error } = await assistantHistoryClient
+      .from("ai_chat_sessions")
+      .update({ title: nextTitle })
+      .eq("id", sessionId)
+      .eq("workspace_id", WORKSPACE_ID);
+    if (error) {
+      console.debug("AI chat rename failed", error);
+      return;
+    }
+    setSessions((current) => current.map((item) => item.id === sessionId ? { ...item, title: nextTitle } : item));
   };
 
   const showStarterPrompts = messages.length === 0 && !run.isPending && prompt.trim().length === 0;
   const showNewChat = messages.length > 0 || prompt.trim().length > 0 || Boolean(run.error);
 
-  return <DashboardLayout title={t("assistantTitle")} subtitle={t("assistantSubtitle")} actions={showNewChat ? <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={resetChat}>{t("assistantNewChat")}</Button> : null}>
+  return <DashboardLayout title={t("assistantTitle")} subtitle={t("assistantSubtitle")} actions={<div className="flex items-center gap-2"><Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => { setIsHistoryDrawerOpen(true); void loadSessions(); }}><History className="mr-1.5 h-3.5 w-3.5" />{t("assistantHistory")}</Button>{showNewChat ? <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={resetChat}>{t("assistantNewChat")}</Button> : null}</div>}>
+    <ChatHistoryDrawer open={isHistoryDrawerOpen} onOpenChange={setIsHistoryDrawerOpen} sessions={sessions} currentSessionId={currentSessionId} loading={loadingSessions || loadingMessages} onSelect={loadChatSession} onArchive={archiveChatSession} onRename={renameChatSession} t={t} lang={lang} />
     <div className="mx-auto flex w-full max-w-5xl flex-col px-1">
       <div className="flex flex-col justify-start pt-1 sm:pt-2 lg:pt-3">
         <div className={`${CHAT_COLUMN_CLASS} space-y-3`}>
@@ -103,6 +284,73 @@ export default function Assistant() {
   </DashboardLayout>;
 }
 
+
+function ChatHistoryDrawer({ open, onOpenChange, sessions, currentSessionId, loading, onSelect, onArchive, onRename, t, lang }: { open: boolean; onOpenChange: (open: boolean) => void; sessions: AiChatSession[]; currentSessionId: string | null; loading: boolean; onSelect: (sessionId: string) => void; onArchive: (sessionId: string) => void; onRename: (sessionId: string, title: string) => Promise<void>; t: (key: TranslationKey) => string; lang: "uk" | "en" }) {
+  const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
+  const grouped = groupSessionsByRecency(sessions);
+  const groups = [
+    { title: t("assistantHistoryGroupToday"), items: grouped.today },
+    { title: t("assistantHistoryGroupYesterday"), items: grouped.yesterday },
+    { title: t("assistantHistoryGroupLastSevenDays"), items: grouped.lastSevenDays },
+    { title: t("assistantHistoryGroupEarlier"), items: grouped.earlier },
+  ];
+
+  return <Sheet open={open} onOpenChange={onOpenChange}>
+    <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+      <SheetHeader className="border-b px-5 py-4 text-left">
+        <SheetTitle>{t("assistantHistoryTitle")}</SheetTitle>
+        <SheetDescription>{t("assistantHistorySubtitle")}</SheetDescription>
+      </SheetHeader>
+      <div className="flex-1 overflow-y-auto px-4 py-4">
+        {loading ? <div className="flex items-center gap-2 rounded-2xl bg-muted/50 px-3 py-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{t("assistantHistoryLoading")}</div> : null}
+        {!loading && sessions.length === 0 ? <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">{t("assistantHistoryEmpty")}</p> : null}
+        <div className="space-y-5">
+          {groups.map((group) => group.items.length > 0 ? <section key={group.title} className="space-y-2">
+            <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{group.title}</h3>
+            <div className="space-y-2">
+              {group.items.map((session) => <div key={session.id} className={`group rounded-2xl border p-3 shadow-sm transition ${currentSessionId === session.id ? "border-primary/45 bg-primary/5" : "border-border/50 bg-card hover:border-primary/25 hover:bg-muted/25"}`}>
+                <button type="button" className="w-full text-left" onClick={() => onSelect(session.id)}>
+                  <div className="flex items-start justify-between gap-3">
+                    <p className="line-clamp-1 text-sm font-medium text-foreground">{session.title}</p>
+                    <time className="shrink-0 text-[11px] text-muted-foreground">{formatSessionTime(session.updated_at, lang)}</time>
+                  </div>
+                  {session.last_message_preview ? <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{session.last_message_preview}</p> : null}
+                  {getSessionContextLabel(session, t) ? <p className="mt-2 inline-flex max-w-full truncate rounded-full bg-muted/70 px-2 py-0.5 text-[10px] text-muted-foreground">{getSessionContextLabel(session, t)}</p> : null}
+                </button>
+                {renamingSessionId === session.id ? <div className="mt-3 rounded-xl bg-muted/40 p-2">
+                  <label className="mb-1 block text-[11px] font-medium text-muted-foreground" htmlFor={`rename-${session.id}`}>{t("assistantHistoryRenameTitle")}</label>
+                  <input id={`rename-${session.id}`} value={renameDraft} onChange={(event) => setRenameDraft(event.target.value)} placeholder={t("assistantHistoryRenamePlaceholder")} className="h-8 w-full rounded-lg border bg-background px-2 text-xs outline-none ring-0 focus:border-primary/40" />
+                  <div className="mt-2 flex justify-end gap-1">
+                    <Button type="button" variant="ghost" size="sm" className="h-7 rounded-full px-2 text-[11px]" onClick={() => { setRenamingSessionId(null); setRenameDraft(""); }}>{t("assistantHistoryRenameCancel")}</Button>
+                    <Button type="button" variant="secondary" size="sm" className="h-7 rounded-full px-2 text-[11px]" onClick={async () => { const nextTitle = createRenamedSessionTitle(renameDraft); if (!nextTitle) { setRenamingSessionId(null); setRenameDraft(""); return; } await onRename(session.id, nextTitle); setRenamingSessionId(null); setRenameDraft(""); }}>{t("assistantHistoryRenameSave")}</Button>
+                  </div>
+                </div> : <div className="mt-2 flex justify-end gap-1">
+                  <Button type="button" variant="ghost" size="sm" className="h-7 rounded-full px-2 text-[11px] text-muted-foreground" onClick={() => { setRenamingSessionId(session.id); setRenameDraft(session.title); }}>{t("assistantHistoryRename")}</Button>
+                  <Button type="button" variant="ghost" size="sm" className="h-7 rounded-full px-2 text-[11px] text-muted-foreground" onClick={() => onArchive(session.id)}><Archive className="mr-1 h-3 w-3" />{t("assistantHistoryArchive")}</Button>
+                </div>}
+              </div>)}
+            </div>
+          </section> : null)}
+        </div>
+      </div>
+    </SheetContent>
+  </Sheet>;
+}
+
+function getSessionContextLabel(session: AiChatSession, t: (key: TranslationKey) => string) {
+  const option = optionFromPersistedMetadata(session.last_request_type, session.last_context_scope);
+  if (session.last_request_type && session.last_context_scope && option.requestType === session.last_request_type && option.contextScope === session.last_context_scope) {
+    return `${t("assistantContextPrefix")}: ${t(option.labelKey)}`;
+  }
+  return session.last_context_label;
+}
+
+function formatSessionTime(value: string, lang: "uk" | "en") {
+  const locale = lang === "en" ? "en-US" : "uk-UA";
+  return new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+}
+
 function Welcome({ t }: { t: (key: TranslationKey) => string }) {
   return <div className="mx-auto flex max-w-3xl flex-col items-center justify-start text-center"><div className="mb-2 rounded-full bg-primary/10 p-3 text-primary shadow-sm"><Sparkles className="h-6 w-6" /></div><h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("assistantWelcomeTitle")}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{t("assistantWelcome")}</p></div>;
 }
@@ -118,7 +366,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     return <div className="flex w-full justify-end"><div className="max-w-[82%] rounded-2xl rounded-tr-sm bg-primary px-4 py-3 text-sm text-primary-foreground"><p className="whitespace-pre-wrap">{message.text}</p><p className="mt-2 text-[10px] text-primary-foreground/65">{message.contextLabel}</p></div></div>;
   }
 
-  return <div className="flex w-full justify-start"><div className="w-full rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm"><p className="mb-2 inline-flex rounded-full bg-muted/70 px-2.5 py-1 text-[11px] text-muted-foreground">{message.contextLabel}</p><AiAnswer text={message.text} /><AssistantMessageActions message={message} /></div></div>;
+  return <div className="flex w-full justify-start"><div className="w-full rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm"><AiAnswer text={message.text} /><AssistantMessageActions message={message} /></div></div>;
 }
 
 function getAnswerText(payload: Record<string, unknown>, fallback: string) {
@@ -127,7 +375,7 @@ function getAnswerText(payload: Record<string, unknown>, fallback: string) {
 }
 
 function AssistantMessageActions({ message }: { message: ChatMessage }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [copied, setCopied] = useState(false);
   const copyAnswer = async () => {
     await navigator.clipboard.writeText(serializeAnswerForWholeCopy(message.text));
@@ -154,7 +402,7 @@ function AiAnswer({ text }: { text: string }) {
 }
 
 function ClientCopyBlock({ text }: { text: string }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [copied, setCopied] = useState(false);
   const copyClientText = async () => {
     await navigator.clipboard.writeText(text);
@@ -165,8 +413,8 @@ function ClientCopyBlock({ text }: { text: string }) {
 
   return <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 shadow-sm">
     <div className="mb-2 flex items-center justify-between gap-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Текст для клієнта</p>
-      <Button type="button" variant="ghost" size="sm" className="h-8 rounded-full px-2 text-xs" aria-label="Скопіювати текст для клієнта" onClick={copyClientText}>{copied ? <Check className="mr-1 h-3.5 w-3.5" /> : <Copy className="mr-1 h-3.5 w-3.5" />}{copied ? t("assistantCopied") : t("assistantCopy")}</Button>
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("assistantClientCopyTitle")}</p>
+      <Button type="button" variant="ghost" size="sm" className="h-8 rounded-full px-2 text-xs" aria-label={t("assistantClientCopyCopyLabel")} onClick={copyClientText}>{copied ? <Check className="mr-1 h-3.5 w-3.5" /> : <Copy className="mr-1 h-3.5 w-3.5" />}{copied ? t("assistantCopied") : t("assistantCopy")}</Button>
     </div>
     <div className="space-y-2">{blocks.map((block, i) => {
       if (block.type === "heading") return <h4 key={i} className="font-semibold tracking-tight">{renderBold(block.items[0])}</h4>;

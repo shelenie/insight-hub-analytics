@@ -1,3 +1,7 @@
+## 2026-07-10 Next — System / Outage Routing After Assistant Chat History
+
+AI Assistant persistent chat sessions are now implemented locally with a 14-day recent-history drawer, user-owned RLS-backed tables, soft archive hiding, loaded-session continuation through bounded conversation history, and hidden assistant-card context chips. After review/apply of migration `20260710_ai_assistant_chat_history.sql`, the next AI Assistant product step remains system/outage routing; do not treat this chat-history work as system/outage routing.
+
 ## 2026-07-10 — AI Assistant Whole-Answer Copy Follow-up
 
 - In live QA, confirm the bottom whole-answer copy no longer includes `[CLIENT_COPY_START]` / `[CLIENT_COPY_END]` marker lines while preserving client text and internal notes.

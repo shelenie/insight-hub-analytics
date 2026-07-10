@@ -31,9 +31,21 @@ export function parseClientCopySegments(text: string): ClientCopySegment[] {
 }
 
 export function serializeAnswerForWholeCopy(text: string): string {
+  return removeClientCopyMarkerLines(text).trim();
+}
+
+
+export function removeClientCopyMarkerLines(text: string): string {
   return text
     .split(/\r?\n/)
     .filter((line) => !/^\s*\[CLIENT_COPY_(?:START|END)\]\s*$/.test(line))
-    .join("\n")
-    .trim();
+    .join("\n");
+}
+
+export function cleanAssistantTextForModelContext(text: string): string {
+  return stripLeadingContextLabel(removeClientCopyMarkerLines(text)).trim();
+}
+
+export function cleanAssistantTextForPreview(text: string): string {
+  return cleanAssistantTextForModelContext(text).replace(/\s+/g, " ").trim();
 }
