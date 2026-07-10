@@ -76,7 +76,7 @@ describe("normalized AI ads context guidance", () => {
     expect(edgeFunctionSource).toContain("Say історичні імпортовані дані instead of platform=other");
     expect(edgeFunctionSource).toContain("Avoid English backend field names like fact_ads_rows, active_ad_accounts, active_ad_account_bindings, and ads_context_status");
     expect(edgeFunctionSource).toContain("Технічна примітка");
-    expect(edgeFunctionSource).toContain("max 5 sections");
+    expect(edgeFunctionSource).toContain("prefer concise structure, usually 3-5 sections");
     expect(edgeFunctionSource).toContain("In Ukrainian answers, prefer Звʼязки даних");
     expect(edgeFunctionSource).toContain("проєкт instead of project");
     expect(edgeFunctionSource).toContain("воронка instead of funnel");
@@ -86,9 +86,9 @@ describe("normalized AI ads context guidance", () => {
     expect(edgeFunctionSource).toContain("For request_type=ads_health_summary or context_scope=ads_health, focus on data availability, freshness, source readiness, sync/access blockers, and binding gaps.");
     expect(edgeFunctionSource).toContain("stay focused on data freshness/readiness, source availability, sync/access blockers, and binding gaps");
     expect(edgeFunctionSource).toContain("do not include detailed campaign performance, CPL rankings, weak campaigns, budget redistribution, or performance diagnosis unless the user explicitly asks");
-    expect(edgeFunctionSource).toContain("answer with complete but focused admin guidance in these sections: Стан даних, Чому немає свіжих даних, Що підтверджено / що є гіпотезою, Що перевірити далі, Що сказати клієнту");
+    expect(edgeFunctionSource).toContain("For ads_health answers, prefer concise structure but do not omit important blockers because of a section limit");
     expect(edgeFunctionSource).toContain("available historical period");
-    expect(edgeFunctionSource).toContain("confirmed blockers, hypotheses that need verification, next admin checks/actions, and client-ready explanation");
+    expect(edgeFunctionSource).toContain("Do not include Що сказати клієнту, client-ready quote blocks, or client wording unless explicitly requested");
     expect(edgeFunctionSource).toContain("avoid hard bullet-count caps");
     expect(edgeFunctionSource).not.toContain("max 8-12 bullets total");
     expect(edgeFunctionSource).not.toContain("max 8–12 bullets total");
@@ -100,7 +100,7 @@ describe("normalized AI ads context guidance", () => {
     expect(edgeFunctionSource).toContain("prefer права доступу or відмова в доступі over permission/access");
     expect(edgeFunctionSource).toContain("Avoid grammar errors like бо є немає свіжих даних");
     expect(edgeFunctionSource).toContain("бо немає свіжих даних за останні 7 днів");
-    expect(edgeFunctionSource).toContain("For ads_health answers, avoid hard bullet-count caps; use enough detail for an admin decision");
+    expect(edgeFunctionSource).toContain("For ads_health answers, prefer concise structure but do not omit important blockers because of a section limit");
     expect(edgeFunctionSource).toContain("if fresh data are missing or last-7-days analysis is not eligible, say anomaly/drop analysis is blocked or unreliable and do not invent current drops");
     expect(edgeFunctionSource).toContain("For data_quality_summary or context_scope=data_quality, focus on data quality, imports, rejected rows, mapping, source freshness, and transformation issues");
     expect(edgeFunctionSource).toContain("max_output_tokens: 2200");

@@ -1,3 +1,21 @@
+## 2026-07-10 — AI Assistant Adaptive Answer Structure Follow-up
+
+- Live-test that normal answers stay concise without becoming rigid templates or omitting important blockers.
+- Confirm small follow-ups are answered directly and complex prompts can receive fuller structured analysis when useful.
+- Continue keeping client wording conditional and avoiding duplicate context labels in answer bodies.
+
+## 2026-07-10 — AI Assistant Thread-Aware Context Follow-up
+
+- Smoke test current-chat follow-ups after deployment: continuation, simplification, prioritized checks, platform-specific follow-ups, and client wording follow-ups.
+- Confirm strong new-intent prompts still reroute to Data Quality, Ads Performance, Ads Anomalies, and Ads Health as expected.
+- Keep persistent DB-backed chat sessions as an optional future feature, not part of the current PR.
+
+## 2026-07-09 — AI Assistant Answer Polish Follow-up
+
+- Verify live AI Assistant responses for the four production prompts and one explicit client-communication prompt after deployment.
+- Confirm continuation prompts continue the visible previous assistant answer instead of restarting analysis.
+- Watch for any remaining answer cutoffs, especially in ads anomalies, and tighten templates further if needed.
+
 ## 2026-07-09 — Next Actions After CFO Playbook Enrichment
 
 - Review deployed AI Assistant ads-performance answers for the enriched CFO lens: budget efficiency, opportunity cost, wasted spend risk, CPL efficiency, spend concentration, and clear missing-data guardrails.

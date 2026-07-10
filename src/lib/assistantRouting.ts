@@ -89,6 +89,57 @@ const matches = (text: string, patterns: RegExp[]) =>
 const normalizePrompt = (prompt: string) =>
   prompt.toLowerCase().replace(/[’']/g, "ʼ").trim();
 
+export function isContinuationPrompt(prompt: string) {
+  return matches(normalizePrompt(prompt), [
+    /(^|\b)продовжи(\b|\s)/,
+    /продовжи попередн(ю|ю свою)? відповідь/,
+    /продовжи відповідь/,
+    /(^|\b)continue(\b|\s|$)/,
+    /continue previous/,
+  ]);
+}
+
+export function isThreadFollowUpPrompt(prompt: string) {
+  return matches(normalizePrompt(prompt), [
+    /^(а\s+)?чому(\s+так)?\??$/,
+    /розпиши детальніше/,
+    /поясни детальніше/,
+    /поясни простіше/,
+    /що з цим робити/,
+    /що робити далі/,
+    /що перевірити першим/,
+    /дай коротше/,
+    /дай простіше/,
+    /а що з (meta|tiktok|google ads)/,
+    /які причини/,
+    /які гіпотези/,
+    /що це означає/,
+    /сформулюй клієнту/,
+    /напиши клієнту/,
+    /зроби висновок/,
+    /дай підсумок/,
+    /explain more/,
+    /make it shorter/,
+    /summari[sz]e/,
+    /what should i check first/,
+  ]);
+}
+
+export function resolveAssistantContextWithHistory(
+  prompt: string,
+  selectedOption: ContextOption,
+  manualOverrideEnabled: boolean,
+  previousAssistantOption?: ContextOption | null,
+): ContextOption {
+  if (manualOverrideEnabled) return selectedOption;
+
+  if (previousAssistantOption && (isContinuationPrompt(prompt) || isThreadFollowUpPrompt(prompt)) && !hasStrongNewIntent(prompt)) {
+    return previousAssistantOption;
+  }
+
+  return resolveAssistantContext(prompt, selectedOption, false);
+}
+
 export function detectAssistantRoutingSignals(prompt: string): SignalMap {
   const text = normalizePrompt(prompt);
 
@@ -183,8 +234,11 @@ export function detectAssistantRoutingSignals(prompt: string): SignalMap {
     /що сказати клієнту/,
     /поясни клієнту/,
     /client update|client-ready/,
+    /send to client|message to client/,
     /для клієнта/,
     /як сформулювати/,
+    /сформулюй клієнту/,
+    /напиши клієнту/,
   ]);
   const mappingSignal = matches(text, [
     /mapping|мапінг|пол(я|е)|fields?/,
@@ -207,6 +261,28 @@ export function detectAssistantRoutingSignals(prompt: string): SignalMap {
     mappingSignal,
     systemReadinessSignal,
   };
+}
+
+function hasStrongNewIntent(prompt: string) {
+  const signals = detectAssistantRoutingSignals(prompt);
+  const knownAssistantPromptSignal =
+    signals.performanceSignal || signals.clientCommunicationSignal;
+
+  return Boolean(
+    signals.dataQualitySignal ||
+      signals.importSignal ||
+      signals.adsHealthSignal ||
+      (signals.anomalySignal &&
+        (signals.adsSignal ||
+          signals.metricSignal ||
+          signals.timeWindowSignal ||
+          knownAssistantPromptSignal)) ||
+      ((signals.adsSignal &&
+        (signals.performanceSignal || signals.metricSignal)) ||
+        (signals.performanceSignal && signals.metricSignal)) ||
+      signals.mappingSignal ||
+      signals.systemReadinessSignal,
+  );
 }
 
 export function resolveAssistantContext(

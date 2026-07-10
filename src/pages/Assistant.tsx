@@ -10,7 +10,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { FriendlyError } from "@/components/common/DeveloperDetails";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { TranslationKey } from "@/i18n/translations";
-import { OPTIONS, resolveAssistantContext, type ContextOption } from "@/lib/assistantRouting";
+import { OPTIONS, resolveAssistantContextWithHistory, type ContextOption } from "@/lib/assistantRouting";
+import { buildConversationHistory, buildConversationThreadMetadata, type ChatMessage, type ConversationHistoryPayload, type ConversationThreadMetadata } from "@/lib/assistantConversation";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
@@ -30,8 +31,8 @@ export default function Assistant() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const selectedOption = useMemo(() => OPTIONS.find((o) => o.labelKey === selected) ?? OPTIONS[0], [selected]);
   const activeRunId = useRef(0);
-  const run = useMutation({ mutationFn: async ({ submittedPrompt, option, runId }: { submittedPrompt: string; option: ContextOption; runId: number }) => {
-    const response = await supabase.functions.invoke("ai-helper-run", { body: { workspace_id: WORKSPACE_ID, request_type: option.requestType, context_scope: option.contextScope, prompt: submittedPrompt } });
+  const run = useMutation({ mutationFn: async ({ submittedPrompt, option, runId, conversationHistory, threadMetadata }: { submittedPrompt: string; option: ContextOption; runId: number; conversationHistory: ConversationHistoryPayload[]; threadMetadata: ConversationThreadMetadata }) => {
+    const response = await supabase.functions.invoke("ai-helper-run", { body: { workspace_id: WORKSPACE_ID, request_type: option.requestType, context_scope: option.contextScope, prompt: submittedPrompt, conversation_history: conversationHistory, conversation_thread: threadMetadata } });
     if (response.error) throw response.error;
     return { payload: (response.data ?? {}) as Record<string, unknown>, option, runId };
   }, onSuccess: ({ payload, option, runId }) => {
@@ -53,11 +54,15 @@ export default function Assistant() {
     if (!submittedPrompt || runDisabled) return;
     const runId = activeRunId.current + 1;
     activeRunId.current = runId;
-    const resolvedOption = resolveAssistantContext(submittedPrompt, selectedOption, manualOverrideEnabled);
+    const previousAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant") ?? null;
+    const previousAssistantOption = previousAssistantMessage?.option ?? null;
+    const resolvedOption = resolveAssistantContextWithHistory(submittedPrompt, selectedOption, manualOverrideEnabled, previousAssistantOption);
+    const conversationHistory = buildConversationHistory(messages, t);
+    const threadMetadata = buildConversationThreadMetadata(messages, previousAssistantMessage, t);
     const autoRouted = !manualOverrideEnabled && resolvedOption.labelKey !== selectedOption.labelKey;
     setMessages((current) => [...current, { id: `user-${Date.now()}`, role: "user", text: submittedPrompt, contextLabel: `${autoRouted ? t("assistantAutoContextPrefix") : t("assistantContextPrefix")}: ${t(resolvedOption.labelKey)}`, option: resolvedOption, autoRouted }]);
     setPrompt("");
-    run.mutate({ submittedPrompt, option: resolvedOption, runId });
+    run.mutate({ submittedPrompt, option: resolvedOption, runId, conversationHistory, threadMetadata });
   };
 
   const resetChat = () => {

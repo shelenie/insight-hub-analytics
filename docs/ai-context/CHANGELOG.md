@@ -1,3 +1,45 @@
+## 2026-07-10 — AI Assistant Adaptive Answer Structure
+
+### Changed
+
+- Clarified AI Assistant prompt/playbook wording so answer structure is adaptive rather than hard template-driven.
+- Reframed section-count and campaign-list guidance as concision defaults, not absolute caps; completeness wins when important blockers, risks, or actions exist.
+- Added guidance that playbooks are reasoning lenses, section headings are optional, small follow-ups should be direct, and complex analysis may include enough detail to be useful.
+- Kept client communication conditional and thread-aware without appending client wording to normal analytical answers.
+
+### Notes
+
+- No Supabase schema, RLS, migrations, `build_ai_ads_context`, `build_ai_production_context`, AdsConnectors, Bindings, source connectors, sync logic, permissions model, routes, or sidebar changes were made.
+
+## 2026-07-10 — AI Assistant Thread-Aware In-Session Context
+
+### Changed
+
+- Replaced the older continuation-only history wording with bounded visible-thread conversation history: up to 12 recent messages are selected within a character budget, the latest assistant answer gets a larger slice, and messages are sent chronologically with `conversation_thread` metadata.
+- Added previous-assistant thread metadata so natural follow-ups reuse the prior assistant context unless a strong new intent is detected.
+- Expanded follow-up routing for explanation, simplification, summary, prioritized-check, platform-specific, client-wording, and continuation prompts.
+- Updated `ai-helper-run` prompt handling so visible conversation history is untrusted continuity context and follow-ups refine, continue, simplify, summarize, or prioritize checks without restarting full analysis.
+- Kept client communication conditional but thread-aware for follow-ups such as “сформулюй клієнту” and “напиши клієнту”.
+
+### Notes
+
+- Conversation context is in-session only and bounded; persistent DB-backed chat sessions remain a future optional feature.
+- No Supabase schema, RLS, migrations, `build_ai_ads_context`, `build_ai_production_context`, AdsConnectors, Bindings, source connectors, sync logic, permissions model, routes, or sidebar changes were made.
+
+## 2026-07-09 — AI Assistant Answer Polish and Continuation
+
+### Changed
+
+- Made the AI Assistant client communication section conditional on explicit client wording requests.
+- Tightened ads health, ads performance, ads anomalies, and data quality answer guidance to prefer concise focused structure while avoiding long lists/cutoffs.
+- Added compact frontend conversation history payloads for AI Assistant calls and continuation routing that reuses the previous assistant context when a user asks to continue.
+- Marked conversation history as untrusted input in `ai-helper-run` prompt construction.
+- Added prompt guidance to avoid starting assistant answer bodies with “Контекст: …” because the UI already displays the context label.
+
+### Notes
+
+- No Supabase schema, RLS, migrations, `build_ai_ads_context`, `build_ai_production_context`, AdsConnectors, Bindings, source connectors, sync logic, permissions model, routes, or sidebar changes were made.
+
 ## 2026-07-09 — CFO Playbook Enrichment for Budget Efficiency
 
 ### Changed

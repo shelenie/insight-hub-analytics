@@ -4,6 +4,7 @@ import { translations } from "@/i18n/translations";
 
 const source = readFileSync("src/pages/Assistant.tsx", "utf8");
 const routingSource = readFileSync("src/lib/assistantRouting.ts", "utf8");
+const conversationSource = readFileSync("src/lib/assistantConversation.ts", "utf8");
 
 describe("AI Assistant chat UI", () => {
   it("uses i18n keys for primary chat-first visible copy", () => {
@@ -72,12 +73,11 @@ describe("AI Assistant chat UI", () => {
 
   it("hides visible history UI and defaults to ads health with smart auto-routing", () => {
     expect(routingSource).toContain("export function resolveAssistantContext(");
+    expect(routingSource).toContain("export function resolveAssistantContextWithHistory(");
     expect(source).toContain(
       'useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextAdsHealth")',
     );
-    expect(source).toContain(
-      "const resolvedOption = resolveAssistantContext(submittedPrompt, selectedOption, manualOverrideEnabled);",
-    );
+    expect(source).toContain("resolveAssistantContextWithHistory");
     expect(source).not.toContain(
       'useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextFullOverview")',
     );
@@ -331,6 +331,70 @@ describe("AI Assistant smart routing and answer UX", () => {
     );
   });
 
+
+
+  it("sends compact conversation history and reuses previous assistant context for continuation", async () => {
+    const { OPTIONS, resolveAssistantContextWithHistory, isContinuationPrompt } =
+      await import("@/lib/assistantRouting");
+    const defaultOption =
+      OPTIONS.find(
+        (option) => option.labelKey === "assistantContextAdsHealth",
+      ) ?? OPTIONS[0];
+    const previousAnomaly =
+      OPTIONS.find(
+        (option) => option.labelKey === "assistantContextAdsAnomalies",
+      ) ?? OPTIONS[0];
+
+    expect(isContinuationPrompt("продовжи попередню відповідь")).toBe(true);
+    expect(
+      resolveAssistantContextWithHistory(
+        "продовжи попередню відповідь",
+        defaultOption,
+        false,
+        previousAnomaly,
+      ).labelKey,
+    ).toBe("assistantContextAdsAnomalies");
+    expect(source).toContain("conversation_history: conversationHistory");
+    expect(conversationSource).toContain("CONVERSATION_HISTORY_MAX_MESSAGES");
+    expect(conversationSource).toContain("CONVERSATION_HISTORY_TEXT_BUDGET");
+    expect(conversationSource).toContain("request_type: message.option.requestType");
+    expect(conversationSource).toContain("context_scope: message.option.contextScope");
+  });
+
+
+
+  it("builds budgeted visible-thread conversation history beyond a four-message limit", async () => {
+    const { OPTIONS } = await import("@/lib/assistantRouting");
+    const { buildConversationHistory } = await import("@/lib/assistantConversation");
+    const option = OPTIONS.find((item) => item.labelKey === "assistantContextAdsPerformance") ?? OPTIONS[0];
+    const t = ((key: string) => key) as Parameters<typeof buildConversationHistory>[1];
+    const messages = Array.from({ length: 9 }, (_, index) => ({
+      id: `message-${index}`,
+      role: index % 2 === 0 ? "user" as const : "assistant" as const,
+      text: `${index === 7 ? "latest-assistant " : "older "}${"x".repeat(index === 7 ? 7000 : 1800)}`,
+      contextLabel: `Контекст ${index}`,
+      option,
+    }));
+
+    const history = buildConversationHistory(messages, t);
+
+    expect(history.length).toBeGreaterThan(4);
+    expect(history.length).toBeLessThanOrEqual(12);
+    expect(history.reduce((sum, item) => sum + item.text.length, 0)).toBeLessThanOrEqual(15000);
+    expect(history.at(-2)?.role).toBe("assistant");
+    expect(history.at(-2)?.text.length).toBeGreaterThan(history[0].text.length);
+    expect(history[0]).toHaveProperty("request_type", option.requestType);
+    expect(history[0]).toHaveProperty("context_scope", option.contextScope);
+  });
+
+  it("includes compact thread metadata in assistant requests", () => {
+    expect(source).toContain("conversation_thread: threadMetadata");
+    expect(conversationSource).toContain("previous_assistant_context_scope");
+    expect(conversationSource).toContain("previous_assistant_request_type");
+    expect(conversationSource).toContain("previous_assistant_label");
+    expect(conversationSource).toContain("current_thread_has_history");
+  });
+
   it("hides manual context override from normal composer UI", () => {
     expect(routingSource).toContain(
       "if (manualOverrideEnabled) return selectedOption",
@@ -340,6 +404,29 @@ describe("AI Assistant smart routing and answer UX", () => {
     expect(source).not.toContain("assistantManualOverride");
     expect(source).not.toContain("disabled={!manualOverrideEnabled}");
     expect(source).not.toContain("SelectTrigger");
+  });
+
+
+
+  it("reuses previous assistant context for natural thread follow-ups while preserving strong new intent routing", async () => {
+    const { OPTIONS, resolveAssistantContextWithHistory, isThreadFollowUpPrompt } =
+      await import("@/lib/assistantRouting");
+    const defaultOption = OPTIONS.find((option) => option.labelKey === "assistantContextAdsHealth") ?? OPTIONS[0];
+    const previousPerformance = OPTIONS.find((option) => option.labelKey === "assistantContextAdsPerformance") ?? OPTIONS[0];
+    const route = (prompt: string) =>
+      resolveAssistantContextWithHistory(prompt, defaultOption, false, previousPerformance).labelKey;
+
+    expect(isThreadFollowUpPrompt("розпиши детальніше")).toBe(true);
+    expect(route("розпиши детальніше")).toBe("assistantContextAdsPerformance");
+    expect(route("а чому так?")).toBe("assistantContextAdsPerformance");
+    expect(route("що перевірити першим?")).toBe("assistantContextAdsPerformance");
+    expect(route("сформулюй клієнту")).toBe("assistantContextAdsPerformance");
+    expect(route("а що з Meta?")).toBe("assistantContextAdsPerformance");
+
+    expect(route("Де є проблеми з якістю даних?")).toBe("assistantContextDataQuality");
+    expect(route("Які кампанії потребують уваги?")).toBe("assistantContextAdsPerformance");
+    expect(route("Що просіло за останні 7 днів?")).toBe("assistantContextAdsAnomalies");
+    expect(route("Чому немає свіжих рекламних даних?")).toBe("assistantContextAdsHealth");
   });
 
   it("shows resolved context badges and copy actions for assistant answers", () => {
