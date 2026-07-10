@@ -14,7 +14,7 @@ import type { TranslationKey } from "@/i18n/translations";
 import { OPTIONS, resolveAssistantContextWithHistory, type ContextOption } from "@/lib/assistantRouting";
 import { buildConversationHistory, buildConversationThreadMetadata, type ChatMessage, type ConversationHistoryPayload, type ConversationThreadMetadata } from "@/lib/assistantConversation";
 import { parseClientCopySegments, serializeAnswerForWholeCopy, stripLeadingContextLabel } from "@/lib/assistantAnswerParsing";
-import { createMessagePreview, createSessionTitle, getRecentHistoryCutoff, groupSessionsByRecency, messageFromRow, optionFromPersistedMetadata, type AiChatMessageRow, type AiChatSession } from "@/lib/assistantChatHistory";
+import { createMessagePreview, createRenamedSessionTitle, createSessionTitle, getRecentHistoryCutoff, groupSessionsByRecency, messageFromRow, optionFromPersistedMetadata, type AiChatMessageRow, type AiChatSession } from "@/lib/assistantChatHistory";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
@@ -238,11 +238,26 @@ export default function Assistant() {
     if (currentSessionId === sessionId) resetChat();
   };
 
+  const renameChatSession = async (sessionId: string, title: string) => {
+    const nextTitle = createRenamedSessionTitle(title);
+    if (!nextTitle) return;
+    const { error } = await assistantHistoryClient
+      .from("ai_chat_sessions")
+      .update({ title: nextTitle })
+      .eq("id", sessionId)
+      .eq("workspace_id", WORKSPACE_ID);
+    if (error) {
+      console.debug("AI chat rename failed", error);
+      return;
+    }
+    setSessions((current) => current.map((item) => item.id === sessionId ? { ...item, title: nextTitle } : item));
+  };
+
   const showStarterPrompts = messages.length === 0 && !run.isPending && prompt.trim().length === 0;
   const showNewChat = messages.length > 0 || prompt.trim().length > 0 || Boolean(run.error);
 
   return <DashboardLayout title={t("assistantTitle")} subtitle={t("assistantSubtitle")} actions={<div className="flex items-center gap-2"><Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => { setIsHistoryDrawerOpen(true); void loadSessions(); }}><History className="mr-1.5 h-3.5 w-3.5" />{t("assistantHistory")}</Button>{showNewChat ? <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={resetChat}>{t("assistantNewChat")}</Button> : null}</div>}>
-    <ChatHistoryDrawer open={isHistoryDrawerOpen} onOpenChange={setIsHistoryDrawerOpen} sessions={sessions} currentSessionId={currentSessionId} loading={loadingSessions || loadingMessages} onSelect={loadChatSession} onArchive={archiveChatSession} t={t} lang={lang} />
+    <ChatHistoryDrawer open={isHistoryDrawerOpen} onOpenChange={setIsHistoryDrawerOpen} sessions={sessions} currentSessionId={currentSessionId} loading={loadingSessions || loadingMessages} onSelect={loadChatSession} onArchive={archiveChatSession} onRename={renameChatSession} t={t} lang={lang} />
     <div className="mx-auto flex w-full max-w-5xl flex-col px-1">
       <div className="flex flex-col justify-start pt-1 sm:pt-2 lg:pt-3">
         <div className={`${CHAT_COLUMN_CLASS} space-y-3`}>
@@ -270,7 +285,9 @@ export default function Assistant() {
 }
 
 
-function ChatHistoryDrawer({ open, onOpenChange, sessions, currentSessionId, loading, onSelect, onArchive, t, lang }: { open: boolean; onOpenChange: (open: boolean) => void; sessions: AiChatSession[]; currentSessionId: string | null; loading: boolean; onSelect: (sessionId: string) => void; onArchive: (sessionId: string) => void; t: (key: TranslationKey) => string; lang: "uk" | "en" }) {
+function ChatHistoryDrawer({ open, onOpenChange, sessions, currentSessionId, loading, onSelect, onArchive, onRename, t, lang }: { open: boolean; onOpenChange: (open: boolean) => void; sessions: AiChatSession[]; currentSessionId: string | null; loading: boolean; onSelect: (sessionId: string) => void; onArchive: (sessionId: string) => void; onRename: (sessionId: string, title: string) => Promise<void>; t: (key: TranslationKey) => string; lang: "uk" | "en" }) {
+  const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState("");
   const grouped = groupSessionsByRecency(sessions);
   const groups = [
     { title: t("assistantHistoryGroupToday"), items: grouped.today },
@@ -301,9 +318,17 @@ function ChatHistoryDrawer({ open, onOpenChange, sessions, currentSessionId, loa
                   {session.last_message_preview ? <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{session.last_message_preview}</p> : null}
                   {getSessionContextLabel(session, t) ? <p className="mt-2 inline-flex max-w-full truncate rounded-full bg-muted/70 px-2 py-0.5 text-[10px] text-muted-foreground">{getSessionContextLabel(session, t)}</p> : null}
                 </button>
-                <div className="mt-2 flex justify-end">
+                {renamingSessionId === session.id ? <div className="mt-3 rounded-xl bg-muted/40 p-2">
+                  <label className="mb-1 block text-[11px] font-medium text-muted-foreground" htmlFor={`rename-${session.id}`}>{t("assistantHistoryRenameTitle")}</label>
+                  <input id={`rename-${session.id}`} value={renameDraft} onChange={(event) => setRenameDraft(event.target.value)} placeholder={t("assistantHistoryRenamePlaceholder")} className="h-8 w-full rounded-lg border bg-background px-2 text-xs outline-none ring-0 focus:border-primary/40" />
+                  <div className="mt-2 flex justify-end gap-1">
+                    <Button type="button" variant="ghost" size="sm" className="h-7 rounded-full px-2 text-[11px]" onClick={() => { setRenamingSessionId(null); setRenameDraft(""); }}>{t("assistantHistoryRenameCancel")}</Button>
+                    <Button type="button" variant="secondary" size="sm" className="h-7 rounded-full px-2 text-[11px]" onClick={async () => { const nextTitle = createRenamedSessionTitle(renameDraft); if (!nextTitle) { setRenamingSessionId(null); setRenameDraft(""); return; } await onRename(session.id, nextTitle); setRenamingSessionId(null); setRenameDraft(""); }}>{t("assistantHistoryRenameSave")}</Button>
+                  </div>
+                </div> : <div className="mt-2 flex justify-end gap-1">
+                  <Button type="button" variant="ghost" size="sm" className="h-7 rounded-full px-2 text-[11px] text-muted-foreground" onClick={() => { setRenamingSessionId(session.id); setRenameDraft(session.title); }}>{t("assistantHistoryRename")}</Button>
                   <Button type="button" variant="ghost" size="sm" className="h-7 rounded-full px-2 text-[11px] text-muted-foreground" onClick={() => onArchive(session.id)}><Archive className="mr-1 h-3 w-3" />{t("assistantHistoryArchive")}</Button>
-                </div>
+                </div>}
               </div>)}
             </div>
           </section> : null)}

@@ -1,3 +1,10 @@
+## 2026-07-10 — AI Assistant Chat History Rename Polish
+
+### Changed
+
+- Added localized manual chat-session rename controls in the history drawer.
+- Rename updates only `ai_chat_sessions.title`, trims/collapses/sanitizes the submitted title, ignores empty renames, and keeps archive behavior unchanged.
+
 ## 2026-07-10 — AI Assistant Chat History Production Polish
 
 ### Fixed

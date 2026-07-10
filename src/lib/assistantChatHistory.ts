@@ -41,6 +41,13 @@ export function createSessionTitle(prompt: string): string {
   return `${normalized.slice(0, AI_CHAT_TITLE_MAX_LENGTH - 1).trim()}…`;
 }
 
+export function createRenamedSessionTitle(title: string): string | null {
+  const normalized = cleanAssistantTextForPreview(title);
+  if (!normalized) return null;
+  if (normalized.length <= AI_CHAT_TITLE_MAX_LENGTH) return normalized;
+  return `${normalized.slice(0, AI_CHAT_TITLE_MAX_LENGTH - 1).trim()}…`;
+}
+
 export function createMessagePreview(text: string): string {
   const normalized = cleanAssistantTextForPreview(text);
   if (normalized.length <= AI_CHAT_PREVIEW_MAX_LENGTH) return normalized;

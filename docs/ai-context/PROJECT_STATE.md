@@ -1,3 +1,7 @@
+## Verified Local Follow-up — 2026-07-10 AI Assistant Chat History Rename Polish
+
+AI Assistant history drawer now includes localized manual rename controls for chat sessions. Rename keeps deterministic first-prompt titles as the default, updates only the session title, sanitizes leading context labels/client-copy marker lines, ignores empty submissions, and does not change archive behavior, schema/RLS, Edge Functions, routes/sidebar, connectors, sync, or permissions.
+
 ## Verified Local Follow-up — 2026-07-10 AI Assistant Chat History Production Polish
 
 AI Assistant chat history polish now localizes all drawer copy through the existing i18n map, formats drawer timestamps with the current app language, derives drawer context labels from persisted request/context metadata when possible, and guards the async first-message session creation path against fast duplicate submits. No Edge Function contract, routing/playbook behavior, AdsConnectors, Bindings, source connectors, sync logic, routes/sidebar, permissions model, or migration shape changed.

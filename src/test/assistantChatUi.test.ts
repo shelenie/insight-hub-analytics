@@ -206,6 +206,12 @@ describe("AI Assistant chat UI", () => {
     expect(translations.assistantHistoryGroupLastSevenDays.en).toBe("Last 7 days");
     expect(translations.assistantHistoryGroupEarlier.en).toBe("Earlier");
     expect(translations.assistantHistoryArchive.en).toBe("Hide");
+    expect(translations.assistantHistoryRename.en).toBe("Rename");
+    expect(translations.assistantHistoryRename.uk).toBe("Перейменувати");
+    expect(translations.assistantHistoryRenameTitle.en).toBe("Chat title");
+    expect(translations.assistantHistoryRenameSave.en).toBe("Save");
+    expect(translations.assistantHistoryRenameCancel.en).toBe("Cancel");
+    expect(translations.assistantHistoryRenamePlaceholder.en).toBe("Enter chat title");
   });
 
   it("keeps starter prompts below the composer and hides them after interaction", () => {

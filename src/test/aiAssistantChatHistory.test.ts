@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { buildConversationHistory } from "@/lib/assistantConversation";
-import { createMessagePreview, createSessionTitle, getRecentHistoryCutoff, groupSessionsByRecency, messageFromRow } from "@/lib/assistantChatHistory";
+import { createMessagePreview, createRenamedSessionTitle, createSessionTitle, getRecentHistoryCutoff, groupSessionsByRecency, messageFromRow } from "@/lib/assistantChatHistory";
 import { OPTIONS } from "@/lib/assistantRouting";
 
 const assistantSource = readFileSync("src/pages/Assistant.tsx", "utf8");
@@ -43,6 +43,9 @@ describe("AI Assistant persistent chat history", () => {
     expect(assistantSource).toContain('t("assistantHistoryGroupLastSevenDays")');
     expect(assistantSource).toContain('t("assistantHistoryGroupEarlier")');
     expect(assistantSource).toContain('t("assistantHistoryArchive")');
+    expect(assistantSource).toContain('t("assistantHistoryRename")');
+    expect(assistantSource).toContain('t("assistantHistoryRenameSave")');
+    expect(assistantSource).toContain('t("assistantHistoryRenameCancel")');
     expect(assistantSource).toContain('.is("archived_at", null)');
     expect(assistantSource).toContain('.gte("updated_at", getRecentHistoryCutoff())');
     expect(assistantSource).toContain('.update({ archived_at: new Date().toISOString() })');
@@ -60,6 +63,15 @@ describe("AI Assistant persistent chat history", () => {
     expect(assistantSource).toContain("isSubmittingRef.current");
     expect(assistantSource).toContain("sessionCreationPromiseRef.current");
     expect(assistantSource).toContain("if (sessionCreationPromiseRef.current) return sessionCreationPromiseRef.current");
+  });
+
+  it("supports safe manual rename without changing archive behavior", () => {
+    expect(assistantSource).toContain("const renameChatSession = async");
+    expect(assistantSource).toContain("const nextTitle = createRenamedSessionTitle(title)");
+    expect(assistantSource).toContain(".update({ title: nextTitle })");
+    expect(assistantSource).not.toContain("delete()");
+    expect(createRenamedSessionTitle("  Контекст: Old\n\n[CLIENT_COPY_START]\nMy   renamed   chat\n[CLIENT_COPY_END]  ")).toBe("My renamed chat");
+    expect(createRenamedSessionTitle("   ")).toBeNull();
   });
 
   it("loads an existing chat into visible messages and keeps bounded follow-up context", () => {
