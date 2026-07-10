@@ -1,3 +1,7 @@
+## Verified Local Follow-up — 2026-07-10 AI Assistant Client Copy i18n Polish
+
+AI Assistant client-copy block visible copy is now localized through the existing i18n map for both Ukrainian and English. The dedicated client-copy action still copies only the client-ready text, whole-answer copy still uses marker sanitization, and no schema/RLS, Edge Function, routing, conversation-history, drawer, rename/archive, connector, sync, route/sidebar, or permissions behavior changed.
+
 ## Verified Local Follow-up — 2026-07-10 AI Assistant Chat History Rename Polish
 
 AI Assistant history drawer now includes localized manual rename controls for chat sessions. Rename keeps deterministic first-prompt titles as the default, updates only the session title, sanitizes leading context labels/client-copy marker lines, ignores empty submissions, and does not change archive behavior, schema/RLS, Edge Functions, routes/sidebar, connectors, sync, or permissions.

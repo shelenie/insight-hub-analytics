@@ -413,8 +413,8 @@ function ClientCopyBlock({ text }: { text: string }) {
 
   return <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 shadow-sm">
     <div className="mb-2 flex items-center justify-between gap-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Текст для клієнта</p>
-      <Button type="button" variant="ghost" size="sm" className="h-8 rounded-full px-2 text-xs" aria-label="Скопіювати текст для клієнта" onClick={copyClientText}>{copied ? <Check className="mr-1 h-3.5 w-3.5" /> : <Copy className="mr-1 h-3.5 w-3.5" />}{copied ? t("assistantCopied") : t("assistantCopy")}</Button>
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("assistantClientCopyTitle")}</p>
+      <Button type="button" variant="ghost" size="sm" className="h-8 rounded-full px-2 text-xs" aria-label={t("assistantClientCopyCopyLabel")} onClick={copyClientText}>{copied ? <Check className="mr-1 h-3.5 w-3.5" /> : <Copy className="mr-1 h-3.5 w-3.5" />}{copied ? t("assistantCopied") : t("assistantCopy")}</Button>
     </div>
     <div className="space-y-2">{blocks.map((block, i) => {
       if (block.type === "heading") return <h4 key={i} className="font-semibold tracking-tight">{renderBold(block.items[0])}</h4>;

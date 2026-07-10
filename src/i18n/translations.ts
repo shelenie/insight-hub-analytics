@@ -494,6 +494,8 @@ export const translations = {
   assistantManualOverride: { uk: "Ручний режим лише для тестування", en: "Manual mode for testing only" },
   assistantCopy: { uk: "Скопіювати", en: "Copy" },
   assistantCopied: { uk: "Скопійовано", en: "Copied" },
+  assistantClientCopyTitle: { uk: "Текст для клієнта", en: "Client text" },
+  assistantClientCopyCopyLabel: { uk: "Скопіювати текст для клієнта", en: "Copy client text" },
   assistantContextSystemReadiness: { uk: "Готовність системи", en: "System readiness" },
   assistantContextClientsFunnels: { uk: "Клієнти та воронки", en: "Clients and funnels" },
   assistantContextMappingReview: { uk: "Мапінг", en: "Mapping" },

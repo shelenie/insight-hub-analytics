@@ -101,7 +101,10 @@ describe("AI Assistant persistent chat history", () => {
     expect(assistantSource).toContain("stripLeadingContextLabel(answer)");
     expect(assistantSource).toContain("ClientCopyBlock");
     expect(assistantSource).toContain("serializeAnswerForWholeCopy(message.text)");
-    expect(assistantSource).toContain("Текст для клієнта");
+    expect(assistantSource).toContain('t("assistantClientCopyTitle")');
+    expect(assistantSource).toContain('t("assistantClientCopyCopyLabel")');
+    expect(assistantSource).not.toContain("Текст для клієнта");
+    expect(assistantSource).not.toContain("Скопіювати текст для клієнта");
   });
 
   it("groups drawer sessions by display recency", () => {

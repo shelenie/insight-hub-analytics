@@ -458,8 +458,14 @@ describe("AI Assistant smart routing and answer UX", () => {
     expect(source).toContain("navigator.clipboard.writeText(text)");
     expect(source).toContain("ClientCopyBlock");
     expect(source).toContain("parseClientCopySegments");
-    expect(source).toContain("Текст для клієнта");
-    expect(source).toContain("Скопіювати текст для клієнта");
+    expect(source).toContain('t("assistantClientCopyTitle")');
+    expect(source).toContain('aria-label={t("assistantClientCopyCopyLabel")}');
+    expect(source).not.toContain("Текст для клієнта");
+    expect(source).not.toContain("Скопіювати текст для клієнта");
+    expect(translations.assistantClientCopyTitle.uk).toBe("Текст для клієнта");
+    expect(translations.assistantClientCopyTitle.en).toBe("Client text");
+    expect(translations.assistantClientCopyCopyLabel.uk).toBe("Скопіювати текст для клієнта");
+    expect(translations.assistantClientCopyCopyLabel.en).toBe("Copy client text");
     expect(answerParsingSource).toContain("CLIENT_COPY_START");
     expect(answerParsingSource).toContain("CLIENT_COPY_END");
     expect(source).toContain("assistantCopy");

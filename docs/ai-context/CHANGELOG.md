@@ -1,3 +1,9 @@
+## 2026-07-10 — AI Assistant Client Copy i18n Polish
+
+### Fixed
+
+- Localized the `ClientCopyBlock` title and client-copy aria label through existing AI Assistant i18n keys while preserving client-only copy and whole-answer sanitization behavior.
+
 ## 2026-07-10 — AI Assistant Chat History Rename Polish
 
 ### Changed
