@@ -1,3 +1,21 @@
+## 2026-07-10 — AI Assistant Persistent Chat History
+
+### Changed
+
+- Added Supabase-backed, user-owned AI Assistant chat sessions and messages with safe visible text/routing metadata only.
+- Added a compact `Історія` drawer that shows non-archived chats from the last 14 days, grouped by recency, with one-line previews and soft-hide archive behavior.
+- Loading a previous chat now restores messages into the active Assistant thread so follow-up prompts reuse the existing bounded `conversation_history` flow.
+- Hid the assistant-card context chip by default while preserving context metadata on user bubbles and persisted chat rows.
+- Preserved client-copy block rendering/copy and whole-answer copy sanitization behavior.
+
+### Notes
+
+- Migration: `supabase/migrations/20260710_ai_assistant_chat_history.sql`.
+- RLS: authenticated users can select/insert/update only their own chat sessions/messages when they have active workspace access through existing `get_workspace_role` / `workspace_role_rank` helper patterns.
+- Older and archived chats remain in the database but are hidden from the primary drawer.
+- No AdsConnectors, Bindings, source connector, sync logic, ads/import model, `build_ai_ads_context`, or `build_ai_production_context` changes were made.
+- This is not system/outage routing; that remains next.
+
 ## 2026-07-10 — AI Assistant Whole-Answer Copy Sanitization
 
 ### Fixed

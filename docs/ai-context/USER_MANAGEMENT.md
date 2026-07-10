@@ -1,3 +1,7 @@
+## AI Assistant Chat History RLS — 2026-07-10
+
+Local migration `supabase/migrations/20260710_ai_assistant_chat_history.sql` adds user-owned AI Assistant chat history tables. Chat sessions/messages are scoped by `workspace_id` and `user_id`; frontend queries use the current authenticated user ID and do not use a service-role key. RLS is enabled on both tables, and authenticated users can select/insert/update only their own chat rows when existing active-workspace-access helper patterns (`get_workspace_role` plus `workspace_role_rank`) confirm workspace access. Archive/hide behavior sets `archived_at` and does not delete users, memberships, sessions, or messages. This change does not add invitation, member-management, role-change, profile, audit-log, first-superadmin, or self-signup behavior.
+
 # USER_MANAGEMENT.md
 
 ## Purpose

@@ -72,7 +72,7 @@ describe("AI Assistant chat UI", () => {
     );
   });
 
-  it("hides visible history UI and defaults to ads health with smart auto-routing", () => {
+  it("uses persistent drawer history UI and defaults to ads health with smart auto-routing", () => {
     expect(routingSource).toContain("export function resolveAssistantContext(");
     expect(routingSource).toContain("export function resolveAssistantContextWithHistory(");
     expect(source).toContain(
@@ -82,9 +82,9 @@ describe("AI Assistant chat UI", () => {
     expect(source).not.toContain(
       'useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextFullOverview")',
     );
-    expect(source).not.toContain("function HistoryPanel");
-    expect(source).not.toContain("function HistoryList");
-    expect(source).not.toContain("assistantHistoryToggle");
+    expect(source).toContain("function ChatHistoryDrawer");
+    expect(source).toContain("Історія чатів");
+    expect(source).toContain("Останні {AI_CHAT_HISTORY_VISIBLE_DAYS} днів");
     expect(source).not.toContain("v_ai_helper_requests_recent");
 
     expect(source).not.toContain("xl:grid-cols-[minmax(0,1fr)_20rem]");
@@ -167,9 +167,6 @@ describe("AI Assistant chat UI", () => {
     expect(source).toContain(
       'return <div className="flex w-full justify-end"><div className="max-w-[82%] rounded-2xl rounded-tr-sm bg-primary',
     );
-    expect(source).toContain(
-      "inline-flex rounded-full bg-muted/70 px-2.5 py-1 text-[11px] text-muted-foreground",
-    );
     expect(source).toContain('{t("assistantAutoRoutingBadge")}');
     expect(source).not.toContain(
       '{t("assistantAutoRoutingBadge")}: {t(selectedOption.labelKey)}',
@@ -186,7 +183,7 @@ describe("AI Assistant chat UI", () => {
     expect(source).not.toContain("max-w-3xl sm:mt-5");
   });
 
-  it("adds a localized in-page New chat reset action without adding history UI", () => {
+  it("adds localized header actions for history and New chat reset", () => {
     expect(translations.assistantNewChat.uk).toBe("Новий чат");
     expect(translations.assistantNewChat.en).toBe("New chat");
     expect(source).toContain("const resetChat = () => {");
@@ -196,9 +193,9 @@ describe("AI Assistant chat UI", () => {
     expect(source).toContain(
       "const showNewChat = messages.length > 0 || prompt.trim().length > 0 || Boolean(run.error);",
     );
-    expect(source).toContain(
-      'actions={showNewChat ? <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={resetChat}>{t("assistantNewChat")}</Button> : null}',
-    );
+    expect(source).toContain("Історія");
+    expect(source).toContain("setIsHistoryDrawerOpen(true)");
+    expect(source).toContain('onClick={resetChat}>{t("assistantNewChat")}');
   });
 
   it("keeps starter prompts below the composer and hides them after interaction", () => {

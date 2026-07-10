@@ -1,0 +1,97 @@
+import { readFileSync } from "node:fs";
+import { describe, expect, it } from "vitest";
+import { buildConversationHistory } from "@/lib/assistantConversation";
+import { createMessagePreview, createSessionTitle, getRecentHistoryCutoff, groupSessionsByRecency, messageFromRow } from "@/lib/assistantChatHistory";
+import { OPTIONS } from "@/lib/assistantRouting";
+
+const assistantSource = readFileSync("src/pages/Assistant.tsx", "utf8");
+const migrationSource = readFileSync("supabase/migrations/20260710_ai_assistant_chat_history.sql", "utf8");
+
+describe("AI Assistant persistent chat history", () => {
+  it("adds Supabase chat history tables, indexes, RLS, and soft archive metadata", () => {
+    expect(migrationSource).toContain("create table if not exists public.ai_chat_sessions");
+    expect(migrationSource).toContain("create table if not exists public.ai_chat_messages");
+    expect(migrationSource).toContain("archived_at timestamptz null");
+    expect(migrationSource).toContain("on public.ai_chat_sessions (workspace_id, user_id, archived_at, updated_at desc)");
+    expect(migrationSource).toContain("on public.ai_chat_messages (session_id, created_at asc)");
+    expect(migrationSource).toContain("alter table public.ai_chat_sessions enable row level security");
+    expect(migrationSource).toContain("alter table public.ai_chat_messages enable row level security");
+    expect(migrationSource).toContain("user_id = auth.uid()");
+    expect(migrationSource).toContain("public.workspace_role_rank(public.get_workspace_role(workspace_id, auth.uid())) >= 1");
+    expect(migrationSource).not.toMatch(/service_role|drop table|delete from public\.ai_chat/i);
+  });
+
+  it("creates deterministic titles/previews and recent 14-day cutoff", () => {
+    expect(createSessionTitle("  hello    world  ")).toBe("hello world");
+    expect(createSessionTitle("x".repeat(80))).toHaveLength(60);
+    expect(createSessionTitle("x".repeat(80))).toMatch(/…$/);
+    expect(createMessagePreview("a\n\n b")).toBe("a b");
+    expect(getRecentHistoryCutoff(new Date("2026-07-10T00:00:00Z"))).toBe("2026-06-26T00:00:00.000Z");
+  });
+
+  it("renders compact drawer UI, empty state, archive action, and recent non-archived query", () => {
+    expect(assistantSource).toContain("const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)");
+    expect(assistantSource).toContain("const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false)");
+    expect(assistantSource).toContain("Історія");
+    expect(assistantSource).toContain("Історія чатів");
+    expect(assistantSource).toContain("Останні {AI_CHAT_HISTORY_VISIBLE_DAYS} днів");
+    expect(assistantSource).toContain("Тут зʼявляться останні чати з AI-асистентом.");
+    expect(assistantSource).toContain("Сьогодні");
+    expect(assistantSource).toContain("Вчора");
+    expect(assistantSource).toContain("Останні 7 днів");
+    expect(assistantSource).toContain("Раніше");
+    expect(assistantSource).toContain('.is("archived_at", null)');
+    expect(assistantSource).toContain('.gte("updated_at", getRecentHistoryCutoff())');
+    expect(assistantSource).toContain('.update({ archived_at: new Date().toISOString() })');
+  });
+
+  it("persists first user message and assistant response into the same session and updates metadata", () => {
+    expect(assistantSource).toContain('from("ai_chat_sessions")');
+    expect(assistantSource).toContain("createSessionTitle(submittedPrompt)");
+    expect(assistantSource).toContain("saveChatMessage(sessionId, userMessage)");
+    expect(assistantSource).toContain("saveChatMessage(sessionId ?? pendingSessionId.current, assistantMessage)");
+    expect(assistantSource).toContain("updateSessionMetadata(sessionId ?? pendingSessionId.current, assistantMessage)");
+    expect(assistantSource).toContain("last_message_preview: createMessagePreview(message.text)");
+    expect(assistantSource).toContain("last_request_type: message.option.requestType");
+    expect(assistantSource).toContain("last_context_scope: message.option.contextScope");
+  });
+
+  it("loads an existing chat into visible messages and keeps bounded follow-up context", () => {
+    expect(assistantSource).toContain("const loadChatSession = async");
+    expect(assistantSource).toContain('.order("created_at", { ascending: true })');
+    expect(assistantSource).toContain("messageFromRow(row, t)");
+    expect(assistantSource).toContain("setCurrentSessionId(sessionId)");
+    expect(assistantSource).toContain("conversation_history: conversationHistory");
+
+    const option = OPTIONS.find((item) => item.labelKey === "assistantContextAdsPerformance") ?? OPTIONS[0];
+    const row = { id: "m1", session_id: "s1", workspace_id: "w1", user_id: "u1", role: "assistant" as const, text: "Previous context", context_label: "Контекст: Ефективність реклами", request_type: option.requestType, context_scope: option.contextScope, auto_routed: false, created_at: "2026-07-10T00:00:00Z" };
+    const message = messageFromRow(row, ((key: string) => key) as never);
+    const history = buildConversationHistory([message], ((key: string) => key) as never);
+    expect(history[0].text).toBe("Previous context");
+    expect(history[0].request_type).toBe(option.requestType);
+  });
+
+  it("hides assistant context chips while preserving user metadata and client-copy behavior", () => {
+    expect(assistantSource).toContain("mt-2 text-[10px] text-primary-foreground/65");
+    expect(assistantSource).not.toContain("mb-2 inline-flex rounded-full bg-muted/70 px-2.5 py-1 text-[11px] text-muted-foreground");
+    expect(assistantSource).toContain("stripLeadingContextLabel(answer)");
+    expect(assistantSource).toContain("ClientCopyBlock");
+    expect(assistantSource).toContain("serializeAnswerForWholeCopy(message.text)");
+    expect(assistantSource).toContain("Текст для клієнта");
+  });
+
+  it("groups drawer sessions by display recency", () => {
+    const base = new Date("2026-07-10T12:00:00Z");
+    const mk = (id: string, updated_at: string) => ({ id, workspace_id: "w", user_id: "u", title: id, last_message_preview: null, last_context_label: null, last_request_type: null, last_context_scope: null, created_at: updated_at, updated_at, archived_at: null });
+    const grouped = groupSessionsByRecency([
+      mk("today", "2026-07-10T08:00:00Z"),
+      mk("yesterday", "2026-07-09T08:00:00Z"),
+      mk("week", "2026-07-06T08:00:00Z"),
+      mk("earlier", "2026-06-28T08:00:00Z"),
+    ], base);
+    expect(grouped.today.map((item) => item.id)).toEqual(["today"]);
+    expect(grouped.yesterday.map((item) => item.id)).toEqual(["yesterday"]);
+    expect(grouped.lastSevenDays.map((item) => item.id)).toEqual(["week"]);
+    expect(grouped.earlier.map((item) => item.id)).toEqual(["earlier"]);
+  });
+});
