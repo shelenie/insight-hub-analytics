@@ -1,3 +1,9 @@
+## 2026-07-10 — AI Assistant Adaptive Answer Structure Follow-up
+
+- Live-test that normal answers stay concise without becoming rigid templates or omitting important blockers.
+- Confirm small follow-ups are answered directly and complex prompts can receive fuller structured analysis when useful.
+- Continue keeping client wording conditional and avoiding duplicate context labels in answer bodies.
+
 ## 2026-07-10 — AI Assistant Thread-Aware Context Follow-up
 
 - Smoke test current-chat follow-ups after deployment: continuation, simplification, prioritized checks, platform-specific follow-ups, and client wording follow-ups.

@@ -1,3 +1,16 @@
+## 2026-07-10 — AI Assistant Adaptive Answer Structure
+
+### Changed
+
+- Clarified AI Assistant prompt/playbook wording so answer structure is adaptive rather than hard template-driven.
+- Reframed section-count and campaign-list guidance as concision defaults, not absolute caps; completeness wins when important blockers, risks, or actions exist.
+- Added guidance that playbooks are reasoning lenses, section headings are optional, small follow-ups should be direct, and complex analysis may include enough detail to be useful.
+- Kept client communication conditional and thread-aware without appending client wording to normal analytical answers.
+
+### Notes
+
+- No Supabase schema, RLS, migrations, `build_ai_ads_context`, `build_ai_production_context`, AdsConnectors, Bindings, source connectors, sync logic, permissions model, routes, or sidebar changes were made.
+
 ## 2026-07-10 — AI Assistant Thread-Aware In-Session Context
 
 ### Changed
@@ -18,7 +31,7 @@
 ### Changed
 
 - Made the AI Assistant client communication section conditional on explicit client wording requests.
-- Tightened ads health, ads performance, ads anomalies, and data quality answer templates to use at most four focused sections by default and avoid long lists/cutoffs.
+- Tightened ads health, ads performance, ads anomalies, and data quality answer guidance to prefer concise focused structure while avoiding long lists/cutoffs.
 - Added compact frontend conversation history payloads for AI Assistant calls and continuation routing that reuses the previous assistant context when a user asks to continue.
 - Marked conversation history as untrusted input in `ai-helper-run` prompt construction.
 - Added prompt guidance to avoid starting assistant answer bodies with “Контекст: …” because the UI already displays the context label.

@@ -49,16 +49,19 @@ describe("ai-helper-run code-versioned analysis playbooks", () => {
   });
 
 
-  it("makes client communication conditional and keeps normal answer templates compact", () => {
+  it("makes client communication conditional and keeps answer structure adaptive", () => {
     expect(edgeFunctionSource).toContain("Do not include a separate Що сказати клієнту / client-ready section");
     expect(edgeFunctionSource).toContain("Client communication triggers: що сказати клієнту, поясни клієнту, для клієнта, як сформулювати, client update, client-ready, send to client, message to client");
-    expect(edgeFunctionSource).toContain("Normal analytical sections: Стан даних, Що видно, Що потребує уваги, Що перевірити далі");
-    expect(edgeFunctionSource).toContain("Explicit client sections: Коротко для клієнта, Внутрішньо: що перевірити");
-    expect(playbookSource).toContain("For ads_health, use at most 4 sections");
-    expect(playbookSource).toContain("For ads_performance, use at most 4 sections");
-    expect(playbookSource).toContain("Use at most 4 sections; if last-7-days data are missing");
-    expect(playbookSource).toContain("3-5 historical anomaly examples");
-    expect(playbookSource).toContain("Use at most 4 sections focused on imports, rejected rows, mapping");
+    expect(edgeFunctionSource).toContain("Keep answer structure adaptive");
+    expect(edgeFunctionSource).toContain("Use section headings only when they improve clarity");
+    expect(edgeFunctionSource).toContain("do not omit important blockers, risks, or actions just to satisfy a section limit");
+    expect(playbookSource).toContain("For ads_health, prefer a concise structure");
+    expect(playbookSource).toContain("Do not include campaign performance unless the user asks");
+    expect(playbookSource).toContain("For ads_performance, start with campaigns that most need attention");
+    expect(playbookSource).toContain("Usually 3-5 priority campaigns are enough, but include more when there are materially different risk groups");
+    expect(playbookSource).toContain("For ads_anomalies, if fresh data are missing");
+    expect(playbookSource).toContain("Limit historical examples by relevance, not a fixed number");
+    expect(playbookSource).toContain("For data_quality, focus on the specific data-quality question");
   });
 
   it("recognizes only explicit client communication triggers", () => {
@@ -91,6 +94,7 @@ describe("ai-helper-run code-versioned analysis playbooks", () => {
     expect(edgeFunctionSource).toContain("thread_follow_up_rule");
     expect(edgeFunctionSource).toContain("do not restart full analysis");
     expect(edgeFunctionSource).toContain("continue from the last visible section");
+    expect(edgeFunctionSource).toContain("do not force report sections into small follow-ups");
     expect(edgeFunctionSource).toContain("поясни простіше should simplify the previous answer");
     expect(edgeFunctionSource).toContain("що перевірити першим should return prioritized next checks");
     expect(edgeFunctionSource).toContain("сформулюй клієнту should use previous thread context and client communication rules");

@@ -46,8 +46,8 @@ export const PLAYBOOK_DATA_READINESS: AnalysisPlaybook = {
     "Mention access/sync blockers, account binding gaps, and test/no-spend account possibility when context indicates it.",
     "Do not say no data when historical/imported/fallback data exist; use історичні імпортовані дані instead of platform=other.",
     "Use свіжі дані / поточні дані instead of unnecessary fresh data.",
-    "For ads_health, use at most 4 sections unless the user explicitly asks for client wording; focus on freshness, source readiness, access, sync, bindings, and next admin checks, with no campaign/CPL lists.",
-    "For ads_performance, use at most 4 sections, list only the top 3-5 campaigns when campaign data exist, keep CMO/CFO logic compact, and do not invent ROAS/revenue/margin/LTV/CAC/payback.",
+    "For ads_health, prefer a concise structure, usually 3-5 sections, but include all important blockers when relevant: freshness, latest available date, source/API state, access issues, sync state, binding gaps, test/no-spend caveats, and next admin checks. Do not include campaign performance unless the user asks.",
+    "For ads_performance, start with campaigns that most need attention. Usually 3-5 priority campaigns are enough, but include more when there are materially different risk groups; group campaigns by issue type rather than listing everything. Use CMO/CFO reasoning where useful without forcing separate CMO/CFO sections, and do not invent ROAS/revenue/margin/LTV/CAC/payback.",
   ],
 };
 
@@ -110,7 +110,7 @@ export const PLAYBOOK_ADS_ANOMALY_REVIEW: AnalysisPlaybook = {
     "Do not invent current drops; historical anomalies may be mentioned only as historical context.",
     "Distinguish metric anomaly from source/data freshness issue.",
     "Explain whether the issue is performance-related or data-readiness-related.",
-    "Use at most 4 sections; if last-7-days data are missing, start with that limitation; mention at most 3-5 historical anomaly examples and avoid long campaign lists or cut-off endings.",
+    "For ads_anomalies, if fresh data are missing, clearly say current last-7-days anomaly analysis is blocked or unreliable. Limit historical examples by relevance, not a fixed number; usually 3-5 examples are enough, but include more when necessary and group them. Finish with a complete concise answer rather than starting too many sections or ending with a cut-off sentence.",
   ],
 };
 
@@ -124,7 +124,7 @@ export const PLAYBOOK_DATA_QUALITY_IMPORT_REVIEW: AnalysisPlaybook = {
     "Do not turn every data quality question into ads connector health.",
     "If ads freshness is the main data quality issue, explain it as a data quality/freshness issue.",
     "If context has not enough detail, say what is missing instead of inventing.",
-    "Use at most 4 sections focused on imports, rejected rows, mapping, raw/staging/processed data, and source freshness; do not do an ads-health deep dive unless freshness is the main data-quality issue.",
+    "For data_quality, focus on the specific data-quality question and include imports, rejected rows, mapping, raw/staging/processed data, normalization, duplicates, missing fields, transformation issues, and source freshness when relevant. Do not force ads-health detail unless freshness is the actual data-quality risk.",
   ],
 };
 
@@ -134,7 +134,7 @@ export const PLAYBOOK_CLIENT_COMMUNICATION: AnalysisPlaybook = {
   applies_to: ["client_communication"],
   instructions: [
     "Produce client-safe language only when the user explicitly asks for client communication.",
-    "Use sections Коротко для клієнта and optionally Внутрішньо: що перевірити; the copy-ready client block should be 3-6 sentences, followed by at most 3-5 internal checklist bullets.",
+    "For explicit client communication, keep wording copy-ready and concise; if the user asks for a detailed client explanation, allow a longer version. Use client/internal headings only when they improve clarity.",
     "Avoid raw backend terms; separate what is known from data from what needs to be verified.",
     "Avoid vanity-metric overconfidence and do not promise that a channel, campaign, or brand move will work without test evidence.",
     "Avoid high-impact marketing recommendations without human review.",
@@ -155,7 +155,7 @@ export const PLAYBOOK_OPERATIONS_READINESS: AnalysisPlaybook = {
     "import_contexts",
   ],
   instructions: [
-    "Focus on actionability: what is ready, blocked, and needs review.",
+    "Focus on actionability: what is ready, blocked, and needs review; use section headings only when they improve clarity.",
     "Do not force ads/CPL/CMO/CFO sections when not relevant.",
     "Keep admin next steps clear.",
   ],
