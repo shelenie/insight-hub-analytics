@@ -15,7 +15,7 @@
 
 ### Changed
 
-- Replaced last-four-message continuation payloads with bounded thread-aware current-chat context: newest messages are selected up to max-message and character budgets, then sent chronologically.
+- Replaced the older continuation-only history wording with bounded visible-thread conversation history: up to 12 recent messages are selected within a character budget, the latest assistant answer gets a larger slice, and messages are sent chronologically with `conversation_thread` metadata.
 - Added previous-assistant thread metadata so natural follow-ups reuse the prior assistant context unless a strong new intent is detected.
 - Expanded follow-up routing for explanation, simplification, summary, prioritized-check, platform-specific, client-wording, and continuation prompts.
 - Updated `ai-helper-run` prompt handling so visible conversation history is untrusted continuity context and follow-ups refine, continue, simplify, summarize, or prioritize checks without restarting full analysis.

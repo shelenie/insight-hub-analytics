@@ -363,7 +363,7 @@ describe("AI Assistant smart routing and answer UX", () => {
 
 
 
-  it("builds budgeted visible-thread conversation history instead of only last four messages", async () => {
+  it("builds budgeted visible-thread conversation history beyond a four-message limit", async () => {
     const { OPTIONS } = await import("@/lib/assistantRouting");
     const { buildConversationHistory } = await import("@/lib/assistantConversation");
     const option = OPTIONS.find((item) => item.labelKey === "assistantContextAdsPerformance") ?? OPTIONS[0];
