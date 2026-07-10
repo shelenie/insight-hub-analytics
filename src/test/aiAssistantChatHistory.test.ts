@@ -26,6 +26,8 @@ describe("AI Assistant persistent chat history", () => {
     expect(createSessionTitle("x".repeat(80))).toHaveLength(60);
     expect(createSessionTitle("x".repeat(80))).toMatch(/…$/);
     expect(createMessagePreview("a\n\n b")).toBe("a b");
+    expect(createSessionTitle("Контекст: Test\n\nPrompt body")).toBe("Prompt body");
+    expect(createMessagePreview("[CLIENT_COPY_START]\nClient\n[CLIENT_COPY_END]")).toBe("Client");
     expect(getRecentHistoryCutoff(new Date("2026-07-10T00:00:00Z"))).toBe("2026-06-26T00:00:00.000Z");
   });
 
@@ -69,6 +71,9 @@ describe("AI Assistant persistent chat history", () => {
     const history = buildConversationHistory([message], ((key: string) => key) as never);
     expect(history[0].text).toBe("Previous context");
     expect(history[0].request_type).toBe(option.requestType);
+
+    const markerMessage = messageFromRow({ ...row, id: "m2", text: "[CLIENT_COPY_START]\nClient text\n[CLIENT_COPY_END]" }, ((key: string) => key) as never);
+    expect(buildConversationHistory([markerMessage], ((key: string) => key) as never)[0].text).toBe("Client text");
   });
 
   it("hides assistant context chips while preserving user metadata and client-copy behavior", () => {

@@ -1,5 +1,6 @@
 import type { TranslationKey } from "@/i18n/translations";
 import type { ContextOption } from "@/lib/assistantRouting";
+import { cleanAssistantTextForModelContext } from "@/lib/assistantAnswerParsing";
 
 const CONVERSATION_HISTORY_MAX_MESSAGES = 12;
 const CONVERSATION_HISTORY_TEXT_BUDGET = 15000;
@@ -50,7 +51,8 @@ export function buildConversationHistory(
     const remainingBudget = CONVERSATION_HISTORY_TEXT_BUDGET - usedCharacters;
     if (remainingBudget <= 0) break;
 
-    const text = message.text.slice(0, Math.min(textLimit, remainingBudget));
+    const cleanedMessageText = cleanAssistantTextForModelContext(message.text);
+    const text = cleanedMessageText.slice(0, Math.min(textLimit, remainingBudget));
     if (!text.trim()) continue;
 
     usedCharacters += text.length;

@@ -1,3 +1,10 @@
+## 2026-07-10 — AI Assistant Chat History Marker Sanitization Follow-up
+
+### Fixed
+
+- Cleaned chat titles, drawer previews, and bounded `conversation_history` text so leading context labels and raw `[CLIENT_COPY_START]` / `[CLIENT_COPY_END]` marker lines are not shown to users or sent back to the model.
+- Preserved raw saved assistant message text for UI rendering so loaded chats can still restore the `Текст для клієнта` block and dedicated client-copy action.
+
 ## 2026-07-10 — AI Assistant Persistent Chat History
 
 ### Changed

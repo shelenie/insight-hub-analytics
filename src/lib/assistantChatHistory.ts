@@ -1,6 +1,7 @@
 import type { TranslationKey } from "@/i18n/translations";
 import { OPTIONS, type ContextOption } from "@/lib/assistantRouting";
 import type { ChatMessage } from "@/lib/assistantConversation";
+import { cleanAssistantTextForPreview } from "@/lib/assistantAnswerParsing";
 
 export const AI_CHAT_HISTORY_VISIBLE_DAYS = 14;
 export const AI_CHAT_TITLE_MAX_LENGTH = 60;
@@ -35,13 +36,13 @@ export type AiChatMessageRow = {
 };
 
 export function createSessionTitle(prompt: string): string {
-  const normalized = prompt.replace(/\s+/g, " ").trim();
+  const normalized = cleanAssistantTextForPreview(prompt);
   if (normalized.length <= AI_CHAT_TITLE_MAX_LENGTH) return normalized || "Новий чат";
   return `${normalized.slice(0, AI_CHAT_TITLE_MAX_LENGTH - 1).trim()}…`;
 }
 
 export function createMessagePreview(text: string): string {
-  const normalized = text.replace(/\s+/g, " ").trim();
+  const normalized = cleanAssistantTextForPreview(text);
   if (normalized.length <= AI_CHAT_PREVIEW_MAX_LENGTH) return normalized;
   return `${normalized.slice(0, AI_CHAT_PREVIEW_MAX_LENGTH - 1).trim()}…`;
 }

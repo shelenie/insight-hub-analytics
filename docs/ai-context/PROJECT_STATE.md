@@ -1,3 +1,7 @@
+## Verified Local Follow-up — 2026-07-10 AI Assistant Chat History Sanitization
+
+AI Assistant persistent chat history now keeps raw assistant text with client-copy markers in saved message rows for faithful reload/rendering, while sanitizing titles, drawer previews, and bounded `conversation_history` text to strip leading `Контекст:` / `Context:` labels and remove raw client-copy marker lines. This preserves `Текст для клієнта` rendering after loading old chats without exposing markers in drawer previews or model continuity context.
+
 ## Verified Local Change — 2026-07-10 AI Assistant Persistent Chat History
 
 AI Assistant now has persistent, user-owned Supabase chat sessions and messages. The Assistant header includes a compact `Історія` drawer that lists non-archived chats updated in the last 14 days, groups them by recency, lets users load prior messages, and soft-hides sessions via `archived_at` instead of deleting them. Loaded chats become the active thread, so the existing bounded `conversation_history` and thread metadata flow continues to provide context for follow-up prompts. Assistant response cards no longer show the visible frontend context chip by default, while user bubbles and persisted metadata retain the resolved context/request metadata. Client-copy behavior, whole-answer copy sanitization, deterministic routing/playbooks, AdsConnectors, Bindings, source connectors, sync logic, ads/import data models, `build_ai_ads_context`, and `build_ai_production_context` were not changed. System/outage routing remains a next task.
