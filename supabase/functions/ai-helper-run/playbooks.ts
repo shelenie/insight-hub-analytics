@@ -193,6 +193,8 @@ export function getPlaybooksForRequest(params: {
     /send to client|message to client/,
     /для клієнта/,
     /як сформулювати/,
+    /сформулюй клієнту/,
+    /напиши клієнту/,
   ]);
   const budgetImpact = includesAny(`${prompt} ${request} ${scope}`, [
     /budget|бюджет|spend|витрат|cpl|cac|ltv|payback|roas|ефективн/,

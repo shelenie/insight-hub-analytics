@@ -11,6 +11,7 @@ import { FriendlyError } from "@/components/common/DeveloperDetails";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { TranslationKey } from "@/i18n/translations";
 import { OPTIONS, resolveAssistantContextWithHistory, type ContextOption } from "@/lib/assistantRouting";
+import { buildConversationHistory, buildConversationThreadMetadata, type ChatMessage, type ConversationHistoryPayload, type ConversationThreadMetadata } from "@/lib/assistantConversation";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
@@ -18,24 +19,6 @@ const SHOW_ASSISTANT_DEV_CONTROLS = false;
 
 const PROMPT_KEYS = ["assistantPromptSevenDayDrop", "assistantPromptCampaignsAttention", "assistantPromptCplIncrease", "assistantPromptDataQuality", "assistantPromptClientSituation", "assistantPromptTeamPriorities"] as const;
 const CHAT_COLUMN_CLASS = "mx-auto w-full max-w-4xl";
-
-type ChatMessage = {
-  id: string;
-  role: "user" | "assistant";
-  text: string;
-  contextLabel: string;
-  option: ContextOption;
-  autoRouted?: boolean;
-};
-
-type ConversationHistoryPayload = {
-  role: "user" | "assistant";
-  text: string;
-  context_label: string;
-  option_label: string;
-  request_type: string;
-  context_scope: string;
-};
 
 export default function Assistant() {
   const { session } = useAuth();
@@ -48,8 +31,8 @@ export default function Assistant() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const selectedOption = useMemo(() => OPTIONS.find((o) => o.labelKey === selected) ?? OPTIONS[0], [selected]);
   const activeRunId = useRef(0);
-  const run = useMutation({ mutationFn: async ({ submittedPrompt, option, runId, conversationHistory }: { submittedPrompt: string; option: ContextOption; runId: number; conversationHistory: ConversationHistoryPayload[] }) => {
-    const response = await supabase.functions.invoke("ai-helper-run", { body: { workspace_id: WORKSPACE_ID, request_type: option.requestType, context_scope: option.contextScope, prompt: submittedPrompt, conversation_history: conversationHistory } });
+  const run = useMutation({ mutationFn: async ({ submittedPrompt, option, runId, conversationHistory, threadMetadata }: { submittedPrompt: string; option: ContextOption; runId: number; conversationHistory: ConversationHistoryPayload[]; threadMetadata: ConversationThreadMetadata }) => {
+    const response = await supabase.functions.invoke("ai-helper-run", { body: { workspace_id: WORKSPACE_ID, request_type: option.requestType, context_scope: option.contextScope, prompt: submittedPrompt, conversation_history: conversationHistory, conversation_thread: threadMetadata } });
     if (response.error) throw response.error;
     return { payload: (response.data ?? {}) as Record<string, unknown>, option, runId };
   }, onSuccess: ({ payload, option, runId }) => {
@@ -71,13 +54,15 @@ export default function Assistant() {
     if (!submittedPrompt || runDisabled) return;
     const runId = activeRunId.current + 1;
     activeRunId.current = runId;
-    const previousAssistantOption = [...messages].reverse().find((message) => message.role === "assistant")?.option ?? null;
+    const previousAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant") ?? null;
+    const previousAssistantOption = previousAssistantMessage?.option ?? null;
     const resolvedOption = resolveAssistantContextWithHistory(submittedPrompt, selectedOption, manualOverrideEnabled, previousAssistantOption);
     const conversationHistory = buildConversationHistory(messages, t);
+    const threadMetadata = buildConversationThreadMetadata(messages, previousAssistantMessage, t);
     const autoRouted = !manualOverrideEnabled && resolvedOption.labelKey !== selectedOption.labelKey;
     setMessages((current) => [...current, { id: `user-${Date.now()}`, role: "user", text: submittedPrompt, contextLabel: `${autoRouted ? t("assistantAutoContextPrefix") : t("assistantContextPrefix")}: ${t(resolvedOption.labelKey)}`, option: resolvedOption, autoRouted }]);
     setPrompt("");
-    run.mutate({ submittedPrompt, option: resolvedOption, runId, conversationHistory });
+    run.mutate({ submittedPrompt, option: resolvedOption, runId, conversationHistory, threadMetadata });
   };
 
   const resetChat = () => {
@@ -133,17 +118,6 @@ function MessageBubble({ message }: { message: ChatMessage }) {
   }
 
   return <div className="flex w-full justify-start"><div className="w-full rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm"><p className="mb-2 inline-flex rounded-full bg-muted/70 px-2.5 py-1 text-[11px] text-muted-foreground">{message.contextLabel}</p><AiAnswer text={message.text} /><AssistantMessageActions message={message} /></div></div>;
-}
-
-function buildConversationHistory(messages: ChatMessage[], t: (key: TranslationKey) => string): ConversationHistoryPayload[] {
-  return messages.slice(-4).map((message) => ({
-    role: message.role,
-    text: message.text.slice(0, 1200),
-    context_label: message.contextLabel,
-    option_label: t(message.option.labelKey),
-    request_type: message.option.requestType,
-    context_scope: message.option.contextScope,
-  }));
 }
 
 function getAnswerText(payload: Record<string, unknown>, fallback: string) {

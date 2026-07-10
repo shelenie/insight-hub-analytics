@@ -1,3 +1,18 @@
+## 2026-07-10 — AI Assistant Thread-Aware In-Session Context
+
+### Changed
+
+- Replaced last-four-message continuation payloads with bounded thread-aware current-chat context: newest messages are selected up to max-message and character budgets, then sent chronologically.
+- Added previous-assistant thread metadata so natural follow-ups reuse the prior assistant context unless a strong new intent is detected.
+- Expanded follow-up routing for explanation, simplification, summary, prioritized-check, platform-specific, client-wording, and continuation prompts.
+- Updated `ai-helper-run` prompt handling so visible conversation history is untrusted continuity context and follow-ups refine, continue, simplify, summarize, or prioritize checks without restarting full analysis.
+- Kept client communication conditional but thread-aware for follow-ups such as “сформулюй клієнту” and “напиши клієнту”.
+
+### Notes
+
+- Conversation context is in-session only and bounded; persistent DB-backed chat sessions remain a future optional feature.
+- No Supabase schema, RLS, migrations, `build_ai_ads_context`, `build_ai_production_context`, AdsConnectors, Bindings, source connectors, sync logic, permissions model, routes, or sidebar changes were made.
+
 ## 2026-07-09 — AI Assistant Answer Polish and Continuation
 
 ### Changed

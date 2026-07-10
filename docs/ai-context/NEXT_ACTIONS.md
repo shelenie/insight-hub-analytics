@@ -1,3 +1,9 @@
+## 2026-07-10 — AI Assistant Thread-Aware Context Follow-up
+
+- Smoke test current-chat follow-ups after deployment: continuation, simplification, prioritized checks, platform-specific follow-ups, and client wording follow-ups.
+- Confirm strong new-intent prompts still reroute to Data Quality, Ads Performance, Ads Anomalies, and Ads Health as expected.
+- Keep persistent DB-backed chat sessions as an optional future feature, not part of the current PR.
+
 ## 2026-07-09 — AI Assistant Answer Polish Follow-up
 
 - Verify live AI Assistant responses for the four production prompts and one explicit client-communication prompt after deployment.
