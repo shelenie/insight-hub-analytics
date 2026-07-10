@@ -29,3 +29,11 @@ export function parseClientCopySegments(text: string): ClientCopySegment[] {
   if (after) segments.push({ type: "answer", text: after });
   return segments.length ? segments : [{ type: "answer", text }];
 }
+
+export function serializeAnswerForWholeCopy(text: string): string {
+  return text
+    .split(/\r?\n/)
+    .filter((line) => !/^\s*\[CLIENT_COPY_(?:START|END)\]\s*$/.test(line))
+    .join("\n")
+    .trim();
+}

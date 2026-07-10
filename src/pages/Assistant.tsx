@@ -12,7 +12,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import type { TranslationKey } from "@/i18n/translations";
 import { OPTIONS, resolveAssistantContextWithHistory, type ContextOption } from "@/lib/assistantRouting";
 import { buildConversationHistory, buildConversationThreadMetadata, type ChatMessage, type ConversationHistoryPayload, type ConversationThreadMetadata } from "@/lib/assistantConversation";
-import { parseClientCopySegments, stripLeadingContextLabel } from "@/lib/assistantAnswerParsing";
+import { parseClientCopySegments, serializeAnswerForWholeCopy, stripLeadingContextLabel } from "@/lib/assistantAnswerParsing";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
@@ -130,7 +130,7 @@ function AssistantMessageActions({ message }: { message: ChatMessage }) {
   const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const copyAnswer = async () => {
-    await navigator.clipboard.writeText(message.text);
+    await navigator.clipboard.writeText(serializeAnswerForWholeCopy(message.text));
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
   };

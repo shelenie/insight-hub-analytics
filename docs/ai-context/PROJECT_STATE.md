@@ -1,3 +1,7 @@
+## Verified Local Follow-up — 2026-07-10 AI Assistant Whole-Answer Copy Sanitization
+
+AI Assistant whole-answer copy now serializes rendered assistant text without raw `[CLIENT_COPY_START]` / `[CLIENT_COPY_END]` marker lines, while preserving the client-ready text and any internal notes outside the markers. The dedicated `Текст для клієнта` card copy remains unchanged and still copies only the client-ready text. Visual rendering is unchanged, and no Supabase schema, RLS, migrations, connectors, sync logic, permissions model, routes, or sidebar changes were made.
+
 ## Verified Local Follow-up — 2026-07-10 AI Assistant Client Copy Polish
 
 AI Assistant answer rendering now deterministically strips duplicated leading `Контекст: ...` / `Context: ...` labels before display because the UI already shows the context chip. Explicit client-communication answers can now render model-marked `[CLIENT_COPY_START]` / `[CLIENT_COPY_END]` content as a dedicated copy-ready `Текст для клієнта` card with its own copy action, while the existing whole-answer copy remains available and internal notes/checklists render outside the client card. Prompt/playbook guidance keeps client communication conditional and instructs the model to keep internal notes outside the copy markers. No Supabase schema, RLS, migrations, `build_ai_ads_context`, `build_ai_production_context`, AdsConnectors, Bindings, source connectors, sync logic, permissions model, routes, or sidebar changes were made.

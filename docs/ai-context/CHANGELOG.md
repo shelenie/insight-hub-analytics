@@ -1,3 +1,15 @@
+## 2026-07-10 — AI Assistant Whole-Answer Copy Sanitization
+
+### Fixed
+
+- Sanitized the existing whole-answer copy action so raw client-copy marker lines are not copied.
+- Preserved client-ready text and internal notes in whole-answer copy, while keeping the dedicated client-card copy action limited to client text only.
+
+### Notes
+
+- Frontend copy behavior only; visual rendering is unchanged.
+- No Supabase schema, RLS, migrations, connectors, sync logic, permissions model, routes, or sidebar changes were made.
+
 ## 2026-07-10 — AI Assistant Client Copy Polish
 
 ### Changed

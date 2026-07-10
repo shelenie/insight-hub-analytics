@@ -440,7 +440,8 @@ describe("AI Assistant smart routing and answer UX", () => {
     expect(translations.assistantAutoRoutingBadge.en).toBe(
       "Auto context enabled",
     );
-    expect(source).toContain("navigator.clipboard.writeText(message.text)");
+    expect(source).toContain("navigator.clipboard.writeText(serializeAnswerForWholeCopy(message.text))");
+    expect(source).not.toContain("navigator.clipboard.writeText(message.text)");
     expect(source).toContain("navigator.clipboard.writeText(text)");
     expect(source).toContain("ClientCopyBlock");
     expect(source).toContain("parseClientCopySegments");

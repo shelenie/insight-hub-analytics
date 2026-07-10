@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseClientCopySegments, stripLeadingContextLabel } from "@/lib/assistantAnswerParsing";
+import { parseClientCopySegments, serializeAnswerForWholeCopy, stripLeadingContextLabel } from "@/lib/assistantAnswerParsing";
 
 describe("AI Assistant answer parsing", () => {
   it("strips leading Ukrainian context labels", () => {
@@ -26,5 +26,15 @@ describe("AI Assistant answer parsing", () => {
       { type: "client-copy", text: "Client text only" },
       { type: "answer", text: "## Внутрішньо: що перевірити\n- Access" },
     ]);
+  });
+
+  it("serializes whole-answer copy without raw client copy marker lines", () => {
+    const serialized = serializeAnswerForWholeCopy("Intro\n\n[CLIENT_COPY_START]\nClient text only\n[CLIENT_COPY_END]\n\n## Внутрішньо: що перевірити\n- Access");
+
+    expect(serialized).not.toContain("[CLIENT_COPY_START]");
+    expect(serialized).not.toContain("[CLIENT_COPY_END]");
+    expect(serialized).toContain("Client text only");
+    expect(serialized).toContain("## Внутрішньо: що перевірити");
+    expect(serialized).toContain("- Access");
   });
 });

@@ -1,3 +1,7 @@
+## 2026-07-10 — AI Assistant Whole-Answer Copy Follow-up
+
+- In live QA, confirm the bottom whole-answer copy no longer includes `[CLIENT_COPY_START]` / `[CLIENT_COPY_END]` marker lines while preserving client text and internal notes.
+
 ## 2026-07-10 — AI Assistant Client Copy Polish Follow-up
 
 - Verify the dedicated client-copy card in a live assistant thread with explicit prompts such as “сформулюй клієнту” and confirm only the client-ready text is copied by the card button.
