@@ -134,7 +134,12 @@ export const PLAYBOOK_CLIENT_COMMUNICATION: AnalysisPlaybook = {
   applies_to: ["client_communication"],
   instructions: [
     "Produce client-safe language only when the user explicitly asks for client communication.",
-    "For explicit client communication, keep wording copy-ready and concise; if the user asks for a detailed client explanation, allow a longer version. Use client/internal headings only when they improve clarity.",
+    "For explicit client communication, wrap only copy-ready client text in stable [CLIENT_COPY_START] and [CLIENT_COPY_END] markers.",
+    "Use [CLIENT_COPY_START] / [CLIENT_COPY_END] only when the user explicitly asks for client communication: сформулюй клієнту, напиши клієнту, що сказати клієнту, для клієнта, client update, client-ready, send to client, message to client.",
+    "Inside the markers, include only text that can be copied and sent to the client; do not include Можна сформулювати клієнту так:, Ось так:, markdown separator ---, or internal checklist/notes.",
+    "If internal notes/checklist are useful, put them after [CLIENT_COPY_END] under a separate heading like Внутрішньо: що перевірити.",
+    "Keep client text practical, transparent, not blamey, and do not overpromise fixes.",
+    "For explicit client communication, keep wording copy-ready and concise; if the user asks for a detailed client explanation, allow a longer version.",
     "Avoid raw backend terms; separate what is known from data from what needs to be verified.",
     "Avoid vanity-metric overconfidence and do not promise that a channel, campaign, or brand move will work without test evidence.",
     "Avoid high-impact marketing recommendations without human review.",

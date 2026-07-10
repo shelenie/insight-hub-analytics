@@ -5,6 +5,7 @@ import { translations } from "@/i18n/translations";
 const source = readFileSync("src/pages/Assistant.tsx", "utf8");
 const routingSource = readFileSync("src/lib/assistantRouting.ts", "utf8");
 const conversationSource = readFileSync("src/lib/assistantConversation.ts", "utf8");
+const answerParsingSource = readFileSync("src/lib/assistantAnswerParsing.ts", "utf8");
 
 describe("AI Assistant chat UI", () => {
   it("uses i18n keys for primary chat-first visible copy", () => {
@@ -439,7 +440,15 @@ describe("AI Assistant smart routing and answer UX", () => {
     expect(translations.assistantAutoRoutingBadge.en).toBe(
       "Auto context enabled",
     );
-    expect(source).toContain("navigator.clipboard.writeText(message.text)");
+    expect(source).toContain("navigator.clipboard.writeText(serializeAnswerForWholeCopy(message.text))");
+    expect(source).not.toContain("navigator.clipboard.writeText(message.text)");
+    expect(source).toContain("navigator.clipboard.writeText(text)");
+    expect(source).toContain("ClientCopyBlock");
+    expect(source).toContain("parseClientCopySegments");
+    expect(source).toContain("Текст для клієнта");
+    expect(source).toContain("Скопіювати текст для клієнта");
+    expect(answerParsingSource).toContain("CLIENT_COPY_START");
+    expect(answerParsingSource).toContain("CLIENT_COPY_END");
     expect(source).toContain("assistantCopy");
     expect(source).toContain("assistantCopied");
     expect(translations.assistantCopy.uk).toBe("Скопіювати");

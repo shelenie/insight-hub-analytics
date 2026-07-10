@@ -51,10 +51,17 @@ describe("ai-helper-run code-versioned analysis playbooks", () => {
 
   it("makes client communication conditional and keeps answer structure adaptive", () => {
     expect(edgeFunctionSource).toContain("Do not include a separate Що сказати клієнту / client-ready section");
+    expect(edgeFunctionSource).toContain("[CLIENT_COPY_START]");
+    expect(edgeFunctionSource).toContain("[CLIENT_COPY_END]");
+    expect(edgeFunctionSource).toContain("Do not include Можна сформулювати клієнту так:");
+    expect(edgeFunctionSource).toContain("internal notes after [CLIENT_COPY_END]");
     expect(edgeFunctionSource).toContain("Client communication triggers: що сказати клієнту, поясни клієнту, для клієнта, як сформулювати, client update, client-ready, send to client, message to client");
     expect(edgeFunctionSource).toContain("Keep answer structure adaptive");
     expect(edgeFunctionSource).toContain("Use section headings only when they improve clarity");
     expect(edgeFunctionSource).toContain("do not omit important blockers, risks, or actions just to satisfy a section limit");
+    expect(playbookSource).toContain("Use [CLIENT_COPY_START] / [CLIENT_COPY_END] only when the user explicitly asks");
+    expect(playbookSource).toContain("Inside the markers, include only text that can be copied and sent to the client");
+    expect(playbookSource).toContain("If internal notes/checklist are useful, put them after [CLIENT_COPY_END]");
     expect(playbookSource).toContain("For ads_health, prefer a concise structure");
     expect(playbookSource).toContain("Do not include campaign performance unless the user asks");
     expect(playbookSource).toContain("For ads_performance, start with campaigns that most need attention");
