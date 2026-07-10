@@ -1,3 +1,7 @@
+## Verified Local Follow-up — 2026-07-10 AI Assistant Chat History Production Polish
+
+AI Assistant chat history polish now localizes all drawer copy through the existing i18n map, formats drawer timestamps with the current app language, derives drawer context labels from persisted request/context metadata when possible, and guards the async first-message session creation path against fast duplicate submits. No Edge Function contract, routing/playbook behavior, AdsConnectors, Bindings, source connectors, sync logic, routes/sidebar, permissions model, or migration shape changed.
+
 ## Verified Local Follow-up — 2026-07-10 AI Assistant Chat History Sanitization
 
 AI Assistant persistent chat history now keeps raw assistant text with client-copy markers in saved message rows for faithful reload/rendering, while sanitizing titles, drawer previews, and bounded `conversation_history` text to strip leading `Контекст:` / `Context:` labels and remove raw client-copy marker lines. This preserves `Текст для клієнта` rendering after loading old chats without exposing markers in drawer previews or model continuity context.

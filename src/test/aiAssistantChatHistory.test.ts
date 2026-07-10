@@ -34,14 +34,15 @@ describe("AI Assistant persistent chat history", () => {
   it("renders compact drawer UI, empty state, archive action, and recent non-archived query", () => {
     expect(assistantSource).toContain("const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)");
     expect(assistantSource).toContain("const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false)");
-    expect(assistantSource).toContain("Історія");
-    expect(assistantSource).toContain("Історія чатів");
-    expect(assistantSource).toContain("Останні {AI_CHAT_HISTORY_VISIBLE_DAYS} днів");
-    expect(assistantSource).toContain("Тут зʼявляться останні чати з AI-асистентом.");
-    expect(assistantSource).toContain("Сьогодні");
-    expect(assistantSource).toContain("Вчора");
-    expect(assistantSource).toContain("Останні 7 днів");
-    expect(assistantSource).toContain("Раніше");
+    expect(assistantSource).toContain('t("assistantHistory")');
+    expect(assistantSource).toContain('t("assistantHistoryTitle")');
+    expect(assistantSource).toContain('t("assistantHistorySubtitle")');
+    expect(assistantSource).toContain('t("assistantHistoryEmpty")');
+    expect(assistantSource).toContain('t("assistantHistoryGroupToday")');
+    expect(assistantSource).toContain('t("assistantHistoryGroupYesterday")');
+    expect(assistantSource).toContain('t("assistantHistoryGroupLastSevenDays")');
+    expect(assistantSource).toContain('t("assistantHistoryGroupEarlier")');
+    expect(assistantSource).toContain('t("assistantHistoryArchive")');
     expect(assistantSource).toContain('.is("archived_at", null)');
     expect(assistantSource).toContain('.gte("updated_at", getRecentHistoryCutoff())');
     expect(assistantSource).toContain('.update({ archived_at: new Date().toISOString() })');
@@ -56,12 +57,18 @@ describe("AI Assistant persistent chat history", () => {
     expect(assistantSource).toContain("last_message_preview: createMessagePreview(message.text)");
     expect(assistantSource).toContain("last_request_type: message.option.requestType");
     expect(assistantSource).toContain("last_context_scope: message.option.contextScope");
+    expect(assistantSource).toContain("isSubmittingRef.current");
+    expect(assistantSource).toContain("sessionCreationPromiseRef.current");
+    expect(assistantSource).toContain("if (sessionCreationPromiseRef.current) return sessionCreationPromiseRef.current");
   });
 
   it("loads an existing chat into visible messages and keeps bounded follow-up context", () => {
     expect(assistantSource).toContain("const loadChatSession = async");
     expect(assistantSource).toContain('.order("created_at", { ascending: true })');
     expect(assistantSource).toContain("messageFromRow(row, t)");
+    expect(assistantSource).toContain("function getSessionContextLabel");
+    expect(assistantSource).toContain("optionFromPersistedMetadata(session.last_request_type, session.last_context_scope)");
+    expect(assistantSource).toContain("return session.last_context_label");
     expect(assistantSource).toContain("setCurrentSessionId(sessionId)");
     expect(assistantSource).toContain("conversation_history: conversationHistory");
 

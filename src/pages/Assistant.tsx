@@ -14,7 +14,7 @@ import type { TranslationKey } from "@/i18n/translations";
 import { OPTIONS, resolveAssistantContextWithHistory, type ContextOption } from "@/lib/assistantRouting";
 import { buildConversationHistory, buildConversationThreadMetadata, type ChatMessage, type ConversationHistoryPayload, type ConversationThreadMetadata } from "@/lib/assistantConversation";
 import { parseClientCopySegments, serializeAnswerForWholeCopy, stripLeadingContextLabel } from "@/lib/assistantAnswerParsing";
-import { AI_CHAT_HISTORY_VISIBLE_DAYS, createMessagePreview, createSessionTitle, getRecentHistoryCutoff, groupSessionsByRecency, messageFromRow, type AiChatMessageRow, type AiChatSession } from "@/lib/assistantChatHistory";
+import { createMessagePreview, createSessionTitle, getRecentHistoryCutoff, groupSessionsByRecency, messageFromRow, optionFromPersistedMetadata, type AiChatMessageRow, type AiChatSession } from "@/lib/assistantChatHistory";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
@@ -45,7 +45,7 @@ const assistantHistoryClient = supabase as unknown as AssistantHistoryClient;
 export default function Assistant() {
   const { session } = useAuth();
   const { capabilities, isLoading: roleLoading } = useWorkspaceRole(WORKSPACE_ID);
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [selected] = useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextAdsHealth");
   const manualOverrideEnabled = SHOW_ASSISTANT_DEV_CONTROLS && false;
   const [prompt, setPrompt] = useState("");
@@ -59,6 +59,8 @@ export default function Assistant() {
   const selectedOption = useMemo(() => OPTIONS.find((o) => o.labelKey === selected) ?? OPTIONS[0], [selected]);
   const activeRunId = useRef(0);
   const pendingSessionId = useRef<string | null>(null);
+  const isSubmittingRef = useRef(false);
+  const sessionCreationPromiseRef = useRef<Promise<string | null> | null>(null);
   const loadSessions = useCallback(async () => {
     if (!session?.user?.id) return;
     setLoadingSessions(true);
@@ -85,19 +87,29 @@ export default function Assistant() {
 
   const ensureSession = async (submittedPrompt: string): Promise<string | null> => {
     if (currentSessionId) return currentSessionId;
+    if (sessionCreationPromiseRef.current) return sessionCreationPromiseRef.current;
     if (!session?.user?.id) return null;
-    const { data, error } = await assistantHistoryClient
+
+    const creationPromise = assistantHistoryClient
       .from("ai_chat_sessions")
       .insert({ workspace_id: WORKSPACE_ID, user_id: session.user.id, title: createSessionTitle(submittedPrompt), last_message_preview: createMessagePreview(submittedPrompt) })
       .select("id")
-      .single();
-    if (error) {
-      console.debug("AI chat session create failed", error);
-      return null;
-    }
-    setCurrentSessionId(data.id);
-    void loadSessions();
-    return data.id as string;
+      .single()
+      .then(({ data, error }) => {
+        if (error) {
+          console.debug("AI chat session create failed", error);
+          return null;
+        }
+        setCurrentSessionId(data.id);
+        void loadSessions();
+        return data.id as string;
+      })
+      .finally(() => {
+        sessionCreationPromiseRef.current = null;
+      });
+
+    sessionCreationPromiseRef.current = creationPromise;
+    return creationPromise;
   };
 
   const saveChatMessage = async (sessionId: string | null, message: ChatMessage) => {
@@ -156,22 +168,27 @@ export default function Assistant() {
   const runDisabled = !session || run.isPending || roleLoading || !canUseAi;
   const submitPrompt = async (value = prompt) => {
     const submittedPrompt = value.trim();
-    if (!submittedPrompt || runDisabled) return;
-    const runId = activeRunId.current + 1;
-    activeRunId.current = runId;
-    const previousAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant") ?? null;
-    const previousAssistantOption = previousAssistantMessage?.option ?? null;
-    const resolvedOption = resolveAssistantContextWithHistory(submittedPrompt, selectedOption, manualOverrideEnabled, previousAssistantOption);
-    const conversationHistory = buildConversationHistory(messages, t);
-    const threadMetadata = buildConversationThreadMetadata(messages, previousAssistantMessage, t);
-    const autoRouted = !manualOverrideEnabled && resolvedOption.labelKey !== selectedOption.labelKey;
-    const userMessage = { id: `user-${Date.now()}`, role: "user" as const, text: submittedPrompt, contextLabel: `${autoRouted ? t("assistantAutoContextPrefix") : t("assistantContextPrefix")}: ${t(resolvedOption.labelKey)}`, option: resolvedOption, autoRouted };
-    setMessages((current) => [...current, userMessage]);
-    setPrompt("");
-    const sessionId = await ensureSession(submittedPrompt);
-    pendingSessionId.current = sessionId;
-    void saveChatMessage(sessionId, userMessage);
-    run.mutate({ submittedPrompt, option: resolvedOption, runId, conversationHistory, threadMetadata, sessionId });
+    if (!submittedPrompt || runDisabled || isSubmittingRef.current) return;
+    isSubmittingRef.current = true;
+    try {
+      const runId = activeRunId.current + 1;
+      activeRunId.current = runId;
+      const previousAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant") ?? null;
+      const previousAssistantOption = previousAssistantMessage?.option ?? null;
+      const resolvedOption = resolveAssistantContextWithHistory(submittedPrompt, selectedOption, manualOverrideEnabled, previousAssistantOption);
+      const conversationHistory = buildConversationHistory(messages, t);
+      const threadMetadata = buildConversationThreadMetadata(messages, previousAssistantMessage, t);
+      const autoRouted = !manualOverrideEnabled && resolvedOption.labelKey !== selectedOption.labelKey;
+      const userMessage = { id: `user-${Date.now()}`, role: "user" as const, text: submittedPrompt, contextLabel: `${autoRouted ? t("assistantAutoContextPrefix") : t("assistantContextPrefix")}: ${t(resolvedOption.labelKey)}`, option: resolvedOption, autoRouted };
+      setMessages((current) => [...current, userMessage]);
+      setPrompt("");
+      const sessionId = await ensureSession(submittedPrompt);
+      pendingSessionId.current = sessionId;
+      void saveChatMessage(sessionId, userMessage);
+      run.mutate({ submittedPrompt, option: resolvedOption, runId, conversationHistory, threadMetadata, sessionId });
+    } finally {
+      isSubmittingRef.current = false;
+    }
   };
 
   const resetChat = () => {
@@ -179,6 +196,8 @@ export default function Assistant() {
     setMessages([]);
     setCurrentSessionId(null);
     pendingSessionId.current = null;
+    sessionCreationPromiseRef.current = null;
+    isSubmittingRef.current = false;
     setPrompt("");
     run.reset();
   };
@@ -222,8 +241,8 @@ export default function Assistant() {
   const showStarterPrompts = messages.length === 0 && !run.isPending && prompt.trim().length === 0;
   const showNewChat = messages.length > 0 || prompt.trim().length > 0 || Boolean(run.error);
 
-  return <DashboardLayout title={t("assistantTitle")} subtitle={t("assistantSubtitle")} actions={<div className="flex items-center gap-2"><Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => { setIsHistoryDrawerOpen(true); void loadSessions(); }}><History className="mr-1.5 h-3.5 w-3.5" />Історія</Button>{showNewChat ? <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={resetChat}>{t("assistantNewChat")}</Button> : null}</div>}>
-    <ChatHistoryDrawer open={isHistoryDrawerOpen} onOpenChange={setIsHistoryDrawerOpen} sessions={sessions} currentSessionId={currentSessionId} loading={loadingSessions || loadingMessages} onSelect={loadChatSession} onArchive={archiveChatSession} />
+  return <DashboardLayout title={t("assistantTitle")} subtitle={t("assistantSubtitle")} actions={<div className="flex items-center gap-2"><Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => { setIsHistoryDrawerOpen(true); void loadSessions(); }}><History className="mr-1.5 h-3.5 w-3.5" />{t("assistantHistory")}</Button>{showNewChat ? <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={resetChat}>{t("assistantNewChat")}</Button> : null}</div>}>
+    <ChatHistoryDrawer open={isHistoryDrawerOpen} onOpenChange={setIsHistoryDrawerOpen} sessions={sessions} currentSessionId={currentSessionId} loading={loadingSessions || loadingMessages} onSelect={loadChatSession} onArchive={archiveChatSession} t={t} lang={lang} />
     <div className="mx-auto flex w-full max-w-5xl flex-col px-1">
       <div className="flex flex-col justify-start pt-1 sm:pt-2 lg:pt-3">
         <div className={`${CHAT_COLUMN_CLASS} space-y-3`}>
@@ -251,24 +270,24 @@ export default function Assistant() {
 }
 
 
-function ChatHistoryDrawer({ open, onOpenChange, sessions, currentSessionId, loading, onSelect, onArchive }: { open: boolean; onOpenChange: (open: boolean) => void; sessions: AiChatSession[]; currentSessionId: string | null; loading: boolean; onSelect: (sessionId: string) => void; onArchive: (sessionId: string) => void }) {
+function ChatHistoryDrawer({ open, onOpenChange, sessions, currentSessionId, loading, onSelect, onArchive, t, lang }: { open: boolean; onOpenChange: (open: boolean) => void; sessions: AiChatSession[]; currentSessionId: string | null; loading: boolean; onSelect: (sessionId: string) => void; onArchive: (sessionId: string) => void; t: (key: TranslationKey) => string; lang: "uk" | "en" }) {
   const grouped = groupSessionsByRecency(sessions);
   const groups = [
-    { title: "Сьогодні", items: grouped.today },
-    { title: "Вчора", items: grouped.yesterday },
-    { title: "Останні 7 днів", items: grouped.lastSevenDays },
-    { title: "Раніше", items: grouped.earlier },
+    { title: t("assistantHistoryGroupToday"), items: grouped.today },
+    { title: t("assistantHistoryGroupYesterday"), items: grouped.yesterday },
+    { title: t("assistantHistoryGroupLastSevenDays"), items: grouped.lastSevenDays },
+    { title: t("assistantHistoryGroupEarlier"), items: grouped.earlier },
   ];
 
   return <Sheet open={open} onOpenChange={onOpenChange}>
     <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
       <SheetHeader className="border-b px-5 py-4 text-left">
-        <SheetTitle>Історія чатів</SheetTitle>
-        <SheetDescription>Останні {AI_CHAT_HISTORY_VISIBLE_DAYS} днів</SheetDescription>
+        <SheetTitle>{t("assistantHistoryTitle")}</SheetTitle>
+        <SheetDescription>{t("assistantHistorySubtitle")}</SheetDescription>
       </SheetHeader>
       <div className="flex-1 overflow-y-auto px-4 py-4">
-        {loading ? <div className="flex items-center gap-2 rounded-2xl bg-muted/50 px-3 py-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />Завантажуємо історію…</div> : null}
-        {!loading && sessions.length === 0 ? <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">Тут зʼявляться останні чати з AI-асистентом.</p> : null}
+        {loading ? <div className="flex items-center gap-2 rounded-2xl bg-muted/50 px-3 py-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{t("assistantHistoryLoading")}</div> : null}
+        {!loading && sessions.length === 0 ? <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">{t("assistantHistoryEmpty")}</p> : null}
         <div className="space-y-5">
           {groups.map((group) => group.items.length > 0 ? <section key={group.title} className="space-y-2">
             <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{group.title}</h3>
@@ -277,13 +296,13 @@ function ChatHistoryDrawer({ open, onOpenChange, sessions, currentSessionId, loa
                 <button type="button" className="w-full text-left" onClick={() => onSelect(session.id)}>
                   <div className="flex items-start justify-between gap-3">
                     <p className="line-clamp-1 text-sm font-medium text-foreground">{session.title}</p>
-                    <time className="shrink-0 text-[11px] text-muted-foreground">{formatSessionTime(session.updated_at)}</time>
+                    <time className="shrink-0 text-[11px] text-muted-foreground">{formatSessionTime(session.updated_at, lang)}</time>
                   </div>
                   {session.last_message_preview ? <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{session.last_message_preview}</p> : null}
-                  {session.last_context_label ? <p className="mt-2 inline-flex max-w-full truncate rounded-full bg-muted/70 px-2 py-0.5 text-[10px] text-muted-foreground">{session.last_context_label}</p> : null}
+                  {getSessionContextLabel(session, t) ? <p className="mt-2 inline-flex max-w-full truncate rounded-full bg-muted/70 px-2 py-0.5 text-[10px] text-muted-foreground">{getSessionContextLabel(session, t)}</p> : null}
                 </button>
                 <div className="mt-2 flex justify-end">
-                  <Button type="button" variant="ghost" size="sm" className="h-7 rounded-full px-2 text-[11px] text-muted-foreground" onClick={() => onArchive(session.id)}><Archive className="mr-1 h-3 w-3" />Сховати</Button>
+                  <Button type="button" variant="ghost" size="sm" className="h-7 rounded-full px-2 text-[11px] text-muted-foreground" onClick={() => onArchive(session.id)}><Archive className="mr-1 h-3 w-3" />{t("assistantHistoryArchive")}</Button>
                 </div>
               </div>)}
             </div>
@@ -294,8 +313,17 @@ function ChatHistoryDrawer({ open, onOpenChange, sessions, currentSessionId, loa
   </Sheet>;
 }
 
-function formatSessionTime(value: string) {
-  return new Intl.DateTimeFormat("uk-UA", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+function getSessionContextLabel(session: AiChatSession, t: (key: TranslationKey) => string) {
+  const option = optionFromPersistedMetadata(session.last_request_type, session.last_context_scope);
+  if (session.last_request_type && session.last_context_scope && option.requestType === session.last_request_type && option.contextScope === session.last_context_scope) {
+    return `${t("assistantContextPrefix")}: ${t(option.labelKey)}`;
+  }
+  return session.last_context_label;
+}
+
+function formatSessionTime(value: string, lang: "uk" | "en") {
+  const locale = lang === "en" ? "en-US" : "uk-UA";
+  return new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
 }
 
 function Welcome({ t }: { t: (key: TranslationKey) => string }) {
@@ -322,7 +350,7 @@ function getAnswerText(payload: Record<string, unknown>, fallback: string) {
 }
 
 function AssistantMessageActions({ message }: { message: ChatMessage }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [copied, setCopied] = useState(false);
   const copyAnswer = async () => {
     await navigator.clipboard.writeText(serializeAnswerForWholeCopy(message.text));
@@ -349,7 +377,7 @@ function AiAnswer({ text }: { text: string }) {
 }
 
 function ClientCopyBlock({ text }: { text: string }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [copied, setCopied] = useState(false);
   const copyClientText = async () => {
     await navigator.clipboard.writeText(text);

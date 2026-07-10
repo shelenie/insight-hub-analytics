@@ -83,8 +83,8 @@ describe("AI Assistant chat UI", () => {
       'useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextFullOverview")',
     );
     expect(source).toContain("function ChatHistoryDrawer");
-    expect(source).toContain("Історія чатів");
-    expect(source).toContain("Останні {AI_CHAT_HISTORY_VISIBLE_DAYS} днів");
+    expect(source).toContain('t("assistantHistoryTitle")');
+    expect(source).toContain('t("assistantHistorySubtitle")');
     expect(source).not.toContain("v_ai_helper_requests_recent");
 
     expect(source).not.toContain("xl:grid-cols-[minmax(0,1fr)_20rem]");
@@ -193,9 +193,19 @@ describe("AI Assistant chat UI", () => {
     expect(source).toContain(
       "const showNewChat = messages.length > 0 || prompt.trim().length > 0 || Boolean(run.error);",
     );
-    expect(source).toContain("Історія");
+    expect(source).toContain('t("assistantHistory")');
     expect(source).toContain("setIsHistoryDrawerOpen(true)");
     expect(source).toContain('onClick={resetChat}>{t("assistantNewChat")}');
+    expect(translations.assistantHistory.en).toBe("History");
+    expect(translations.assistantHistoryTitle.en).toBe("Chat history");
+    expect(translations.assistantHistorySubtitle.en).toBe("Last 14 days");
+    expect(translations.assistantHistoryLoading.en).toBe("Loading history…");
+    expect(translations.assistantHistoryEmpty.en).toBe("Recent AI Assistant chats will appear here.");
+    expect(translations.assistantHistoryGroupToday.en).toBe("Today");
+    expect(translations.assistantHistoryGroupYesterday.en).toBe("Yesterday");
+    expect(translations.assistantHistoryGroupLastSevenDays.en).toBe("Last 7 days");
+    expect(translations.assistantHistoryGroupEarlier.en).toBe("Earlier");
+    expect(translations.assistantHistoryArchive.en).toBe("Hide");
   });
 
   it("keeps starter prompts below the composer and hides them after interaction", () => {

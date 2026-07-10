@@ -1,3 +1,11 @@
+## 2026-07-10 — AI Assistant Chat History Production Polish
+
+### Fixed
+
+- Localized the chat history drawer labels through the existing i18n translation map, including English copy.
+- Rendered drawer context labels from persisted request/context metadata when possible, falling back to stored labels only when metadata cannot be mapped.
+- Added a submit/session-creation guard so a fast double-submit cannot create duplicate first-message chat sessions.
+
 ## 2026-07-10 — AI Assistant Chat History Marker Sanitization Follow-up
 
 ### Fixed
