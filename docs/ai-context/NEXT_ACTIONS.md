@@ -1,3 +1,8 @@
+## 2026-07-10 — AI Assistant Client Copy Polish Follow-up
+
+- Verify the dedicated client-copy card in a live assistant thread with explicit prompts such as “сформулюй клієнту” and confirm only the client-ready text is copied by the card button.
+- Continue monitoring live answers for awkward client-intro prefixes or internal checklist leakage; prompt rules and frontend marker parsing are now in place, but model behavior should still be observed.
+
 ## 2026-07-10 — AI Assistant Adaptive Answer Structure Follow-up
 
 - Live-test that normal answers stay concise without becoming rigid templates or omitting important blockers.

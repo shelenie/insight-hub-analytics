@@ -12,6 +12,7 @@ import { useI18n } from "@/i18n/I18nProvider";
 import type { TranslationKey } from "@/i18n/translations";
 import { OPTIONS, resolveAssistantContextWithHistory, type ContextOption } from "@/lib/assistantRouting";
 import { buildConversationHistory, buildConversationThreadMetadata, type ChatMessage, type ConversationHistoryPayload, type ConversationThreadMetadata } from "@/lib/assistantConversation";
+import { parseClientCopySegments, stripLeadingContextLabel } from "@/lib/assistantAnswerParsing";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
@@ -121,7 +122,8 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 }
 
 function getAnswerText(payload: Record<string, unknown>, fallback: string) {
-  return String(payload.answer ?? payload.summary ?? payload.response ?? payload.text ?? "") || fallback;
+  const answer = String(payload.answer ?? payload.summary ?? payload.response ?? payload.text ?? "") || fallback;
+  return stripLeadingContextLabel(answer);
 }
 
 function AssistantMessageActions({ message }: { message: ChatMessage }) {
@@ -137,13 +139,42 @@ function AssistantMessageActions({ message }: { message: ChatMessage }) {
 }
 
 function AiAnswer({ text }: { text: string }) {
-  const blocks = parseMarkdownBlocks(text);
-  return <div className="space-y-3 text-sm leading-relaxed">{blocks.map((block, i) => {
+  const segments = parseClientCopySegments(text);
+  return <div className="space-y-3 text-sm leading-relaxed">{segments.map((segment, segmentIndex) => {
+    if (segment.type === "client-copy") return <ClientCopyBlock key={segmentIndex} text={segment.text} />;
+
+    const blocks = parseMarkdownBlocks(segment.text);
+    return <Fragment key={segmentIndex}>{blocks.map((block, i) => {
     if (block.type === "heading") return <h3 key={i} className="pt-1 font-semibold tracking-tight">{renderBold(block.items[0])}</h3>;
     if (block.type === "bullets") return <ul key={i} className="list-disc space-y-1 pl-5">{block.items.map((item, j) => <li key={j}>{renderBold(item)}</li>)}</ul>;
     if (block.type === "numbers") return <ol key={i} className="list-decimal space-y-1 pl-5">{block.items.map((item, j) => <li key={j}>{renderBold(item)}</li>)}</ol>;
     return <p key={i}>{renderBold(block.items.join(" "))}</p>;
+    })}</Fragment>;
   })}</div>;
+}
+
+function ClientCopyBlock({ text }: { text: string }) {
+  const { t } = useI18n();
+  const [copied, setCopied] = useState(false);
+  const copyClientText = async () => {
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  };
+  const blocks = parseMarkdownBlocks(text);
+
+  return <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 shadow-sm">
+    <div className="mb-2 flex items-center justify-between gap-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Текст для клієнта</p>
+      <Button type="button" variant="ghost" size="sm" className="h-8 rounded-full px-2 text-xs" aria-label="Скопіювати текст для клієнта" onClick={copyClientText}>{copied ? <Check className="mr-1 h-3.5 w-3.5" /> : <Copy className="mr-1 h-3.5 w-3.5" />}{copied ? t("assistantCopied") : t("assistantCopy")}</Button>
+    </div>
+    <div className="space-y-2">{blocks.map((block, i) => {
+      if (block.type === "heading") return <h4 key={i} className="font-semibold tracking-tight">{renderBold(block.items[0])}</h4>;
+      if (block.type === "bullets") return <ul key={i} className="list-disc space-y-1 pl-5">{block.items.map((item, j) => <li key={j}>{renderBold(item)}</li>)}</ul>;
+      if (block.type === "numbers") return <ol key={i} className="list-decimal space-y-1 pl-5">{block.items.map((item, j) => <li key={j}>{renderBold(item)}</li>)}</ol>;
+      return <p key={i}>{renderBold(block.items.join(" "))}</p>;
+    })}</div>
+  </div>;
 }
 
 type MarkdownBlock = { type: "heading" | "paragraph" | "bullets" | "numbers"; items: string[] };

@@ -1,3 +1,16 @@
+## 2026-07-10 — AI Assistant Client Copy Polish
+
+### Changed
+
+- Added deterministic frontend stripping for duplicated leading `Контекст: ...` / `Context: ...` labels before assistant answer rendering.
+- Added AI Assistant client-copy marker parsing and a dedicated `Текст для клієнта` card with its own copy button for explicit client communication.
+- Kept the existing whole-answer copy action available for assistant answers.
+- Updated `ai-helper-run` prompt/playbook guidance so client-ready text is emitted only for explicit client-communication requests and internal notes/checklists stay outside `[CLIENT_COPY_START]` / `[CLIENT_COPY_END]`.
+
+### Notes
+
+- No Supabase schema, RLS, migrations, AdsConnectors, Bindings, source connectors, sync logic, permissions model, routes, or sidebar changes were made.
+
 ## 2026-07-10 — AI Assistant Adaptive Answer Structure
 
 ### Changed
