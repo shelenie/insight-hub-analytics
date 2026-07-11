@@ -1,3 +1,9 @@
+## Updated — 2026-07-11 AI Assistant General Routing Follow-up
+
+- Verify General mode behavior in the deployed app with representative Ukrainian prompts: “Тест історії чату”, “Просто тест”, “Що таке CPL?”, “Чому немає свіжих рекламних даних?”, “Де є проблеми з якістю даних?”, “Що просіло за останні 7 днів?”, and “Які кампанії потребують уваги?”.
+- If product wants explicit debug visibility, add an opt-in developer-only context metadata panel rather than restoring normal UI context chips.
+- Keep monitoring whether additional strong routing signals are needed for system/outage/product-process prompts without weakening evidence or access rules.
+
 ## 2026-07-11 Next — Verify AI Assistant History Persistence in Live
 
 After deploying this fix and applying `supabase/migrations/20260711_fix_ai_assistant_chat_history_persistence.sql`, create a fresh live AI Assistant chat and verify that `ai_chat_sessions` increments, both user and assistant rows appear in `ai_chat_messages`, and the new session appears in the History drawer without a full page reload. If a save fails, use the muted history diagnostic under the composer to capture the safe operation name/code/message. Continue to avoid AdsConnectors, Bindings / Звʼязки даних, source connector, sync, routing/sidebar, and overlay work in this verification.

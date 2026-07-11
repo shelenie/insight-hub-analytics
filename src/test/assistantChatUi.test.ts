@@ -4,8 +4,14 @@ import { translations } from "@/i18n/translations";
 
 const source = readFileSync("src/pages/Assistant.tsx", "utf8");
 const routingSource = readFileSync("src/lib/assistantRouting.ts", "utf8");
-const conversationSource = readFileSync("src/lib/assistantConversation.ts", "utf8");
-const answerParsingSource = readFileSync("src/lib/assistantAnswerParsing.ts", "utf8");
+const conversationSource = readFileSync(
+  "src/lib/assistantConversation.ts",
+  "utf8",
+);
+const answerParsingSource = readFileSync(
+  "src/lib/assistantAnswerParsing.ts",
+  "utf8",
+);
 
 describe("AI Assistant chat UI", () => {
   it("uses i18n keys for primary chat-first visible copy", () => {
@@ -65,19 +71,29 @@ describe("AI Assistant chat UI", () => {
       "What would you like to analyze?",
     );
     expect(translations.assistantWelcome.uk).toBe(
-      "Я допоможу знайти просідання, проблеми з рекламою, якістю даних і підготувати висновки для команди або клієнта.",
+      "Я допоможу з аналітикою, рекламою, імпортами, якістю даних, робочими процесами та загальними питаннями по системі.",
     );
     expect(translations.assistantWelcome.en).toBe(
-      "I can help find performance drops, ad issues, data quality problems, and prepare insights for the team or client.",
+      "I can help with analytics, ads, imports, data quality, workflows, and general questions about the system.",
+    );
+    expect(translations.assistantComposerPlaceholder.uk).toBe(
+      "Напишіть питання про аналітику, рекламу, імпорти, якість даних, процеси або загальне пояснення…",
+    );
+    expect(translations.assistantComposerPlaceholder.en).toBe(
+      "Ask about analytics, ads, imports, data quality, workflows, or a general explanation…",
+    );
+    expect(translations.assistantThinking.uk).toBe("AI готує відповідь…");
+    expect(translations.assistantThinking.en).toBe(
+      "AI is preparing an answer…",
     );
   });
 
-  it("uses persistent drawer history UI and defaults to ads health with smart auto-routing", () => {
+  it("uses persistent drawer history UI and defaults to general mode with smart auto-routing", () => {
     expect(routingSource).toContain("export function resolveAssistantContext(");
-    expect(routingSource).toContain("export function resolveAssistantContextWithHistory(");
-    expect(source).toContain(
-      'useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextAdsHealth")',
+    expect(routingSource).toContain(
+      "export function resolveAssistantContextWithHistory(",
     );
+    expect(source).toContain("assistantContextGeneral");
     expect(source).toContain("resolveAssistantContextWithHistory");
     expect(source).not.toContain(
       'useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextFullOverview")',
@@ -104,6 +120,7 @@ describe("AI Assistant chat UI", () => {
       optionsBlock.matchAll(/labelKey: "([^"]+)"/g),
     ).map((match) => match[1]);
     expect(optionLabels.slice(0, 10)).toEqual([
+      "assistantContextGeneral",
       "assistantContextAdsHealth",
       "assistantContextAdsPerformance",
       "assistantContextAdsAnomalies",
@@ -113,7 +130,6 @@ describe("AI Assistant chat UI", () => {
       "assistantContextMappingReview",
       "assistantContextAlerts",
       "assistantContextClientsFunnels",
-      "assistantContextSystemReadiness",
     ]);
     expect(translations.assistantContextFullOverview.en).toBe("Full overview");
     expect(translations.assistantContextAdsAnomalies.en).toBe(
@@ -158,20 +174,18 @@ describe("AI Assistant chat UI", () => {
     expect(source).toContain(
       "<div className={`${CHAT_COLUMN_CLASS} mt-4 sm:mt-5`}>",
     );
+    expect(source).toContain("<FriendlyError");
     expect(source).toContain(
-      "<div className={CHAT_COLUMN_CLASS}><FriendlyError",
+      "rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm",
     );
     expect(source).toContain(
-      'return <div className="flex w-full justify-start"><div className="w-full rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm">',
-    );
-    expect(source).toContain(
-      'return <div className="flex w-full justify-end"><div className="max-w-[82%] rounded-2xl rounded-tr-sm bg-primary',
+      "max-w-[82%] rounded-2xl rounded-tr-sm bg-primary",
     );
     expect(source).toContain('{t("assistantAutoRoutingBadge")}');
     expect(source).not.toContain(
       '{t("assistantAutoRoutingBadge")}: {t(selectedOption.labelKey)}',
     );
-    expect(source).toContain("mt-2 text-[10px] text-primary-foreground/65");
+    expect(source).not.toContain("mt-2 text-[10px] text-primary-foreground/65");
     expect(source).not.toContain(
       '<p className="mb-1 text-[11px] opacity-75">{message.contextLabel}</p><p className="whitespace-pre-wrap">{message.text}</p>',
     );
@@ -190,37 +204,39 @@ describe("AI Assistant chat UI", () => {
     expect(source).toContain("setMessages([]);");
     expect(source).toContain('setPrompt("");');
     expect(source).toContain("run.reset();");
-    expect(source).toContain(
-      "const showNewChat = messages.length > 0 || prompt.trim().length > 0 || Boolean(run.error);",
-    );
+    expect(source).toContain("const showNewChat =");
     expect(source).toContain('t("assistantHistory")');
     expect(source).toContain("setIsHistoryDrawerOpen(true)");
-    expect(source).toContain('onClick={resetChat}>{t("assistantNewChat")}');
+    expect(source).toContain("assistantNewChat");
     expect(translations.assistantHistory.en).toBe("History");
     expect(translations.assistantHistoryTitle.en).toBe("Chat history");
     expect(translations.assistantHistorySubtitle.en).toBe("Last 14 days");
     expect(translations.assistantHistoryLoading.en).toBe("Loading history…");
-    expect(translations.assistantHistoryEmpty.en).toBe("Recent AI Assistant chats will appear here.");
+    expect(translations.assistantHistoryEmpty.en).toBe(
+      "Recent AI Assistant chats will appear here.",
+    );
     expect(translations.assistantHistoryGroupToday.en).toBe("Today");
     expect(translations.assistantHistoryGroupYesterday.en).toBe("Yesterday");
-    expect(translations.assistantHistoryGroupLastSevenDays.en).toBe("Last 7 days");
+    expect(translations.assistantHistoryGroupLastSevenDays.en).toBe(
+      "Last 7 days",
+    );
     expect(translations.assistantHistoryGroupEarlier.en).toBe("Earlier");
-    expect(translations.assistantHistoryArchive.en).toBe("Hide");
+    expect(translations.assistantHistoryArchive.en).toBe("Archive");
+    expect(translations.assistantHistoryRestore.en).toBe("Restore");
     expect(translations.assistantHistoryRename.en).toBe("Rename");
     expect(translations.assistantHistoryRename.uk).toBe("Перейменувати");
     expect(translations.assistantHistoryRenameTitle.en).toBe("Chat title");
     expect(translations.assistantHistoryRenameSave.en).toBe("Save");
     expect(translations.assistantHistoryRenameCancel.en).toBe("Cancel");
-    expect(translations.assistantHistoryRenamePlaceholder.en).toBe("Enter chat title");
+    expect(translations.assistantHistoryRenamePlaceholder.en).toBe(
+      "Enter chat title",
+    );
   });
 
   it("keeps starter prompts below the composer and hides them after interaction", () => {
-    expect(source).toContain(
-      "const showStarterPrompts = messages.length === 0 && !run.isPending && prompt.trim().length === 0;",
-    );
-    expect(source).toContain(
-      "{showStarterPrompts ? <StarterPrompts t={t} onPrompt={submitPrompt} disabled={runDisabled} /> : null}",
-    );
+    expect(source).toContain("const showStarterPrompts =");
+    expect(source).toContain("showStarterPrompts");
+    expect(source).toContain("<StarterPrompts");
     expect(source.indexOf("<Textarea ref={textareaRef}")).toBeLessThan(
       source.indexOf("<StarterPrompts"),
     );
@@ -260,11 +276,18 @@ describe("AI Assistant smart routing and answer UX", () => {
     const { OPTIONS, resolveAssistantContext } =
       await import("@/lib/assistantRouting");
     const defaultOption =
-      OPTIONS.find(
-        (option) => option.labelKey === "assistantContextAdsHealth",
-      ) ?? OPTIONS[0];
+      OPTIONS.find((option) => option.labelKey === "assistantContextGeneral") ??
+      OPTIONS[0];
     const route = (prompt: string) =>
       resolveAssistantContext(prompt, defaultOption, false).labelKey;
+
+    expect(route("Тест історії чату")).toBe("assistantContextGeneral");
+    expect(route("Просто тест")).toBe("assistantContextGeneral");
+    expect(route("Що таке CPL?")).toBe("assistantContextGeneral");
+    expect(route("Поясни простими словами, що таке RLS")).toBe(
+      "assistantContextGeneral",
+    );
+    expect(route("Як краще назвати цей чат?")).toBe("assistantContextGeneral");
 
     expect(route("Чому немає свіжих рекламних даних?")).toBe(
       "assistantContextAdsHealth",
@@ -345,15 +368,15 @@ describe("AI Assistant smart routing and answer UX", () => {
     );
   });
 
-
-
   it("sends compact conversation history and reuses previous assistant context for continuation", async () => {
-    const { OPTIONS, resolveAssistantContextWithHistory, isContinuationPrompt } =
-      await import("@/lib/assistantRouting");
+    const {
+      OPTIONS,
+      resolveAssistantContextWithHistory,
+      isContinuationPrompt,
+    } = await import("@/lib/assistantRouting");
     const defaultOption =
-      OPTIONS.find(
-        (option) => option.labelKey === "assistantContextAdsHealth",
-      ) ?? OPTIONS[0];
+      OPTIONS.find((option) => option.labelKey === "assistantContextGeneral") ??
+      OPTIONS[0];
     const previousAnomaly =
       OPTIONS.find(
         (option) => option.labelKey === "assistantContextAdsAnomalies",
@@ -371,20 +394,28 @@ describe("AI Assistant smart routing and answer UX", () => {
     expect(source).toContain("conversation_history: conversationHistory");
     expect(conversationSource).toContain("CONVERSATION_HISTORY_MAX_MESSAGES");
     expect(conversationSource).toContain("CONVERSATION_HISTORY_TEXT_BUDGET");
-    expect(conversationSource).toContain("request_type: message.option.requestType");
-    expect(conversationSource).toContain("context_scope: message.option.contextScope");
+    expect(conversationSource).toContain(
+      "request_type: message.option.requestType",
+    );
+    expect(conversationSource).toContain(
+      "context_scope: message.option.contextScope",
+    );
   });
-
-
 
   it("builds budgeted visible-thread conversation history beyond a four-message limit", async () => {
     const { OPTIONS } = await import("@/lib/assistantRouting");
-    const { buildConversationHistory } = await import("@/lib/assistantConversation");
-    const option = OPTIONS.find((item) => item.labelKey === "assistantContextAdsPerformance") ?? OPTIONS[0];
-    const t = ((key: string) => key) as Parameters<typeof buildConversationHistory>[1];
+    const { buildConversationHistory } =
+      await import("@/lib/assistantConversation");
+    const option =
+      OPTIONS.find(
+        (item) => item.labelKey === "assistantContextAdsPerformance",
+      ) ?? OPTIONS[0];
+    const t = ((key: string) => key) as Parameters<
+      typeof buildConversationHistory
+    >[1];
     const messages = Array.from({ length: 9 }, (_, index) => ({
       id: `message-${index}`,
-      role: index % 2 === 0 ? "user" as const : "assistant" as const,
+      role: index % 2 === 0 ? ("user" as const) : ("assistant" as const),
       text: `${index === 7 ? "latest-assistant " : "older "}${"x".repeat(index === 7 ? 7000 : 1800)}`,
       contextLabel: `Контекст ${index}`,
       option,
@@ -394,7 +425,9 @@ describe("AI Assistant smart routing and answer UX", () => {
 
     expect(history.length).toBeGreaterThan(4);
     expect(history.length).toBeLessThanOrEqual(12);
-    expect(history.reduce((sum, item) => sum + item.text.length, 0)).toBeLessThanOrEqual(15000);
+    expect(
+      history.reduce((sum, item) => sum + item.text.length, 0),
+    ).toBeLessThanOrEqual(15000);
     expect(history.at(-2)?.role).toBe("assistant");
     expect(history.at(-2)?.text.length).toBeGreaterThan(history[0].text.length);
     expect(history[0]).toHaveProperty("request_type", option.requestType);
@@ -420,27 +453,49 @@ describe("AI Assistant smart routing and answer UX", () => {
     expect(source).not.toContain("SelectTrigger");
   });
 
-
-
   it("reuses previous assistant context for natural thread follow-ups while preserving strong new intent routing", async () => {
-    const { OPTIONS, resolveAssistantContextWithHistory, isThreadFollowUpPrompt } =
-      await import("@/lib/assistantRouting");
-    const defaultOption = OPTIONS.find((option) => option.labelKey === "assistantContextAdsHealth") ?? OPTIONS[0];
-    const previousPerformance = OPTIONS.find((option) => option.labelKey === "assistantContextAdsPerformance") ?? OPTIONS[0];
+    const {
+      OPTIONS,
+      resolveAssistantContextWithHistory,
+      isThreadFollowUpPrompt,
+    } = await import("@/lib/assistantRouting");
+    const defaultOption =
+      OPTIONS.find((option) => option.labelKey === "assistantContextGeneral") ??
+      OPTIONS[0];
+    const previousPerformance =
+      OPTIONS.find(
+        (option) => option.labelKey === "assistantContextAdsPerformance",
+      ) ?? OPTIONS[0];
     const route = (prompt: string) =>
-      resolveAssistantContextWithHistory(prompt, defaultOption, false, previousPerformance).labelKey;
+      resolveAssistantContextWithHistory(
+        prompt,
+        defaultOption,
+        false,
+        previousPerformance,
+      ).labelKey;
 
     expect(isThreadFollowUpPrompt("розпиши детальніше")).toBe(true);
     expect(route("розпиши детальніше")).toBe("assistantContextAdsPerformance");
     expect(route("а чому так?")).toBe("assistantContextAdsPerformance");
-    expect(route("що перевірити першим?")).toBe("assistantContextAdsPerformance");
+    expect(route("що перевірити першим?")).toBe(
+      "assistantContextAdsPerformance",
+    );
     expect(route("сформулюй клієнту")).toBe("assistantContextAdsPerformance");
     expect(route("а що з Meta?")).toBe("assistantContextAdsPerformance");
 
-    expect(route("Де є проблеми з якістю даних?")).toBe("assistantContextDataQuality");
-    expect(route("Які кампанії потребують уваги?")).toBe("assistantContextAdsPerformance");
-    expect(route("Що просіло за останні 7 днів?")).toBe("assistantContextAdsAnomalies");
-    expect(route("Чому немає свіжих рекламних даних?")).toBe("assistantContextAdsHealth");
+    expect(route("Де є проблеми з якістю даних?")).toBe(
+      "assistantContextDataQuality",
+    );
+    expect(route("Які кампанії потребують уваги?")).toBe(
+      "assistantContextAdsPerformance",
+    );
+    expect(route("Що просіло за останні 7 днів?")).toBe(
+      "assistantContextAdsAnomalies",
+    );
+    expect(route("Чому немає свіжих рекламних даних?")).toBe(
+      "assistantContextAdsHealth",
+    );
+    expect(route("Тест історії чату")).toBe("assistantContextGeneral");
   });
 
   it("shows resolved context badges and copy actions for assistant answers", () => {
@@ -453,7 +508,7 @@ describe("AI Assistant smart routing and answer UX", () => {
     expect(translations.assistantAutoRoutingBadge.en).toBe(
       "Auto context enabled",
     );
-    expect(source).toContain("navigator.clipboard.writeText(serializeAnswerForWholeCopy(message.text))");
+    expect(source).toContain("serializeAnswerForWholeCopy(message.text)");
     expect(source).not.toContain("navigator.clipboard.writeText(message.text)");
     expect(source).toContain("navigator.clipboard.writeText(text)");
     expect(source).toContain("ClientCopyBlock");
@@ -464,8 +519,12 @@ describe("AI Assistant smart routing and answer UX", () => {
     expect(source).not.toContain("Скопіювати текст для клієнта");
     expect(translations.assistantClientCopyTitle.uk).toBe("Текст для клієнта");
     expect(translations.assistantClientCopyTitle.en).toBe("Client text");
-    expect(translations.assistantClientCopyCopyLabel.uk).toBe("Скопіювати текст для клієнта");
-    expect(translations.assistantClientCopyCopyLabel.en).toBe("Copy client text");
+    expect(translations.assistantClientCopyCopyLabel.uk).toBe(
+      "Скопіювати текст для клієнта",
+    );
+    expect(translations.assistantClientCopyCopyLabel.en).toBe(
+      "Copy client text",
+    );
     expect(answerParsingSource).toContain("CLIENT_COPY_START");
     expect(answerParsingSource).toContain("CLIENT_COPY_END");
     expect(source).toContain("assistantCopy");

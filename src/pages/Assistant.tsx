@@ -1,9 +1,32 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useMutation } from "@tanstack/react-query";
-import { AlertTriangle, Archive, Check, Copy, History, Loader2, Send, Sparkles } from "lucide-react";
+import {
+  AlertTriangle,
+  Archive,
+  Check,
+  Copy,
+  History,
+  Loader2,
+  RotateCcw,
+  Send,
+  Sparkles,
+} from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/auth/AuthProvider";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
@@ -11,16 +34,47 @@ import { supabase } from "@/integrations/supabase/client";
 import { FriendlyError } from "@/components/common/DeveloperDetails";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { TranslationKey } from "@/i18n/translations";
-import { OPTIONS, resolveAssistantContextWithHistory, type ContextOption } from "@/lib/assistantRouting";
-import { buildConversationHistory, buildConversationThreadMetadata, type ChatMessage, type ConversationHistoryPayload, type ConversationThreadMetadata } from "@/lib/assistantConversation";
-import { parseClientCopySegments, serializeAnswerForWholeCopy, stripLeadingContextLabel } from "@/lib/assistantAnswerParsing";
-import { createMessagePreview, createRenamedSessionTitle, createSessionTitle, getRecentHistoryCutoff, groupSessionsByRecency, messageFromRow, optionFromPersistedMetadata, type AiChatMessageRow, type AiChatSession } from "@/lib/assistantChatHistory";
+import {
+  OPTIONS,
+  resolveAssistantContextWithHistory,
+  type ContextOption,
+} from "@/lib/assistantRouting";
+import {
+  buildConversationHistory,
+  buildConversationThreadMetadata,
+  type ChatMessage,
+  type ConversationHistoryPayload,
+  type ConversationThreadMetadata,
+} from "@/lib/assistantConversation";
+import {
+  parseClientCopySegments,
+  serializeAnswerForWholeCopy,
+  stripLeadingContextLabel,
+} from "@/lib/assistantAnswerParsing";
+import {
+  createMessagePreview,
+  createRenamedSessionTitle,
+  createSessionTitle,
+  getRecentHistoryCutoff,
+  groupSessionsByRecency,
+  messageFromRow,
+  optionFromPersistedMetadata,
+  type AiChatMessageRow,
+  type AiChatSession,
+} from "@/lib/assistantChatHistory";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
 const SHOW_ASSISTANT_DEV_CONTROLS = false;
 
-const PROMPT_KEYS = ["assistantPromptSevenDayDrop", "assistantPromptCampaignsAttention", "assistantPromptCplIncrease", "assistantPromptDataQuality", "assistantPromptClientSituation", "assistantPromptTeamPriorities"] as const;
+const PROMPT_KEYS = [
+  "assistantPromptSevenDayDrop",
+  "assistantPromptCampaignsAttention",
+  "assistantPromptCplIncrease",
+  "assistantPromptDataQuality",
+  "assistantPromptClientSituation",
+  "assistantPromptTeamPriorities",
+] as const;
 const CHAT_COLUMN_CLASS = "mx-auto w-full max-w-4xl";
 
 type SupabaseTableQuery = {
@@ -29,8 +83,12 @@ type SupabaseTableQuery = {
   update: (values: unknown) => SupabaseTableQuery;
   eq: (column: string, value: unknown) => SupabaseTableQuery;
   is: (column: string, value: unknown) => SupabaseTableQuery;
+  not: (column: string, operator: string, value: unknown) => SupabaseTableQuery;
   gte: (column: string, value: unknown) => SupabaseTableQuery;
-  order: (column: string, options?: { ascending?: boolean }) => SupabaseTableQuery;
+  order: (
+    column: string,
+    options?: { ascending?: boolean },
+  ) => SupabaseTableQuery;
   limit: (count: number) => SupabaseTableQuery;
   single: () => Promise<{ data: { id: string }; error: Error | null }>;
   then: PromiseLike<{ data: unknown; error: Error | null }>["then"];
@@ -40,7 +98,16 @@ type AssistantHistoryClient = {
   from: (table: "ai_chat_sessions" | "ai_chat_messages") => SupabaseTableQuery;
 };
 
-type HistoryOperation = "session_create" | "user_message_save" | "assistant_message_save" | "session_metadata_update" | "drawer_load" | "messages_load" | "session_archive" | "session_rename";
+type HistoryOperation =
+  | "session_create"
+  | "user_message_save"
+  | "assistant_message_save"
+  | "session_metadata_update"
+  | "drawer_load"
+  | "messages_load"
+  | "session_archive"
+  | "session_restore"
+  | "session_rename";
 
 type HistoryOperationStatus = {
   operation: HistoryOperation;
@@ -52,14 +119,24 @@ type HistoryOperationStatus = {
 function sanitizeHistoryError(error: unknown): string {
   if (!error) return "Unknown error";
   if (typeof error === "string") return error.slice(0, 220);
-  const maybeError = error as { message?: unknown; code?: unknown; details?: unknown };
+  const maybeError = error as {
+    message?: unknown;
+    code?: unknown;
+    details?: unknown;
+  };
   const parts = [maybeError.code, maybeError.message, maybeError.details]
-    .map((part) => typeof part === "string" ? part.trim() : "")
+    .map((part) => (typeof part === "string" ? part.trim() : ""))
     .filter(Boolean);
-  return (parts.join(" — ") || "Unknown error").replace(/https?:\/\/\S+/g, "[url]").slice(0, 220);
+  return (parts.join(" — ") || "Unknown error")
+    .replace(/https?:\/\/\S+/g, "[url]")
+    .slice(0, 220);
 }
 
-function createOptimisticSession(sessionId: string, userId: string, submittedPrompt: string): AiChatSession {
+function createOptimisticSession(
+  sessionId: string,
+  userId: string,
+  submittedPrompt: string,
+): AiChatSession {
   const now = new Date().toISOString();
   return {
     id: sessionId,
@@ -80,9 +157,12 @@ const assistantHistoryClient = supabase as unknown as AssistantHistoryClient;
 
 export default function Assistant() {
   const { session } = useAuth();
-  const { capabilities, isLoading: roleLoading } = useWorkspaceRole(WORKSPACE_ID);
+  const { capabilities, isLoading: roleLoading } =
+    useWorkspaceRole(WORKSPACE_ID);
   const { t, lang } = useI18n();
-  const [selected] = useState<(typeof OPTIONS)[number]["labelKey"]>("assistantContextAdsHealth");
+  const [selected] = useState<(typeof OPTIONS)[number]["labelKey"]>(
+    "assistantContextGeneral",
+  );
   const manualOverrideEnabled = SHOW_ASSISTANT_DEV_CONTROLS && false;
   const [prompt, setPrompt] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -90,29 +170,54 @@ export default function Assistant() {
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
   const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
   const [sessions, setSessions] = useState<AiChatSession[]>([]);
+  const [historyView, setHistoryView] = useState<"recent" | "archive">(
+    "recent",
+  );
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [historyStatus, setHistoryStatus] = useState<HistoryOperationStatus | null>(null);
-  const selectedOption = useMemo(() => OPTIONS.find((o) => o.labelKey === selected) ?? OPTIONS[0], [selected]);
+  const [historyStatus, setHistoryStatus] =
+    useState<HistoryOperationStatus | null>(null);
+  const selectedOption = useMemo(
+    () => OPTIONS.find((o) => o.labelKey === selected) ?? OPTIONS[0],
+    [selected],
+  );
   const activeRunId = useRef(0);
   const pendingSessionId = useRef<string | null>(null);
   const isSubmittingRef = useRef(false);
   const sessionCreationPromiseRef = useRef<Promise<string | null> | null>(null);
-  const recordHistoryStatus = useCallback((operation: HistoryOperation, status: "success" | "fail", detail?: unknown) => {
-    setHistoryStatus((current) => {
-      if (status === "success" && current?.status === "fail") return current;
-      return { operation, status, detail: status === "fail" ? sanitizeHistoryError(detail) : undefined, at: new Date().toISOString() };
-    });
-  }, []);
+  const recordHistoryStatus = useCallback(
+    (
+      operation: HistoryOperation,
+      status: "success" | "fail",
+      detail?: unknown,
+    ) => {
+      setHistoryStatus((current) => {
+        if (status === "success" && current?.status === "fail") return current;
+        return {
+          operation,
+          status,
+          detail: status === "fail" ? sanitizeHistoryError(detail) : undefined,
+          at: new Date().toISOString(),
+        };
+      });
+    },
+    [],
+  );
   const loadSessions = useCallback(async () => {
     if (!session?.user?.id) return;
     setLoadingSessions(true);
-    const { data, error } = await assistantHistoryClient
+    const baseQuery = assistantHistoryClient
       .from("ai_chat_sessions")
-      .select("id, workspace_id, user_id, title, last_message_preview, last_context_label, last_request_type, last_context_scope, created_at, updated_at, archived_at")
+      .select(
+        "id, workspace_id, user_id, title, last_message_preview, last_context_label, last_request_type, last_context_scope, created_at, updated_at, archived_at",
+      )
       .eq("workspace_id", WORKSPACE_ID)
-      .eq("user_id", session.user.id)
-      .is("archived_at", null)
+      .eq("user_id", session.user.id);
+    const filteredQuery =
+      historyView === "recent"
+        ? baseQuery.is("archived_at", null)
+        : baseQuery.not("archived_at", "is", null);
+    const { data, error } = await filteredQuery
       .gte("updated_at", getRecentHistoryCutoff())
       .order("updated_at", { ascending: false })
       .limit(30);
@@ -124,23 +229,35 @@ export default function Assistant() {
       recordHistoryStatus("drawer_load", "success");
     }
     setLoadingSessions(false);
-  }, [recordHistoryStatus, session?.user?.id]);
+  }, [historyView, recordHistoryStatus, session?.user?.id]);
 
   useEffect(() => {
     void loadSessions();
   }, [loadSessions]);
 
-  const ensureSession = async (submittedPrompt: string): Promise<string | null> => {
+  const ensureSession = async (
+    submittedPrompt: string,
+  ): Promise<string | null> => {
     if (currentSessionId) return currentSessionId;
-    if (sessionCreationPromiseRef.current) return sessionCreationPromiseRef.current;
+    if (sessionCreationPromiseRef.current)
+      return sessionCreationPromiseRef.current;
     if (!session?.user?.id) {
-      recordHistoryStatus("session_create", "fail", "No authenticated user id available");
+      recordHistoryStatus(
+        "session_create",
+        "fail",
+        "No authenticated user id available",
+      );
       return null;
     }
 
     const creationPromise = assistantHistoryClient
       .from("ai_chat_sessions")
-      .insert({ workspace_id: WORKSPACE_ID, user_id: session.user.id, title: createSessionTitle(submittedPrompt), last_message_preview: createMessagePreview(submittedPrompt) })
+      .insert({
+        workspace_id: WORKSPACE_ID,
+        user_id: session.user.id,
+        title: createSessionTitle(submittedPrompt),
+        last_message_preview: createMessagePreview(submittedPrompt),
+      })
       .select("id")
       .single()
       .then(({ data, error }) => {
@@ -152,7 +269,18 @@ export default function Assistant() {
         const newSessionId = data.id as string;
         setCurrentSessionId(newSessionId);
         pendingSessionId.current = newSessionId;
-        setSessions((current) => [createOptimisticSession(newSessionId, session.user.id, submittedPrompt), ...current.filter((item) => item.id !== newSessionId)]);
+        setSessions((current) =>
+          historyView === "recent"
+            ? [
+                createOptimisticSession(
+                  newSessionId,
+                  session.user.id,
+                  submittedPrompt,
+                ),
+                ...current.filter((item) => item.id !== newSessionId),
+              ]
+            : current,
+        );
         recordHistoryStatus("session_create", "success");
         void loadSessions();
         return newSessionId;
@@ -165,26 +293,36 @@ export default function Assistant() {
     return creationPromise;
   };
 
-  const saveChatMessage = async (sessionId: string | null, message: ChatMessage, operation: "user_message_save" | "assistant_message_save") => {
+  const saveChatMessage = async (
+    sessionId: string | null,
+    message: ChatMessage,
+    operation: "user_message_save" | "assistant_message_save",
+  ) => {
     if (!sessionId) {
       recordHistoryStatus(operation, "fail", "No chat session id available");
       return false;
     }
     if (!session?.user?.id) {
-      recordHistoryStatus(operation, "fail", "No authenticated user id available");
+      recordHistoryStatus(
+        operation,
+        "fail",
+        "No authenticated user id available",
+      );
       return false;
     }
-    const { error } = await assistantHistoryClient.from("ai_chat_messages").insert({
-      session_id: sessionId,
-      workspace_id: WORKSPACE_ID,
-      user_id: session.user.id,
-      role: message.role,
-      text: message.text,
-      context_label: message.contextLabel,
-      request_type: message.option.requestType,
-      context_scope: message.option.contextScope,
-      auto_routed: message.autoRouted ?? false,
-    });
+    const { error } = await assistantHistoryClient
+      .from("ai_chat_messages")
+      .insert({
+        session_id: sessionId,
+        workspace_id: WORKSPACE_ID,
+        user_id: session.user.id,
+        role: message.role,
+        text: message.text,
+        context_label: message.contextLabel,
+        request_type: message.option.requestType,
+        context_scope: message.option.contextScope,
+        auto_routed: message.autoRouted ?? false,
+      });
     if (error) {
       console.warn("AI chat message save failed", error);
       recordHistoryStatus(operation, "fail", error);
@@ -194,9 +332,16 @@ export default function Assistant() {
     return true;
   };
 
-  const updateSessionMetadata = async (sessionId: string | null, message: ChatMessage) => {
+  const updateSessionMetadata = async (
+    sessionId: string | null,
+    message: ChatMessage,
+  ) => {
     if (!sessionId) {
-      recordHistoryStatus("session_metadata_update", "fail", "No chat session id available");
+      recordHistoryStatus(
+        "session_metadata_update",
+        "fail",
+        "No chat session id available",
+      );
       return false;
     }
     const { error } = await assistantHistoryClient
@@ -216,23 +361,77 @@ export default function Assistant() {
       return false;
     }
     recordHistoryStatus("session_metadata_update", "success");
-    setSessions((current) => current.map((item) => item.id === sessionId ? { ...item, updated_at: new Date().toISOString(), last_message_preview: createMessagePreview(message.text), last_context_label: message.contextLabel, last_request_type: message.option.requestType, last_context_scope: message.option.contextScope } : item));
+    setSessions((current) =>
+      current.map((item) =>
+        item.id === sessionId
+          ? {
+              ...item,
+              updated_at: new Date().toISOString(),
+              last_message_preview: createMessagePreview(message.text),
+              last_context_label: message.contextLabel,
+              last_request_type: message.option.requestType,
+              last_context_scope: message.option.contextScope,
+            }
+          : item,
+      ),
+    );
     void loadSessions();
     return true;
   };
 
-  const run = useMutation({ mutationFn: async ({ submittedPrompt, option, runId, conversationHistory, threadMetadata, sessionId }: { submittedPrompt: string; option: ContextOption; runId: number; conversationHistory: ConversationHistoryPayload[]; threadMetadata: ConversationThreadMetadata; sessionId: string | null }) => {
-    const response = await supabase.functions.invoke("ai-helper-run", { body: { workspace_id: WORKSPACE_ID, request_type: option.requestType, context_scope: option.contextScope, prompt: submittedPrompt, conversation_history: conversationHistory, conversation_thread: threadMetadata } });
-    if (response.error) throw response.error;
-    return { payload: (response.data ?? {}) as Record<string, unknown>, option, runId, sessionId };
-  }, onSuccess: async ({ payload, option, runId, sessionId }) => {
-    if (runId !== activeRunId.current) return;
-    const assistantMessage = { id: `assistant-${Date.now()}`, role: "assistant" as const, text: getAnswerText(payload, t("assistantEmptyAnswer")), contextLabel: `${t("assistantContextPrefix")}: ${t(option.labelKey)}`, option };
-    setMessages((current) => [...current, assistantMessage]);
-    const persistedSessionId = sessionId ?? pendingSessionId.current;
-    await saveChatMessage(persistedSessionId, assistantMessage, "assistant_message_save");
-    await updateSessionMetadata(persistedSessionId, assistantMessage);
-  } });
+  const run = useMutation({
+    mutationFn: async ({
+      submittedPrompt,
+      option,
+      runId,
+      conversationHistory,
+      threadMetadata,
+      sessionId,
+    }: {
+      submittedPrompt: string;
+      option: ContextOption;
+      runId: number;
+      conversationHistory: ConversationHistoryPayload[];
+      threadMetadata: ConversationThreadMetadata;
+      sessionId: string | null;
+    }) => {
+      const response = await supabase.functions.invoke("ai-helper-run", {
+        body: {
+          workspace_id: WORKSPACE_ID,
+          request_type: option.requestType,
+          context_scope: option.contextScope,
+          prompt: submittedPrompt,
+          conversation_history: conversationHistory,
+          conversation_thread: threadMetadata,
+        },
+      });
+      if (response.error) throw response.error;
+      return {
+        payload: (response.data ?? {}) as Record<string, unknown>,
+        option,
+        runId,
+        sessionId,
+      };
+    },
+    onSuccess: async ({ payload, option, runId, sessionId }) => {
+      if (runId !== activeRunId.current) return;
+      const assistantMessage = {
+        id: `assistant-${Date.now()}`,
+        role: "assistant" as const,
+        text: getAnswerText(payload, t("assistantEmptyAnswer")),
+        contextLabel: `${t("assistantContextPrefix")}: ${t(option.labelKey)}`,
+        option,
+      };
+      setMessages((current) => [...current, assistantMessage]);
+      const persistedSessionId = sessionId ?? pendingSessionId.current;
+      await saveChatMessage(
+        persistedSessionId,
+        assistantMessage,
+        "assistant_message_save",
+      );
+      await updateSessionMetadata(persistedSessionId, assistantMessage);
+    },
+  });
 
   const canUseAi = capabilities.can_use_ai_helper;
   useEffect(() => {
@@ -250,13 +449,34 @@ export default function Assistant() {
     try {
       const runId = activeRunId.current + 1;
       activeRunId.current = runId;
-      const previousAssistantMessage = [...messages].reverse().find((message) => message.role === "assistant") ?? null;
+      const previousAssistantMessage =
+        [...messages]
+          .reverse()
+          .find((message) => message.role === "assistant") ?? null;
       const previousAssistantOption = previousAssistantMessage?.option ?? null;
-      const resolvedOption = resolveAssistantContextWithHistory(submittedPrompt, selectedOption, manualOverrideEnabled, previousAssistantOption);
+      const resolvedOption = resolveAssistantContextWithHistory(
+        submittedPrompt,
+        selectedOption,
+        manualOverrideEnabled,
+        previousAssistantOption,
+      );
       const conversationHistory = buildConversationHistory(messages, t);
-      const threadMetadata = buildConversationThreadMetadata(messages, previousAssistantMessage, t);
-      const autoRouted = !manualOverrideEnabled && resolvedOption.labelKey !== selectedOption.labelKey;
-      const userMessage = { id: `user-${Date.now()}`, role: "user" as const, text: submittedPrompt, contextLabel: `${autoRouted ? t("assistantAutoContextPrefix") : t("assistantContextPrefix")}: ${t(resolvedOption.labelKey)}`, option: resolvedOption, autoRouted };
+      const threadMetadata = buildConversationThreadMetadata(
+        messages,
+        previousAssistantMessage,
+        t,
+      );
+      const autoRouted =
+        !manualOverrideEnabled &&
+        resolvedOption.labelKey !== selectedOption.labelKey;
+      const userMessage = {
+        id: `user-${Date.now()}`,
+        role: "user" as const,
+        text: submittedPrompt,
+        contextLabel: `${autoRouted ? t("assistantAutoContextPrefix") : t("assistantContextPrefix")}: ${t(resolvedOption.labelKey)}`,
+        option: resolvedOption,
+        autoRouted,
+      };
       setMessages((current) => [...current, userMessage]);
       setPrompt("");
       const sessionId = await ensureSession(submittedPrompt);
@@ -267,7 +487,14 @@ export default function Assistant() {
       } else {
         pendingSessionId.current = null;
       }
-      run.mutate({ submittedPrompt, option: resolvedOption, runId, conversationHistory, threadMetadata, sessionId });
+      run.mutate({
+        submittedPrompt,
+        option: resolvedOption,
+        runId,
+        conversationHistory,
+        threadMetadata,
+        sessionId,
+      });
     } finally {
       isSubmittingRef.current = false;
     }
@@ -285,13 +512,13 @@ export default function Assistant() {
     run.reset();
   };
 
-
-
   const loadChatSession = async (sessionId: string) => {
     setLoadingMessages(true);
     const { data, error } = await assistantHistoryClient
       .from("ai_chat_messages")
-      .select("id, session_id, workspace_id, user_id, role, text, context_label, request_type, context_scope, auto_routed, created_at")
+      .select(
+        "id, session_id, workspace_id, user_id, role, text, context_label, request_type, context_scope, auto_routed, created_at",
+      )
       .eq("session_id", sessionId)
       .eq("workspace_id", WORKSPACE_ID)
       .order("created_at", { ascending: true });
@@ -299,7 +526,11 @@ export default function Assistant() {
       console.warn("AI chat messages load failed", error);
       recordHistoryStatus("messages_load", "fail", error);
     } else {
-      setMessages(((data ?? []) as AiChatMessageRow[]).map((row) => messageFromRow(row, t)));
+      setMessages(
+        ((data ?? []) as AiChatMessageRow[]).map((row) =>
+          messageFromRow(row, t),
+        ),
+      );
       setCurrentSessionId(sessionId);
       pendingSessionId.current = sessionId;
       setIsHistoryDrawerOpen(false);
@@ -325,6 +556,22 @@ export default function Assistant() {
     if (currentSessionId === sessionId) resetChat();
   };
 
+  const restoreChatSession = async (sessionId: string) => {
+    const { error } = await assistantHistoryClient
+      .from("ai_chat_sessions")
+      .update({ archived_at: null })
+      .eq("id", sessionId)
+      .eq("workspace_id", WORKSPACE_ID);
+    if (error) {
+      console.warn("AI chat restore failed", error);
+      recordHistoryStatus("session_restore", "fail", error);
+      return;
+    }
+    recordHistoryStatus("session_restore", "success");
+    setSessions((current) => current.filter((item) => item.id !== sessionId));
+    void loadSessions();
+  };
+
   const renameChatSession = async (sessionId: string, title: string) => {
     const nextTitle = createRenamedSessionTitle(title);
     if (!nextTitle) return;
@@ -339,113 +586,416 @@ export default function Assistant() {
       return;
     }
     recordHistoryStatus("session_rename", "success");
-    setSessions((current) => current.map((item) => item.id === sessionId ? { ...item, title: nextTitle } : item));
+    setSessions((current) =>
+      current.map((item) =>
+        item.id === sessionId ? { ...item, title: nextTitle } : item,
+      ),
+    );
   };
 
-  const showStarterPrompts = messages.length === 0 && !run.isPending && prompt.trim().length === 0;
-  const showNewChat = messages.length > 0 || prompt.trim().length > 0 || Boolean(run.error);
+  const showStarterPrompts =
+    messages.length === 0 && !run.isPending && prompt.trim().length === 0;
+  const showNewChat =
+    messages.length > 0 || prompt.trim().length > 0 || Boolean(run.error);
 
-  return <DashboardLayout title={t("assistantTitle")} subtitle={t("assistantSubtitle")} actions={<div className="flex items-center gap-2"><Button type="button" variant="outline" size="sm" className="rounded-full" onClick={() => { setIsHistoryDrawerOpen(true); void loadSessions(); }}><History className="mr-1.5 h-3.5 w-3.5" />{t("assistantHistory")}</Button>{showNewChat ? <Button type="button" variant="outline" size="sm" className="rounded-full" onClick={resetChat}>{t("assistantNewChat")}</Button> : null}</div>}>
-    <ChatHistoryDrawer open={isHistoryDrawerOpen} onOpenChange={setIsHistoryDrawerOpen} sessions={sessions} currentSessionId={currentSessionId} loading={loadingSessions || loadingMessages} onSelect={loadChatSession} onArchive={archiveChatSession} onRename={renameChatSession} t={t} lang={lang} />
-    <div className="mx-auto flex w-full max-w-5xl flex-col px-1">
-      <div className="flex flex-col justify-start pt-1 sm:pt-2 lg:pt-3">
-        <div className={`${CHAT_COLUMN_CLASS} space-y-3`}>
-          {messages.length === 0 ? <Welcome t={t} /> : messages.map((message) => <MessageBubble key={message.id} message={message} />)}
-          {run.isPending ? <div className="rounded-2xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground shadow-sm">{t("assistantThinking")}</div> : null}
-          {run.error ? <div className={CHAT_COLUMN_CLASS}><FriendlyError message={t("assistantError")} technical={run.error.message} /></div> : null}
-          {!roleLoading && !canUseAi ? <p className="rounded-2xl bg-muted/50 p-3 text-sm text-muted-foreground shadow-sm">{t("assistantNoAccess")}</p> : null}
+  return (
+    <DashboardLayout
+      title={t("assistantTitle")}
+      subtitle={t("assistantSubtitle")}
+      actions={
+        <div className="flex items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="rounded-full"
+            onClick={() => {
+              setIsHistoryDrawerOpen(true);
+              void loadSessions();
+            }}
+          >
+            <History className="mr-1.5 h-3.5 w-3.5" />
+            {t("assistantHistory")}
+          </Button>
+          {showNewChat ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              onClick={resetChat}
+            >
+              {t("assistantNewChat")}
+            </Button>
+          ) : null}
         </div>
-        <div className={`${CHAT_COLUMN_CLASS} mt-4 sm:mt-5`}>
-          <div className="rounded-2xl border border-border/40 bg-card/95 p-2 shadow-lg shadow-foreground/5 ring-1 ring-foreground/5 transition focus-within:border-primary/35 focus-within:ring-2 focus-within:ring-primary/20">
-            <Textarea ref={textareaRef} value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={1} className="!min-h-12 max-h-44 resize-none overflow-y-auto border-0 bg-transparent px-3 py-3 text-base leading-6 shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 focus-visible:ring-0 sm:text-sm" placeholder={t("assistantComposerPlaceholder")} onKeyDown={(event) => { if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) submitPrompt(); }} />
-            <div className="flex items-center justify-between gap-2 px-1 pb-1 pt-1">
-              <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="truncate rounded-full bg-muted/70 px-3 py-1 text-xs text-muted-foreground">{t("assistantAutoRoutingBadge")}</span>
+      }
+    >
+      <ChatHistoryDrawer
+        open={isHistoryDrawerOpen}
+        onOpenChange={setIsHistoryDrawerOpen}
+        sessions={sessions}
+        currentSessionId={currentSessionId}
+        loading={loadingSessions || loadingMessages}
+        view={historyView}
+        onViewChange={setHistoryView}
+        onSelect={loadChatSession}
+        onArchive={archiveChatSession}
+        onRestore={restoreChatSession}
+        onRename={renameChatSession}
+        t={t}
+        lang={lang}
+      />
+      <div className="mx-auto flex w-full max-w-5xl flex-col px-1">
+        <div className="flex flex-col justify-start pt-1 sm:pt-2 lg:pt-3">
+          <div className={`${CHAT_COLUMN_CLASS} space-y-3`}>
+            {messages.length === 0 ? (
+              <Welcome t={t} />
+            ) : (
+              messages.map((message) => (
+                <MessageBubble key={message.id} message={message} />
+              ))
+            )}
+            {run.isPending ? (
+              <div className="rounded-2xl bg-muted/50 px-4 py-3 text-sm text-muted-foreground shadow-sm">
+                {t("assistantThinking")}
               </div>
-              <Button size="icon" className="h-9 w-9 shrink-0 rounded-full" aria-label={run.isPending ? t("assistantSending") : t("assistantSend")} onClick={() => submitPrompt()} disabled={runDisabled || !prompt.trim()}><Send className="h-4 w-4" /></Button>
-            </div>
+            ) : null}
+            {run.error ? (
+              <div className={CHAT_COLUMN_CLASS}>
+                <FriendlyError
+                  message={t("assistantError")}
+                  technical={run.error.message}
+                />
+              </div>
+            ) : null}
+            {!roleLoading && !canUseAi ? (
+              <p className="rounded-2xl bg-muted/50 p-3 text-sm text-muted-foreground shadow-sm">
+                {t("assistantNoAccess")}
+              </p>
+            ) : null}
           </div>
-          {showStarterPrompts ? <StarterPrompts t={t} onPrompt={submitPrompt} disabled={runDisabled} /> : null}
-          <HistoryPersistenceStatus status={historyStatus} t={t} />
-          <p className="mt-3 px-2 text-center text-xs text-muted-foreground">{t("assistantSafetyNote")}</p>
+          <div className={`${CHAT_COLUMN_CLASS} mt-4 sm:mt-5`}>
+            <div className="rounded-2xl border border-border/40 bg-card/95 p-2 shadow-lg shadow-foreground/5 ring-1 ring-foreground/5 transition focus-within:border-primary/35 focus-within:ring-2 focus-within:ring-primary/20">
+              <Textarea
+                ref={textareaRef}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                rows={1}
+                className="!min-h-12 max-h-44 resize-none overflow-y-auto border-0 bg-transparent px-3 py-3 text-base leading-6 shadow-none outline-none ring-0 focus:border-0 focus:outline-none focus:ring-0 focus-visible:ring-0 sm:text-sm"
+                placeholder={t("assistantComposerPlaceholder")}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" && (event.metaKey || event.ctrlKey))
+                    submitPrompt();
+                }}
+              />
+              <div className="flex items-center justify-between gap-2 px-1 pb-1 pt-1">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <span className="truncate rounded-full bg-muted/70 px-3 py-1 text-xs text-muted-foreground">
+                    {t("assistantAutoRoutingBadge")}
+                  </span>
+                </div>
+                <Button
+                  size="icon"
+                  className="h-9 w-9 shrink-0 rounded-full"
+                  aria-label={
+                    run.isPending ? t("assistantSending") : t("assistantSend")
+                  }
+                  onClick={() => submitPrompt()}
+                  disabled={runDisabled || !prompt.trim()}
+                >
+                  <Send className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+            {showStarterPrompts ? (
+              <StarterPrompts
+                t={t}
+                onPrompt={submitPrompt}
+                disabled={runDisabled}
+              />
+            ) : null}
+            <HistoryPersistenceStatus status={historyStatus} t={t} />
+            <p className="mt-3 px-2 text-center text-xs text-muted-foreground">
+              {t("assistantSafetyNote")}
+            </p>
+          </div>
         </div>
       </div>
-    </div>
-  </DashboardLayout>;
+    </DashboardLayout>
+  );
 }
 
-
-function ChatHistoryDrawer({ open, onOpenChange, sessions, currentSessionId, loading, onSelect, onArchive, onRename, t, lang }: { open: boolean; onOpenChange: (open: boolean) => void; sessions: AiChatSession[]; currentSessionId: string | null; loading: boolean; onSelect: (sessionId: string) => void; onArchive: (sessionId: string) => void; onRename: (sessionId: string, title: string) => Promise<void>; t: (key: TranslationKey) => string; lang: "uk" | "en" }) {
-  const [renamingSessionId, setRenamingSessionId] = useState<string | null>(null);
+function ChatHistoryDrawer({
+  open,
+  onOpenChange,
+  sessions,
+  currentSessionId,
+  loading,
+  view,
+  onViewChange,
+  onSelect,
+  onArchive,
+  onRestore,
+  onRename,
+  t,
+  lang,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  sessions: AiChatSession[];
+  currentSessionId: string | null;
+  loading: boolean;
+  view: "recent" | "archive";
+  onViewChange: (view: "recent" | "archive") => void;
+  onSelect: (sessionId: string) => void;
+  onArchive: (sessionId: string) => void;
+  onRestore: (sessionId: string) => void;
+  onRename: (sessionId: string, title: string) => Promise<void>;
+  t: (key: TranslationKey) => string;
+  lang: "uk" | "en";
+}) {
+  const [renamingSessionId, setRenamingSessionId] = useState<string | null>(
+    null,
+  );
   const [renameDraft, setRenameDraft] = useState("");
   const grouped = groupSessionsByRecency(sessions);
   const groups = [
     { title: t("assistantHistoryGroupToday"), items: grouped.today },
     { title: t("assistantHistoryGroupYesterday"), items: grouped.yesterday },
-    { title: t("assistantHistoryGroupLastSevenDays"), items: grouped.lastSevenDays },
+    {
+      title: t("assistantHistoryGroupLastSevenDays"),
+      items: grouped.lastSevenDays,
+    },
     { title: t("assistantHistoryGroupEarlier"), items: grouped.earlier },
   ];
 
-  return <Sheet open={open} onOpenChange={onOpenChange}>
-    <SheetContent side="right" overlayClassName="bg-slate-950/45 backdrop-blur-[1px]" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
-      <SheetHeader className="border-b px-5 py-4 text-left">
-        <SheetTitle>{t("assistantHistoryTitle")}</SheetTitle>
-        <SheetDescription>{t("assistantHistorySubtitle")}</SheetDescription>
-      </SheetHeader>
-      <div className="flex-1 overflow-y-auto px-4 py-4">
-        {loading ? <div className="flex items-center gap-2 rounded-2xl bg-muted/50 px-3 py-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />{t("assistantHistoryLoading")}</div> : null}
-        {!loading && sessions.length === 0 ? <p className="rounded-2xl border border-dashed bg-muted/30 px-4 py-6 text-center text-sm text-muted-foreground">{t("assistantHistoryEmpty")}</p> : null}
-        <div className="space-y-5">
-          {groups.map((group) => group.items.length > 0 ? <section key={group.title} className="space-y-2">
-            <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{group.title}</h3>
-            <div className="space-y-2">
-              {group.items.map((session) => <div key={session.id} className={`group rounded-2xl border p-3 shadow-sm transition ${currentSessionId === session.id ? "border-primary/45 bg-primary/5" : "border-border/50 bg-card hover:border-primary/25 hover:bg-muted/25"}`}>
-                <button type="button" className="w-full text-left" onClick={() => onSelect(session.id)}>
-                  <div className="flex items-start justify-between gap-3">
-                    <p className="line-clamp-1 text-sm font-medium text-foreground">{session.title}</p>
-                    <time className="shrink-0 text-[11px] text-muted-foreground">{formatSessionTime(session.updated_at, lang)}</time>
-                  </div>
-                  {session.last_message_preview ? <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{session.last_message_preview}</p> : null}
-                  {getSessionContextLabel(session, t) ? <p className="mt-2 inline-flex max-w-full truncate rounded-full bg-muted/70 px-2 py-0.5 text-[10px] text-muted-foreground">{getSessionContextLabel(session, t)}</p> : null}
-                </button>
-                {renamingSessionId === session.id ? <div className="mt-3 rounded-xl bg-muted/40 p-2">
-                  <label className="mb-1 block text-[11px] font-medium text-muted-foreground" htmlFor={`rename-${session.id}`}>{t("assistantHistoryRenameTitle")}</label>
-                  <input id={`rename-${session.id}`} value={renameDraft} onChange={(event) => setRenameDraft(event.target.value)} placeholder={t("assistantHistoryRenamePlaceholder")} className="h-8 w-full rounded-lg border bg-background px-2 text-xs outline-none ring-0 focus:border-primary/40" />
-                  <div className="mt-2 flex justify-end gap-1">
-                    <Button type="button" variant="ghost" size="sm" className="h-7 rounded-full px-2 text-[11px]" onClick={() => { setRenamingSessionId(null); setRenameDraft(""); }}>{t("assistantHistoryRenameCancel")}</Button>
-                    <Button type="button" variant="secondary" size="sm" className="h-7 rounded-full px-2 text-[11px]" onClick={async () => { const nextTitle = createRenamedSessionTitle(renameDraft); if (!nextTitle) { setRenamingSessionId(null); setRenameDraft(""); return; } await onRename(session.id, nextTitle); setRenamingSessionId(null); setRenameDraft(""); }}>{t("assistantHistoryRenameSave")}</Button>
-                  </div>
-                </div> : <div className="mt-2 flex justify-end gap-1">
-                  <Button type="button" variant="ghost" size="sm" className="h-7 rounded-full px-2 text-[11px] text-muted-foreground" onClick={() => { setRenamingSessionId(session.id); setRenameDraft(session.title); }}>{t("assistantHistoryRename")}</Button>
-                  <Button type="button" variant="ghost" size="sm" className="h-7 rounded-full px-2 text-[11px] text-muted-foreground" onClick={() => onArchive(session.id)}><Archive className="mr-1 h-3 w-3" />{t("assistantHistoryArchive")}</Button>
-                </div>}
-              </div>)}
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        overlayClassName="bg-slate-950/45 backdrop-blur-[1px]"
+        className="flex w-full flex-col gap-0 p-0 sm:max-w-md"
+      >
+        <SheetHeader className="border-b px-5 py-4 text-left">
+          <SheetTitle>{t("assistantHistoryTitle")}</SheetTitle>
+          <SheetDescription>{t("assistantHistorySubtitle")}</SheetDescription>
+          <div className="mt-3 grid grid-cols-2 gap-1 rounded-full bg-muted/60 p-1">
+            <Button
+              type="button"
+              variant={view === "recent" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 rounded-full text-xs"
+              onClick={() => onViewChange("recent")}
+            >
+              {t("assistantHistoryRecent")}
+            </Button>
+            <Button
+              type="button"
+              variant={view === "archive" ? "secondary" : "ghost"}
+              size="sm"
+              className="h-7 rounded-full text-xs"
+              onClick={() => onViewChange("archive")}
+            >
+              {t("assistantHistoryArchiveTab")}
+            </Button>
+          </div>
+        </SheetHeader>
+        <div className="flex-1 overflow-y-auto px-3 py-3">
+          {loading ? (
+            <div className="flex items-center gap-2 rounded-2xl bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {t("assistantHistoryLoading")}
             </div>
-          </section> : null)}
+          ) : null}
+          {!loading && sessions.length === 0 ? (
+            <p className="rounded-xl border border-dashed bg-muted/30 px-3 py-5 text-center text-sm text-muted-foreground">
+              {view === "archive"
+                ? t("assistantHistoryArchivedEmpty")
+                : t("assistantHistoryEmpty")}
+            </p>
+          ) : null}
+          <div className="space-y-5">
+            {groups.map((group) =>
+              group.items.length > 0 ? (
+                <section key={group.title} className="space-y-2">
+                  <h3 className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    {group.title}
+                  </h3>
+                  <div className="space-y-2">
+                    {group.items.map((session) => (
+                      <div
+                        key={session.id}
+                        className={`group rounded-xl border px-2.5 py-2 shadow-sm transition ${currentSessionId === session.id ? "border-primary/45 bg-primary/5" : "border-border/50 bg-card/80 hover:border-primary/25 hover:bg-muted/25"}`}
+                      >
+                        <button
+                          type="button"
+                          className="w-full text-left"
+                          onClick={() => onSelect(session.id)}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <p className="line-clamp-1 text-sm font-medium text-foreground">
+                              {session.title}
+                            </p>
+                            <time className="shrink-0 text-[11px] text-muted-foreground">
+                              {formatSessionTime(session.updated_at, lang)}
+                            </time>
+                          </div>
+                          {session.last_message_preview ? (
+                            <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+                              {session.last_message_preview}
+                            </p>
+                          ) : null}
+                        </button>
+                        {renamingSessionId === session.id ? (
+                          <div className="mt-3 rounded-xl bg-muted/40 p-2">
+                            <label
+                              className="mb-1 block text-[11px] font-medium text-muted-foreground"
+                              htmlFor={`rename-${session.id}`}
+                            >
+                              {t("assistantHistoryRenameTitle")}
+                            </label>
+                            <input
+                              id={`rename-${session.id}`}
+                              value={renameDraft}
+                              onChange={(event) =>
+                                setRenameDraft(event.target.value)
+                              }
+                              placeholder={t(
+                                "assistantHistoryRenamePlaceholder",
+                              )}
+                              className="h-8 w-full rounded-lg border bg-background px-2 text-xs outline-none ring-0 focus:border-primary/40"
+                            />
+                            <div className="mt-1.5 flex justify-end gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 rounded-full px-2 text-[11px]"
+                                onClick={() => {
+                                  setRenamingSessionId(null);
+                                  setRenameDraft("");
+                                }}
+                              >
+                                {t("assistantHistoryRenameCancel")}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                className="h-7 rounded-full px-2 text-[11px]"
+                                onClick={async () => {
+                                  const nextTitle =
+                                    createRenamedSessionTitle(renameDraft);
+                                  if (!nextTitle) {
+                                    setRenamingSessionId(null);
+                                    setRenameDraft("");
+                                    return;
+                                  }
+                                  await onRename(session.id, nextTitle);
+                                  setRenamingSessionId(null);
+                                  setRenameDraft("");
+                                }}
+                              >
+                                {t("assistantHistoryRenameSave")}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-1.5 flex justify-end gap-1">
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 rounded-full px-2 text-[11px] text-muted-foreground"
+                              onClick={() => {
+                                setRenamingSessionId(session.id);
+                                setRenameDraft(session.title);
+                              }}
+                            >
+                              {t("assistantHistoryRename")}
+                            </Button>
+                            {view === "archive" ? (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 rounded-full px-2 text-[11px] text-muted-foreground"
+                                onClick={() => onRestore(session.id)}
+                              >
+                                <RotateCcw className="mr-1 h-3 w-3" />
+                                {t("assistantHistoryRestore")}
+                              </Button>
+                            ) : (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 rounded-full px-2 text-[11px] text-muted-foreground"
+                                onClick={() => onArchive(session.id)}
+                              >
+                                <Archive className="mr-1 h-3 w-3" />
+                                {t("assistantHistoryArchive")}
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ) : null,
+            )}
+          </div>
         </div>
-      </div>
-    </SheetContent>
-  </Sheet>;
+      </SheetContent>
+    </Sheet>
+  );
 }
 
-function HistoryPersistenceStatus({ status, t }: { status: HistoryOperationStatus | null; t: (key: TranslationKey) => string }) {
+function HistoryPersistenceStatus({
+  status,
+  t,
+}: {
+  status: HistoryOperationStatus | null;
+  t: (key: TranslationKey) => string;
+}) {
   if (!status || status.status !== "fail") return null;
 
-  return <details className="mt-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-muted-foreground">
-    <summary className="flex cursor-pointer items-center gap-2 text-amber-700 dark:text-amber-300">
-      <AlertTriangle className="h-3.5 w-3.5" />
-      <span>{t("assistantHistorySaveWarning")}</span>
-    </summary>
-    <div className="mt-2 space-y-1 pl-5">
-      <p>{t("assistantHistoryLastOperation")}: <code>{status.operation}</code></p>
-      {status.detail ? <p>{t("assistantHistoryTechnicalDetail")}: <code>{status.detail}</code></p> : null}
-    </div>
-  </details>;
+  return (
+    <details className="mt-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-muted-foreground">
+      <summary className="flex cursor-pointer items-center gap-2 text-amber-700 dark:text-amber-300">
+        <AlertTriangle className="h-3.5 w-3.5" />
+        <span>{t("assistantHistorySaveWarning")}</span>
+      </summary>
+      <div className="mt-2 space-y-1 pl-5">
+        <p>
+          {t("assistantHistoryLastOperation")}: <code>{status.operation}</code>
+        </p>
+        {status.detail ? (
+          <p>
+            {t("assistantHistoryTechnicalDetail")}: <code>{status.detail}</code>
+          </p>
+        ) : null}
+      </div>
+    </details>
+  );
 }
 
-function getSessionContextLabel(session: AiChatSession, t: (key: TranslationKey) => string) {
-  const option = optionFromPersistedMetadata(session.last_request_type, session.last_context_scope);
-  if (session.last_request_type && session.last_context_scope && option.requestType === session.last_request_type && option.contextScope === session.last_context_scope) {
+function getSessionContextLabel(
+  session: AiChatSession,
+  t: (key: TranslationKey) => string,
+) {
+  const option = optionFromPersistedMetadata(
+    session.last_request_type,
+    session.last_context_scope,
+  );
+  if (
+    session.last_request_type &&
+    session.last_context_scope &&
+    option.requestType === session.last_request_type &&
+    option.contextScope === session.last_context_scope
+  ) {
     return `${t("assistantContextPrefix")}: ${t(option.labelKey)}`;
   }
   return session.last_context_label;
@@ -453,29 +1003,88 @@ function getSessionContextLabel(session: AiChatSession, t: (key: TranslationKey)
 
 function formatSessionTime(value: string, lang: "uk" | "en") {
   const locale = lang === "en" ? "en-US" : "uk-UA";
-  return new Intl.DateTimeFormat(locale, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+  return new Intl.DateTimeFormat(locale, {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
 }
 
 function Welcome({ t }: { t: (key: TranslationKey) => string }) {
-  return <div className="mx-auto flex max-w-3xl flex-col items-center justify-start text-center"><div className="mb-2 rounded-full bg-primary/10 p-3 text-primary shadow-sm"><Sparkles className="h-6 w-6" /></div><h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">{t("assistantWelcomeTitle")}</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">{t("assistantWelcome")}</p></div>;
+  return (
+    <div className="mx-auto flex max-w-3xl flex-col items-center justify-start text-center">
+      <div className="mb-2 rounded-full bg-primary/10 p-3 text-primary shadow-sm">
+        <Sparkles className="h-6 w-6" />
+      </div>
+      <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+        {t("assistantWelcomeTitle")}
+      </h2>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+        {t("assistantWelcome")}
+      </p>
+    </div>
+  );
 }
 
-function StarterPrompts({ t, onPrompt, disabled }: { t: (key: TranslationKey) => string; onPrompt: (value: string) => void; disabled: boolean }) {
-  return <div className="mt-3 grid w-full gap-2 sm:grid-cols-2">{PROMPT_KEYS.map((key) => <button key={key} type="button" onClick={() => onPrompt(t(key))} disabled={disabled} className="rounded-full border border-border/45 bg-background/75 px-4 py-2 text-left text-sm font-medium shadow-sm shadow-foreground/5 transition hover:border-primary/35 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50">{t(key)}</button>)}</div>;
+function StarterPrompts({
+  t,
+  onPrompt,
+  disabled,
+}: {
+  t: (key: TranslationKey) => string;
+  onPrompt: (value: string) => void;
+  disabled: boolean;
+}) {
+  return (
+    <div className="mt-3 grid w-full gap-2 sm:grid-cols-2">
+      {PROMPT_KEYS.map((key) => (
+        <button
+          key={key}
+          type="button"
+          onClick={() => onPrompt(t(key))}
+          disabled={disabled}
+          className="rounded-full border border-border/45 bg-background/75 px-4 py-2 text-left text-sm font-medium shadow-sm shadow-foreground/5 transition hover:border-primary/35 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {t(key)}
+        </button>
+      ))}
+    </div>
+  );
 }
 
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
 
   if (isUser) {
-    return <div className="flex w-full justify-end"><div className="max-w-[82%] rounded-2xl rounded-tr-sm bg-primary px-4 py-3 text-sm text-primary-foreground"><p className="whitespace-pre-wrap">{message.text}</p><p className="mt-2 text-[10px] text-primary-foreground/65">{message.contextLabel}</p></div></div>;
+    return (
+      <div className="flex w-full justify-end">
+        <div className="max-w-[82%] rounded-2xl rounded-tr-sm bg-primary px-4 py-3 text-sm text-primary-foreground">
+          <p className="whitespace-pre-wrap">{message.text}</p>
+        </div>
+      </div>
+    );
   }
 
-  return <div className="flex w-full justify-start"><div className="w-full rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm"><AiAnswer text={message.text} /><AssistantMessageActions message={message} /></div></div>;
+  return (
+    <div className="flex w-full justify-start">
+      <div className="w-full rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm">
+        <AiAnswer text={message.text} />
+        <AssistantMessageActions message={message} />
+      </div>
+    </div>
+  );
 }
 
 function getAnswerText(payload: Record<string, unknown>, fallback: string) {
-  const answer = String(payload.answer ?? payload.summary ?? payload.response ?? payload.text ?? "") || fallback;
+  const answer =
+    String(
+      payload.answer ??
+        payload.summary ??
+        payload.response ??
+        payload.text ??
+        "",
+    ) || fallback;
   return stripLeadingContextLabel(answer);
 }
 
@@ -483,27 +1092,74 @@ function AssistantMessageActions({ message }: { message: ChatMessage }) {
   const { t, lang } = useI18n();
   const [copied, setCopied] = useState(false);
   const copyAnswer = async () => {
-    await navigator.clipboard.writeText(serializeAnswerForWholeCopy(message.text));
+    await navigator.clipboard.writeText(
+      serializeAnswerForWholeCopy(message.text),
+    );
     setCopied(true);
     window.setTimeout(() => setCopied(false), 1600);
   };
 
-  return <div className="mt-3 flex items-center gap-2 border-t pt-2"><Button type="button" variant="ghost" size="sm" className="h-8 rounded-full px-2 text-xs" onClick={copyAnswer}>{copied ? <Check className="mr-1 h-3.5 w-3.5" /> : <Copy className="mr-1 h-3.5 w-3.5" />}{copied ? t("assistantCopied") : t("assistantCopy")}</Button></div>;
+  return (
+    <div className="mt-3 flex items-center gap-2 border-t pt-2">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-8 rounded-full px-2 text-xs"
+        onClick={copyAnswer}
+      >
+        {copied ? (
+          <Check className="mr-1 h-3.5 w-3.5" />
+        ) : (
+          <Copy className="mr-1 h-3.5 w-3.5" />
+        )}
+        {copied ? t("assistantCopied") : t("assistantCopy")}
+      </Button>
+    </div>
+  );
 }
 
 function AiAnswer({ text }: { text: string }) {
   const segments = parseClientCopySegments(text);
-  return <div className="space-y-3 text-sm leading-relaxed">{segments.map((segment, segmentIndex) => {
-    if (segment.type === "client-copy") return <ClientCopyBlock key={segmentIndex} text={segment.text} />;
+  return (
+    <div className="space-y-3 text-sm leading-relaxed">
+      {segments.map((segment, segmentIndex) => {
+        if (segment.type === "client-copy")
+          return <ClientCopyBlock key={segmentIndex} text={segment.text} />;
 
-    const blocks = parseMarkdownBlocks(segment.text);
-    return <Fragment key={segmentIndex}>{blocks.map((block, i) => {
-    if (block.type === "heading") return <h3 key={i} className="pt-1 font-semibold tracking-tight">{renderBold(block.items[0])}</h3>;
-    if (block.type === "bullets") return <ul key={i} className="list-disc space-y-1 pl-5">{block.items.map((item, j) => <li key={j}>{renderBold(item)}</li>)}</ul>;
-    if (block.type === "numbers") return <ol key={i} className="list-decimal space-y-1 pl-5">{block.items.map((item, j) => <li key={j}>{renderBold(item)}</li>)}</ol>;
-    return <p key={i}>{renderBold(block.items.join(" "))}</p>;
-    })}</Fragment>;
-  })}</div>;
+        const blocks = parseMarkdownBlocks(segment.text);
+        return (
+          <Fragment key={segmentIndex}>
+            {blocks.map((block, i) => {
+              if (block.type === "heading")
+                return (
+                  <h3 key={i} className="pt-1 font-semibold tracking-tight">
+                    {renderBold(block.items[0])}
+                  </h3>
+                );
+              if (block.type === "bullets")
+                return (
+                  <ul key={i} className="list-disc space-y-1 pl-5">
+                    {block.items.map((item, j) => (
+                      <li key={j}>{renderBold(item)}</li>
+                    ))}
+                  </ul>
+                );
+              if (block.type === "numbers")
+                return (
+                  <ol key={i} className="list-decimal space-y-1 pl-5">
+                    {block.items.map((item, j) => (
+                      <li key={j}>{renderBold(item)}</li>
+                    ))}
+                  </ol>
+                );
+              return <p key={i}>{renderBold(block.items.join(" "))}</p>;
+            })}
+          </Fragment>
+        );
+      })}
+    </div>
+  );
 }
 
 function ClientCopyBlock({ text }: { text: string }) {
@@ -516,25 +1172,70 @@ function ClientCopyBlock({ text }: { text: string }) {
   };
   const blocks = parseMarkdownBlocks(text);
 
-  return <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 shadow-sm">
-    <div className="mb-2 flex items-center justify-between gap-3">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("assistantClientCopyTitle")}</p>
-      <Button type="button" variant="ghost" size="sm" className="h-8 rounded-full px-2 text-xs" aria-label={t("assistantClientCopyCopyLabel")} onClick={copyClientText}>{copied ? <Check className="mr-1 h-3.5 w-3.5" /> : <Copy className="mr-1 h-3.5 w-3.5" />}{copied ? t("assistantCopied") : t("assistantCopy")}</Button>
+  return (
+    <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3 shadow-sm">
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {t("assistantClientCopyTitle")}
+        </p>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 rounded-full px-2 text-xs"
+          aria-label={t("assistantClientCopyCopyLabel")}
+          onClick={copyClientText}
+        >
+          {copied ? (
+            <Check className="mr-1 h-3.5 w-3.5" />
+          ) : (
+            <Copy className="mr-1 h-3.5 w-3.5" />
+          )}
+          {copied ? t("assistantCopied") : t("assistantCopy")}
+        </Button>
+      </div>
+      <div className="space-y-2">
+        {blocks.map((block, i) => {
+          if (block.type === "heading")
+            return (
+              <h4 key={i} className="font-semibold tracking-tight">
+                {renderBold(block.items[0])}
+              </h4>
+            );
+          if (block.type === "bullets")
+            return (
+              <ul key={i} className="list-disc space-y-1 pl-5">
+                {block.items.map((item, j) => (
+                  <li key={j}>{renderBold(item)}</li>
+                ))}
+              </ul>
+            );
+          if (block.type === "numbers")
+            return (
+              <ol key={i} className="list-decimal space-y-1 pl-5">
+                {block.items.map((item, j) => (
+                  <li key={j}>{renderBold(item)}</li>
+                ))}
+              </ol>
+            );
+          return <p key={i}>{renderBold(block.items.join(" "))}</p>;
+        })}
+      </div>
     </div>
-    <div className="space-y-2">{blocks.map((block, i) => {
-      if (block.type === "heading") return <h4 key={i} className="font-semibold tracking-tight">{renderBold(block.items[0])}</h4>;
-      if (block.type === "bullets") return <ul key={i} className="list-disc space-y-1 pl-5">{block.items.map((item, j) => <li key={j}>{renderBold(item)}</li>)}</ul>;
-      if (block.type === "numbers") return <ol key={i} className="list-decimal space-y-1 pl-5">{block.items.map((item, j) => <li key={j}>{renderBold(item)}</li>)}</ol>;
-      return <p key={i}>{renderBold(block.items.join(" "))}</p>;
-    })}</div>
-  </div>;
+  );
 }
 
-type MarkdownBlock = { type: "heading" | "paragraph" | "bullets" | "numbers"; items: string[] };
+type MarkdownBlock = {
+  type: "heading" | "paragraph" | "bullets" | "numbers";
+  items: string[];
+};
 
 function parseMarkdownBlocks(text: string): MarkdownBlock[] {
   const blocks: MarkdownBlock[] = [];
-  const safeLines = text.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !/^\s*[{}[\]],?\s*$/.test(line));
+  const safeLines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !/^\s*[{}[\]],?\s*$/.test(line));
 
   for (const line of safeLines) {
     const heading = line.match(/^#{1,3}\s+(.+)$/);
@@ -561,5 +1262,13 @@ function parseMarkdownBlocks(text: string): MarkdownBlock[] {
 }
 
 function renderBold(text: string) {
-  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) => part.startsWith("**") && part.endsWith("**") ? <strong key={i}>{part.slice(2, -2)}</strong> : <Fragment key={i}>{part}</Fragment>);
+  return text
+    .split(/(\*\*[^*]+\*\*)/g)
+    .map((part, i) =>
+      part.startsWith("**") && part.endsWith("**") ? (
+        <strong key={i}>{part.slice(2, -2)}</strong>
+      ) : (
+        <Fragment key={i}>{part}</Fragment>
+      ),
+    );
 }

@@ -1,3 +1,9 @@
+## 2026-07-11 — AI Assistant General Mode and Context Scope Semantics
+
+Decision: General mode is the default AI Assistant context (`general_assistant` / `general`). `context_scope` is treated as an internal routing/source hint and persisted debug/routing metadata, not as a visible normal-UI label and not as a hard answer prison for general, conversational, product, process, or test-like prompts. Scoped analytics playbooks remain governing lenses only when the resolved request type/scope actually matches the user intent; General mode receives Safety/Evidence plus General Assistant guidance and must not invent workspace metrics, statuses, operational actions, or client/campaign facts.
+
+Rationale: The prior Ads Health default caused weak/no-signal prompts such as chat-history tests to be sent as `ads_health_summary` / `ads_health`, which made the backend build ads context and force ads-health reporting language. The new default preserves safety and evidence requirements for workspace claims while allowing non-analytics questions to be answered directly.
+
 # DECISIONS.md
 
 ## Purpose

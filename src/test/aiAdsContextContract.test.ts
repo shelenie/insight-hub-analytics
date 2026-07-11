@@ -47,7 +47,7 @@ describe("AI ads context backend contract", () => {
     expect(edgeFunctionSource).toContain('ads_health_summary: "ads_health"');
   });
 
-  it("uses a senior performance marketing analyst system prompt with strict data boundaries", () => {
+  it("uses an adaptive assistant system prompt with strict workspace data boundaries", () => {
     const systemPromptBody =
       edgeFunctionSource.match(
         /function buildSystemPrompt[\s\S]*?function buildUserPrompt/,
@@ -57,30 +57,38 @@ describe("AI ads context backend contract", () => {
       "utf8",
     );
 
-    expect(systemPromptBody).toContain("senior performance marketing analyst");
+    expect(systemPromptBody).toContain(
+      "You are the AI Assistant for Analytics Hub / Internal Analytics Workspace",
+    );
+    expect(systemPromptBody).toContain("use the relevant specialist playbooks");
     expect(systemPromptBody).toContain(
       "formatPlaybooksForPrompt(selectedPlaybooks)",
     );
     expect(playbookSource).toContain("PLAYBOOK_CMO_CAMPAIGN_DIAGNOSIS");
     expect(playbookSource).toContain("PLAYBOOK_CFO_BUDGET_EFFICIENCY");
-    expect(playbookSource).toContain("Use only provided JSON context");
-    expect(playbookSource).toContain(
-      "never invent metrics, periods, campaign names, client names, revenue, ROAS, causes",
+    expect(playbookSource).not.toContain(
+      "Use only provided JSON context; never invent metrics",
     );
+    expect(playbookSource).toContain("For workspace-specific claims");
+    expect(playbookSource).toContain("use only provided JSON context");
     expect(playbookSource).toContain("stale, missing, fallback, or imported");
     expect(playbookSource).toContain(
       "Do not force ads/CPL/CMO/CFO sections when not relevant",
     );
   });
 
-  it("passes marketing analyst response requirements into the OpenAI user prompt", () => {
+  it("passes adaptive response requirements into the OpenAI user prompt", () => {
     const userPromptBody =
       edgeFunctionSource.match(
         /function buildUserPrompt[\s\S]*?function extractResponsesText/,
       )?.[0] ?? "";
 
     expect(userPromptBody).toContain(
-      'role: "senior_performance_marketing_analyst"',
+      "role: responseRoleForRequest(params.requestType, params.contextScope)",
+    );
+    expect(edgeFunctionSource).toContain("analytics_hub_ai_assistant");
+    expect(edgeFunctionSource).toContain(
+      "senior_performance_marketing_analyst",
     );
     expect(userPromptBody).toContain(
       "selected_playbooks: getPlaybookIds(selectedPlaybooks)",
