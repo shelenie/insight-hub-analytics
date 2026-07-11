@@ -1,3 +1,13 @@
+## 2026-07-11 — Data Bindings RPC Live-Schema Compatibility Fix
+
+### Fixed
+
+- Removed the invalid `workspaces.status` dependency from the Data Bindings RPC hardening migration.
+- Replaced short RPC overload hardening with exact live signatures for binding archive, mapping review status, and onboarding upsert RPCs.
+- Corrected `mapping_review_actions` audit inserts to use `action_type`, previous/new mapping status, actor user/email/role, notes, and metadata.
+- Preserved canonical onboarding fields (`client_name`, `project_name`, `funnel_name`) and required funnel `client_id`.
+- Changed `manage_ad_account_binding` primary semantics so omitted `p_is_primary` preserves an existing primary binding on idempotent duplicate calls.
+
 ## 2026-07-11 — Data Bindings RPC Production Hardening
 
 ### Changed
