@@ -5,6 +5,7 @@ import { createMessagePreview, createRenamedSessionTitle, createSessionTitle, ge
 import { OPTIONS } from "@/lib/assistantRouting";
 
 const assistantSource = readFileSync("src/pages/Assistant.tsx", "utf8");
+const sheetSource = readFileSync("src/components/ui/sheet.tsx", "utf8");
 const migrationSource = readFileSync("supabase/migrations/20260710_ai_assistant_chat_history.sql", "utf8");
 
 describe("AI Assistant persistent chat history", () => {
@@ -49,6 +50,10 @@ describe("AI Assistant persistent chat history", () => {
     expect(assistantSource).toContain('.is("archived_at", null)');
     expect(assistantSource).toContain('.gte("updated_at", getRecentHistoryCutoff())');
     expect(assistantSource).toContain('.update({ archived_at: new Date().toISOString() })');
+    expect(sheetSource).toContain("overlayClassName?: string");
+    expect(sheetSource).toContain("<SheetOverlay className={overlayClassName} />");
+    expect(sheetSource).toContain("fixed inset-0 z-50 bg-black/80");
+    expect(assistantSource).toContain('overlayClassName="bg-slate-950/35 backdrop-blur-[1px]"');
   });
 
   it("persists first user message and assistant response into the same session and updates metadata", () => {

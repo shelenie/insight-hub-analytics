@@ -297,7 +297,7 @@ function ChatHistoryDrawer({ open, onOpenChange, sessions, currentSessionId, loa
   ];
 
   return <Sheet open={open} onOpenChange={onOpenChange}>
-    <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
+    <SheetContent side="right" overlayClassName="bg-slate-950/35 backdrop-blur-[1px]" className="flex w-full flex-col gap-0 p-0 sm:max-w-md">
       <SheetHeader className="border-b px-5 py-4 text-left">
         <SheetTitle>{t("assistantHistoryTitle")}</SheetTitle>
         <SheetDescription>{t("assistantHistorySubtitle")}</SheetDescription>

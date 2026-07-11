@@ -1,3 +1,7 @@
+## Verified Local Follow-up — 2026-07-10 AI Assistant History Drawer Overlay Polish
+
+AI Assistant chat history drawer now uses an opt-in lighter Sheet overlay (`bg-slate-950/35` with subtle blur) so the app behind the drawer remains readable. Shared `SheetContent` supports an optional `overlayClassName` while preserving the existing `bg-black/80` default for every sheet that does not opt in. Drawer panel layout, title/i18n, rename, archive, client-copy behavior, Supabase schema/RLS, Edge Functions, routing, migrations, connectors, sync logic, routes, and sidebar were not changed.
+
 ## Verified Local Follow-up — 2026-07-10 AI Assistant Client Copy i18n Polish
 
 AI Assistant client-copy block visible copy is now localized through the existing i18n map for both Ukrainian and English. The dedicated client-copy action still copies only the client-ready text, whole-answer copy still uses marker sanitization, and no schema/RLS, Edge Function, routing, conversation-history, drawer, rename/archive, connector, sync, route/sidebar, or permissions behavior changed.
