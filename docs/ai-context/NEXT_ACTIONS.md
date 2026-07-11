@@ -1,3 +1,10 @@
+## Next — Deploy and wire hardened Data Bindings mutations
+
+- Apply and verify `supabase/migrations/20260711_harden_data_binding_mutation_rpcs.sql` against the target Supabase project before wiring frontend mutation actions.
+- Confirm live function signatures match the hardened migration, especially `bind_source_entity_to_scope`, `archive_binding`, `update_binding_mapping_status`, and onboarding upsert RPC return types.
+- After deployment, update frontend binding mutations to use `manage_ad_account_binding` for authenticated admin/superadmin ad-account binding create/replace flows.
+- Manually verify that existing active production bindings remain unchanged by migration application and that members cannot execute mutation RPCs.
+
 ## Next Actions — 2026-07-11 AI Assistant Routing Source QA
 
 - Redeploy `ai-helper-run` after merge because client-only copy guidance changed in the Edge Function prompt/playbooks.

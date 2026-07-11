@@ -1,3 +1,7 @@
+## Data Bindings Operational Mutation Roles — 2026-07-11
+
+Local migration `supabase/migrations/20260711_harden_data_binding_mutation_rpcs.sql` clarifies operational binding and onboarding mutation access: authenticated admins and superadmins may manage source/ad-account bindings and onboarding hierarchy records through hardened RPCs that call `can_manage_sources`; members remain read-only/proposal-only and must not mutate bindings directly. Mutation RPCs derive actor identity from `auth.uid()` / authenticated JWT metadata instead of trusting caller-supplied creator fields. Service-role access is preserved for backend jobs, but PUBLIC and anon execution is revoked for sensitive mutation RPCs. Archive/replacement behavior is soft-only and preserves audit history.
+
 ## AI Assistant Chat History RLS — 2026-07-10
 
 Local migration `supabase/migrations/20260710_ai_assistant_chat_history.sql` adds user-owned AI Assistant chat history tables. Chat sessions/messages are scoped by `workspace_id` and `user_id`; frontend queries use the current authenticated user ID and do not use a service-role key. RLS is enabled on both tables, and authenticated users can select/insert/update only their own chat rows when existing active-workspace-access helper patterns (`get_workspace_role` plus `workspace_role_rank`) confirm workspace access. Archive/hide behavior sets `archived_at` and does not delete users, memberships, sessions, or messages. This change does not add invitation, member-management, role-change, profile, audit-log, first-superadmin, or self-signup behavior.
