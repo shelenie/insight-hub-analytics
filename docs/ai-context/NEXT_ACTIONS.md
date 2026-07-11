@@ -1,3 +1,10 @@
+## 2026-07-11 — Next: Redeploy AI Helper and QA Assistant Polish
+
+- Redeploy `supabase/functions/ai-helper-run` after merge because client communication playbook wording changed.
+- QA History drawer behavior: open History from any prior Archive state and confirm it starts on Recent, then switch to Archive inside the open drawer.
+- QA admin/superadmin Assistant answers: confirm Technical details are collapsed by default and show only request_type, context_scope, auto_routed, and mode_label.
+- QA normal member Assistant answers/history cards: confirm no context chips or routing metadata are visible.
+
 ## 2026-07-11 — AI Assistant History UX Follow-up
 
 - Verify the new archived-session DELETE policy after migration deployment: permanent delete should succeed only for own archived sessions with active workspace access and should remain unavailable for Recent/non-archived sessions.

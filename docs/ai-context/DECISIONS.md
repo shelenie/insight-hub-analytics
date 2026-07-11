@@ -1,3 +1,17 @@
+## Decision: Routing Metadata Hidden by Default, Admin Debug Only
+
+Status: active
+Date: 2026-07-11
+Scope: AI Assistant routing QA
+
+Decision:
+
+AI Assistant request/context routing metadata remains hidden from normal user bubbles and history cards. Admin and superadmin users may see a collapsed, muted Technical details control under assistant answer actions for QA, limited to safe routing fields already present on the chat message: request_type, context_scope, auto_routed, and user-facing mode label. Raw backend payloads, prompts, system prompts, JSON context, and secrets must not be rendered.
+
+Reason:
+
+This preserves low-noise normal UX while giving operators a reversible way to verify deterministic routing during testing.
+
 ## Decision: Permanent AI Chat Delete Only From Archive
 
 Status: active
