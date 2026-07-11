@@ -1,3 +1,8 @@
+## 2026-07-11 Follow-up
+
+- After deployment, verify a future clean/non-production Supabase environment applies `20260711_allow_general_ai_helper_requests.sql` successfully and accepts `general_assistant` / `general` AI helper requests without manual DB intervention.
+- Live-smoke the AI Assistant drawer in light and dark themes to confirm Recent/Archive active-state contrast and compact rows feel clear on desktop and touch devices.
+
 ## Updated — 2026-07-11 AI Assistant General Routing Follow-up
 
 - Verify General mode behavior in the deployed app with representative Ukrainian prompts: “Тест історії чату”, “Просто тест”, “Що таке CPL?”, “Чому немає свіжих рекламних даних?”, “Де є проблеми з якістю даних?”, “Що просіло за останні 7 днів?”, and “Які кампанії потребують уваги?”.

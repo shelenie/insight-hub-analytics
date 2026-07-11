@@ -780,21 +780,29 @@ function ChatHistoryDrawer({
         <SheetHeader className="border-b px-5 py-4 text-left">
           <SheetTitle>{t("assistantHistoryTitle")}</SheetTitle>
           <SheetDescription>{t("assistantHistorySubtitle")}</SheetDescription>
-          <div className="mt-3 grid grid-cols-2 gap-1 rounded-full bg-muted/60 p-1">
+          <div className="mt-3 grid grid-cols-2 gap-1 rounded-full border border-border/70 bg-muted/50 p-1 shadow-inner">
             <Button
               type="button"
-              variant={view === "recent" ? "secondary" : "ghost"}
+              variant="ghost"
               size="sm"
-              className="h-7 rounded-full text-xs"
+              className={`h-7 rounded-full text-xs transition ${
+                view === "recent"
+                  ? "border border-primary/25 bg-background font-semibold text-foreground shadow-sm ring-1 ring-primary/10 dark:bg-slate-900"
+                  : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
+              }`}
               onClick={() => onViewChange("recent")}
             >
               {t("assistantHistoryRecent")}
             </Button>
             <Button
               type="button"
-              variant={view === "archive" ? "secondary" : "ghost"}
+              variant="ghost"
               size="sm"
-              className="h-7 rounded-full text-xs"
+              className={`h-7 rounded-full text-xs transition ${
+                view === "archive"
+                  ? "border border-primary/25 bg-background font-semibold text-foreground shadow-sm ring-1 ring-primary/10 dark:bg-slate-900"
+                  : "text-muted-foreground hover:bg-background/50 hover:text-foreground"
+              }`}
               onClick={() => onViewChange("archive")}
             >
               {t("assistantHistoryArchiveTab")}
@@ -823,125 +831,139 @@ function ChatHistoryDrawer({
                     {group.title}
                   </h3>
                   <div className="space-y-2">
-                    {group.items.map((session) => (
-                      <div
-                        key={session.id}
-                        className={`group rounded-xl border px-2.5 py-2 shadow-sm transition ${currentSessionId === session.id ? "border-primary/45 bg-primary/5" : "border-border/50 bg-card/80 hover:border-primary/25 hover:bg-muted/25"}`}
-                      >
-                        <button
-                          type="button"
-                          className="w-full text-left"
-                          onClick={() => onSelect(session.id)}
+                    {group.items.map((session) => {
+                      const isIncomplete = isIncompleteHistorySession(session);
+                      return (
+                        <div
+                          key={session.id}
+                          className={`group rounded-lg border px-2.5 py-1.5 shadow-sm transition ${
+                            currentSessionId === session.id
+                              ? "border-primary/45 bg-primary/5"
+                              : "border-border/50 bg-card/80 hover:border-primary/25 hover:bg-muted/25"
+                          }`}
                         >
-                          <div className="flex items-start justify-between gap-3">
-                            <p className="line-clamp-1 text-sm font-medium text-foreground">
-                              {session.title}
-                            </p>
-                            <time className="shrink-0 text-[11px] text-muted-foreground">
-                              {formatSessionTime(session.updated_at, lang)}
-                            </time>
-                          </div>
-                          {session.last_message_preview ? (
-                            <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
-                              {session.last_message_preview}
-                            </p>
-                          ) : null}
-                        </button>
-                        {renamingSessionId === session.id ? (
-                          <div className="mt-3 rounded-xl bg-muted/40 p-2">
-                            <label
-                              className="mb-1 block text-[11px] font-medium text-muted-foreground"
-                              htmlFor={`rename-${session.id}`}
-                            >
-                              {t("assistantHistoryRenameTitle")}
-                            </label>
-                            <input
-                              id={`rename-${session.id}`}
-                              value={renameDraft}
-                              onChange={(event) =>
-                                setRenameDraft(event.target.value)
-                              }
-                              placeholder={t(
-                                "assistantHistoryRenamePlaceholder",
-                              )}
-                              className="h-8 w-full rounded-lg border bg-background px-2 text-xs outline-none ring-0 focus:border-primary/40"
-                            />
-                            <div className="mt-1.5 flex justify-end gap-1">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 rounded-full px-2 text-[11px]"
-                                onClick={() => {
-                                  setRenamingSessionId(null);
-                                  setRenameDraft("");
-                                }}
+                          <button
+                            type="button"
+                            className="w-full text-left"
+                            onClick={() => onSelect(session.id)}
+                          >
+                            <div className="flex items-center justify-between gap-3">
+                              <p className="line-clamp-1 text-sm font-medium text-foreground">
+                                {session.title}
+                              </p>
+                              <time className="shrink-0 text-right text-[11px] text-muted-foreground">
+                                {formatSessionTime(session.updated_at, lang)}
+                              </time>
+                            </div>
+                            <div className="mt-0.5 flex min-w-0 items-center gap-2">
+                              {session.last_message_preview ? (
+                                <p className="line-clamp-1 min-w-0 flex-1 text-xs text-muted-foreground">
+                                  {session.last_message_preview}
+                                </p>
+                              ) : null}
+                              {isIncomplete ? (
+                                <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                                  {t("assistantHistoryNoAiAnswer")}
+                                </span>
+                              ) : null}
+                            </div>
+                          </button>
+                          {renamingSessionId === session.id ? (
+                            <div className="mt-3 rounded-xl bg-muted/40 p-2">
+                              <label
+                                className="mb-1 block text-[11px] font-medium text-muted-foreground"
+                                htmlFor={`rename-${session.id}`}
                               >
-                                {t("assistantHistoryRenameCancel")}
-                              </Button>
-                              <Button
-                                type="button"
-                                variant="secondary"
-                                size="sm"
-                                className="h-7 rounded-full px-2 text-[11px]"
-                                onClick={async () => {
-                                  const nextTitle =
-                                    createRenamedSessionTitle(renameDraft);
-                                  if (!nextTitle) {
+                                {t("assistantHistoryRenameTitle")}
+                              </label>
+                              <input
+                                id={`rename-${session.id}`}
+                                value={renameDraft}
+                                onChange={(event) =>
+                                  setRenameDraft(event.target.value)
+                                }
+                                placeholder={t(
+                                  "assistantHistoryRenamePlaceholder",
+                                )}
+                                className="h-8 w-full rounded-lg border bg-background px-2 text-xs outline-none ring-0 focus:border-primary/40"
+                              />
+                              <div className="mt-1 flex justify-end gap-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 rounded-full px-2 text-[11px]"
+                                  onClick={() => {
                                     setRenamingSessionId(null);
                                     setRenameDraft("");
-                                    return;
-                                  }
-                                  await onRename(session.id, nextTitle);
-                                  setRenamingSessionId(null);
-                                  setRenameDraft("");
+                                  }}
+                                >
+                                  {t("assistantHistoryRenameCancel")}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="secondary"
+                                  size="sm"
+                                  className="h-7 rounded-full px-2 text-[11px]"
+                                  onClick={async () => {
+                                    const nextTitle =
+                                      createRenamedSessionTitle(renameDraft);
+                                    if (!nextTitle) {
+                                      setRenamingSessionId(null);
+                                      setRenameDraft("");
+                                      return;
+                                    }
+                                    await onRename(session.id, nextTitle);
+                                    setRenamingSessionId(null);
+                                    setRenameDraft("");
+                                  }}
+                                >
+                                  {t("assistantHistoryRenameSave")}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="mt-1 flex justify-end gap-1">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 rounded-full px-2 text-[11px] text-muted-foreground"
+                                onClick={() => {
+                                  setRenamingSessionId(session.id);
+                                  setRenameDraft(session.title);
                                 }}
                               >
-                                {t("assistantHistoryRenameSave")}
+                                {t("assistantHistoryRename")}
                               </Button>
+                              {view === "archive" ? (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 rounded-full px-2 text-[11px] text-muted-foreground"
+                                  onClick={() => onRestore(session.id)}
+                                >
+                                  <RotateCcw className="mr-1 h-3 w-3" />
+                                  {t("assistantHistoryRestore")}
+                                </Button>
+                              ) : (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-6 rounded-full px-2 text-[11px] text-muted-foreground"
+                                  onClick={() => onArchive(session.id)}
+                                >
+                                  <Archive className="mr-1 h-3 w-3" />
+                                  {t("assistantHistoryArchive")}
+                                </Button>
+                              )}
                             </div>
-                          </div>
-                        ) : (
-                          <div className="mt-1.5 flex justify-end gap-1">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 rounded-full px-2 text-[11px] text-muted-foreground"
-                              onClick={() => {
-                                setRenamingSessionId(session.id);
-                                setRenameDraft(session.title);
-                              }}
-                            >
-                              {t("assistantHistoryRename")}
-                            </Button>
-                            {view === "archive" ? (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 rounded-full px-2 text-[11px] text-muted-foreground"
-                                onClick={() => onRestore(session.id)}
-                              >
-                                <RotateCcw className="mr-1 h-3 w-3" />
-                                {t("assistantHistoryRestore")}
-                              </Button>
-                            ) : (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 rounded-full px-2 text-[11px] text-muted-foreground"
-                                onClick={() => onArchive(session.id)}
-                              >
-                                <Archive className="mr-1 h-3 w-3" />
-                                {t("assistantHistoryArchive")}
-                              </Button>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </section>
               ) : null,
@@ -950,6 +972,14 @@ function ChatHistoryDrawer({
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function isIncompleteHistorySession(session: AiChatSession) {
+  return (
+    !session.last_request_type &&
+    !session.last_context_scope &&
+    !session.last_context_label
   );
 }
 

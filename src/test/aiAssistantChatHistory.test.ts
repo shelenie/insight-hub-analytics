@@ -21,6 +21,10 @@ const persistenceFixMigrationSource = readFileSync(
   "supabase/migrations/20260711_fix_ai_assistant_chat_history_persistence.sql",
   "utf8",
 );
+const generalModeConstraintMigrationSource = readFileSync(
+  "supabase/migrations/20260711_allow_general_ai_helper_requests.sql",
+  "utf8",
+);
 
 describe("AI Assistant persistent chat history", () => {
   it("adds Supabase chat history tables, indexes, RLS, and soft archive metadata", () => {
@@ -49,6 +53,29 @@ describe("AI Assistant persistent chat history", () => {
     );
     expect(migrationSource).not.toMatch(
       /service_role|drop table|delete from public\.ai_chat/i,
+    );
+  });
+
+  it("adds the source-controlled General mode constraint migration without data, RLS, or grant changes", () => {
+    expect(generalModeConstraintMigrationSource).toContain(
+      "drop constraint if exists ai_helper_requests_request_type_check",
+    );
+    expect(generalModeConstraintMigrationSource).toContain(
+      "drop constraint if exists ai_helper_requests_context_scope_check",
+    );
+    expect(generalModeConstraintMigrationSource).toContain(
+      "'general_assistant'",
+    );
+    expect(generalModeConstraintMigrationSource).toContain("'general'");
+    expect(generalModeConstraintMigrationSource).toContain(
+      "'data_quality_summary'",
+    );
+    expect(generalModeConstraintMigrationSource).toContain("'ads_health'");
+    expect(generalModeConstraintMigrationSource).not.toMatch(
+      /delete\s+from|drop\s+table|service_role|grant\s+/i,
+    );
+    expect(generalModeConstraintMigrationSource).not.toContain(
+      "alter table public.ai_helper_requests disable row level security",
     );
   });
 
@@ -90,6 +117,10 @@ describe("AI Assistant persistent chat history", () => {
     expect(createSessionTitle("x".repeat(80))).toHaveLength(60);
     expect(createSessionTitle("x".repeat(80))).toMatch(/…$/);
     expect(createMessagePreview("a\n\n b")).toBe("a b");
+    expect(createMessagePreview("### Heading")).toBe("Heading");
+    expect(createMessagePreview("**CPL** — це *Cost Per Lead*")).toBe(
+      "CPL — це Cost Per Lead",
+    );
     expect(createSessionTitle("Контекст: Test\n\nPrompt body")).toBe(
       "Prompt body",
     );
@@ -128,6 +159,20 @@ describe("AI Assistant persistent chat history", () => {
     expect(assistantSource).toContain('t("assistantHistoryArchiveTab")');
     expect(assistantSource).toContain('t("assistantHistoryRestore")');
     expect(assistantSource).toContain('t("assistantHistoryArchivedEmpty")');
+    expect(assistantSource).toContain('t("assistantHistoryNoAiAnswer")');
+    expect(assistantSource).toContain(
+      "border border-primary/25 bg-background font-semibold text-foreground shadow-sm ring-1 ring-primary/10",
+    );
+    expect(assistantSource).toContain(
+      "text-muted-foreground hover:bg-background/50 hover:text-foreground",
+    );
+    expect(assistantSource).toContain("rounded-lg border px-2.5 py-1.5");
+    expect(assistantSource).toContain(
+      "line-clamp-1 min-w-0 flex-1 text-xs text-muted-foreground",
+    );
+    expect(assistantSource).toContain(
+      'className="h-6 rounded-full px-2 text-[11px] text-muted-foreground"',
+    );
     expect(assistantSource).toContain(
       '.gte("updated_at", getRecentHistoryCutoff())',
     );
@@ -202,12 +247,25 @@ describe("AI Assistant persistent chat history", () => {
     );
     expect(assistantSource).toContain(".update({ title: nextTitle })");
     expect(assistantSource).not.toContain("delete()");
+    expect(assistantSource).not.toContain("Permanent delete");
     expect(
       createRenamedSessionTitle(
         "  Контекст: Old\n\n[CLIENT_COPY_START]\nMy   renamed   chat\n[CLIENT_COPY_END]  ",
       ),
     ).toBe("My renamed chat");
     expect(createRenamedSessionTitle("   ")).toBeNull();
+  });
+
+  it("marks sessions without AI metadata as incomplete while keeping rename/archive/restore", () => {
+    expect(assistantSource).toContain("function isIncompleteHistorySession");
+    expect(assistantSource).toContain("!session.last_request_type");
+    expect(assistantSource).toContain("!session.last_context_scope");
+    expect(assistantSource).toContain("!session.last_context_label");
+    expect(assistantSource).toContain('t("assistantHistoryNoAiAnswer")');
+    expect(assistantSource).toContain("onRename(session.id, nextTitle)");
+    expect(assistantSource).toContain("onArchive(session.id)");
+    expect(assistantSource).toContain("onRestore(session.id)");
+    expect(assistantSource).not.toContain("delete()");
   });
 
   it("loads an existing chat into visible messages and keeps bounded follow-up context", () => {

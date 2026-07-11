@@ -1,3 +1,19 @@
+## 2026-07-11 — AI Assistant History Drawer Polish and General Constraint Migration
+
+### Changed
+
+- Added source-controlled Supabase migration `20260711_allow_general_ai_helper_requests.sql` to align future environments with the production `allow_general_ai_helper_requests` manual fix for `ai_helper_requests` CHECK constraints.
+- Made Recent / Archive history tabs visually distinct with stronger active styling and muted inactive states.
+- Made history rows more compact and list-like with one-line title/preview, right-aligned time, and small inline rename/archive/restore actions.
+- Added an incomplete-chat label for sessions that only have a saved user prompt and no AI response metadata after a failed backend run, without deleting or blocking rename/archive/restore.
+- Cleaned drawer previews/titles/model-context snippets so markdown headings, bold, and italic markers do not leak into previews while full assistant answers remain unchanged.
+- Broadened Assistant subtitle copy to cover analytics, ads, imports, data quality, workflows, and general system questions.
+
+### Notes
+
+- Production DB was already manually fixed with migration name `allow_general_ai_helper_requests`; this repo migration preserves source-of-truth consistency.
+- No rows, RLS policies, grants, permissions, Edge Function deploy config, or existing migrations were changed.
+
 ## 2026-07-11 — AI Assistant General Mode Prompt Polish
 
 ### Changed
