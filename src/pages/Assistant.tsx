@@ -11,6 +11,7 @@ import {
   AlertTriangle,
   Archive,
   Check,
+  Trash2,
   Copy,
   History,
   Loader2,
@@ -27,6 +28,14 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/auth/AuthProvider";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
@@ -49,6 +58,7 @@ import {
 import {
   parseClientCopySegments,
   serializeAnswerForWholeCopy,
+  cleanAssistantTextForPreview,
   stripLeadingContextLabel,
 } from "@/lib/assistantAnswerParsing";
 import {
@@ -81,6 +91,7 @@ type SupabaseTableQuery = {
   select: (columns?: string) => SupabaseTableQuery;
   insert: (values: unknown) => SupabaseTableQuery;
   update: (values: unknown) => SupabaseTableQuery;
+  delete: () => SupabaseTableQuery;
   eq: (column: string, value: unknown) => SupabaseTableQuery;
   is: (column: string, value: unknown) => SupabaseTableQuery;
   not: (column: string, operator: string, value: unknown) => SupabaseTableQuery;
@@ -107,7 +118,8 @@ type HistoryOperation =
   | "messages_load"
   | "session_archive"
   | "session_restore"
-  | "session_rename";
+  | "session_rename"
+  | "session_delete";
 
 type HistoryOperationStatus = {
   operation: HistoryOperation;
@@ -215,12 +227,13 @@ export default function Assistant() {
       .eq("user_id", session.user.id);
     const filteredQuery =
       historyView === "recent"
-        ? baseQuery.is("archived_at", null)
+        ? baseQuery
+            .is("archived_at", null)
+            .gte("updated_at", getRecentHistoryCutoff())
         : baseQuery.not("archived_at", "is", null);
     const { data, error } = await filteredQuery
-      .gte("updated_at", getRecentHistoryCutoff())
       .order("updated_at", { ascending: false })
-      .limit(30);
+      .limit(historyView === "recent" ? 30 : 100);
     if (error) {
       console.warn("AI chat history load failed", error);
       recordHistoryStatus("drawer_load", "fail", error);
@@ -572,6 +585,23 @@ export default function Assistant() {
     void loadSessions();
   };
 
+  const deleteArchivedChatSession = async (sessionId: string) => {
+    const { error } = await assistantHistoryClient
+      .from("ai_chat_sessions")
+      .delete()
+      .eq("id", sessionId)
+      .eq("workspace_id", WORKSPACE_ID)
+      .not("archived_at", "is", null);
+    if (error) {
+      console.warn("AI chat delete failed", error);
+      recordHistoryStatus("session_delete", "fail", error);
+      return;
+    }
+    recordHistoryStatus("session_delete", "success");
+    setSessions((current) => current.filter((item) => item.id !== sessionId));
+    if (currentSessionId === sessionId) resetChat();
+  };
+
   const renameChatSession = async (sessionId: string, title: string) => {
     const nextTitle = createRenamedSessionTitle(title);
     if (!nextTitle) return;
@@ -642,6 +672,7 @@ export default function Assistant() {
         onSelect={loadChatSession}
         onArchive={archiveChatSession}
         onRestore={restoreChatSession}
+        onDelete={deleteArchivedChatSession}
         onRename={renameChatSession}
         t={t}
         lang={lang}
@@ -737,6 +768,7 @@ function ChatHistoryDrawer({
   onSelect,
   onArchive,
   onRestore,
+  onDelete,
   onRename,
   t,
   lang,
@@ -751,6 +783,7 @@ function ChatHistoryDrawer({
   onSelect: (sessionId: string) => void;
   onArchive: (sessionId: string) => void;
   onRestore: (sessionId: string) => void;
+  onDelete: (sessionId: string) => Promise<void>;
   onRename: (sessionId: string, title: string) => Promise<void>;
   t: (key: TranslationKey) => string;
   lang: "uk" | "en";
@@ -759,6 +792,7 @@ function ChatHistoryDrawer({
     null,
   );
   const [renameDraft, setRenameDraft] = useState("");
+  const [deleteSessionId, setDeleteSessionId] = useState<string | null>(null);
   const grouped = groupSessionsByRecency(sessions);
   const groups = [
     { title: t("assistantHistoryGroupToday"), items: grouped.today },
@@ -779,7 +813,11 @@ function ChatHistoryDrawer({
       >
         <SheetHeader className="border-b px-5 py-4 text-left">
           <SheetTitle>{t("assistantHistoryTitle")}</SheetTitle>
-          <SheetDescription>{t("assistantHistorySubtitle")}</SheetDescription>
+          <SheetDescription>
+            {view === "archive"
+              ? t("assistantHistoryArchiveSubtitle")
+              : t("assistantHistoryRecentSubtitle")}
+          </SheetDescription>
           <div className="mt-3 grid grid-cols-2 gap-1 rounded-full border border-border/70 bg-muted/50 p-1 shadow-inner">
             <Button
               type="button"
@@ -833,10 +871,13 @@ function ChatHistoryDrawer({
                   <div className="space-y-2">
                     {group.items.map((session) => {
                       const isIncomplete = isIncompleteHistorySession(session);
+                      const cleanedPreview = session.last_message_preview
+                        ? cleanAssistantTextForPreview(session.last_message_preview)
+                        : "";
                       return (
                         <div
                           key={session.id}
-                          className={`group rounded-lg border px-2.5 py-1.5 shadow-sm transition ${
+                          className={`group rounded-lg border px-2 py-1.5 shadow-sm transition ${
                             currentSessionId === session.id
                               ? "border-primary/45 bg-primary/5"
                               : "border-border/50 bg-card/80 hover:border-primary/25 hover:bg-muted/25"
@@ -856,9 +897,9 @@ function ChatHistoryDrawer({
                               </time>
                             </div>
                             <div className="mt-0.5 flex min-w-0 items-center gap-2">
-                              {session.last_message_preview ? (
+                              {cleanedPreview ? (
                                 <p className="line-clamp-1 min-w-0 flex-1 text-xs text-muted-foreground">
-                                  {session.last_message_preview}
+                                  {cleanedPreview}
                                 </p>
                               ) : null}
                               {isIncomplete ? (
@@ -887,7 +928,7 @@ function ChatHistoryDrawer({
                                 )}
                                 className="h-8 w-full rounded-lg border bg-background px-2 text-xs outline-none ring-0 focus:border-primary/40"
                               />
-                              <div className="mt-1 flex justify-end gap-1">
+                              <div className="mt-0.5 flex justify-end gap-0.5">
                                 <Button
                                   type="button"
                                   variant="ghost"
@@ -923,12 +964,12 @@ function ChatHistoryDrawer({
                               </div>
                             </div>
                           ) : (
-                            <div className="mt-1 flex justify-end gap-1">
+                            <div className="mt-0.5 flex justify-end gap-0.5">
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                className="h-6 rounded-full px-2 text-[11px] text-muted-foreground"
+                                className="h-5 rounded-full px-1.5 text-[10px] text-muted-foreground"
                                 onClick={() => {
                                   setRenamingSessionId(session.id);
                                   setRenameDraft(session.title);
@@ -937,25 +978,37 @@ function ChatHistoryDrawer({
                                 {t("assistantHistoryRename")}
                               </Button>
                               {view === "archive" ? (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 rounded-full px-2 text-[11px] text-muted-foreground"
-                                  onClick={() => onRestore(session.id)}
-                                >
-                                  <RotateCcw className="mr-1 h-3 w-3" />
-                                  {t("assistantHistoryRestore")}
-                                </Button>
+                                <>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-5 rounded-full px-1.5 text-[10px] text-muted-foreground"
+                                    onClick={() => onRestore(session.id)}
+                                  >
+                                    <RotateCcw className="mr-0.5 h-3 w-3" />
+                                    {t("assistantHistoryRestore")}
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-5 rounded-full px-1.5 text-[10px] text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                    onClick={() => setDeleteSessionId(session.id)}
+                                  >
+                                    <Trash2 className="mr-0.5 h-3 w-3" />
+                                    {t("assistantHistoryDelete")}
+                                  </Button>
+                                </>
                               ) : (
                                 <Button
                                   type="button"
                                   variant="ghost"
                                   size="sm"
-                                  className="h-6 rounded-full px-2 text-[11px] text-muted-foreground"
+                                  className="h-5 rounded-full px-1.5 text-[10px] text-muted-foreground"
                                   onClick={() => onArchive(session.id)}
                                 >
-                                  <Archive className="mr-1 h-3 w-3" />
+                                  <Archive className="mr-0.5 h-3 w-3" />
                                   {t("assistantHistoryArchive")}
                                 </Button>
                               )}
@@ -971,6 +1024,42 @@ function ChatHistoryDrawer({
           </div>
         </div>
       </SheetContent>
+      <Dialog
+        open={Boolean(deleteSessionId)}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen) setDeleteSessionId(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("assistantHistoryDeleteConfirmTitle")}</DialogTitle>
+            <DialogDescription>
+              {t("assistantHistoryDeleteConfirmDescription")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:space-x-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDeleteSessionId(null)}
+            >
+              {t("assistantHistoryDeleteCancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={async () => {
+                if (!deleteSessionId) return;
+                const sessionId = deleteSessionId;
+                setDeleteSessionId(null);
+                await onDelete(sessionId);
+              }}
+            >
+              {t("assistantHistoryDeleteConfirm")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Sheet>
   );
 }
@@ -1067,7 +1156,7 @@ function StarterPrompts({
   disabled: boolean;
 }) {
   return (
-    <div className="mt-3 grid w-full gap-2 sm:grid-cols-2">
+    <div className="mt-6 grid w-full gap-2 sm:grid-cols-2">
       {PROMPT_KEYS.map((key) => (
         <button
           key={key}

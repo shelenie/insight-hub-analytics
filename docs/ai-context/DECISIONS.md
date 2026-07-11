@@ -1,3 +1,17 @@
+## Decision: Permanent AI Chat Delete Only From Archive
+
+Status: active
+Date: 2026-07-11
+Scope: AI Assistant chat history
+
+Decision:
+
+AI Assistant chat sessions remain archived before deletion by default. Permanent deletion is allowed only for archived chat sessions, only after explicit user confirmation in the Archive view, and only when RLS confirms the row belongs to the authenticated user with active workspace access. Recent/non-archived sessions must not expose a permanent delete action.
+
+Reason:
+
+This preserves the project-wide archive-before-delete principle for normal history management while giving users a deliberate cleanup path for archived AI chat storage.
+
 ## 2026-07-11 — AI Assistant General Mode and Context Scope Semantics
 
 Decision: General mode is the default AI Assistant context (`general_assistant` / `general`). `context_scope` is treated as an internal routing/source hint and persisted debug/routing metadata, not as a visible normal-UI label and not as a hard answer prison for general, conversational, product, process, or test-like prompts. Scoped analytics playbooks remain governing lenses only when the resolved request type/scope actually matches the user intent; General mode receives Safety/Evidence plus General Assistant guidance and must not invent workspace metrics, statuses, operational actions, or client/campaign facts.

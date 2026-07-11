@@ -25,6 +25,10 @@ const generalModeConstraintMigrationSource = readFileSync(
   "supabase/migrations/20260711_allow_general_ai_helper_requests.sql",
   "utf8",
 );
+const archivedDeleteMigrationSource = readFileSync(
+  "supabase/migrations/20260711_allow_archived_ai_chat_session_delete.sql",
+  "utf8",
+);
 
 describe("AI Assistant persistent chat history", () => {
   it("adds Supabase chat history tables, indexes, RLS, and soft archive metadata", () => {
@@ -112,6 +116,16 @@ describe("AI Assistant persistent chat history", () => {
     );
   });
 
+  it("allows permanent deletion only for own archived AI chat sessions", () => {
+    expect(archivedDeleteMigrationSource).toContain("for delete");
+    expect(archivedDeleteMigrationSource).toContain("ai_chat_sessions.user_id = auth.uid()");
+    expect(archivedDeleteMigrationSource).toContain("ai_chat_sessions.archived_at is not null");
+    expect(archivedDeleteMigrationSource).toContain("public.workspace_role_rank(public.get_workspace_role(ai_chat_sessions.workspace_id, auth.uid())) >= 1");
+    expect(archivedDeleteMigrationSource).toContain("alter table public.ai_chat_sessions enable row level security");
+    expect(archivedDeleteMigrationSource).not.toContain("disable row level security");
+    expect(archivedDeleteMigrationSource).not.toMatch(/delete\s+from|service_role|to anon/i);
+  });
+
   it("creates deterministic titles/previews and recent 14-day cutoff", () => {
     expect(createSessionTitle("  hello    world  ")).toBe("hello world");
     expect(createSessionTitle("x".repeat(80))).toHaveLength(60);
@@ -141,7 +155,8 @@ describe("AI Assistant persistent chat history", () => {
     );
     expect(assistantSource).toContain('t("assistantHistory")');
     expect(assistantSource).toContain('t("assistantHistoryTitle")');
-    expect(assistantSource).toContain('t("assistantHistorySubtitle")');
+    expect(assistantSource).toContain('t("assistantHistoryRecentSubtitle")');
+    expect(assistantSource).toContain('t("assistantHistoryArchiveSubtitle")');
     expect(assistantSource).toContain('t("assistantHistoryEmpty")');
     expect(assistantSource).toContain('t("assistantHistoryGroupToday")');
     expect(assistantSource).toContain('t("assistantHistoryGroupYesterday")');
@@ -166,15 +181,18 @@ describe("AI Assistant persistent chat history", () => {
     expect(assistantSource).toContain(
       "text-muted-foreground hover:bg-background/50 hover:text-foreground",
     );
-    expect(assistantSource).toContain("rounded-lg border px-2.5 py-1.5");
+    expect(assistantSource).toContain("rounded-lg border px-2 py-1.5");
     expect(assistantSource).toContain(
       "line-clamp-1 min-w-0 flex-1 text-xs text-muted-foreground",
     );
     expect(assistantSource).toContain(
-      'className="h-6 rounded-full px-2 text-[11px] text-muted-foreground"',
+      'className="h-5 rounded-full px-1.5 text-[10px] text-muted-foreground"',
     );
     expect(assistantSource).toContain(
       '.gte("updated_at", getRecentHistoryCutoff())',
+    );
+    expect(assistantSource).toContain(
+      '.limit(historyView === "recent" ? 30 : 100)',
     );
     expect(assistantSource).toContain(
       ".update({ archived_at: new Date().toISOString() })",
@@ -246,8 +264,8 @@ describe("AI Assistant persistent chat history", () => {
       "const nextTitle = createRenamedSessionTitle(title)",
     );
     expect(assistantSource).toContain(".update({ title: nextTitle })");
-    expect(assistantSource).not.toContain("delete()");
-    expect(assistantSource).not.toContain("Permanent delete");
+    expect(assistantSource).toContain("const deleteArchivedChatSession = async");
+    expect(assistantSource).toContain('.not("archived_at", "is", null)');
     expect(
       createRenamedSessionTitle(
         "  Контекст: Old\n\n[CLIENT_COPY_START]\nMy   renamed   chat\n[CLIENT_COPY_END]  ",
@@ -265,7 +283,8 @@ describe("AI Assistant persistent chat history", () => {
     expect(assistantSource).toContain("onRename(session.id, nextTitle)");
     expect(assistantSource).toContain("onArchive(session.id)");
     expect(assistantSource).toContain("onRestore(session.id)");
-    expect(assistantSource).not.toContain("delete()");
+    expect(assistantSource).toContain("setDeleteSessionId(session.id)");
+    expect(assistantSource).toContain('view === "archive" ? (');
   });
 
   it("loads an existing chat into visible messages and keeps bounded follow-up context", () => {

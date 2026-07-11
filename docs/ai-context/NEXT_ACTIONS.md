@@ -1,3 +1,8 @@
+## 2026-07-11 — AI Assistant History UX Follow-up
+
+- Verify the new archived-session DELETE policy after migration deployment: permanent delete should succeed only for own archived sessions with active workspace access and should remain unavailable for Recent/non-archived sessions.
+- Live-check that Recent still shows only the last 14 days, Archive shows older archived chats, and old stored markdown previews render without raw `**`, `*`, or `###` markers.
+
 ## 2026-07-11 Follow-up
 
 - After deployment, verify a future clean/non-production Supabase environment applies `20260711_allow_general_ai_helper_requests.sql` successfully and accepts `general_assistant` / `general` AI helper requests without manual DB intervention.
