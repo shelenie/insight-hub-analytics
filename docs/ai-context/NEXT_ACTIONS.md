@@ -1,3 +1,10 @@
+## Next Actions — 2026-07-11 AI Assistant Routing Source QA
+
+- Redeploy `ai-helper-run` after merge because client-only copy guidance changed in the Edge Function prompt/playbooks.
+- Live-test automatic General (“Що таке CPL?”) and Ads Health (“Чому немає свіжих рекламних даних?”) prompts and confirm admin Technical details show Routing = Автоматично with `general_assistant/general` and `ads_health_summary/ads_health` respectively.
+- Live-test any explicit manual override/dev mode flow if re-enabled and confirm Routing = Вручну / `auto_routed = false`.
+- Live-test “сформулюй клієнту” after redeploy and confirm the answer contains only `[CLIENT_COPY_START]... [CLIENT_COPY_END]` client copy with no internal checklist unless explicitly requested.
+
 ## 2026-07-11 — Next: Redeploy AI Helper and QA Assistant Polish
 
 - Redeploy `supabase/functions/ai-helper-run` after merge because client communication playbook wording changed.

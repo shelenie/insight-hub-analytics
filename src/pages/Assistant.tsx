@@ -22,6 +22,11 @@ import {
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -402,6 +407,7 @@ export default function Assistant() {
     mutationFn: async ({
       submittedPrompt,
       option,
+      autoRouted,
       runId,
       conversationHistory,
       threadMetadata,
@@ -409,6 +415,7 @@ export default function Assistant() {
     }: {
       submittedPrompt: string;
       option: ContextOption;
+      autoRouted: boolean;
       runId: number;
       conversationHistory: ConversationHistoryPayload[];
       threadMetadata: ConversationThreadMetadata;
@@ -428,18 +435,20 @@ export default function Assistant() {
       return {
         payload: (response.data ?? {}) as Record<string, unknown>,
         option,
+        autoRouted,
         runId,
         sessionId,
       };
     },
-    onSuccess: async ({ payload, option, runId, sessionId }) => {
+    onSuccess: async ({ payload, option, autoRouted, runId, sessionId }) => {
       if (runId !== activeRunId.current) return;
       const assistantMessage = {
         id: `assistant-${Date.now()}`,
         role: "assistant" as const,
         text: getAnswerText(payload, t("assistantEmptyAnswer")),
-        contextLabel: `${t("assistantContextPrefix")}: ${t(option.labelKey)}`,
+        contextLabel: `${autoRouted ? t("assistantAutoContextPrefix") : t("assistantContextPrefix")}: ${t(option.labelKey)}`,
         option,
+        autoRouted,
       };
       setMessages((current) => [...current, assistantMessage]);
       const persistedSessionId = sessionId ?? pendingSessionId.current;
@@ -487,9 +496,7 @@ export default function Assistant() {
         previousAssistantMessage,
         t,
       );
-      const autoRouted =
-        !manualOverrideEnabled &&
-        resolvedOption.labelKey !== selectedOption.labelKey;
+      const autoRouted = !manualOverrideEnabled;
       const userMessage = {
         id: `user-${Date.now()}`,
         role: "user" as const,
@@ -511,6 +518,7 @@ export default function Assistant() {
       run.mutate({
         submittedPrompt,
         option: resolvedOption,
+        autoRouted,
         runId,
         conversationHistory,
         threadMetadata,
@@ -1257,7 +1265,7 @@ function AssistantMessageActions({
 
   return (
     <div className="mt-3 border-t pt-2">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2" data-testid="assistant-message-action-row">
         <Button
           type="button"
           variant="ghost"
@@ -1272,39 +1280,47 @@ function AssistantMessageActions({
           )}
           {copied ? t("assistantCopied") : t("assistantCopy")}
         </Button>
+        {showRoutingDebug ? <AssistantRoutingDebug message={message} /> : null}
       </div>
-      {showRoutingDebug ? <AssistantRoutingDebug message={message} /> : null}
     </div>
   );
 }
 
 function AssistantRoutingDebug({ message }: { message: ChatMessage }) {
   const { t } = useI18n();
+  const routingSource = message.autoRouted
+    ? t("assistantTechnicalAutomatic")
+    : t("assistantTechnicalManual");
 
   return (
-    <details className="mt-2 text-[11px] text-muted-foreground">
-      <summary className="inline-flex cursor-pointer select-none rounded-full px-1 py-0.5 hover:bg-muted/60">
-        {t("assistantTechnicalDetails")}
-      </summary>
-      <dl className="mt-1 grid gap-1 rounded-xl bg-muted/35 px-3 py-2 font-mono text-[10px] leading-4">
-        <div className="flex gap-2">
-          <dt className="min-w-24 text-muted-foreground/80">request_type</dt>
-          <dd>{message.option.requestType}</dd>
-        </div>
-        <div className="flex gap-2">
-          <dt className="min-w-24 text-muted-foreground/80">context_scope</dt>
-          <dd>{message.option.contextScope}</dd>
-        </div>
-        <div className="flex gap-2">
-          <dt className="min-w-24 text-muted-foreground/80">auto_routed</dt>
-          <dd>{String(message.autoRouted ?? false)}</dd>
-        </div>
-        <div className="flex gap-2">
-          <dt className="min-w-24 text-muted-foreground/80">mode_label</dt>
-          <dd className="font-sans">{t(message.option.labelKey)}</dd>
-        </div>
-      </dl>
-    </details>
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="ml-auto h-8 rounded-full px-2 text-xs text-muted-foreground"
+        >
+          {t("assistantTechnicalDetails")}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-72 p-3 text-xs">
+        <dl className="grid grid-cols-[6.5rem_minmax(0,1fr)] gap-x-3 gap-y-2">
+          <dt className="text-muted-foreground">{t("assistantTechnicalMode")}</dt>
+          <dd className="min-w-0 font-medium">{t(message.option.labelKey)}</dd>
+          <dt className="text-muted-foreground">{t("assistantTechnicalRouting")}</dt>
+          <dd className="min-w-0 font-medium">{routingSource}</dd>
+          <dt className="text-muted-foreground">{t("assistantTechnicalRequestType")}</dt>
+          <dd className="min-w-0 break-words font-mono text-[11px]">
+            {message.option.requestType}
+          </dd>
+          <dt className="text-muted-foreground">{t("assistantTechnicalContextScope")}</dt>
+          <dd className="min-w-0 break-words font-mono text-[11px]">
+            {message.option.contextScope}
+          </dd>
+        </dl>
+      </PopoverContent>
+    </Popover>
   );
 }
 

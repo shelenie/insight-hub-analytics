@@ -1,3 +1,17 @@
+## Decision: auto_routed Means Routing Source
+
+Status: active
+Date: 2026-07-11
+Scope: AI Assistant routing metadata
+
+Decision:
+
+`auto_routed` means whether AI routing selected the assistant mode automatically (`true`) or whether an explicit manual override selected the mode (`false`). It must not be derived from whether the resolved mode differs from the default mode; automatic General routing is still `auto_routed = true`. User and assistant messages for the same request should carry the same routing-source metadata.
+
+Reason:
+
+This matches product/debug semantics and lets admin QA distinguish AI-selected routing from manual override behavior without mislabeling automatic General prompts as manual.
+
 ## Decision: Routing Metadata Hidden by Default, Admin Debug Only
 
 Status: active
