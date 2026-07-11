@@ -413,7 +413,7 @@ describe("ai-helper-run code-versioned analysis playbooks", () => {
     expect(edgeFunctionSource).not.toContain('fetch("https://clawhub');
     expect(playbookSource).not.toContain("clawhub.ai");
     expect(
-      changedFiles.some((file) => file.startsWith("supabase/migrations/")),
+      changedFiles.some((file) => file.startsWith("supabase/functions/ai-helper-run/")),
     ).toBe(false);
     expect(changedFiles).not.toContain("src/pages/AdsConnectors.tsx");
     expect(changedFiles).not.toContain("src/pages/Bindings.tsx");

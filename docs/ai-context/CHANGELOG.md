@@ -1,3 +1,34 @@
+## 2026-07-11 — Data Bindings Onboarding UUID Return-Type Compatibility
+
+### Fixed
+
+- Changed the corrected onboarding upsert RPC migration bodies to preserve live `uuid` return types for `upsert_client`, `upsert_project`, and `upsert_funnel`.
+- The functions still write canonical names and required hierarchy fields, but now return `v_client.id`, `v_project.id`, and `v_funnel.id` instead of JSON payloads.
+
+## 2026-07-11 — Data Bindings RPC Live-Schema Compatibility Fix
+
+### Fixed
+
+- Removed the invalid `workspaces.status` dependency from the Data Bindings RPC hardening migration.
+- Replaced short RPC overload hardening with exact live signatures for binding archive, mapping review status, and onboarding upsert RPCs.
+- Corrected `mapping_review_actions` audit inserts to use `action_type`, previous/new mapping status, actor user/email/role, notes, and metadata.
+- Preserved canonical onboarding fields (`client_name`, `project_name`, `funnel_name`) and required funnel `client_id`.
+- Changed `manage_ad_account_binding` primary semantics so omitted `p_is_primary` preserves an existing primary binding on idempotent duplicate calls.
+
+## 2026-07-11 — Data Bindings RPC Production Hardening
+
+### Changed
+
+- Added a Supabase migration to revoke PUBLIC/anon execution from sensitive binding and onboarding mutation RPCs while preserving service-role access.
+- Added in-function admin/superadmin authorization for binding archive, mapping status review, source binding, ad-account binding management, and onboarding upsert RPCs through `can_manage_sources`.
+- Added `manage_ad_account_binding` as the safe authenticated ad-account binding RPC: it loads account identity from `ad_accounts`, validates active hierarchy ownership, idempotently upserts the exact active scope, and transactionally archives only a selected replacement binding.
+- Kept binding archive behavior soft-only and preserved mapping review action logging.
+
+### Notes
+
+- Migration: `supabase/migrations/20260711_harden_data_binding_mutation_rpcs.sql`.
+- No production data backfill, destructive delete, frontend Binding UI, Ads connector OAuth/API, sync orchestration, raw data, dashboard calculation, routes/sidebar, AI Assistant, or `ai-helper-run` changes.
+
 ## 2026-07-11 — AI Assistant Routing Source, Client-only Copy, and Compact Debug Popover
 
 ### Fixed

@@ -1,3 +1,7 @@
+## 2026-07-11 — Data Bindings mutation RPC authorization model
+
+Decision: operational source and binding mutations are admin/superadmin-only through `can_manage_sources`; members remain read-only/proposal-only until a separate proposal workflow is explicitly designed. Binding replacement must be archive-first, soft-only, and transactional: when an operator supplies a replacement binding id, only that selected active binding is archived and the new exact-scope binding is created/upserted in the same transaction. Multiple active ad-account bindings may exist when scopes differ; setting a binding primary unsets other active primary bindings for the same ad account in the same transaction, but no new global one-binding-per-account constraint is added. Frontend callers must not supply platform/external account identifiers or actor identity for the new ad-account binding contract; those values are derived from database rows and the authenticated session.
+
 ## Decision: auto_routed Means Routing Source
 
 Status: active
