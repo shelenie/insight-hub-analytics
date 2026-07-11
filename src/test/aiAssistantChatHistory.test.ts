@@ -7,6 +7,7 @@ import { OPTIONS } from "@/lib/assistantRouting";
 const assistantSource = readFileSync("src/pages/Assistant.tsx", "utf8");
 const sheetSource = readFileSync("src/components/ui/sheet.tsx", "utf8");
 const migrationSource = readFileSync("supabase/migrations/20260710_ai_assistant_chat_history.sql", "utf8");
+const persistenceFixMigrationSource = readFileSync("supabase/migrations/20260711_fix_ai_assistant_chat_history_persistence.sql", "utf8");
 
 describe("AI Assistant persistent chat history", () => {
   it("adds Supabase chat history tables, indexes, RLS, and soft archive metadata", () => {
@@ -20,6 +21,19 @@ describe("AI Assistant persistent chat history", () => {
     expect(migrationSource).toContain("user_id = auth.uid()");
     expect(migrationSource).toContain("public.workspace_role_rank(public.get_workspace_role(workspace_id, auth.uid())) >= 1");
     expect(migrationSource).not.toMatch(/service_role|drop table|delete from public\.ai_chat/i);
+  });
+
+  it("fixes live PostgREST grants while preserving user-owned workspace RLS", () => {
+    expect(persistenceFixMigrationSource).toContain("grant select, insert, update on table public.ai_chat_sessions to authenticated");
+    expect(persistenceFixMigrationSource).toContain("grant select, insert on table public.ai_chat_messages to authenticated");
+    expect(persistenceFixMigrationSource).toContain("alter table public.ai_chat_sessions enable row level security");
+    expect(persistenceFixMigrationSource).toContain("alter table public.ai_chat_messages enable row level security");
+    expect(persistenceFixMigrationSource).toContain("ai_chat_sessions.user_id = auth.uid()");
+    expect(persistenceFixMigrationSource).toContain("public.get_workspace_role(ai_chat_sessions.workspace_id, auth.uid())");
+    expect(persistenceFixMigrationSource).toContain("ai_chat_messages.user_id = auth.uid()");
+    expect(persistenceFixMigrationSource).toContain("s.id = ai_chat_messages.session_id");
+    expect(persistenceFixMigrationSource).toContain("s.workspace_id = ai_chat_messages.workspace_id");
+    expect(persistenceFixMigrationSource).not.toMatch(/service_role|to anon|for delete|drop table|delete from public\.ai_chat/i);
   });
 
   it("creates deterministic titles/previews and recent 14-day cutoff", () => {
@@ -53,21 +67,41 @@ describe("AI Assistant persistent chat history", () => {
     expect(sheetSource).toContain("overlayClassName?: string");
     expect(sheetSource).toContain("<SheetOverlay className={overlayClassName} />");
     expect(sheetSource).toContain("fixed inset-0 z-50 bg-black/80");
-    expect(assistantSource).toContain('overlayClassName="bg-slate-950/35 backdrop-blur-[1px]"');
+    expect(assistantSource).toContain('overlayClassName="bg-slate-950/45 backdrop-blur-[1px]"');
   });
 
   it("persists first user message and assistant response into the same session and updates metadata", () => {
     expect(assistantSource).toContain('from("ai_chat_sessions")');
     expect(assistantSource).toContain("createSessionTitle(submittedPrompt)");
-    expect(assistantSource).toContain("saveChatMessage(sessionId, userMessage)");
-    expect(assistantSource).toContain("saveChatMessage(sessionId ?? pendingSessionId.current, assistantMessage)");
-    expect(assistantSource).toContain("updateSessionMetadata(sessionId ?? pendingSessionId.current, assistantMessage)");
+    expect(assistantSource).toContain("const sessionId = await ensureSession(submittedPrompt)");
+    expect(assistantSource).toContain("setCurrentSessionId(sessionId)");
+    expect(assistantSource).toContain("pendingSessionId.current = sessionId");
+    expect(assistantSource).toContain("await saveChatMessage(sessionId, userMessage, \"user_message_save\")");
+    expect(assistantSource).toContain("await saveChatMessage(persistedSessionId, assistantMessage, \"assistant_message_save\")");
+    expect(assistantSource).toContain("await updateSessionMetadata(persistedSessionId, assistantMessage)");
     expect(assistantSource).toContain("last_message_preview: createMessagePreview(message.text)");
     expect(assistantSource).toContain("last_request_type: message.option.requestType");
     expect(assistantSource).toContain("last_context_scope: message.option.contextScope");
     expect(assistantSource).toContain("isSubmittingRef.current");
     expect(assistantSource).toContain("sessionCreationPromiseRef.current");
     expect(assistantSource).toContain("if (sessionCreationPromiseRef.current) return sessionCreationPromiseRef.current");
+    expect(assistantSource).toContain("createOptimisticSession(newSessionId, session.user.id, submittedPrompt)");
+    expect(assistantSource).toContain("void loadSessions()");
+  });
+
+  it("records non-blocking persistence diagnostics without blocking AI answers", () => {
+    expect(assistantSource).toContain("type HistoryOperation");
+    expect(assistantSource).toContain("sanitizeHistoryError");
+    expect(assistantSource).toContain("HistoryPersistenceStatus");
+    expect(assistantSource).toContain("assistantHistorySaveWarning");
+    expect(assistantSource).toContain("session_create");
+    expect(assistantSource).toContain("user_message_save");
+    expect(assistantSource).toContain("assistant_message_save");
+    expect(assistantSource).toContain("session_metadata_update");
+    expect(assistantSource).toContain("drawer_load");
+    expect(assistantSource).toContain("No chat session id available");
+    expect(assistantSource).toContain("run.mutate({ submittedPrompt, option: resolvedOption, runId, conversationHistory, threadMetadata, sessionId })");
+    expect(assistantSource).not.toContain("service_role");
   });
 
   it("supports safe manual rename without changing archive behavior", () => {
