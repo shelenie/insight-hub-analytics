@@ -301,6 +301,28 @@ describe("AI Assistant smart routing and answer UX", () => {
     expect(routingSource).toContain("signals.timeWindowSignal ||");
   });
 
+
+  it("treats automatic routing as routing source rather than difference from default", async () => {
+    const { OPTIONS, resolveAssistantContext } =
+      await import("@/lib/assistantRouting");
+    const defaultOption =
+      OPTIONS.find((option) => option.labelKey === "assistantContextGeneral") ??
+      OPTIONS[0];
+
+    expect(resolveAssistantContext("Що таке CPL?", defaultOption, false)).toMatchObject({
+      requestType: "general_assistant",
+      contextScope: "general",
+    });
+    expect(resolveAssistantContext("Чому немає свіжих рекламних даних?", defaultOption, false)).toMatchObject({
+      requestType: "ads_health_summary",
+      contextScope: "ads_health",
+    });
+    expect(resolveAssistantContext("Чому немає свіжих рекламних даних?", defaultOption, true)).toBe(defaultOption);
+
+    expect(source).toContain("const autoRouted = !manualOverrideEnabled");
+    expect(source).not.toContain("resolvedOption.labelKey !== selectedOption.labelKey");
+  });
+
   it("routes live-tested Ukrainian prompts to the intended assistant contexts", async () => {
     const { OPTIONS, resolveAssistantContext } =
       await import("@/lib/assistantRouting");

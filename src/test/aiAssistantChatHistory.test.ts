@@ -420,13 +420,49 @@ it("keeps routing metadata hidden by default but available as admin-only collaps
   expect(assistantSource).toContain("canShowAssistantRoutingDebug");
   expect(assistantSource).toContain("function AssistantRoutingDebug");
   expect(assistantSource).toContain('t("assistantTechnicalDetails")');
-  expect(assistantSource).toContain("<details");
+  expect(assistantSource).toContain("PopoverTrigger");
+  expect(assistantSource).toContain("PopoverContent");
+  expect(assistantSource).toContain('data-testid="assistant-message-action-row"');
+  expect(assistantSource).toContain("ml-auto h-8");
   expect(assistantSource).not.toContain("<details open");
-  expect(assistantSource).toContain("request_type");
-  expect(assistantSource).toContain("context_scope");
-  expect(assistantSource).toContain("auto_routed");
-  expect(assistantSource).toContain("mode_label");
+  expect(assistantSource).toContain('t("assistantTechnicalMode")');
+  expect(assistantSource).toContain('t("assistantTechnicalRouting")');
+  expect(assistantSource).toContain('t("assistantTechnicalAutomatic")');
+  expect(assistantSource).toContain('t("assistantTechnicalManual")');
+  expect(assistantSource).toContain("message.option.requestType");
+  expect(assistantSource).toContain("message.option.contextScope");
+  expect(assistantSource).not.toContain("auto_routed</dt>");
+  expect(assistantSource).not.toContain("mode_label");
   expect(assistantSource).not.toContain("JSON.stringify(message");
   expect(assistantSource).not.toContain("raw_context");
   expect(assistantSource).not.toContain("backend_payload");
+});
+
+
+it("propagates autoRouted metadata to assistant messages and persistence", () => {
+  expect(assistantSource).toContain("autoRouted: boolean;");
+  expect(assistantSource).toContain("auto_routed: message.autoRouted ?? false");
+  expect(assistantSource).toContain("onSuccess: async ({ payload, option, autoRouted, runId, sessionId })");
+  expect(assistantSource).toContain("autoRouted,\n      };");
+  expect(assistantSource).toContain("autoRouted,\n        runId");
+
+  const option = OPTIONS.find((item) => item.labelKey === "assistantContextAdsHealth") ?? OPTIONS[0];
+  const message = messageFromRow(
+    {
+      id: "m-auto",
+      session_id: "s1",
+      workspace_id: "w1",
+      user_id: "u1",
+      role: "assistant",
+      text: "Answer",
+      context_label: null,
+      request_type: option.requestType,
+      context_scope: option.contextScope,
+      auto_routed: true,
+      created_at: "2026-07-11T00:00:00Z",
+    },
+    ((key: string) => key) as never,
+  );
+  expect(message.autoRouted).toBe(true);
+  expect(message.option).toBe(option);
 });

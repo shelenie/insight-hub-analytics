@@ -119,9 +119,11 @@ describe("ai-helper-run code-versioned analysis playbooks", () => {
     expect(edgeFunctionSource).toContain(
       "internal notes after [CLIENT_COPY_END]",
     );
-    expect(edgeFunctionSource).toContain(
-      "Client communication triggers: що сказати клієнту, поясни клієнту, для клієнта, як сформулювати, client update, client-ready, send to client, message to client",
-    );
+    expect(edgeFunctionSource).toContain("сформулюй клієнту");
+    expect(edgeFunctionSource).toContain("дай текст клієнту");
+    expect(edgeFunctionSource).toContain("message for the client");
+    expect(edgeFunctionSource).toContain("client-ready text");
+    expect(edgeFunctionSource).toContain("For client-wording-only prompts, return only the marker block");
     expect(edgeFunctionSource).toContain("Keep answer structure adaptive");
     expect(edgeFunctionSource).toContain(
       "Use section headings only when they improve clarity",
@@ -136,7 +138,10 @@ describe("ai-helper-run code-versioned analysis playbooks", () => {
       "Inside the markers, include only concise, non-technical, client-safe wording",
     );
     expect(playbookSource).toContain(
-      "If internal notes/checklist are useful, put them after [CLIENT_COPY_END]",
+      "If the user asks only for client wording/copy, return only [CLIENT_COPY_START]... [CLIENT_COPY_END]",
+    );
+    expect(playbookSource).toContain(
+      "Add internal notes after [CLIENT_COPY_END] only when the user explicitly also asks",
     );
     expect(playbookSource).toContain(
       "concise, non-technical, client-safe wording",

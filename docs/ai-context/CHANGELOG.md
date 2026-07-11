@@ -1,3 +1,17 @@
+## 2026-07-11 — AI Assistant Routing Source, Client-only Copy, and Compact Debug Popover
+
+### Fixed
+
+- Changed `auto_routed` semantics to mean automatic-vs-manual routing source instead of “resolved mode differs from default,” so automatic General and automatic Ads Health both persist `true`.
+- Propagated the same `autoRouted` value from the user chat message through the AI run result into the assistant message and persisted chat history rows.
+- Replaced the admin-only expanded Technical details block with a compact Popover in the same action row as Copy, with user-facing Automatic/Manual routing labels.
+- Tightened client communication guidance so client-only wording prompts return only the client-copy marker block, while internal notes/checklists are allowed only when explicitly requested.
+
+### Notes
+
+- `ai-helper-run` prompt/playbook guidance changed and requires Edge Function redeploy after merge.
+- No Supabase schema, RLS, migrations, chat table definitions, connector, binding, sync, route/sidebar, or Edge Function auth/JWT/DB access changes.
+
 ## 2026-07-11 — AI Assistant History Default, Admin Routing Debug, and Client Copy Polish
 
 ### Changed
