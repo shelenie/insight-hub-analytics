@@ -1,4 +1,5 @@
 export type AssistantContextLabelKey =
+  | "assistantContextGeneral"
   | "assistantContextFullOverview"
   | "assistantContextAdsPerformance"
   | "assistantContextAdsAnomalies"
@@ -17,6 +18,11 @@ export type ContextOption = {
 };
 
 export const OPTIONS = [
+  {
+    labelKey: "assistantContextGeneral",
+    requestType: "general_assistant",
+    contextScope: "general",
+  },
   {
     labelKey: "assistantContextAdsHealth",
     requestType: "ads_health_summary",
@@ -133,7 +139,11 @@ export function resolveAssistantContextWithHistory(
 ): ContextOption {
   if (manualOverrideEnabled) return selectedOption;
 
-  if (previousAssistantOption && (isContinuationPrompt(prompt) || isThreadFollowUpPrompt(prompt)) && !hasStrongNewIntent(prompt)) {
+  if (
+    previousAssistantOption &&
+    (isContinuationPrompt(prompt) || isThreadFollowUpPrompt(prompt)) &&
+    !hasStrongNewIntent(prompt)
+  ) {
     return previousAssistantOption;
   }
 
@@ -176,10 +186,11 @@ export function detectAssistantRoutingSignals(prompt: string): SignalMap {
   ]);
 
   const adsHealthSignal = matches(text, [
-    /свіж[іи]? рекламн[іи]? дан[іих]/,
-    /немає даних по реклам/,
-    /не синхронізуються рекламн[іи]? дан[іих]/,
+    /свіж\S* рекламн\S* дан\S*/,
+    /немає дан\S* по реклам/,
+    /не синхронізуються рекламн\S* дан\S*/,
     /рекламн[іи]? підключенн/,
+    /стан(ом)? рекламн[иі]х підключень/,
     /рекламн[іи]? акаунт/,
     /акаунт(и)? треба привʼязати/,
     /привʼязк[аи] акаунт/,
@@ -188,7 +199,7 @@ export function detectAssistantRoutingSignals(prompt: string): SignalMap {
     /відмов[аі] в доступі/,
     /live api/,
     /sync|синхрон/,
-    /access|permission/,
+    /access|permission|доступ/,
     /binding(s)?\b|привʼяз/,
     /readiness|source readiness|готовн/,
   ]);
@@ -270,18 +281,18 @@ function hasStrongNewIntent(prompt: string) {
 
   return Boolean(
     signals.dataQualitySignal ||
-      signals.importSignal ||
-      signals.adsHealthSignal ||
-      (signals.anomalySignal &&
-        (signals.adsSignal ||
-          signals.metricSignal ||
-          signals.timeWindowSignal ||
-          knownAssistantPromptSignal)) ||
-      ((signals.adsSignal &&
-        (signals.performanceSignal || signals.metricSignal)) ||
-        (signals.performanceSignal && signals.metricSignal)) ||
-      signals.mappingSignal ||
-      signals.systemReadinessSignal,
+    signals.importSignal ||
+    signals.adsHealthSignal ||
+    (signals.anomalySignal &&
+      (signals.adsSignal ||
+        signals.metricSignal ||
+        signals.timeWindowSignal ||
+        knownAssistantPromptSignal)) ||
+    (signals.adsSignal &&
+      (signals.performanceSignal || signals.metricSignal)) ||
+    (signals.performanceSignal && signals.metricSignal) ||
+    signals.mappingSignal ||
+    signals.systemReadinessSignal,
   );
 }
 
@@ -319,5 +330,5 @@ export function resolveAssistantContext(
   if (signals.mappingSignal) return option("assistantContextMappingReview");
   if (signals.systemReadinessSignal)
     return option("assistantContextSystemReadiness");
-  return selectedOption;
+  return option("assistantContextGeneral");
 }

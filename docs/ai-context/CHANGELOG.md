@@ -1,3 +1,19 @@
+## 2026-07-11 — AI Assistant General Context Routing and History Archive UX
+
+### Changed
+
+- Added a General Assistant mode and made it the default frontend selected context.
+- Updated deterministic routing so weak/no-signal general prompts resolve to General while strong analytics prompts still resolve to Ads Health, Data Quality, Ads Anomalies, or Ads Performance.
+- Added safe backend General context handling that does not call ads or production context builders.
+- Softened prompt requirements so workspace factual claims must use provided JSON context, while general explanatory/conversational questions can be answered from the prompt and chat history without invented workspace facts.
+- Added a General Assistant playbook and scoped playbook selection so General mode avoids Ads Health, Data Readiness, CMO, and CFO lenses unless a real matching intent is routed.
+- Hid context chips from normal user bubbles, assistant answer cards, and history rows while preserving persisted routing metadata.
+- Made history drawer rows more compact and added Recent / Archive views with Restore for archived chats; no hard delete was added.
+
+### Notes
+
+- No Supabase RLS/schema, access-check, connector, sync, route/sidebar, or secrets handling changes.
+
 ## 2026-07-11 — AI Assistant Live Chat History Persistence Fix
 
 ### Changed

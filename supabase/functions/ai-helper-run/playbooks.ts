@@ -128,6 +128,17 @@ export const PLAYBOOK_DATA_QUALITY_IMPORT_REVIEW: AnalysisPlaybook = {
   ],
 };
 
+export const PLAYBOOK_GENERAL_ASSISTANT: AnalysisPlaybook = {
+  id: "PLAYBOOK_GENERAL_ASSISTANT",
+  version: "2026-07-11.1",
+  applies_to: ["general_assistant", "general"],
+  instructions: [
+    "For general explanatory, conversational, product, process, or test-like prompts, answer directly from the user prompt and conversation history without forcing an analytics report.",
+    "Do not invent workspace-specific metrics, platform status, clients, campaigns, imports, operational actions, or data changes when no scoped workspace context is provided.",
+    "If the user asks for a workspace-specific fact while in general mode, explain that scoped context/data is needed and ask for the relevant analytics context only if necessary.",
+  ],
+};
+
 export const PLAYBOOK_CLIENT_COMMUNICATION: AnalysisPlaybook = {
   id: "PLAYBOOK_CLIENT_COMMUNICATION",
   version: "2026-07-09.2",
@@ -173,6 +184,7 @@ const ALL_PLAYBOOKS = [
   PLAYBOOK_CFO_BUDGET_EFFICIENCY,
   PLAYBOOK_ADS_ANOMALY_REVIEW,
   PLAYBOOK_DATA_QUALITY_IMPORT_REVIEW,
+  PLAYBOOK_GENERAL_ASSISTANT,
   PLAYBOOK_CLIENT_COMMUNICATION,
   PLAYBOOK_OPERATIONS_READINESS,
 ] as const;
@@ -208,7 +220,9 @@ export function getPlaybooksForRequest(params: {
     /fresh|свіж|поточн|source|джерел|sync|синхрон|readiness|готовн|access|доступ/,
   ]);
 
-  if (request.includes("ads_health") || scope.includes("ads_health"))
+  if (request.includes("general_assistant") || scope === "general") {
+    add(PLAYBOOK_GENERAL_ASSISTANT);
+  } else if (request.includes("ads_health") || scope.includes("ads_health"))
     add(PLAYBOOK_DATA_READINESS);
   else if (
     request.includes("ads_performance") ||
