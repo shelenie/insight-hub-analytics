@@ -67,7 +67,7 @@ describe("AI Assistant persistent chat history", () => {
     expect(sheetSource).toContain("overlayClassName?: string");
     expect(sheetSource).toContain("<SheetOverlay className={overlayClassName} />");
     expect(sheetSource).toContain("fixed inset-0 z-50 bg-black/80");
-    expect(assistantSource).toContain('overlayClassName="bg-slate-950/35 backdrop-blur-[1px]"');
+    expect(assistantSource).toContain('overlayClassName="bg-slate-950/45 backdrop-blur-[1px]"');
   });
 
   it("persists first user message and assistant response into the same session and updates metadata", () => {
