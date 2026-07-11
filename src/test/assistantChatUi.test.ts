@@ -70,6 +70,12 @@ describe("AI Assistant chat UI", () => {
     expect(translations.assistantWelcomeTitle.en).toBe(
       "What would you like to analyze?",
     );
+    expect(translations.assistantSubtitle.uk).toBe(
+      "AI-асистент для аналітики, реклами, імпортів, якості даних, робочих процесів і загальних питань по системі.",
+    );
+    expect(translations.assistantSubtitle.en).toBe(
+      "AI assistant for analytics, ads, imports, data quality, workflows, and general system questions.",
+    );
     expect(translations.assistantWelcome.uk).toBe(
       "Я допоможу з аналітикою, рекламою, імпортами, якістю даних, робочими процесами та загальними питаннями по системі.",
     );
@@ -231,6 +237,8 @@ describe("AI Assistant chat UI", () => {
     expect(translations.assistantHistoryRenamePlaceholder.en).toBe(
       "Enter chat title",
     );
+    expect(translations.assistantHistoryNoAiAnswer.uk).toBe("Без відповіді AI");
+    expect(translations.assistantHistoryNoAiAnswer.en).toBe("No AI answer");
   });
 
   it("keeps starter prompts below the composer and hides them after interaction", () => {

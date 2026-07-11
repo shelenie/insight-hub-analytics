@@ -1,11 +1,17 @@
-export type ClientCopySegment = { type: "answer" | "client-copy"; text: string };
+export type ClientCopySegment = {
+  type: "answer" | "client-copy";
+  text: string;
+};
 
 export function stripLeadingContextLabel(answer: string): string {
   let sanitized = answer;
-  const leadingContextPattern = /^\s*(?:Контекст|Context)\s*:\s*[^\r\n]*(?:\r?\n|$)/i;
+  const leadingContextPattern =
+    /^\s*(?:Контекст|Context)\s*:\s*[^\r\n]*(?:\r?\n|$)/i;
 
   while (leadingContextPattern.test(sanitized)) {
-    sanitized = sanitized.replace(leadingContextPattern, "").replace(/^\s+/, "");
+    sanitized = sanitized
+      .replace(leadingContextPattern, "")
+      .replace(/^\s+/, "");
   }
 
   return sanitized;
@@ -34,7 +40,6 @@ export function serializeAnswerForWholeCopy(text: string): string {
   return removeClientCopyMarkerLines(text).trim();
 }
 
-
 export function removeClientCopyMarkerLines(text: string): string {
   return text
     .split(/\r?\n/)
@@ -46,6 +51,19 @@ export function cleanAssistantTextForModelContext(text: string): string {
   return stripLeadingContextLabel(removeClientCopyMarkerLines(text)).trim();
 }
 
+export function stripMarkdownForPreview(text: string): string {
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.replace(/^\s{0,3}#{1,6}\s+/, ""))
+    .join("\n")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/__([^_]+)__/g, "$1")
+    .replace(/(^|[^*])\*([^*\n]+)\*(?=[^*]|$)/g, "$1$2")
+    .replace(/(^|[^_])_([^_\n]+)_(?=[^_]|$)/g, "$1$2");
+}
+
 export function cleanAssistantTextForPreview(text: string): string {
-  return cleanAssistantTextForModelContext(text).replace(/\s+/g, " ").trim();
+  return stripMarkdownForPreview(cleanAssistantTextForModelContext(text))
+    .replace(/\s+/g, " ")
+    .trim();
 }

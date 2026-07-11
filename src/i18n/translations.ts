@@ -448,8 +448,8 @@ export const translations = {
   // AI Assistant
   assistantTitle: { uk: "AI-асистент", en: "AI Assistant" },
   assistantSubtitle: {
-    uk: "AI-асистент для performance marketing: аналізує рекламу, CPL, кампанії, ліди, якість даних і готує висновки для команди та клієнтів.",
-    en: "AI assistant for performance marketing: analyzes ads, CPL, campaigns, leads, data quality, and prepares insights for teams and clients.",
+    uk: "AI-асистент для аналітики, реклами, імпортів, якості даних, робочих процесів і загальних питань по системі.",
+    en: "AI assistant for analytics, ads, imports, data quality, workflows, and general system questions.",
   },
   assistantSafetyNote: {
     uk: "AI дає пояснення й рекомендації, але не змінює дані без підтвердження.",
@@ -480,6 +480,7 @@ export const translations = {
   assistantHistoryArchive: { uk: "Архівувати", en: "Archive" },
   assistantHistoryRestore: { uk: "Повернути", en: "Restore" },
   assistantHistoryArchivedEmpty: { uk: "Архівованих чатів поки немає.", en: "No archived chats yet." },
+  assistantHistoryNoAiAnswer: { uk: "Без відповіді AI", en: "No AI answer" },
   assistantHistoryRename: { uk: "Перейменувати", en: "Rename" },
   assistantHistoryRenameTitle: { uk: "Назва чату", en: "Chat title" },
   assistantHistoryRenameSave: { uk: "Зберегти", en: "Save" },
