@@ -1,3 +1,16 @@
+## 2026-07-11 — AI Assistant General Mode Prompt Polish
+
+### Changed
+
+- Reworded `ai-helper-run` system identity from marketing-only analyst to the broader Analytics Hub AI Assistant with specialist playbooks applied only when relevant.
+- Made response role adaptive so General mode uses `analytics_hub_ai_assistant` and scoped analytical contexts retain `senior_performance_marketing_analyst`.
+- Replaced broad Safety/Evidence JSON-only wording with workspace-claim-specific evidence wording while preserving no-secret, no-mutation, no-fake-action, and no-invented-workspace-facts rules.
+- Updated Assistant welcome, composer placeholder, and thinking copy to include workflows and general system explanations.
+
+### Notes
+
+- No Supabase schema/RLS, migrations, connectors, sync, routes/sidebar, permissions, or chat history persistence changes.
+
 ## 2026-07-11 — AI Assistant General Context Routing and History Archive UX
 
 ### Changed

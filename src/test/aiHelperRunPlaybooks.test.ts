@@ -69,6 +69,43 @@ describe("ai-helper-run code-versioned analysis playbooks", () => {
       'request.includes("general_assistant") || scope === "general"',
     );
   });
+  it("scopes safety evidence wording and general playbooks without old broad JSON-only rule", () => {
+    expect(playbookSource).not.toContain(
+      "Use only provided JSON context; never invent metrics",
+    );
+    expect(playbookSource).toContain(
+      "For workspace-specific claims — metrics, periods, campaign names, client names, revenue, ROAS, causes, attribution, platform status, imports, permissions, or operational actions — use only provided JSON context",
+    );
+    expect(playbookSource).toContain(
+      "For general explanatory or conversational questions, answer from general knowledge and conversation history",
+    );
+    const generalBranch =
+      playbookSource.match(
+        /if \(request\.includes\("general_assistant"\)[\s\S]*?else if/,
+      )?.[0] ?? "";
+    expect(generalBranch).toContain("PLAYBOOK_GENERAL_ASSISTANT");
+    expect(generalBranch).not.toContain("PLAYBOOK_DATA_READINESS");
+    expect(generalBranch).not.toContain("PLAYBOOK_CMO_CAMPAIGN_DIAGNOSIS");
+    expect(generalBranch).not.toContain("PLAYBOOK_CFO_BUDGET_EFFICIENCY");
+    expect(generalBranch).not.toContain("PLAYBOOK_ADS_ANOMALY_REVIEW");
+  });
+
+  it("uses adaptive assistant identity and response role", () => {
+    expect(edgeFunctionSource).toContain(
+      "You are the AI Assistant for Analytics Hub / Internal Analytics Workspace",
+    );
+    expect(edgeFunctionSource).toContain(
+      "For general explanatory or conversational questions, answer directly and do not force a marketing report",
+    );
+    expect(edgeFunctionSource).toContain("function responseRoleForRequest");
+    expect(edgeFunctionSource).toContain('"analytics_hub_ai_assistant"');
+    expect(edgeFunctionSource).toContain(
+      '"senior_performance_marketing_analyst"',
+    );
+    expect(edgeFunctionSource).toContain(
+      "role: responseRoleForRequest(params.requestType, params.contextScope)",
+    );
+  });
 
   it("makes client communication conditional and keeps answer structure adaptive", () => {
     expect(edgeFunctionSource).toContain(

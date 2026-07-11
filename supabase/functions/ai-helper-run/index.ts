@@ -606,7 +606,7 @@ function buildSystemPrompt(params: {
   const selectedPlaybooks = getPlaybooksForRequest(params);
 
   return [
-    "You are a senior performance marketing analyst for an agency working in Analytics Hub / Internal Analytics Workspace.",
+    "You are the AI Assistant for Analytics Hub / Internal Analytics Workspace. For marketing, ads, data-quality, import, and operations questions, use the relevant specialist playbooks. For general explanatory or conversational questions, answer directly and do not force a marketing report.",
     "Answer in Ukrainian unless the user asks otherwise.",
     "Use the code-versioned playbooks below as the governing analysis policy. Include only relevant lenses; do not force CMO/CFO sections into ads-health or non-ads answers.",
     "Keep answer structure adaptive: prefer concise structure, usually 3-5 sections for larger analytical answers, but include additional sections when needed to answer the user completely; for small follow-ups, answer directly instead of restarting a full report.",
@@ -689,6 +689,12 @@ function sanitizeConversationThread(
   };
 }
 
+function responseRoleForRequest(requestType: string, contextScope: string) {
+  return isGeneralContext(requestType, contextScope)
+    ? "analytics_hub_ai_assistant"
+    : "senior_performance_marketing_analyst";
+}
+
 function buildUserPrompt(params: {
   requestType: string;
   contextScope: string;
@@ -724,7 +730,7 @@ function buildUserPrompt(params: {
         language: "uk",
         format: "clear_markdown",
         concise: true,
-        role: "senior_performance_marketing_analyst",
+        role: responseRoleForRequest(params.requestType, params.contextScope),
         constraints: [
           "follow selected_playbooks in the system prompt",
           "For workspace metrics, platform status, imports, campaigns, clients, financial values, and operational state, use only provided JSON context",

@@ -71,10 +71,20 @@ describe("AI Assistant chat UI", () => {
       "What would you like to analyze?",
     );
     expect(translations.assistantWelcome.uk).toBe(
-      "Я допоможу знайти просідання, проблеми з рекламою, якістю даних і підготувати висновки для команди або клієнта.",
+      "Я допоможу з аналітикою, рекламою, імпортами, якістю даних, робочими процесами та загальними питаннями по системі.",
     );
     expect(translations.assistantWelcome.en).toBe(
-      "I can help find performance drops, ad issues, data quality problems, and prepare insights for the team or client.",
+      "I can help with analytics, ads, imports, data quality, workflows, and general questions about the system.",
+    );
+    expect(translations.assistantComposerPlaceholder.uk).toBe(
+      "Напишіть питання про аналітику, рекламу, імпорти, якість даних, процеси або загальне пояснення…",
+    );
+    expect(translations.assistantComposerPlaceholder.en).toBe(
+      "Ask about analytics, ads, imports, data quality, workflows, or a general explanation…",
+    );
+    expect(translations.assistantThinking.uk).toBe("AI готує відповідь…");
+    expect(translations.assistantThinking.en).toBe(
+      "AI is preparing an answer…",
     );
   });
 
@@ -274,6 +284,10 @@ describe("AI Assistant smart routing and answer UX", () => {
     expect(route("Тест історії чату")).toBe("assistantContextGeneral");
     expect(route("Просто тест")).toBe("assistantContextGeneral");
     expect(route("Що таке CPL?")).toBe("assistantContextGeneral");
+    expect(route("Поясни простими словами, що таке RLS")).toBe(
+      "assistantContextGeneral",
+    );
+    expect(route("Як краще назвати цей чат?")).toBe("assistantContextGeneral");
 
     expect(route("Чому немає свіжих рекламних даних?")).toBe(
       "assistantContextAdsHealth",
@@ -481,6 +495,7 @@ describe("AI Assistant smart routing and answer UX", () => {
     expect(route("Чому немає свіжих рекламних даних?")).toBe(
       "assistantContextAdsHealth",
     );
+    expect(route("Тест історії чату")).toBe("assistantContextGeneral");
   });
 
   it("shows resolved context badges and copy actions for assistant answers", () => {
