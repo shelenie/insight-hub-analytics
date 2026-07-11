@@ -169,8 +169,11 @@ const assistantHistoryClient = supabase as unknown as AssistantHistoryClient;
 
 export default function Assistant() {
   const { session } = useAuth();
-  const { capabilities, isLoading: roleLoading } =
-    useWorkspaceRole(WORKSPACE_ID);
+  const {
+    role,
+    capabilities,
+    isLoading: roleLoading,
+  } = useWorkspaceRole(WORKSPACE_ID);
   const { t, lang } = useI18n();
   const [selected] = useState<(typeof OPTIONS)[number]["labelKey"]>(
     "assistantContextGeneral",
@@ -215,34 +218,37 @@ export default function Assistant() {
     },
     [],
   );
-  const loadSessions = useCallback(async () => {
-    if (!session?.user?.id) return;
-    setLoadingSessions(true);
-    const baseQuery = assistantHistoryClient
-      .from("ai_chat_sessions")
-      .select(
-        "id, workspace_id, user_id, title, last_message_preview, last_context_label, last_request_type, last_context_scope, created_at, updated_at, archived_at",
-      )
-      .eq("workspace_id", WORKSPACE_ID)
-      .eq("user_id", session.user.id);
-    const filteredQuery =
-      historyView === "recent"
-        ? baseQuery
-            .is("archived_at", null)
-            .gte("updated_at", getRecentHistoryCutoff())
-        : baseQuery.not("archived_at", "is", null);
-    const { data, error } = await filteredQuery
-      .order("updated_at", { ascending: false })
-      .limit(historyView === "recent" ? 30 : 100);
-    if (error) {
-      console.warn("AI chat history load failed", error);
-      recordHistoryStatus("drawer_load", "fail", error);
-    } else {
-      setSessions((data ?? []) as AiChatSession[]);
-      recordHistoryStatus("drawer_load", "success");
-    }
-    setLoadingSessions(false);
-  }, [historyView, recordHistoryStatus, session?.user?.id]);
+  const loadSessions = useCallback(
+    async (targetView = historyView) => {
+      if (!session?.user?.id) return;
+      setLoadingSessions(true);
+      const baseQuery = assistantHistoryClient
+        .from("ai_chat_sessions")
+        .select(
+          "id, workspace_id, user_id, title, last_message_preview, last_context_label, last_request_type, last_context_scope, created_at, updated_at, archived_at",
+        )
+        .eq("workspace_id", WORKSPACE_ID)
+        .eq("user_id", session.user.id);
+      const filteredQuery =
+        targetView === "recent"
+          ? baseQuery
+              .is("archived_at", null)
+              .gte("updated_at", getRecentHistoryCutoff())
+          : baseQuery.not("archived_at", "is", null);
+      const { data, error } = await filteredQuery
+        .order("updated_at", { ascending: false })
+        .limit(targetView === "recent" ? 30 : 100);
+      if (error) {
+        console.warn("AI chat history load failed", error);
+        recordHistoryStatus("drawer_load", "fail", error);
+      } else {
+        setSessions((data ?? []) as AiChatSession[]);
+        recordHistoryStatus("drawer_load", "success");
+      }
+      setLoadingSessions(false);
+    },
+    [historyView, recordHistoryStatus, session?.user?.id],
+  );
 
   useEffect(() => {
     void loadSessions();
@@ -447,6 +453,8 @@ export default function Assistant() {
   });
 
   const canUseAi = capabilities.can_use_ai_helper;
+  const canShowAssistantRoutingDebug =
+    role === "admin" || role === "superadmin";
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -640,8 +648,9 @@ export default function Assistant() {
             size="sm"
             className="rounded-full"
             onClick={() => {
+              setHistoryView("recent");
               setIsHistoryDrawerOpen(true);
-              void loadSessions();
+              void loadSessions("recent");
             }}
           >
             <History className="mr-1.5 h-3.5 w-3.5" />
@@ -668,7 +677,10 @@ export default function Assistant() {
         currentSessionId={currentSessionId}
         loading={loadingSessions || loadingMessages}
         view={historyView}
-        onViewChange={setHistoryView}
+        onViewChange={(nextView) => {
+          setHistoryView(nextView);
+          void loadSessions(nextView);
+        }}
         onSelect={loadChatSession}
         onArchive={archiveChatSession}
         onRestore={restoreChatSession}
@@ -684,7 +696,11 @@ export default function Assistant() {
               <Welcome t={t} />
             ) : (
               messages.map((message) => (
-                <MessageBubble key={message.id} message={message} />
+                <MessageBubble
+                  key={message.id}
+                  message={message}
+                  showRoutingDebug={canShowAssistantRoutingDebug}
+                />
               ))
             )}
             {run.isPending ? (
@@ -871,9 +887,8 @@ function ChatHistoryDrawer({
                   <div className="space-y-2">
                     {group.items.map((session) => {
                       const isIncomplete = isIncompleteHistorySession(session);
-                      const cleanedPreview = session.last_message_preview
-                        ? cleanAssistantTextForPreview(session.last_message_preview)
-                        : "";
+                      const cleanedPreview =
+                        cleanSessionLastMessagePreview(session);
                       return (
                         <div
                           key={session.id}
@@ -994,7 +1009,9 @@ function ChatHistoryDrawer({
                                     variant="ghost"
                                     size="sm"
                                     className="h-5 rounded-full px-1.5 text-[10px] text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                    onClick={() => setDeleteSessionId(session.id)}
+                                    onClick={() =>
+                                      setDeleteSessionId(session.id)
+                                    }
                                   >
                                     <Trash2 className="mr-0.5 h-3 w-3" />
                                     {t("assistantHistoryDelete")}
@@ -1062,6 +1079,11 @@ function ChatHistoryDrawer({
       </Dialog>
     </Sheet>
   );
+}
+
+function cleanSessionLastMessagePreview(session: AiChatSession) {
+  if (!session.last_message_preview) return "";
+  return cleanAssistantTextForPreview(session.last_message_preview);
 }
 
 function isIncompleteHistorySession(session: AiChatSession) {
@@ -1172,7 +1194,13 @@ function StarterPrompts({
   );
 }
 
-function MessageBubble({ message }: { message: ChatMessage }) {
+function MessageBubble({
+  message,
+  showRoutingDebug,
+}: {
+  message: ChatMessage;
+  showRoutingDebug: boolean;
+}) {
   const isUser = message.role === "user";
 
   if (isUser) {
@@ -1189,7 +1217,10 @@ function MessageBubble({ message }: { message: ChatMessage }) {
     <div className="flex w-full justify-start">
       <div className="w-full rounded-2xl rounded-tl-sm border bg-card px-4 py-3 text-sm shadow-sm">
         <AiAnswer text={message.text} />
-        <AssistantMessageActions message={message} />
+        <AssistantMessageActions
+          message={message}
+          showRoutingDebug={showRoutingDebug}
+        />
       </div>
     </div>
   );
@@ -1207,8 +1238,14 @@ function getAnswerText(payload: Record<string, unknown>, fallback: string) {
   return stripLeadingContextLabel(answer);
 }
 
-function AssistantMessageActions({ message }: { message: ChatMessage }) {
-  const { t, lang } = useI18n();
+function AssistantMessageActions({
+  message,
+  showRoutingDebug,
+}: {
+  message: ChatMessage;
+  showRoutingDebug: boolean;
+}) {
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const copyAnswer = async () => {
     await navigator.clipboard.writeText(
@@ -1219,22 +1256,55 @@ function AssistantMessageActions({ message }: { message: ChatMessage }) {
   };
 
   return (
-    <div className="mt-3 flex items-center gap-2 border-t pt-2">
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        className="h-8 rounded-full px-2 text-xs"
-        onClick={copyAnswer}
-      >
-        {copied ? (
-          <Check className="mr-1 h-3.5 w-3.5" />
-        ) : (
-          <Copy className="mr-1 h-3.5 w-3.5" />
-        )}
-        {copied ? t("assistantCopied") : t("assistantCopy")}
-      </Button>
+    <div className="mt-3 border-t pt-2">
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-8 rounded-full px-2 text-xs"
+          onClick={copyAnswer}
+        >
+          {copied ? (
+            <Check className="mr-1 h-3.5 w-3.5" />
+          ) : (
+            <Copy className="mr-1 h-3.5 w-3.5" />
+          )}
+          {copied ? t("assistantCopied") : t("assistantCopy")}
+        </Button>
+      </div>
+      {showRoutingDebug ? <AssistantRoutingDebug message={message} /> : null}
     </div>
+  );
+}
+
+function AssistantRoutingDebug({ message }: { message: ChatMessage }) {
+  const { t } = useI18n();
+
+  return (
+    <details className="mt-2 text-[11px] text-muted-foreground">
+      <summary className="inline-flex cursor-pointer select-none rounded-full px-1 py-0.5 hover:bg-muted/60">
+        {t("assistantTechnicalDetails")}
+      </summary>
+      <dl className="mt-1 grid gap-1 rounded-xl bg-muted/35 px-3 py-2 font-mono text-[10px] leading-4">
+        <div className="flex gap-2">
+          <dt className="min-w-24 text-muted-foreground/80">request_type</dt>
+          <dd>{message.option.requestType}</dd>
+        </div>
+        <div className="flex gap-2">
+          <dt className="min-w-24 text-muted-foreground/80">context_scope</dt>
+          <dd>{message.option.contextScope}</dd>
+        </div>
+        <div className="flex gap-2">
+          <dt className="min-w-24 text-muted-foreground/80">auto_routed</dt>
+          <dd>{String(message.autoRouted ?? false)}</dd>
+        </div>
+        <div className="flex gap-2">
+          <dt className="min-w-24 text-muted-foreground/80">mode_label</dt>
+          <dd className="font-sans">{t(message.option.labelKey)}</dd>
+        </div>
+      </dl>
+    </details>
   );
 }
 
@@ -1282,7 +1352,7 @@ function AiAnswer({ text }: { text: string }) {
 }
 
 function ClientCopyBlock({ text }: { text: string }) {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const [copied, setCopied] = useState(false);
   const copyClientText = async () => {
     await navigator.clipboard.writeText(text);

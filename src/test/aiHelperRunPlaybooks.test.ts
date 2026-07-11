@@ -133,11 +133,21 @@ describe("ai-helper-run code-versioned analysis playbooks", () => {
       "Use [CLIENT_COPY_START] / [CLIENT_COPY_END] only when the user explicitly asks",
     );
     expect(playbookSource).toContain(
-      "Inside the markers, include only text that can be copied and sent to the client",
+      "Inside the markers, include only concise, non-technical, client-safe wording",
     );
     expect(playbookSource).toContain(
       "If internal notes/checklist are useful, put them after [CLIENT_COPY_END]",
     );
+    expect(playbookSource).toContain(
+      "concise, non-technical, client-safe wording",
+    );
+    expect(playbookSource).toContain("1 short status paragraph");
+    expect(playbookSource).toContain("2-4 short bullets");
+    expect(playbookSource).toContain(
+      "1 short sentence on what this means for reporting/analysis",
+    );
+    expect(playbookSource).toContain("unnecessary internal account names");
+    expect(playbookSource).toContain("Внутрішньо: що перевірити");
     expect(playbookSource).toContain(
       "For ads_health, prefer a concise structure",
     );

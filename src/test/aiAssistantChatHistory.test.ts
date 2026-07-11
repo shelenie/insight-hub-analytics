@@ -118,12 +118,24 @@ describe("AI Assistant persistent chat history", () => {
 
   it("allows permanent deletion only for own archived AI chat sessions", () => {
     expect(archivedDeleteMigrationSource).toContain("for delete");
-    expect(archivedDeleteMigrationSource).toContain("ai_chat_sessions.user_id = auth.uid()");
-    expect(archivedDeleteMigrationSource).toContain("ai_chat_sessions.archived_at is not null");
-    expect(archivedDeleteMigrationSource).toContain("public.workspace_role_rank(public.get_workspace_role(ai_chat_sessions.workspace_id, auth.uid())) >= 1");
-    expect(archivedDeleteMigrationSource).toContain("alter table public.ai_chat_sessions enable row level security");
-    expect(archivedDeleteMigrationSource).not.toContain("disable row level security");
-    expect(archivedDeleteMigrationSource).not.toMatch(/delete\s+from|service_role|to anon/i);
+    expect(archivedDeleteMigrationSource).toContain(
+      "ai_chat_sessions.user_id = auth.uid()",
+    );
+    expect(archivedDeleteMigrationSource).toContain(
+      "ai_chat_sessions.archived_at is not null",
+    );
+    expect(archivedDeleteMigrationSource).toContain(
+      "public.workspace_role_rank(public.get_workspace_role(ai_chat_sessions.workspace_id, auth.uid())) >= 1",
+    );
+    expect(archivedDeleteMigrationSource).toContain(
+      "alter table public.ai_chat_sessions enable row level security",
+    );
+    expect(archivedDeleteMigrationSource).not.toContain(
+      "disable row level security",
+    );
+    expect(archivedDeleteMigrationSource).not.toMatch(
+      /delete\s+from|service_role|to anon/i,
+    );
   });
 
   it("creates deterministic titles/previews and recent 14-day cutoff", () => {
@@ -173,6 +185,10 @@ describe("AI Assistant persistent chat history", () => {
     expect(assistantSource).toContain('t("assistantHistoryRecent")');
     expect(assistantSource).toContain('t("assistantHistoryArchiveTab")');
     expect(assistantSource).toContain('t("assistantHistoryRestore")');
+    expect(assistantSource).toContain(
+      'onClick={() => onViewChange("archive")}',
+    );
+    expect(assistantSource).toContain('onClick={() => onViewChange("recent")}');
     expect(assistantSource).toContain('t("assistantHistoryArchivedEmpty")');
     expect(assistantSource).toContain('t("assistantHistoryNoAiAnswer")');
     expect(assistantSource).toContain(
@@ -192,8 +208,11 @@ describe("AI Assistant persistent chat history", () => {
       '.gte("updated_at", getRecentHistoryCutoff())',
     );
     expect(assistantSource).toContain(
-      '.limit(historyView === "recent" ? 30 : 100)',
+      '.limit(targetView === "recent" ? 30 : 100)',
     );
+    expect(assistantSource).toContain('setHistoryView("recent")');
+    expect(assistantSource).toContain('void loadSessions("recent")');
+    expect(assistantSource).toContain("void loadSessions(nextView)");
     expect(assistantSource).toContain(
       ".update({ archived_at: new Date().toISOString() })",
     );
@@ -264,7 +283,9 @@ describe("AI Assistant persistent chat history", () => {
       "const nextTitle = createRenamedSessionTitle(title)",
     );
     expect(assistantSource).toContain(".update({ title: nextTitle })");
-    expect(assistantSource).toContain("const deleteArchivedChatSession = async");
+    expect(assistantSource).toContain(
+      "const deleteArchivedChatSession = async",
+    );
     expect(assistantSource).toContain('.not("archived_at", "is", null)');
     expect(
       createRenamedSessionTitle(
@@ -390,4 +411,22 @@ describe("AI Assistant persistent chat history", () => {
     expect(grouped.lastSevenDays.map((item) => item.id)).toEqual(["week"]);
     expect(grouped.earlier.map((item) => item.id)).toEqual(["earlier"]);
   });
+});
+
+it("keeps routing metadata hidden by default but available as admin-only collapsed debug details", () => {
+  expect(assistantSource).toContain(
+    'role === "admin" || role === "superadmin"',
+  );
+  expect(assistantSource).toContain("canShowAssistantRoutingDebug");
+  expect(assistantSource).toContain("function AssistantRoutingDebug");
+  expect(assistantSource).toContain('t("assistantTechnicalDetails")');
+  expect(assistantSource).toContain("<details");
+  expect(assistantSource).not.toContain("<details open");
+  expect(assistantSource).toContain("request_type");
+  expect(assistantSource).toContain("context_scope");
+  expect(assistantSource).toContain("auto_routed");
+  expect(assistantSource).toContain("mode_label");
+  expect(assistantSource).not.toContain("JSON.stringify(message");
+  expect(assistantSource).not.toContain("raw_context");
+  expect(assistantSource).not.toContain("backend_payload");
 });

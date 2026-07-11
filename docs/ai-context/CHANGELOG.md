@@ -1,3 +1,16 @@
+## 2026-07-11 — AI Assistant History Default, Admin Routing Debug, and Client Copy Polish
+
+### Changed
+
+- Reset the AI Assistant History drawer to Recent whenever it is opened from the main History button, while preserving Archive selection inside the open drawer.
+- Added admin/superadmin-only collapsed Technical details under assistant answer actions for routing QA, limited to request_type, context_scope, auto_routed, and mode label.
+- Updated the client communication playbook to produce shorter, softer, non-technical, client-safe copy and keep internal diagnostics outside `[CLIENT_COPY_START]` / `[CLIENT_COPY_END]`.
+
+### Notes
+
+- `supabase/functions/ai-helper-run` must be redeployed after merge because playbook wording changed.
+- No Supabase schema/RLS/migrations, chat archive/restore/delete logic, connectors, bindings, sync, routes/sidebar, or Edge Function auth/JWT/DB access behavior changed.
+
 ## 2026-07-11 — AI Assistant Archive Delete and Drawer Final Polish
 
 ### Changed
