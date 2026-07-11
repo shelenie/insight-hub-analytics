@@ -1,7 +1,7 @@
 ## Next — Verify PR #242 Data Bindings migration against live Supabase
 
 - Before merge/deployment, verify the corrected exact-signature migration in a safe staging or SQL review path against the target Supabase project.
-- Confirm existing live RPC return types for onboarding upserts match the migration before applying, because PostgreSQL requires `CREATE OR REPLACE FUNCTION` return types to match existing functions.
+- Confirm the corrected migration still preserves exact live UUID return types for onboarding upserts during staging SQL review.
 - After deployment, verify the pg_proc audit passes and no sensitive overload remains executable by PUBLIC or anon.
 
 ## Next — Deploy and wire hardened Data Bindings mutations

@@ -1,3 +1,10 @@
+## 2026-07-11 — Data Bindings Onboarding UUID Return-Type Compatibility
+
+### Fixed
+
+- Changed the corrected onboarding upsert RPC migration bodies to preserve live `uuid` return types for `upsert_client`, `upsert_project`, and `upsert_funnel`.
+- The functions still write canonical names and required hierarchy fields, but now return `v_client.id`, `v_project.id`, and `v_funnel.id` instead of JSON payloads.
+
 ## 2026-07-11 — Data Bindings RPC Live-Schema Compatibility Fix
 
 ### Fixed

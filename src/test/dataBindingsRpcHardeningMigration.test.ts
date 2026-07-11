@@ -86,6 +86,27 @@ describe("data binding RPC hardening migration", () => {
     expect(auditInsert).not.toContain(" actor_id,");
   });
 
+
+  it("preserves exact live UUID return types for onboarding upsert RPCs", () => {
+    const functionBlock = (name: string) => normalized.slice(
+      normalized.indexOf(`create or replace function public.${name}(`),
+      normalized.indexOf("language plpgsql", normalized.indexOf(`create or replace function public.${name}(`)),
+    );
+
+    for (const name of ["upsert_client", "upsert_project", "upsert_funnel"]) {
+      const block = functionBlock(name);
+      expect(block).toContain("returns uuid");
+      expect(block).not.toContain("returns jsonb");
+    }
+
+    expect(normalized).toContain("return v_client.id");
+    expect(normalized).toContain("return v_project.id");
+    expect(normalized).toContain("return v_funnel.id");
+    expect(normalized).not.toContain("return to_jsonb(v_client)");
+    expect(normalized).not.toContain("return to_jsonb(v_project)");
+    expect(normalized).not.toContain("return to_jsonb(v_funnel)");
+  });
+
   it("preserves onboarding canonical fields and avoids incomplete funnel rows", () => {
     expect(normalized).toContain("name, client_name, client_code");
     expect(normalized).toContain("name = excluded.name");

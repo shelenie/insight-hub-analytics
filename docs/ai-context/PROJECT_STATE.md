@@ -1,3 +1,7 @@
+## Verified Local Follow-up — 2026-07-11 Data Bindings Onboarding Return-Type Compatibility
+
+PR #242 migration now preserves the verified live UUID return types for `upsert_client`, `upsert_project`, and `upsert_funnel`. The onboarding functions keep the corrected canonical field writes and hierarchy validation but return only the resulting row id (`v_client.id`, `v_project.id`, or `v_funnel.id`) so PostgreSQL `CREATE OR REPLACE FUNCTION` can apply against the existing exact signatures without a return-type change.
+
 ## Verified Local Follow-up — 2026-07-11 Data Bindings RPC Live-Schema Compatibility Fix
 
 PR #242 migration was corrected against verified live Supabase schema compatibility findings. `require_source_manager` now verifies workspace existence without referencing a non-existent `workspaces.status` column and continues to delegate active access/admin authorization to `can_manage_sources`. The migration now hardens the exact live long signatures for `archive_binding`, `update_binding_mapping_status`, `upsert_client`, `upsert_project`, and `upsert_funnel` instead of creating short overloads, and includes a pg_proc audit so no sensitive overload remains PUBLIC/anon executable. Mapping review audit writes now use the live `mapping_review_actions` columns. Onboarding upserts preserve canonical `client_name`, `project_name`, `funnel_name`, and required funnel `client_id`. `manage_ad_account_binding` now defaults `p_is_primary` to null so duplicate saves preserve existing primary state unless explicitly changed.

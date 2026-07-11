@@ -346,7 +346,7 @@ create or replace function public.upsert_client(
   p_created_by_email text default null,
   p_metadata jsonb default '{}'::jsonb
 )
-returns jsonb
+returns uuid
 language plpgsql
 security definer
 set search_path = public
@@ -377,7 +377,7 @@ begin
     updated_at = now()
   returning * into v_client;
 
-  return to_jsonb(v_client);
+  return v_client.id;
 end;
 $$;
 
@@ -398,7 +398,7 @@ create or replace function public.upsert_project(
   p_created_by_email text default null,
   p_metadata jsonb default '{}'::jsonb
 )
-returns jsonb
+returns uuid
 language plpgsql
 security definer
 set search_path = public
@@ -435,7 +435,7 @@ begin
     updated_at = now()
   returning * into v_project;
 
-  return to_jsonb(v_project);
+  return v_project.id;
 end;
 $$;
 
@@ -457,7 +457,7 @@ create or replace function public.upsert_funnel(
   p_created_by_email text default null,
   p_metadata jsonb default '{}'::jsonb
 )
-returns jsonb
+returns uuid
 language plpgsql
 security definer
 set search_path = public
@@ -507,7 +507,7 @@ begin
     updated_at = now()
   returning * into v_funnel;
 
-  return to_jsonb(v_funnel);
+  return v_funnel.id;
 end;
 $$;
 
