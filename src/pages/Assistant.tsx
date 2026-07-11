@@ -1,6 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { Archive, Check, Copy, History, Loader2, Send, Sparkles } from "lucide-react";
+import { AlertTriangle, Archive, Check, Copy, History, Loader2, Send, Sparkles } from "lucide-react";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -40,6 +40,42 @@ type AssistantHistoryClient = {
   from: (table: "ai_chat_sessions" | "ai_chat_messages") => SupabaseTableQuery;
 };
 
+type HistoryOperation = "session_create" | "user_message_save" | "assistant_message_save" | "session_metadata_update" | "drawer_load" | "messages_load" | "session_archive" | "session_rename";
+
+type HistoryOperationStatus = {
+  operation: HistoryOperation;
+  status: "success" | "fail";
+  detail?: string;
+  at: string;
+};
+
+function sanitizeHistoryError(error: unknown): string {
+  if (!error) return "Unknown error";
+  if (typeof error === "string") return error.slice(0, 220);
+  const maybeError = error as { message?: unknown; code?: unknown; details?: unknown };
+  const parts = [maybeError.code, maybeError.message, maybeError.details]
+    .map((part) => typeof part === "string" ? part.trim() : "")
+    .filter(Boolean);
+  return (parts.join(" — ") || "Unknown error").replace(/https?:\/\/\S+/g, "[url]").slice(0, 220);
+}
+
+function createOptimisticSession(sessionId: string, userId: string, submittedPrompt: string): AiChatSession {
+  const now = new Date().toISOString();
+  return {
+    id: sessionId,
+    workspace_id: WORKSPACE_ID,
+    user_id: userId,
+    title: createSessionTitle(submittedPrompt),
+    last_message_preview: createMessagePreview(submittedPrompt),
+    last_context_label: null,
+    last_request_type: null,
+    last_context_scope: null,
+    created_at: now,
+    updated_at: now,
+    archived_at: null,
+  };
+}
+
 const assistantHistoryClient = supabase as unknown as AssistantHistoryClient;
 
 export default function Assistant() {
@@ -56,11 +92,18 @@ export default function Assistant() {
   const [sessions, setSessions] = useState<AiChatSession[]>([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [historyStatus, setHistoryStatus] = useState<HistoryOperationStatus | null>(null);
   const selectedOption = useMemo(() => OPTIONS.find((o) => o.labelKey === selected) ?? OPTIONS[0], [selected]);
   const activeRunId = useRef(0);
   const pendingSessionId = useRef<string | null>(null);
   const isSubmittingRef = useRef(false);
   const sessionCreationPromiseRef = useRef<Promise<string | null> | null>(null);
+  const recordHistoryStatus = useCallback((operation: HistoryOperation, status: "success" | "fail", detail?: unknown) => {
+    setHistoryStatus((current) => {
+      if (status === "success" && current?.status === "fail") return current;
+      return { operation, status, detail: status === "fail" ? sanitizeHistoryError(detail) : undefined, at: new Date().toISOString() };
+    });
+  }, []);
   const loadSessions = useCallback(async () => {
     if (!session?.user?.id) return;
     setLoadingSessions(true);
@@ -74,12 +117,14 @@ export default function Assistant() {
       .order("updated_at", { ascending: false })
       .limit(30);
     if (error) {
-      console.debug("AI chat history load failed", error);
+      console.warn("AI chat history load failed", error);
+      recordHistoryStatus("drawer_load", "fail", error);
     } else {
       setSessions((data ?? []) as AiChatSession[]);
+      recordHistoryStatus("drawer_load", "success");
     }
     setLoadingSessions(false);
-  }, [session?.user?.id]);
+  }, [recordHistoryStatus, session?.user?.id]);
 
   useEffect(() => {
     void loadSessions();
@@ -88,7 +133,10 @@ export default function Assistant() {
   const ensureSession = async (submittedPrompt: string): Promise<string | null> => {
     if (currentSessionId) return currentSessionId;
     if (sessionCreationPromiseRef.current) return sessionCreationPromiseRef.current;
-    if (!session?.user?.id) return null;
+    if (!session?.user?.id) {
+      recordHistoryStatus("session_create", "fail", "No authenticated user id available");
+      return null;
+    }
 
     const creationPromise = assistantHistoryClient
       .from("ai_chat_sessions")
@@ -97,12 +145,17 @@ export default function Assistant() {
       .single()
       .then(({ data, error }) => {
         if (error) {
-          console.debug("AI chat session create failed", error);
+          console.warn("AI chat session create failed", error);
+          recordHistoryStatus("session_create", "fail", error);
           return null;
         }
-        setCurrentSessionId(data.id);
+        const newSessionId = data.id as string;
+        setCurrentSessionId(newSessionId);
+        pendingSessionId.current = newSessionId;
+        setSessions((current) => [createOptimisticSession(newSessionId, session.user.id, submittedPrompt), ...current.filter((item) => item.id !== newSessionId)]);
+        recordHistoryStatus("session_create", "success");
         void loadSessions();
-        return data.id as string;
+        return newSessionId;
       })
       .finally(() => {
         sessionCreationPromiseRef.current = null;
@@ -112,8 +165,15 @@ export default function Assistant() {
     return creationPromise;
   };
 
-  const saveChatMessage = async (sessionId: string | null, message: ChatMessage) => {
-    if (!sessionId || !session?.user?.id) return;
+  const saveChatMessage = async (sessionId: string | null, message: ChatMessage, operation: "user_message_save" | "assistant_message_save") => {
+    if (!sessionId) {
+      recordHistoryStatus(operation, "fail", "No chat session id available");
+      return false;
+    }
+    if (!session?.user?.id) {
+      recordHistoryStatus(operation, "fail", "No authenticated user id available");
+      return false;
+    }
     const { error } = await assistantHistoryClient.from("ai_chat_messages").insert({
       session_id: sessionId,
       workspace_id: WORKSPACE_ID,
@@ -125,11 +185,20 @@ export default function Assistant() {
       context_scope: message.option.contextScope,
       auto_routed: message.autoRouted ?? false,
     });
-    if (error) console.debug("AI chat message save failed", error);
+    if (error) {
+      console.warn("AI chat message save failed", error);
+      recordHistoryStatus(operation, "fail", error);
+      return false;
+    }
+    recordHistoryStatus(operation, "success");
+    return true;
   };
 
   const updateSessionMetadata = async (sessionId: string | null, message: ChatMessage) => {
-    if (!sessionId) return;
+    if (!sessionId) {
+      recordHistoryStatus("session_metadata_update", "fail", "No chat session id available");
+      return false;
+    }
     const { error } = await assistantHistoryClient
       .from("ai_chat_sessions")
       .update({
@@ -141,20 +210,28 @@ export default function Assistant() {
       })
       .eq("id", sessionId)
       .eq("workspace_id", WORKSPACE_ID);
-    if (error) console.debug("AI chat session metadata update failed", error);
+    if (error) {
+      console.warn("AI chat session metadata update failed", error);
+      recordHistoryStatus("session_metadata_update", "fail", error);
+      return false;
+    }
+    recordHistoryStatus("session_metadata_update", "success");
+    setSessions((current) => current.map((item) => item.id === sessionId ? { ...item, updated_at: new Date().toISOString(), last_message_preview: createMessagePreview(message.text), last_context_label: message.contextLabel, last_request_type: message.option.requestType, last_context_scope: message.option.contextScope } : item));
     void loadSessions();
+    return true;
   };
 
   const run = useMutation({ mutationFn: async ({ submittedPrompt, option, runId, conversationHistory, threadMetadata, sessionId }: { submittedPrompt: string; option: ContextOption; runId: number; conversationHistory: ConversationHistoryPayload[]; threadMetadata: ConversationThreadMetadata; sessionId: string | null }) => {
     const response = await supabase.functions.invoke("ai-helper-run", { body: { workspace_id: WORKSPACE_ID, request_type: option.requestType, context_scope: option.contextScope, prompt: submittedPrompt, conversation_history: conversationHistory, conversation_thread: threadMetadata } });
     if (response.error) throw response.error;
     return { payload: (response.data ?? {}) as Record<string, unknown>, option, runId, sessionId };
-  }, onSuccess: ({ payload, option, runId, sessionId }) => {
+  }, onSuccess: async ({ payload, option, runId, sessionId }) => {
     if (runId !== activeRunId.current) return;
     const assistantMessage = { id: `assistant-${Date.now()}`, role: "assistant" as const, text: getAnswerText(payload, t("assistantEmptyAnswer")), contextLabel: `${t("assistantContextPrefix")}: ${t(option.labelKey)}`, option };
     setMessages((current) => [...current, assistantMessage]);
-    void saveChatMessage(sessionId ?? pendingSessionId.current, assistantMessage);
-    void updateSessionMetadata(sessionId ?? pendingSessionId.current, assistantMessage);
+    const persistedSessionId = sessionId ?? pendingSessionId.current;
+    await saveChatMessage(persistedSessionId, assistantMessage, "assistant_message_save");
+    await updateSessionMetadata(persistedSessionId, assistantMessage);
   } });
 
   const canUseAi = capabilities.can_use_ai_helper;
@@ -183,8 +260,13 @@ export default function Assistant() {
       setMessages((current) => [...current, userMessage]);
       setPrompt("");
       const sessionId = await ensureSession(submittedPrompt);
-      pendingSessionId.current = sessionId;
-      void saveChatMessage(sessionId, userMessage);
+      if (sessionId) {
+        setCurrentSessionId(sessionId);
+        pendingSessionId.current = sessionId;
+        await saveChatMessage(sessionId, userMessage, "user_message_save");
+      } else {
+        pendingSessionId.current = null;
+      }
       run.mutate({ submittedPrompt, option: resolvedOption, runId, conversationHistory, threadMetadata, sessionId });
     } finally {
       isSubmittingRef.current = false;
@@ -199,6 +281,7 @@ export default function Assistant() {
     sessionCreationPromiseRef.current = null;
     isSubmittingRef.current = false;
     setPrompt("");
+    setHistoryStatus(null);
     run.reset();
   };
 
@@ -213,13 +296,15 @@ export default function Assistant() {
       .eq("workspace_id", WORKSPACE_ID)
       .order("created_at", { ascending: true });
     if (error) {
-      console.debug("AI chat messages load failed", error);
+      console.warn("AI chat messages load failed", error);
+      recordHistoryStatus("messages_load", "fail", error);
     } else {
       setMessages(((data ?? []) as AiChatMessageRow[]).map((row) => messageFromRow(row, t)));
       setCurrentSessionId(sessionId);
       pendingSessionId.current = sessionId;
       setIsHistoryDrawerOpen(false);
       run.reset();
+      recordHistoryStatus("messages_load", "success");
     }
     setLoadingMessages(false);
   };
@@ -231,9 +316,11 @@ export default function Assistant() {
       .eq("id", sessionId)
       .eq("workspace_id", WORKSPACE_ID);
     if (error) {
-      console.debug("AI chat archive failed", error);
+      console.warn("AI chat archive failed", error);
+      recordHistoryStatus("session_archive", "fail", error);
       return;
     }
+    recordHistoryStatus("session_archive", "success");
     setSessions((current) => current.filter((item) => item.id !== sessionId));
     if (currentSessionId === sessionId) resetChat();
   };
@@ -247,9 +334,11 @@ export default function Assistant() {
       .eq("id", sessionId)
       .eq("workspace_id", WORKSPACE_ID);
     if (error) {
-      console.debug("AI chat rename failed", error);
+      console.warn("AI chat rename failed", error);
+      recordHistoryStatus("session_rename", "fail", error);
       return;
     }
+    recordHistoryStatus("session_rename", "success");
     setSessions((current) => current.map((item) => item.id === sessionId ? { ...item, title: nextTitle } : item));
   };
 
@@ -277,6 +366,7 @@ export default function Assistant() {
             </div>
           </div>
           {showStarterPrompts ? <StarterPrompts t={t} onPrompt={submitPrompt} disabled={runDisabled} /> : null}
+          <HistoryPersistenceStatus status={historyStatus} t={t} />
           <p className="mt-3 px-2 text-center text-xs text-muted-foreground">{t("assistantSafetyNote")}</p>
         </div>
       </div>
@@ -336,6 +426,21 @@ function ChatHistoryDrawer({ open, onOpenChange, sessions, currentSessionId, loa
       </div>
     </SheetContent>
   </Sheet>;
+}
+
+function HistoryPersistenceStatus({ status, t }: { status: HistoryOperationStatus | null; t: (key: TranslationKey) => string }) {
+  if (!status || status.status !== "fail") return null;
+
+  return <details className="mt-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-muted-foreground">
+    <summary className="flex cursor-pointer items-center gap-2 text-amber-700 dark:text-amber-300">
+      <AlertTriangle className="h-3.5 w-3.5" />
+      <span>{t("assistantHistorySaveWarning")}</span>
+    </summary>
+    <div className="mt-2 space-y-1 pl-5">
+      <p>{t("assistantHistoryLastOperation")}: <code>{status.operation}</code></p>
+      {status.detail ? <p>{t("assistantHistoryTechnicalDetail")}: <code>{status.detail}</code></p> : null}
+    </div>
+  </details>;
 }
 
 function getSessionContextLabel(session: AiChatSession, t: (key: TranslationKey) => string) {

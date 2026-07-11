@@ -1,3 +1,7 @@
+## 2026-07-11 Next — Verify AI Assistant History Persistence in Live
+
+After deploying this fix and applying `supabase/migrations/20260711_fix_ai_assistant_chat_history_persistence.sql`, create a fresh live AI Assistant chat and verify that `ai_chat_sessions` increments, both user and assistant rows appear in `ai_chat_messages`, and the new session appears in the History drawer without a full page reload. If a save fails, use the muted history diagnostic under the composer to capture the safe operation name/code/message. Continue to avoid AdsConnectors, Bindings / Звʼязки даних, source connector, sync, routing/sidebar, and overlay work in this verification.
+
 ## 2026-07-10 Next — System / Outage Routing After Assistant Chat History
 
 AI Assistant persistent chat sessions are now implemented locally with a 14-day recent-history drawer, user-owned RLS-backed tables, soft archive hiding, loaded-session continuation through bounded conversation history, and hidden assistant-card context chips. After review/apply of migration `20260710_ai_assistant_chat_history.sql`, the next AI Assistant product step remains system/outage routing; do not treat this chat-history work as system/outage routing.

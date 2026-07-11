@@ -1,3 +1,17 @@
+## 2026-07-11 — AI Assistant Live Chat History Persistence Fix
+
+### Changed
+
+- Added a corrective Supabase migration that grants authenticated PostgREST access to the AI Assistant chat history tables while keeping RLS enabled and user-owned active-workspace policy checks.
+- Recreated AI chat history RLS policies with fully-qualified `ai_chat_sessions` / `ai_chat_messages` predicates to keep owner/workspace checks explicit.
+- Updated the Assistant submit flow to await first-session creation before saving the first user message, set both active session refs immediately, avoid null-session message inserts, save user/assistant messages with explicit operation diagnostics, update metadata after the assistant response, and refresh/optimistically update the drawer sessions list.
+- Added muted non-blocking history persistence diagnostics in the Assistant UI so live operators can see whether session creation, message save, metadata update, drawer load, load, rename, or archive failed while the AI answer remains visible.
+
+### Notes
+
+- No `ai-helper-run` contract, assistant routing/playbooks, `build_ai_ads_context`, `build_ai_production_context`, AdsConnectors, Bindings / Звʼязки даних, source connectors, sync logic, routes/sidebar, or PR #235 overlay styling changes were made.
+- Drawer visibility still depends on real `ai_chat_sessions` rows; the local optimistic row is followed by a reload of saved sessions for verification.
+
 ## Verified Local Follow-up — 2026-07-10 AI Assistant History Drawer Overlay Polish
 
 AI Assistant chat history drawer now uses an opt-in lighter Sheet overlay (`bg-slate-950/35` with subtle blur) so the app behind the drawer remains readable. Shared `SheetContent` supports an optional `overlayClassName` while preserving the existing `bg-black/80` default for every sheet that does not opt in. Drawer panel layout, title/i18n, rename, archive, client-copy behavior, Supabase schema/RLS, Edge Functions, routing, migrations, connectors, sync logic, routes, and sidebar were not changed.
