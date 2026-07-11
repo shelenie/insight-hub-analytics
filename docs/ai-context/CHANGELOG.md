@@ -1,3 +1,20 @@
+## 2026-07-11 — AI Assistant Archive Delete and Drawer Final Polish
+
+### Changed
+
+- Kept Recent as the 14-day chat-history view and made Archive a longer-term archived-chat view with a bounded 100-row load ordered by `updated_at desc`.
+- Added view-specific history drawer subtitles for Recent and Archive.
+- Sanitized stored history previews at render time so old rows with markdown headings/bold/italic markers display cleanly without changing full assistant answers or mutating historical rows.
+- Added permanent delete only for archived chats, guarded by an explicit confirmation dialog and local-state removal/reset after success.
+- Added a Supabase migration for the archived-session delete policy on `public.ai_chat_sessions`; it requires `user_id = auth.uid()`, active workspace access via existing role helpers, and `archived_at is not null`.
+- Made drawer action rows more compact and added more vertical breathing room above starter prompts.
+- Renamed the auto-context composer badge to a friendlier “AI will choose the mode” / “AI сам обере режим”.
+
+### Notes
+
+- No Edge Functions were deployed or changed; `supabase/functions/ai-helper-run` remains untouched.
+- The migration does not delete rows, disable RLS, expose service role access, or grant broad delete access.
+
 ## 2026-07-11 — AI Assistant History Drawer Polish and General Constraint Migration
 
 ### Changed

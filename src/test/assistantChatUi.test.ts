@@ -106,7 +106,8 @@ describe("AI Assistant chat UI", () => {
     );
     expect(source).toContain("function ChatHistoryDrawer");
     expect(source).toContain('t("assistantHistoryTitle")');
-    expect(source).toContain('t("assistantHistorySubtitle")');
+    expect(source).toContain('t("assistantHistoryRecentSubtitle")');
+    expect(source).toContain('t("assistantHistoryArchiveSubtitle")');
     expect(source).not.toContain("v_ai_helper_requests_recent");
 
     expect(source).not.toContain("xl:grid-cols-[minmax(0,1fr)_20rem]");
@@ -216,7 +217,9 @@ describe("AI Assistant chat UI", () => {
     expect(source).toContain("assistantNewChat");
     expect(translations.assistantHistory.en).toBe("History");
     expect(translations.assistantHistoryTitle.en).toBe("Chat history");
-    expect(translations.assistantHistorySubtitle.en).toBe("Last 14 days");
+    expect(translations.assistantHistoryRecentSubtitle.en).toBe("Last 14 days");
+    expect(translations.assistantHistoryArchiveSubtitle.en).toBe("Archived chats");
+    expect(translations.assistantHistoryArchiveSubtitle.uk).not.toBe("Останні 14 днів");
     expect(translations.assistantHistoryLoading.en).toBe("Loading history…");
     expect(translations.assistantHistoryEmpty.en).toBe(
       "Recent AI Assistant chats will appear here.",
@@ -239,6 +242,11 @@ describe("AI Assistant chat UI", () => {
     );
     expect(translations.assistantHistoryNoAiAnswer.uk).toBe("Без відповіді AI");
     expect(translations.assistantHistoryNoAiAnswer.en).toBe("No AI answer");
+    expect(translations.assistantHistoryDelete.uk).toBe("Видалити");
+    expect(translations.assistantHistoryDelete.en).toBe("Delete");
+    expect(translations.assistantHistoryDeleteConfirmTitle.uk).toBe("Видалити чат назавжди?");
+    expect(translations.assistantHistoryDeleteConfirmDescription.en).toBe("This action cannot be undone. The chat and its messages will be deleted.");
+    expect(translations.assistantHistoryDeleteConfirm.en).toBe("Delete permanently");
   });
 
   it("keeps starter prompts below the composer and hides them after interaction", () => {
@@ -250,7 +258,20 @@ describe("AI Assistant chat UI", () => {
     );
     expect(source).toContain("onClick={() => onPrompt(t(key))}");
     expect(source).toContain("disabled={disabled}");
+    expect(source).toContain('className="mt-6 grid w-full gap-2 sm:grid-cols-2"');
     expect(source).not.toContain("onPrompt={(value) => setPrompt(value)}");
+  });
+
+
+  it("cleans stored drawer previews at render time and keeps archive delete behind confirmation", () => {
+    expect(source).toContain("cleanAssistantTextForPreview(session.last_message_preview)");
+    expect(source).toContain("{cleanedPreview}");
+    expect(source).not.toContain("{session.last_message_preview}");
+    expect(source).toContain('view === "archive" ? (');
+    expect(source).toContain('setDeleteSessionId(session.id)');
+    expect(source).toContain('<Dialog');
+    expect(source).toContain('t("assistantHistoryDeleteConfirmTitle")');
+    expect(source).toContain('await onDelete(sessionId)');
   });
 
   it("keeps backend contract and does not add unsupported fake action labels", () => {
@@ -511,10 +532,10 @@ describe("AI Assistant smart routing and answer UX", () => {
     expect(source).toContain("assistantAutoContextPrefix");
     expect(translations.assistantAutoContextPrefix.uk).toBe("Автоконтекст");
     expect(translations.assistantAutoRoutingBadge.uk).toBe(
-      "Автоконтекст увімкнено",
+      "AI сам обере режим",
     );
     expect(translations.assistantAutoRoutingBadge.en).toBe(
-      "Auto context enabled",
+      "AI will choose the mode",
     );
     expect(source).toContain("serializeAnswerForWholeCopy(message.text)");
     expect(source).not.toContain("navigator.clipboard.writeText(message.text)");
