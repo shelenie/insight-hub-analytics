@@ -227,7 +227,7 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain("onValueChange={handleTabChange}");
     expect(source).toContain('normalAdFeedback?.variant === "error"');
     expect(source).toContain("technical: null");
-    expect(source).toContain("Technical details");
+    expect(source).toContain('t("bindingsTechnicalDetails")');
     expect(source).toContain("getBindingActionTechnicalDetails");
   });
 });

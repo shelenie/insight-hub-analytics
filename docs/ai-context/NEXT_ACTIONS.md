@@ -1,3 +1,10 @@
+## Step 3 Status — Ready for review after RPC payload and primary-state fixes
+
+- Deploy changed Edge Functions after merge: `binding-create-or-update`, `binding-archive`, `onboarding-client-upsert`, `onboarding-project-upsert`, and `onboarding-funnel-upsert`. Do not deploy unrelated functions.
+- QA `/bindings` as admin/superadmin: exact onboarding Add Client/Project/Funnel RPC payloads, source/ad selected rebind primary preservation, Google Sheet source inactive filtering, partial source rebind Technical details, and existing source/ad archive flows.
+- QA member access: members should remain read-only, should not run source-candidate queries, and should not see or invoke binding/onboarding mutation actions.
+- No Data Bindings migration is expected; do not reapply `20260711_harden_data_binding_mutation_rpcs.sql`.
+
 ## Step 3 Status — Ready for review after source workflow completion
 
 - Deploy changed Edge Functions after merge: `binding-create-or-update`, `binding-archive`, `onboarding-client-upsert`, `onboarding-project-upsert`, and `onboarding-funnel-upsert`. Do not deploy unrelated functions.

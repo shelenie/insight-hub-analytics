@@ -298,15 +298,15 @@ async function lookupRawExternalDatasetSource(adminClient: any, sourceId: string
 async function lookupGoogleSheetSource(adminClient: any, sourceId: string, workspaceId: string): Promise<{ source: SourceEntity | null; error: TargetCheck | null }> {
   const { data, error } = await adminClient
     .from("google_sheet_sources")
-    .select("id, workspace_id, status, spreadsheet_id, spreadsheet_name")
+    .select("id, workspace_id, status, is_active, spreadsheet_id, spreadsheet_name")
     .eq("id", sourceId)
     .eq("workspace_id", workspaceId)
     .maybeSingle();
 
   if (error || !data) return { source: null, error: null };
   if (data.workspace_id && data.workspace_id !== workspaceId) return { source: null, error: sourceLookupError("source_workspace_mismatch", sourceId) };
-  if (isInactiveStatus(data.status)) {
-    return { source: null, error: sourceLookupError("inactive_source", sourceId, 409, "Cannot create a binding for an inactive or archived source", { id: sourceId, status: data.status }) };
+  if (data.is_active === false || isInactiveStatus(data.status)) {
+    return { source: null, error: sourceLookupError("inactive_source", sourceId, 409, "Cannot create a binding for an inactive or archived source", { id: sourceId, status: data.status, is_active: data.is_active }) };
   }
 
   return {

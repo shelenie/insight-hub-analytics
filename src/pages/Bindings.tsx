@@ -82,6 +82,7 @@ const EMPTY_AD_FORM = {
   original_client_id: "",
   original_project_id: "",
   original_funnel_id: "",
+  original_is_primary: "false",
   primary_intent: "remove_primary" as PrimaryIntent,
 };
 
@@ -94,6 +95,7 @@ const EMPTY_SOURCE_FORM = {
   original_client_id: "",
   original_project_id: "",
   original_funnel_id: "",
+  original_is_primary: "false",
   primary_intent: "remove_primary" as PrimaryIntent,
 };
 
@@ -688,34 +690,34 @@ export default function Bindings() {
       sourceForm.project_id === sourceForm.original_project_id &&
       sourceForm.funnel_id === sourceForm.original_funnel_id;
     const oldBindingId = sourceForm.binding_id;
-    const saved = await runAction(
-      "create-source",
-      () =>
-        supabase.functions.invoke("binding-create-or-update", {
-          body: {
-            workspace_id: WORKSPACE_ID,
-            binding_type: "source",
-            binding_id: sourceForm.binding_id || null,
-            source_id: sourceForm.source_id,
-            client_id: sourceForm.client_id,
-            project_id: sourceForm.project_id,
-            funnel_id: sourceForm.funnel_id,
-            is_primary: sourceForm.primary_intent === "make_primary"
-              ? true
-              : sourceForm.primary_intent === "remove_primary"
-                ? false
-                : null,
-            metadata: { ui: "bindings_page" },
-          },
-        }),
-      {
-        bindingType: "source",
-        successMessage: t("bindingsSourceSaved"),
-        feedbackHandler: setSourceFeedback,
-        successFeedback: false,
+    const isRebind = Boolean(sourceForm.binding_id && !sameScope);
+    setPending("create-source");
+    const { data: response, error } = await supabase.functions.invoke("binding-create-or-update", {
+      body: {
+        workspace_id: WORKSPACE_ID,
+        binding_type: "source",
+        binding_id: sourceForm.binding_id || null,
+        source_id: sourceForm.source_id,
+        client_id: sourceForm.client_id,
+        project_id: sourceForm.project_id,
+        funnel_id: sourceForm.funnel_id,
+        is_primary: resolvePrimaryForMutation(sourceForm, isRebind),
+        metadata: { ui: "bindings_page" },
       },
-    );
-    if (!saved) return;
+    });
+    setPending("");
+    if (error || (response && typeof response === "object" && (response as { ok?: boolean }).ok === false)) {
+      const actionResponse = response && typeof response === "object"
+        ? (response as BindingActionResponse)
+        : ({ ok: false, error: error?.message } satisfies BindingActionResponse);
+      setSourceFeedback({
+        message: getFriendlyBindingActionMessage(actionResponse, t),
+        variant: "error",
+        technical: getBindingActionTechnicalDetails(actionResponse),
+      });
+      return;
+    }
+    const newBindingId = extractBindingId(response);
 
     if (sourceFormMode === "edit" && oldBindingId && !sameScope) {
       const archiveResult = await archiveBinding({
@@ -733,7 +735,7 @@ export default function Bindings() {
             action: "source_rebind_partial",
             rpc: "archive_binding",
             binding_id: oldBindingId,
-            result: { new_source_id: sourceForm.source_id },
+            result: { old_binding_id: oldBindingId, new_binding_id: newBindingId },
           },
         });
         return;
@@ -1017,6 +1019,7 @@ export default function Bindings() {
                         original_client_id: clientId,
                         original_project_id: projectId,
                         original_funnel_id: funnelId,
+                        original_is_primary: String(Boolean(row.is_primary)),
                         primary_intent: "unchanged",
                       });
                       setSourceFormMode("edit");
@@ -1150,6 +1153,8 @@ export default function Bindings() {
                             query.data?.adAccountBindings ?? [],
                             normalAdForm,
                           );
+                          const isRebind = Boolean(normalAdForm.binding_id && !sameScope);
+                          const outgoingPrimaryIntent = primaryIntentForValue(resolvePrimaryForMutation(normalAdForm, isRebind));
                           const saved = await runAction(
                             "create-ad",
                             async () => {
@@ -1159,7 +1164,7 @@ export default function Bindings() {
                                 clientId: normalAdForm.client_id,
                                 projectId: normalAdForm.project_id,
                                 funnelId: normalAdForm.funnel_id,
-                                primaryIntent: normalAdForm.primary_intent,
+                                primaryIntent: outgoingPrimaryIntent,
                                 replaceBindingId: sameScope ? null : normalAdForm.binding_id || null,
                                 metadata: { ui: "bindings_page" },
                               });
@@ -1234,6 +1239,7 @@ onArchive={(row) => setArchiveTarget({ row, type: "ad_account" })}
                         original_client_id: clientId,
                         original_project_id: projectId,
                         original_funnel_id: funnelId,
+                        original_is_primary: String(Boolean(row.is_primary)),
                         primary_intent: "unchanged",
                       });
                       setAdFormOpen(true);
@@ -1589,12 +1595,40 @@ const getBindingType = (row: Row): BindingType =>
     ? "ad_account"
     : "source";
 
+function resolvePrimaryForMutation(
+  form: typeof EMPTY_AD_FORM | typeof EMPTY_SOURCE_FORM,
+  isRebind: boolean,
+): boolean | null {
+  if (form.primary_intent === "make_primary") return true;
+  if (form.primary_intent === "remove_primary") return false;
+  return isRebind ? form.original_is_primary === "true" : null;
+}
+
+function primaryIntentForValue(value: boolean | null): PrimaryIntent {
+  if (value === true) return "make_primary";
+  if (value === false) return "remove_primary";
+  return "unchanged";
+}
+
+function extractBindingId(response: unknown): string | null {
+  if (!response || typeof response !== "object") return null;
+  const payload = response as Record<string, unknown>;
+  const direct = payload.binding_id ?? payload.result ?? payload.data;
+  if (typeof direct === "string") return direct;
+  if (direct && typeof direct === "object") {
+    const nested = direct as Record<string, unknown>;
+    const nestedId = nested.binding_id ?? nested.id;
+    if (typeof nestedId === "string") return nestedId;
+  }
+  return null;
+}
+
 
 async function readSourceCandidates(): Promise<SourceCandidatesData> {
   const [sheets, tabs, datasets] = await Promise.all([
     supabase
       .from("google_sheet_sources")
-      .select("id, spreadsheet_name, spreadsheet_id, status")
+      .select("id, spreadsheet_name, spreadsheet_id, status, is_active")
       .eq("workspace_id", WORKSPACE_ID),
     supabase
       .from("google_sheet_tabs")
@@ -1613,7 +1647,7 @@ async function readSourceCandidates(): Promise<SourceCandidatesData> {
     ((sheets.data ?? []) as Row[]).map((row) => [asText(row.id), asText(row.spreadsheet_name)]),
   );
   const sheetCandidates = ((sheets.data ?? []) as Row[])
-    .filter((row) => !isInactiveStatus(row.status))
+    .filter((row) => row.is_active !== false && !isInactiveStatus(row.status))
     .map((row) => ({
       id: asText(row.id),
       sourceType: "google_sheet_source" as const,
@@ -2303,6 +2337,7 @@ function BindingFeedback({
 }: {
   feedback: BindingActionFeedback | null;
 }) {
+  const { t } = useI18n();
   if (!feedback) return null;
   return (
     <div
@@ -2314,7 +2349,7 @@ function BindingFeedback({
       {feedback.technical ? (
         <details className="mt-2 rounded border border-border/60 bg-muted/25 p-2 text-xs text-muted-foreground">
           <summary className="cursor-pointer font-medium">
-            Technical details
+            {t("bindingsTechnicalDetails")}
           </summary>
           <pre className="mt-2 max-h-48 overflow-auto whitespace-pre-wrap break-words">
             {JSON.stringify(feedback.technical, null, 2)}

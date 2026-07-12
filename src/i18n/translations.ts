@@ -863,6 +863,7 @@ export const translations = {
   bindingsValidationSource: { uk: "Оберіть джерело.", en: "Choose a source." },
   bindingsSourceCandidatesUnavailable: { uk: "Список джерел тимчасово недоступний. Перегляд наявних звʼязків працює.", en: "The source list is temporarily unavailable. Existing bindings remain readable." },
   bindingsSourcePartialRebindWarning: { uk: "Нову привʼязку джерела збережено, але попередню не вдалося архівувати. Оновіть дані й архівуйте старий звʼязок вручну.", en: "The new source binding was saved, but the previous binding could not be archived. Refresh and archive the old binding manually." },
+  bindingsTechnicalDetails: { uk: "Технічні деталі", en: "Technical details" },
   bindingsHierarchyDialogDescription: { uk: "Вкажіть коротку назву. Після збереження список оновиться, а новий запис буде вибрано.", en: "Enter a short name. After saving, the list will refresh and the new record will be selected." },
   bindingsHierarchyNameRequired: { uk: "Вкажіть назву.", en: "Enter a name." },
   bindingsHierarchyCreatedTitle: { uk: "Запис додано", en: "Record added" },

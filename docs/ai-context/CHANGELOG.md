@@ -1,3 +1,17 @@
+## 2026-07-12 — Step 3 RPC Payload and Primary Preservation Follow-up
+
+### Fixed
+
+- Aligned frontend onboarding mutation helpers and onboarding Edge Function wrappers to the exact hardened production `upsert_client`, `upsert_project`, and `upsert_funnel` RPC argument sets.
+- Removed unsupported stale onboarding parameters from frontend and wrapper payloads while keeping actor fields null for backend-derived identity.
+- Preserved original primary state for selected source and ad-account rebinds when primary intent remains unchanged; same-scope edits still send null.
+- Added Google Sheet source `is_active` filtering/validation in frontend candidates and server-side resolver.
+- Retained the new source binding UUID for partial source rebind Technical details and localized the Binding feedback Technical details label.
+
+### Notes
+
+- No Supabase migration, RLS change, RPC signature change, production data mutation, or `ai-helper-run` change was made.
+
 ## 2026-07-12 — Step 3 Source Bindings UI Follow-up
 
 ### Fixed

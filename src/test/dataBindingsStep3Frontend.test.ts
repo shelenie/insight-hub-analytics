@@ -10,7 +10,7 @@ describe("Step 3 Data Bindings frontend production flow", () => {
   it("loads source candidates only for binding managers with safe fields", () => {
     expect(bindings).toContain('queryKey: ["source-binding-candidates", WORKSPACE_ID]');
     expect(bindings).toContain("enabled: Boolean(session) && canManage");
-    expect(bindings).toContain('.select("id, spreadsheet_name, spreadsheet_id, status")');
+    expect(bindings).toContain('.select("id, spreadsheet_name, spreadsheet_id, status, is_active")');
     expect(bindings).toContain('.select("id, google_sheet_source_id, source_id, tab_name, source_type, target_raw_table, is_active")');
     expect(bindings).toContain('.select("id, dataset_name, sheet_name, source_type, target_raw_table, status, parser_type")');
     expect(bindings).not.toMatch(/secret_ref|access_token|refresh_token|oauth|config_json|storage_path|raw_rows/i);
@@ -36,6 +36,9 @@ describe("Step 3 Data Bindings frontend production flow", () => {
     expect(bindings).toContain('bindingType: "source"');
     expect(bindings).toContain('source_rebind_partial');
     expect(bindings).toContain('bindingsSourcePartialRebindWarning');
+    expect(bindings).toContain("const newBindingId = extractBindingId(response)");
+    expect(bindings).toContain("new_binding_id: newBindingId");
+    expect(bindings).not.toContain("new_source_id");
     expect(translations).toContain("The new source binding was saved, but the previous binding could not be archived");
   });
 
@@ -67,6 +70,7 @@ describe("Step 3 Data Bindings frontend production flow", () => {
 
   it("initializes full ad form state and creates ad bindings as not primary by default", () => {
     expect(bindings).toContain('primary_intent: "remove_primary" as PrimaryIntent');
+    expect(bindings).toContain('original_is_primary: "false"');
     expect(bindings).toContain("...EMPTY_AD_FORM");
     expect(bindings).toContain('ad_account_id: adAccountId');
     expect(mutations).toContain('if (intent === "remove_primary") return false;');
@@ -85,7 +89,18 @@ describe("Step 3 Data Bindings frontend production flow", () => {
     expect(bindings).toContain('response.code === "PGRST202"');
     expect(bindings).toContain('return t("bindingsActionFailed")');
     expect(bindings).toContain("<details");
-    expect(bindings).toContain("Technical details");
+    expect(bindings).toContain('t("bindingsTechnicalDetails")');
+    expect(translations).toContain('bindingsTechnicalDetails: { uk: "Технічні деталі", en: "Technical details" }');
+  });
+
+  it("preserves original primary state for selected source and ad-account rebinds", () => {
+    expect(bindings).toContain("function resolvePrimaryForMutation");
+    expect(bindings).toContain('return isRebind ? form.original_is_primary === "true" : null;');
+    expect(bindings).toContain('original_is_primary: String(Boolean(row.is_primary))');
+    expect(bindings).toContain("is_primary: resolvePrimaryForMutation(sourceForm, isRebind)");
+    expect(bindings).toContain("primaryIntentForValue(resolvePrimaryForMutation(normalAdForm, isRebind))");
+    expect(bindings).toContain('if (value === true) return "make_primary";');
+    expect(bindings).toContain('if (value === false) return "remove_primary";');
   });
 
   it("preserves source resolver canonical identity conventions", () => {
@@ -93,7 +108,7 @@ describe("Step 3 Data Bindings frontend production flow", () => {
     expect(edge).toContain('source_table: "google_sheet_sources"');
     expect(edge).toContain("source_kind: data.source_type ?? \"google_sheet_source\"");
     expect(edge).toContain("source_table: data.target_raw_table ?? \"google_sheet_sources\"");
-    expect(edge).toContain("data.is_active === false");
+    expect(edge).toContain("data.is_active === false || isInactiveStatus(data.status)");
     expect(edge).toContain("google_sheet_source_id ?? data.source_id");
     expect(edge).toContain("await userClient.rpc(rpcName, rpcPayload)");
     expect(edge).not.toContain('source_kind: "google_sheet_tab"');
