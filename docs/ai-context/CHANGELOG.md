@@ -1,3 +1,15 @@
+## 2026-07-12 — Step 3 Onboarding Reactivation Audit and Reparent Guard Follow-up
+
+### Fixed
+
+- Allowed exact selected inactive/archived onboarding entities to be edited or reactivated by authorized admins instead of rejecting the entity solely due to its current status.
+- Added server-derived edit audit metadata for onboarding wrapper edit paths while preserving existing metadata and safe plain-object request metadata.
+- Blocked normal Project and Funnel hierarchy reparenting in edit mode with dedicated friendly codes and disabled hierarchy selectors while editing existing Project/Funnel records.
+
+### Notes
+
+- No Supabase migration, RLS change, RPC signature change, production data mutation, or `ai-helper-run` change was made.
+
 ## 2026-07-12 — Step 3 Onboarding Edit and Source Parent Validation Follow-up
 
 ### Fixed

@@ -17,29 +17,31 @@ Deno.serve(async (req) => {
   const name = String(body.funnel_name ?? body.name ?? "").trim();
   if (!workspace_id || !project_id || !name) return json({ ok: false, error: "workspace_id, project_id, and funnel_name are required" }, 400);
 
-  const projectCheck = await requireActiveProject(userClient, workspace_id, project_id);
-  if (projectCheck.error) return projectCheck.error;
-  const client_id = projectCheck.project.client_id;
-
   if (funnel_id) {
     const { data: existing, error: lookupError } = await userClient
       .from("funnels")
-      .select("id, workspace_id, status")
+      .select("id, workspace_id, project_id, client_id, status, metadata")
       .eq("id", funnel_id)
       .eq("workspace_id", workspace_id)
       .maybeSingle();
     if (lookupError) return json({ ok: false, error: lookupError.message, code: lookupError.code, action: "lookup_funnel" }, 400);
     if (!existing) return json({ ok: false, error: "Funnel not found in workspace", code: "funnel_not_found" }, 404);
-    if (isInactiveStatus(existing.status)) return json({ ok: false, error: "Funnel is inactive", code: "inactive_funnel" }, 409);
+    if (project_id !== existing.project_id) {
+      return json({ ok: false, error: "Funnel reparent requires a dedicated action", code: "funnel_reparent_requires_dedicated_action" }, 409);
+    }
+    const projectCheck = await requireActiveProject(userClient, workspace_id, project_id);
+    if (projectCheck.error) return projectCheck.error;
+    const client_id = projectCheck.project.client_id;
 
     const actor = actorContext(authData.user);
-    void actor;
+    const now = new Date().toISOString();
     const patch: Record<string, unknown> = {
       client_id,
       project_id,
       funnel_name: name,
       name,
-      updated_at: new Date().toISOString(),
+      updated_at: now,
+      metadata: mergeAuditMetadata(existing.metadata, body.metadata, actor, "onboarding-funnel-upsert", now),
     };
     if ("funnel_code" in body || "code" in body) patch.funnel_code = body.funnel_code ?? body.code;
     if ("funnel_type" in body) patch.funnel_type = body.funnel_type;
@@ -63,6 +65,9 @@ Deno.serve(async (req) => {
     if (!data) return json({ ok: false, error: "Funnel update did not match a row", code: "funnel_not_found" }, 404);
     return json({ ok: true, action: "update_funnel", funnel_id: data.id });
   }
+
+  const projectCheck = await requireActiveProject(userClient, workspace_id, project_id);
+  if (projectCheck.error) return projectCheck.error;
 
   const { data, error } = await userClient.rpc("upsert_funnel", {
     p_workspace_id: workspace_id,
@@ -99,4 +104,10 @@ async function requireActiveProject(userClient: any, workspace_id: string, proje
 }
 function isInactiveStatus(status: unknown) { return inactiveStatuses.has(String(status ?? "").trim().toLowerCase()); }
 function actorContext(user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null }) { return { id: user.id, email: user.email ?? (typeof user.user_metadata?.email === "string" ? user.user_metadata.email : null) }; }
+function isPlainObject(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === "object" && !Array.isArray(value); }
+function mergeAuditMetadata(existing: unknown, requested: unknown, actor: { id: string; email: string | null }, updatedVia: string, updatedAt: string) {
+  const safeExisting = isPlainObject(existing) ? existing : {};
+  const safeRequested = isPlainObject(requested) ? requested : {};
+  return { ...safeExisting, ...safeRequested, updated_by: actor.id, updated_by_email: actor.email, updated_via: updatedVia, updated_at: updatedAt };
+}
 function json(payload: unknown, status = 200) { return new Response(JSON.stringify(payload), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }); }

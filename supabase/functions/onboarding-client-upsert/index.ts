@@ -23,20 +23,20 @@ Deno.serve(async (req) => {
   if (client_id) {
     const { data: existing, error: lookupError } = await userClient
       .from("clients")
-      .select("id, workspace_id, status")
+      .select("id, workspace_id, status, metadata")
       .eq("id", client_id)
       .eq("workspace_id", workspace_id)
       .maybeSingle();
     if (lookupError) return json({ ok: false, error: lookupError.message, code: lookupError.code, action: "lookup_client" }, 400);
     if (!existing) return json({ ok: false, error: "Client not found in workspace", code: "client_not_found" }, 404);
-    if (isInactiveStatus(existing.status)) return json({ ok: false, error: "Client is inactive", code: "inactive_client" }, 409);
 
     const actor = actorContext(authData.user);
-    void actor;
+    const now = new Date().toISOString();
     const patch: Record<string, unknown> = {
       name,
       client_name: name,
-      updated_at: new Date().toISOString(),
+      updated_at: now,
+      metadata: mergeAuditMetadata(existing.metadata, body.metadata, actor, "onboarding-client-upsert", now),
     };
     if ("client_code" in body || "code" in body) patch.client_code = body.client_code ?? body.code;
     if ("status" in body) patch.status = body.status;
@@ -84,6 +84,23 @@ function isInactiveStatus(status: unknown) {
 
 function actorContext(user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null }) {
   return { id: user.id, email: user.email ?? (typeof user.user_metadata?.email === "string" ? user.user_metadata.email : null) };
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function mergeAuditMetadata(existing: unknown, requested: unknown, actor: { id: string; email: string | null }, updatedVia: string, updatedAt: string) {
+  const safeExisting = isPlainObject(existing) ? existing : {};
+  const safeRequested = isPlainObject(requested) ? requested : {};
+  return {
+    ...safeExisting,
+    ...safeRequested,
+    updated_by: actor.id,
+    updated_by_email: actor.email,
+    updated_via: updatedVia,
+    updated_at: updatedAt,
+  };
 }
 
 function json(payload: unknown, status = 200) {

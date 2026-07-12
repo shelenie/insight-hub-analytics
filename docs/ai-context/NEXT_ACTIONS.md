@@ -1,3 +1,11 @@
+## Step 3 Status — Ready for review after onboarding reactivation, audit, and reparent guards
+
+- Deploy changed Edge Functions after merge: `binding-create-or-update`, `binding-archive`, `onboarding-client-upsert`, `onboarding-project-upsert`, and `onboarding-funnel-upsert`. Do not deploy unrelated functions.
+- QA `/onboarding` edit mode for inactive/archived Client/Project/Funnel records: name/code/status changes should update the exact row and allow reactivation when parent hierarchy is valid.
+- QA that normal Project edit cannot change Client and normal Funnel edit cannot change Project; dedicated transactional reparenting remains a future task.
+- QA edit metadata audit fields are server-derived and preserve existing metadata.
+- No Data Bindings migration is expected; do not reapply `20260711_harden_data_binding_mutation_rpcs.sql`.
+
 ## Step 3 Status — Ready for review after onboarding edit and source-parent fixes
 
 - Deploy changed Edge Functions after merge: `binding-create-or-update`, `binding-archive`, `onboarding-client-upsert`, `onboarding-project-upsert`, and `onboarding-funnel-upsert`. Do not deploy unrelated functions.
