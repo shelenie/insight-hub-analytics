@@ -514,8 +514,8 @@ $$;
 create or replace function public.bind_source_entity_to_scope(
   p_workspace_id uuid,
   p_source_kind text,
-  p_source_table text,
-  p_source_id uuid,
+  p_source_table text default null,
+  p_source_id uuid default null,
   p_source_external_id text default null,
   p_source_name text default null,
   p_client_id uuid default null,
@@ -526,7 +526,7 @@ create or replace function public.bind_source_entity_to_scope(
   p_confidence numeric default 1.0,
   p_is_primary boolean default false,
   p_notes text default null,
-  p_created_by uuid default auth.uid(),
+  p_created_by uuid default null,
   p_created_by_email text default null,
   p_metadata jsonb default '{}'::jsonb
 )
