@@ -1,3 +1,14 @@
+## 2026-07-12 — AI Assistant Client Wording Follow-up Routing
+
+### Fixed
+
+- Aligned frontend thread-follow-up detection with explicit client communication triggers so “що сказати клієнту?”, “поясни клієнту”, “дай текст клієнту”, and “client update” preserve the previous System diagnostics or Ads Health route.
+- Added regression coverage for previous System diagnostics, previous Ads Health, standalone General fallback, and clear-new-intent switching.
+
+### Notes
+
+- No request_type/context_scope values, Supabase schema/migrations, playbooks, chat history, Data Bindings, connectors, routes/sidebar, or Edge Function code changed in this follow-up.
+
 ## 2026-07-12 — AI Assistant System Diagnostics Routing
 
 ### Changed

@@ -571,22 +571,65 @@ describe("AI Assistant smart routing and answer UX", () => {
       OPTIONS.find(
         (option) => option.labelKey === "assistantContextSystemReadiness",
       ) ?? OPTIONS[0];
-    const route = (prompt: string) =>
+    const previousAdsHealth =
+      OPTIONS.find((option) => option.labelKey === "assistantContextAdsHealth") ??
+      OPTIONS[0];
+    const routeFromSystem = (prompt: string) =>
       resolveAssistantContextWithHistory(
         prompt,
         defaultOption,
         false,
         previousSystem,
       ).labelKey;
+    const routeFromAdsHealth = (prompt: string) =>
+      resolveAssistantContextWithHistory(
+        prompt,
+        defaultOption,
+        false,
+        previousAdsHealth,
+      ).labelKey;
+    const routeWithoutHistory = (prompt: string) =>
+      resolveAssistantContextWithHistory(prompt, defaultOption, false, null)
+        .labelKey;
 
-    expect(route("що перевірити першим?")).toBe("assistantContextSystemReadiness");
-    expect(route("а чому так?")).toBe("assistantContextSystemReadiness");
-    expect(route("сформулюй клієнту")).toBe("assistantContextSystemReadiness");
-    expect(route("а що з Supabase?")).toBe("assistantContextSystemReadiness");
-    expect(route("а що з GitHub Pages?")).toBe("assistantContextSystemReadiness");
+    expect(routeFromSystem("що перевірити першим?")).toBe(
+      "assistantContextSystemReadiness",
+    );
+    expect(routeFromSystem("а чому так?")).toBe(
+      "assistantContextSystemReadiness",
+    );
+    expect(routeFromSystem("що сказати клієнту?")).toBe(
+      "assistantContextSystemReadiness",
+    );
+    expect(routeFromSystem("поясни клієнту")).toBe(
+      "assistantContextSystemReadiness",
+    );
+    expect(routeFromSystem("дай текст клієнту")).toBe(
+      "assistantContextSystemReadiness",
+    );
+    expect(routeFromSystem("client update")).toBe(
+      "assistantContextSystemReadiness",
+    );
+    expect(routeFromSystem("сформулюй клієнту")).toBe(
+      "assistantContextSystemReadiness",
+    );
+    expect(routeFromSystem("а що з Supabase?")).toBe(
+      "assistantContextSystemReadiness",
+    );
+    expect(routeFromSystem("а що з GitHub Pages?")).toBe(
+      "assistantContextSystemReadiness",
+    );
+    expect(routeFromAdsHealth("що сказати клієнту?")).toBe(
+      "assistantContextAdsHealth",
+    );
+    expect(routeWithoutHistory("що сказати клієнту?")).toBe(
+      "assistantContextGeneral",
+    );
 
-    expect(route("чому немає свіжих рекламних даних?")).toBe("assistantContextAdsHealth");
-    expect(route("що таке CPL?")).toBe("assistantContextGeneral");
+    expect(routeFromSystem("чому немає свіжих рекламних даних?")).toBe(
+      "assistantContextAdsHealth",
+    );
+    expect(routeFromSystem("що таке CPL?")).toBe("assistantContextGeneral");
   });
 
   it("shows resolved context badges and copy actions for assistant answers", () => {
