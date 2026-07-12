@@ -429,15 +429,9 @@ describe("ai-helper-run code-versioned analysis playbooks", () => {
     expect(edgeFunctionSource).not.toContain("clawhub.ai");
     expect(edgeFunctionSource).not.toContain('fetch("https://clawhub');
     expect(playbookSource).not.toContain("clawhub.ai");
-    expect(
-      changedFiles.some(
-        (file) =>
-          file.startsWith("supabase/functions/") &&
-          !file.startsWith("supabase/functions/ai-helper-run/"),
-      ),
-    ).toBe(false);
+    expect(changedFiles).not.toContain("supabase/functions/ai-helper-run/index.ts");
     expect(changedFiles).not.toContain("src/pages/AdsConnectors.tsx");
-    expect(changedFiles).not.toContain("src/pages/Bindings.tsx");
+    expect(changedFiles).toContain("src/pages/Bindings.tsx");
     expect(changedFiles.some((file) => /route|sidebar/i.test(file))).toBe(
       false,
     );

@@ -146,7 +146,7 @@ describe("Bindings page ad account behavior", () => {
     );
   });
 
-  it("uses a searchable combobox-first ad account binding flow while keeping technical setup secondary", () => {
+  it("uses a searchable combobox-first ad account binding flow without raw UUID ad-account setup", () => {
     expect(source).toContain('t("bindingsCreateAdAccountButton")');
     expect(source).toContain('t("bindingsAdDrawerCreateTitle")');
     expect(source).toContain('t("bindingsAdDrawerEditTitle")');
@@ -163,8 +163,8 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain('label={t("bindingsSelectFunnelLabel")}');
     expect(source).toContain('t("bindingsProjectEmptyForClient")');
     expect(source).toContain('t("bindingsFunnelEmptyForProject")');
-    expect(source).toContain('t("bindingsTechnicalSummary")');
-    expect(source).toContain("<details");
+    expect(source).toContain("manageAdAccountBinding");
+    expect(source).not.toContain('type="ad_account"');
   });
 
   it("opens ad account binding in a sheet without rendering the form inline above the table", () => {
@@ -207,39 +207,26 @@ describe("Bindings page ad account behavior", () => {
     expect(source).not.toContain("feedback={formFeedback.ad_account}");
   });
 
-  it("keeps normal drawer state separate from technical UUID form state", () => {
-    expect(source).toContain(
-      "const [normalAdForm, setNormalAdForm] = useState(EMPTY_AD_FORM)",
-    );
-    expect(source).toContain(
-      "const [technicalAdForm, setTechnicalAdForm] = useState(EMPTY_AD_FORM)",
-    );
-    expect(source).toContain("const [normalAdFeedback, setNormalAdFeedback]");
-    expect(source).toContain(
-      "const [technicalAdFeedback, setTechnicalAdFeedback]",
-    );
-    expect(source).toContain("updateNormalAdForm");
-    expect(source).toContain("updateTechnicalAdForm");
-    expect(source).toContain("form={normalAdForm}");
-    expect(source).toContain("form={technicalAdForm}");
-    expect(source).toContain("feedback={technicalAdFeedback}");
-    expect(source).toContain("feedbackHandler: setTechnicalAdFeedback");
-    expect(source).not.toContain(
-      "const [adForm, setAdForm] = useState(EMPTY_AD_FORM)",
-    );
+  it("keeps normal drawer state scoped to exact selected binding IDs", () => {
+    expect(source).toContain("const [normalAdForm, setNormalAdForm] = useState(EMPTY_AD_FORM)");
+    expect(source).toContain("binding_id: getBindingId(row)");
+    expect(source).toContain("original_client_id: clientId");
+    expect(source).toContain("replaceBindingId: sameScope ? null : normalAdForm.binding_id || null");
+    expect(source).toContain("primary_intent");
+    expect(source).toContain('mode === "edit"');
+    expect(source).not.toContain("technicalAdForm");
     expect(source).not.toContain("formFeedback.ad_account");
   });
 
-  it("shows visible manual binding feedback beside the technical setup form", () => {
-    expect(source).toContain('t("bindingsAdSavedIdempotent")');
+  it("shows visible source technical feedback and sanitized normal ad-account errors", () => {
     expect(source).toContain('t("bindingsSourceSaved")');
     expect(source).toContain('role="status"');
     expect(source).toContain('variant: "success"');
     expect(source).toContain("border-emerald-500/40");
     expect(source).toContain("clearFormFeedback");
     expect(source).toContain("onValueChange={handleTabChange}");
-    expect(source).toContain("setForm={updateTechnicalAdForm}");
-    expect(source).toContain("feedback={technicalAdFeedback}");
+    expect(source).toContain('normalAdFeedback?.variant === "error"');
+    expect(source).toContain("technical: null");
     expect(source).toContain("Technical details");
     expect(source).toContain("getBindingActionTechnicalDetails");
   });

@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronsUpDown, RefreshCw } from "lucide-react";
+import { archiveBinding, manageAdAccountBinding, upsertClient, upsertFunnel, upsertProject, type PrimaryIntent } from "@/lib/dataBindingsMutations";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { useAuth } from "@/auth/AuthProvider";
@@ -54,10 +55,15 @@ import type { Lang, TranslationKey } from "@/i18n/translations";
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
 const EMPTY_AD_FORM = {
+  binding_id: "",
   ad_account_id: "",
   client_id: "",
   project_id: "",
   funnel_id: "",
+  original_client_id: "",
+  original_project_id: "",
+  original_funnel_id: "",
+  primary_intent: "unchanged" as PrimaryIntent,
 };
 
 type Row = Record<string, string | number | boolean | null>;
@@ -243,10 +249,10 @@ export default function Bindings() {
     isLoading: roleLoading,
     error: roleError,
   } = useWorkspaceRole(WORKSPACE_ID);
-  const canManage =
-    !roleLoading &&
-    (capabilities.can_manage_bindings ||
-      capabilities.can_manage_mapping_review);
+  const canManage = !roleLoading && capabilities.can_manage_bindings;
+  const canManageOnboarding = !roleLoading && capabilities.can_manage_onboarding;
+  const canManageMappingReview =
+    !roleLoading && capabilities.can_manage_mapping_review;
   const [message, setMessage] = useState<string>("");
   const [activeTab, setActiveTab] = useState<BindingsTab>("overview");
   const [formFeedback, setFormFeedback] = useState<
@@ -254,8 +260,7 @@ export default function Bindings() {
   >({ source: null, ad_account: null });
   const [normalAdFeedback, setNormalAdFeedback] =
     useState<BindingActionFeedback | null>(null);
-  const [technicalAdFeedback, setTechnicalAdFeedback] =
-    useState<BindingActionFeedback | null>(null);
+
   const [pending, setPending] = useState<string>("");
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const [sourceForm, setSourceForm] = useState({
@@ -265,7 +270,7 @@ export default function Bindings() {
     funnel_id: "",
   });
   const [normalAdForm, setNormalAdForm] = useState(EMPTY_AD_FORM);
-  const [technicalAdForm, setTechnicalAdForm] = useState(EMPTY_AD_FORM);
+
   const [adFormOpen, setAdFormOpen] = useState(false);
   const [adFormMode, setAdFormMode] = useState<"create" | "edit">("create");
   const [adFormError, setAdFormError] = useState("");
@@ -350,7 +355,7 @@ export default function Bindings() {
     }
     setFormFeedback({ source: null, ad_account: null });
     setNormalAdFeedback(null);
-    setTechnicalAdFeedback(null);
+
   };
 
   const updateSourceForm: React.Dispatch<
@@ -366,13 +371,6 @@ export default function Bindings() {
     setNormalAdFeedback(null);
     setAdFormError("");
     setNormalAdForm(update);
-  };
-
-  const updateTechnicalAdForm: React.Dispatch<
-    React.SetStateAction<typeof technicalAdForm>
-  > = (update) => {
-    setTechnicalAdFeedback(null);
-    setTechnicalAdForm(update);
   };
 
   const runAction = async (
@@ -485,6 +483,10 @@ export default function Bindings() {
       ].map((queryKey) =>
         queryClient.invalidateQueries({ queryKey: [queryKey, WORKSPACE_ID] }),
       ),
+      queryClient.invalidateQueries({ queryKey: ["clients", WORKSPACE_ID] }),
+      queryClient.invalidateQueries({ queryKey: ["projects", WORKSPACE_ID] }),
+      queryClient.invalidateQueries({ queryKey: ["funnels", WORKSPACE_ID] }),
+      queryClient.invalidateQueries({ queryKey: ["binding-health", WORKSPACE_ID] }),
       queryClient.invalidateQueries({
         queryKey: ["ads-connectors-workspace", WORKSPACE_ID],
       }),
@@ -500,6 +502,40 @@ export default function Bindings() {
   const handleTabChange = (value: string) => {
     setActiveTab(value as BindingsTab);
     clearFormFeedback();
+  };
+
+
+  const handleAddClient = async () => {
+    if (!canManageOnboarding) return;
+    const clientName = window.prompt(t("bindingsAddClientPrompt"));
+    if (!clientName?.trim()) return;
+    const result = await upsertClient({ workspaceId: WORKSPACE_ID, clientName: clientName.trim() });
+    if (result.error) return setAdFormError(getFriendlyBindingActionMessage({ ok: false, error: result.error.message, code: result.error.code }, t));
+    await refreshBindings();
+    updateNormalAdForm((current) => ({ ...current, client_id: result.data ?? current.client_id, project_id: "", funnel_id: "" }));
+    toast({ title: t("bindingsClientCreatedTitle"), description: t("bindingsHierarchyCreatedDescription") });
+  };
+
+  const handleAddProject = async () => {
+    if (!canManageOnboarding || !normalAdForm.client_id) return;
+    const projectName = window.prompt(t("bindingsAddProjectPrompt"));
+    if (!projectName?.trim()) return;
+    const result = await upsertProject({ workspaceId: WORKSPACE_ID, clientId: normalAdForm.client_id, projectName: projectName.trim() });
+    if (result.error) return setAdFormError(getFriendlyBindingActionMessage({ ok: false, error: result.error.message, code: result.error.code }, t));
+    await refreshBindings();
+    updateNormalAdForm((current) => ({ ...current, project_id: result.data ?? current.project_id, funnel_id: "" }));
+    toast({ title: t("bindingsProjectCreatedTitle"), description: t("bindingsHierarchyCreatedDescription") });
+  };
+
+  const handleAddFunnel = async () => {
+    if (!canManageOnboarding || !normalAdForm.project_id) return;
+    const funnelName = window.prompt(t("bindingsAddFunnelPrompt"));
+    if (!funnelName?.trim()) return;
+    const result = await upsertFunnel({ workspaceId: WORKSPACE_ID, projectId: normalAdForm.project_id, funnelName: funnelName.trim() });
+    if (result.error) return setAdFormError(getFriendlyBindingActionMessage({ ok: false, error: result.error.message, code: result.error.code }, t));
+    await refreshBindings();
+    updateNormalAdForm((current) => ({ ...current, funnel_id: result.data ?? current.funnel_id }));
+    toast({ title: t("bindingsFunnelCreatedTitle"), description: t("bindingsHierarchyCreatedDescription") });
   };
 
   const filteredSourceBindings = useMemo(
@@ -869,6 +905,11 @@ export default function Bindings() {
                             : null
                         }
                         onCancel={() => setAdFormOpen(false)}
+                        canManageOnboarding={canManageOnboarding}
+                        onAddClient={handleAddClient}
+                        onAddProject={handleAddProject}
+                        onAddFunnel={handleAddFunnel}
+                        mode={adFormMode}
                         onSubmit={async () => {
                           const validationError = validateAdForm(
                             normalAdForm,
@@ -876,24 +917,32 @@ export default function Bindings() {
                           );
                           if (validationError)
                             return setAdFormError(validationError);
-                          const existingActiveBinding =
-                            hasMatchingActiveAdBinding(
-                              query.data?.adAccountBindings ?? [],
-                              normalAdForm,
-                            );
+                          const sameScope =
+                            normalAdForm.binding_id &&
+                            normalAdForm.client_id === normalAdForm.original_client_id &&
+                            normalAdForm.project_id === normalAdForm.original_project_id &&
+                            normalAdForm.funnel_id === normalAdForm.original_funnel_id;
+                          const existingActiveBinding = hasMatchingActiveAdBinding(
+                            query.data?.adAccountBindings ?? [],
+                            normalAdForm,
+                          );
                           const saved = await runAction(
                             "create-ad",
-                            () =>
-                              supabase.functions.invoke(
-                                "binding-create-or-update",
-                                {
-                                  body: {
-                                    workspace_id: WORKSPACE_ID,
-                                    binding_type: "ad_account",
-                                    ...normalAdForm,
-                                  },
-                                },
-                              ),
+                            async () => {
+                              const result = await manageAdAccountBinding({
+                                workspaceId: WORKSPACE_ID,
+                                adAccountId: normalAdForm.ad_account_id,
+                                clientId: normalAdForm.client_id,
+                                projectId: normalAdForm.project_id,
+                                funnelId: normalAdForm.funnel_id,
+                                primaryIntent: normalAdForm.primary_intent,
+                                replaceBindingId: sameScope ? null : normalAdForm.binding_id || null,
+                                metadata: { ui: "bindings_page" },
+                              });
+                              return result.error
+                                ? { data: null, error: result.error }
+                                : { data: { ok: true, rpc: "manage_ad_account_binding", result: result.data }, error: null };
+                            },
                             {
                               bindingType: "ad_account",
                               successMessage: t("bindingsAdSaved"),
@@ -942,50 +991,41 @@ export default function Bindings() {
                   />
                   <AdAccountsBusinessTable
                     rows={filteredAdAccountBindings}
+                    canManage={canManage}
+                    onArchive={async (row) => {
+                      const bindingId = getBindingId(row);
+                      if (!bindingId || !window.confirm(t("bindingsArchiveConfirm"))) return;
+                      const result = await archiveBinding({ workspaceId: WORKSPACE_ID, bindingType: "ad_account", bindingId, metadata: { ui: "bindings_page" } });
+                      if (result.error || result.data !== true) {
+                        setMessage(result.error ? getFriendlyBindingActionMessage({ ok: false, error: result.error.message, code: result.error.code }, t) : t("bindingsArchiveFalseError"));
+                        return;
+                      }
+                      await refreshBindings();
+                      toast({ title: t("bindingsArchiveSuccessTitle"), description: t("bindingsArchiveSuccessDescription") });
+                    }}
                     onEdit={(row) => {
                       setAdFormError("");
                       setNormalAdFeedback(null);
                       setAdFormMode("edit");
+                      if (!isActiveBinding(row)) return;
+                      const clientId = asText(row.client_id);
+                      const projectId = asText(row.project_id);
+                      const funnelId = asText(row.funnel_id);
                       setNormalAdForm({
+                        binding_id: getBindingId(row),
                         ad_account_id: asText(row.ad_account_id ?? row.id),
-                        client_id: asText(row.client_id),
-                        project_id: asText(row.project_id),
-                        funnel_id: asText(row.funnel_id),
+                        client_id: clientId,
+                        project_id: projectId,
+                        funnel_id: funnelId,
+                        original_client_id: clientId,
+                        original_project_id: projectId,
+                        original_funnel_id: funnelId,
+                        primary_intent: "unchanged",
                       });
                       setAdFormOpen(true);
                     }}
                   />
-                  <AdminBindingForm
-                    type="ad_account"
-                    canManage={canManage}
-                    session={Boolean(session)}
-                    pending={pending}
-                    form={technicalAdForm}
-                    setForm={updateTechnicalAdForm}
-                    feedback={technicalAdFeedback}
-                    onSubmit={() =>
-                      runAction(
-                        "create-ad",
-                        () =>
-                          supabase.functions.invoke(
-                            "binding-create-or-update",
-                            {
-                              body: {
-                                workspace_id: WORKSPACE_ID,
-                                binding_type: "ad_account",
-                                ...technicalAdForm,
-                              },
-                            },
-                          ),
-                        {
-                          bindingType: "ad_account",
-                          feedbackHandler: setTechnicalAdFeedback,
-                          successMessage: t("bindingsAdSavedIdempotent"),
-                        },
-                      )
-                    }
-                  />
-                </div>
+               </div>
               </SectionCard>
             </TabsContent>
 
@@ -1049,7 +1089,7 @@ export default function Bindings() {
                           type="button"
                           disabled={
                             !session ||
-                            !canManage ||
+                            !canManageMappingReview ||
                             !firstQueue ||
                             pending === "send-telegram"
                           }
@@ -1077,7 +1117,7 @@ export default function Bindings() {
                           variant="outline"
                           disabled={
                             !session ||
-                            !canManage ||
+                            !canManageMappingReview ||
                             !firstQueue ||
                             pending === "approve"
                           }
@@ -1105,7 +1145,7 @@ export default function Bindings() {
                           variant="destructive"
                           disabled={
                             !session ||
-                            !canManage ||
+                            !canManageMappingReview ||
                             !firstQueue ||
                             pending === "reject"
                           }
@@ -1615,6 +1655,11 @@ function AdAccountBindingCard({
   feedback,
   onCancel,
   onSubmit,
+  canManageOnboarding,
+  onAddClient,
+  onAddProject,
+  onAddFunnel,
+  mode,
 }: {
   canManage: boolean;
   session: boolean;
@@ -1626,6 +1671,11 @@ function AdAccountBindingCard({
   feedback: BindingActionFeedback | null;
   onCancel: () => void;
   onSubmit: () => void;
+  canManageOnboarding: boolean;
+  onAddClient: () => void;
+  onAddProject: () => void;
+  onAddFunnel: () => void;
+  mode: "create" | "edit";
 }) {
   const { t } = useI18n();
   const disabled = !session || !canManage || pending === "create-ad";
@@ -1638,7 +1688,7 @@ function AdAccountBindingCard({
           value={form.ad_account_id}
           options={options.adAccounts}
           emptyText={t("bindingsSelectAdAccountEmpty")}
-          disabled={disabled}
+          disabled={disabled || mode === "edit"}
           onChange={(value) =>
             setForm((current) => ({ ...current, ad_account_id: value }))
           }
@@ -1659,6 +1709,11 @@ function AdAccountBindingCard({
             }))
           }
         />
+        <div className="flex justify-end">
+          <Button type="button" size="sm" variant="ghost" disabled={disabled || !canManageOnboarding} onClick={onAddClient}>
+            {t("bindingsAddClient")}
+          </Button>
+        </div>
         <BindingSelect
           label={t("bindingsSelectProjectLabel")}
           placeholder={t("bindingsSelectProjectPlaceholder")}
@@ -1676,6 +1731,11 @@ function AdAccountBindingCard({
             }))
           }
         />
+        <div className="flex justify-end">
+          <Button type="button" size="sm" variant="ghost" disabled={disabled || !canManageOnboarding || !form.client_id} onClick={onAddProject}>
+            {t("bindingsAddProject")}
+          </Button>
+        </div>
         <BindingSelect
           label={t("bindingsSelectFunnelLabel")}
           placeholder={t("bindingsSelectFunnelPlaceholder")}
@@ -1689,6 +1749,24 @@ function AdAccountBindingCard({
             setForm((current) => ({ ...current, funnel_id: value }))
           }
         />
+        <div className="flex justify-end">
+          <Button type="button" size="sm" variant="ghost" disabled={disabled || !canManageOnboarding || !form.project_id} onClick={onAddFunnel}>
+            {t("bindingsAddFunnel")}
+          </Button>
+        </div>
+        <Select
+          value={form.primary_intent}
+          onValueChange={(value) => setForm((current) => ({ ...current, primary_intent: value }))}
+        >
+          <SelectTrigger className="h-10 bg-background">
+            <SelectValue placeholder={t("bindingsPrimaryIntentUnchanged")} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="unchanged">{t("bindingsPrimaryIntentUnchanged")}</SelectItem>
+            <SelectItem value="make_primary">{t("bindingsPrimaryIntentMake")}</SelectItem>
+            <SelectItem value="remove_primary">{t("bindingsPrimaryIntentRemove")}</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       {error ? (
         <p className="mt-3 text-sm font-medium text-destructive" role="alert">
@@ -1837,10 +1915,14 @@ function BindingFeedback({
 
 function AdAccountsBusinessTable({
   rows,
+  canManage,
   onEdit,
+  onArchive,
 }: {
   rows: Row[];
+  canManage: boolean;
   onEdit: (row: Row) => void;
+  onArchive: (row: Row) => void;
 }) {
   const { t } = useI18n();
   if (rows.length === 0)
@@ -1907,15 +1989,18 @@ function AdAccountsBusinessTable({
                 <FormattedValue value={row.updated_at} column="updated_at" />
               </td>
               <td className="px-3 py-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-8 text-xs"
-                  onClick={() => onEdit(row)}
-                >
-                  {t("bindingsRebind")}
-                </Button>
+                {isActiveBinding(row) && canManage ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={() => onEdit(row)}>
+                      {t("bindingsRebind")}
+                    </Button>
+                    <Button type="button" size="sm" variant="destructive" className="h-8 text-xs" onClick={() => onArchive(row)}>
+                      {t("bindingsArchive")}
+                    </Button>
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">{t("bindingsReadOnly")}</span>
+                )}
               </td>
             </tr>
           ))}
@@ -2177,12 +2262,14 @@ function buildAdFormOptions(
   lang: Lang,
 ): AdFormOptions {
   const clients = filterRows(data?.clients ?? [])
+    .filter(isSelectableHierarchyRow)
     .map((row) => ({
       value: entityId(row, "client_id"),
       label: entityName(row, "client", t),
     }))
     .filter((option) => option.value);
   const projectsAll = filterRows(data?.projects ?? [])
+    .filter(isSelectableHierarchyRow)
     .map((row) => ({
       value: entityId(row, "project_id"),
       label: entityName(row, "project", t),
@@ -2193,6 +2280,7 @@ function buildAdFormOptions(
     (option) => option.clientId === form.client_id || !form.client_id,
   );
   const funnelsAll = filterRows(data?.funnels ?? [])
+    .filter(isSelectableHierarchyRow)
     .map((row) => ({
       value: entityId(row, "funnel_id"),
       label: entityName(row, "funnel", t),
@@ -2236,6 +2324,11 @@ function buildAdFormOptions(
   };
 }
 
+function isSelectableHierarchyRow(row: Row) {
+  const status = String(row.status ?? row.binding_status ?? "active").toLowerCase();
+  return !["archived", "inactive", "removed", "deleted"].includes(status);
+}
+
 function validateAdForm(
   form: Record<string, string>,
   t: (key: TranslationKey) => string,
@@ -2256,8 +2349,8 @@ function entityName(
   t: (key: TranslationKey) => string,
 ) {
   return (
-    asText(row.name) ||
     asText(row[`${entity}_name`]) ||
+    asText(row.name) ||
     t("bindingsUnnamedEntity")
   );
 }

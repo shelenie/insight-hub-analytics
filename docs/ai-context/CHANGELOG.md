@@ -1,3 +1,19 @@
+## 2026-07-12
+
+### Changed
+
+- Wired `/bindings` ad-account create/edit/rebind to authenticated `manage_ad_account_binding` through a frontend mutation helper, with explicit primary intent and selected binding replacement IDs.
+- Added authenticated `archive_binding` usage for selected ad-account row archival and removed the ad-account raw UUID technical form from the active workflow.
+- Added compact Add Client / Add Project / Add Funnel actions in the binding drawer using authenticated `upsert_client`, `upsert_project`, and `upsert_funnel` with backend-derived actor identity.
+- Changed `binding-create-or-update` so ad-account mutations return a deprecated/unsupported response while source mutations continue through the source resolver.
+- Updated the legacy onboarding and binding-archive wrappers to call hardened RPCs with the authenticated user client and exact canonical argument names.
+- Fixed the source resolver Google Sheet tab lookup to use `is_active` and `google_sheet_source_id`, preserve canonical Google Sheet source identity, and call `bind_source_entity_to_scope` through the authenticated user client.
+
+### Notes
+
+- No Supabase migration or production data mutation was added.
+- `ai-helper-run` was not changed.
+
 ## 2026-07-12 — AI Assistant Client Wording Follow-up Routing
 
 ### Fixed

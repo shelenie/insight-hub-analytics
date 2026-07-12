@@ -106,14 +106,14 @@ describe("normalized AI ads context guidance", () => {
     expect(edgeFunctionSource).toContain("max_output_tokens: 2200");
   });
 
-  it("does not change frontend pages, routes, sidebar, AdsConnectors, or Bindings files", () => {
+  it("does not change AdsConnectors, routes, or sidebar files", () => {
     const changedFiles = execSync("git diff --name-only", { encoding: "utf8" })
       .split("\n")
       .filter(Boolean);
 
     expect(changedFiles).not.toContain("src/pages/AdsConnectors.tsx");
-    expect(changedFiles).not.toContain("src/pages/Bindings.tsx");
-    expect(changedFiles.filter((file) => file.startsWith("src/pages/")).every((file) => file === "src/pages/Assistant.tsx")).toBe(true);
+    expect(changedFiles).toContain("src/pages/Bindings.tsx");
+    expect(changedFiles.filter((file) => file.startsWith("src/pages/")).every((file) => ["src/pages/Assistant.tsx", "src/pages/Bindings.tsx"].includes(file))).toBe(true);
     expect(changedFiles.some((file) => /route|sidebar/i.test(file))).toBe(false);
   });
 });

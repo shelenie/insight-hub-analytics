@@ -1,3 +1,10 @@
+## Step 3 Status — Data Bindings frontend wiring ready for review
+
+- Review and deploy `binding-create-or-update` after merge because its source resolver and deprecated ad-account branch changed; keep `verify_jwt = true`.
+- QA `/bindings` as admin/superadmin: create ad-account binding, same-scope edit, selected rebind, primary unchanged/make/remove, selected archive, and Add Client/Project/Funnel flows.
+- QA member access: members should remain read-only and should not see or invoke binding/onboarding mutation actions.
+- No Data Bindings migration is expected for this Step 3 PR; do not reapply `20260711_harden_data_binding_mutation_rpcs.sql`.
+
 ## Verified Local Follow-up — 2026-07-12 AI Assistant Client Wording Follow-up Routing
 
 AI Assistant thread-follow-up detection now explicitly recognizes client-wording follow-ups such as “що сказати клієнту?”, “поясни клієнту”, “дай текст клієнту”, and “client update” without treating every generic mention of “client” as a continuation. After a System diagnostics or Ads Health answer, those explicit wording requests preserve the previous assistant route; standalone client-wording prompts without previous assistant context continue to fall back to General. No request_type/context_scope values, Supabase schema/migrations, playbook behavior, chat history, Data Bindings, connectors, routes/sidebar, or Edge Function code changed in this follow-up.
