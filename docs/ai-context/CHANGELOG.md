@@ -1,3 +1,16 @@
+## 2026-07-12 — Step 3 Onboarding Edit and Source Parent Validation Follow-up
+
+### Fixed
+
+- Changed onboarding Edge Function wrappers so edit mode with an entity ID updates the exact selected Client/Project/Funnel row through authenticated `userClient` instead of calling create/upsert RPCs that key only by non-null code.
+- Kept create mode on the hardened `upsert_client`, `upsert_project`, and `upsert_funnel` RPC paths when no entity ID is supplied.
+- Added active hierarchy validation for Project edits and Funnel edits, with Funnel `client_id` derived from the selected active Project.
+- Excluded Google Sheet tabs from source candidates when their parent Sheet is inactive, archived, disabled, deleted, or missing; server-side tab resolution now enforces the same parent validation.
+
+### Notes
+
+- No Supabase migration, RLS change, RPC signature change, production data mutation, or `ai-helper-run` change was made.
+
 ## 2026-07-12 — Step 3 RPC Payload and Primary Preservation Follow-up
 
 ### Fixed

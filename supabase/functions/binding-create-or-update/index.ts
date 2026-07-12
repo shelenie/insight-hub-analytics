@@ -239,17 +239,24 @@ async function lookupGoogleSheetTabSource(adminClient: any, sourceId: string, wo
     return { source: null, error: sourceLookupError("inactive_source", sourceId, 409, "Cannot create a binding for an inactive or archived source", { id: sourceId, is_active: data.is_active }) };
   }
 
-  let parentSheet: { spreadsheet_id?: string | null; spreadsheet_name?: string | null } | null = null;
+  let parentSheet: { id?: string | null; spreadsheet_id?: string | null; spreadsheet_name?: string | null; status?: string | null; is_active?: boolean | null } | null = null;
   const parentSheetId = data.google_sheet_source_id ?? data.source_id ?? null;
-  if (parentSheetId) {
-    const { data: sheet } = await adminClient
-      .from("google_sheet_sources")
-      .select("id, spreadsheet_id, spreadsheet_name")
-      .eq("id", parentSheetId)
-      .eq("workspace_id", workspaceId)
-      .maybeSingle();
-    parentSheet = sheet ?? null;
+  if (!parentSheetId) {
+    return { source: null, error: sourceLookupError("source_not_found", sourceId, 404, "Google Sheet tab parent source was not found", { id: sourceId, parent_sheet_id: parentSheetId }) };
   }
+  const { data: sheet, error: sheetError } = await adminClient
+    .from("google_sheet_sources")
+    .select("id, spreadsheet_id, spreadsheet_name, status, is_active")
+    .eq("id", parentSheetId)
+    .eq("workspace_id", workspaceId)
+    .maybeSingle();
+  if (sheetError || !sheet) {
+    return { source: null, error: sourceLookupError("source_not_found", sourceId, 404, "Google Sheet tab parent source was not found", { id: sourceId, parent_sheet_id: parentSheetId }) };
+  }
+  if (sheet.is_active === false || isInactiveStatus(sheet.status)) {
+    return { source: null, error: sourceLookupError("inactive_source", sourceId, 409, "Cannot create a binding for a tab under an inactive or archived source", { id: sourceId, parent_sheet_id: parentSheetId, parent_status: sheet.status, parent_is_active: sheet.is_active }) };
+  }
+  parentSheet = sheet;
 
   const spreadsheetName = parentSheet?.spreadsheet_name ?? null;
   const tabName = data.tab_name ?? null;

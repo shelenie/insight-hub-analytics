@@ -1,3 +1,10 @@
+## Step 3 Status — Ready for review after onboarding edit and source-parent fixes
+
+- Deploy changed Edge Functions after merge: `binding-create-or-update`, `binding-archive`, `onboarding-client-upsert`, `onboarding-project-upsert`, and `onboarding-funnel-upsert`. Do not deploy unrelated functions.
+- QA `/onboarding` edit mode for Client/Project/Funnel records with existing IDs, including code changes and records with null codes, and confirm no duplicate hierarchy rows are created.
+- QA `/bindings` source selector and source save with Google Sheet tabs under active, inactive, archived, and missing parent Sheets.
+- No Data Bindings migration is expected; do not reapply `20260711_harden_data_binding_mutation_rpcs.sql`.
+
 ## Step 3 Status — Ready for review after RPC payload and primary-state fixes
 
 - Deploy changed Edge Functions after merge: `binding-create-or-update`, `binding-archive`, `onboarding-client-upsert`, `onboarding-project-upsert`, and `onboarding-funnel-upsert`. Do not deploy unrelated functions.

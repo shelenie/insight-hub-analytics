@@ -1643,11 +1643,12 @@ async function readSourceCandidates(): Promise<SourceCandidatesData> {
   if (tabs.error) throw tabs.error;
   if (datasets.error) throw datasets.error;
 
+  const activeSheetRows = ((sheets.data ?? []) as Row[]).filter((row) => row.is_active !== false && !isInactiveStatus(row.status));
+  const activeSheetIds = new Set(activeSheetRows.map((row) => asText(row.id)).filter(Boolean));
   const sheetNameById = new Map(
-    ((sheets.data ?? []) as Row[]).map((row) => [asText(row.id), asText(row.spreadsheet_name)]),
+    activeSheetRows.map((row) => [asText(row.id), asText(row.spreadsheet_name)]),
   );
-  const sheetCandidates = ((sheets.data ?? []) as Row[])
-    .filter((row) => row.is_active !== false && !isInactiveStatus(row.status))
+  const sheetCandidates = activeSheetRows
     .map((row) => ({
       id: asText(row.id),
       sourceType: "google_sheet_source" as const,
@@ -1655,7 +1656,10 @@ async function readSourceCandidates(): Promise<SourceCandidatesData> {
       description: "Google Sheet",
     }));
   const tabCandidates = ((tabs.data ?? []) as Row[])
-    .filter((row) => row.is_active !== false)
+    .filter((row) => {
+      const parentId = asText(row.google_sheet_source_id) || asText(row.source_id);
+      return row.is_active !== false && activeSheetIds.has(parentId);
+    })
     .map((row) => {
       const parentId = asText(row.google_sheet_source_id) || asText(row.source_id);
       const parentName = sheetNameById.get(parentId) || parentId;

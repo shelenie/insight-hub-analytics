@@ -12,6 +12,8 @@ describe("Step 3 Data Bindings frontend production flow", () => {
     expect(bindings).toContain("enabled: Boolean(session) && canManage");
     expect(bindings).toContain('.select("id, spreadsheet_name, spreadsheet_id, status, is_active")');
     expect(bindings).toContain('.select("id, google_sheet_source_id, source_id, tab_name, source_type, target_raw_table, is_active")');
+    expect(bindings).toContain("const activeSheetIds = new Set");
+    expect(bindings).toContain("row.is_active !== false && activeSheetIds.has(parentId)");
     expect(bindings).toContain('.select("id, dataset_name, sheet_name, source_type, target_raw_table, status, parser_type")');
     expect(bindings).not.toMatch(/secret_ref|access_token|refresh_token|oauth|config_json|storage_path|raw_rows/i);
   });
@@ -110,6 +112,9 @@ describe("Step 3 Data Bindings frontend production flow", () => {
     expect(edge).toContain("source_table: data.target_raw_table ?? \"google_sheet_sources\"");
     expect(edge).toContain("data.is_active === false || isInactiveStatus(data.status)");
     expect(edge).toContain("google_sheet_source_id ?? data.source_id");
+    expect(edge).toContain('.select("id, spreadsheet_id, spreadsheet_name, status, is_active")');
+    expect(edge).toContain("if (!parentSheetId)");
+    expect(edge).toContain("sheet.is_active === false || isInactiveStatus(sheet.status)");
     expect(edge).toContain("await userClient.rpc(rpcName, rpcPayload)");
     expect(edge).not.toContain('source_kind: "google_sheet_tab"');
   });
