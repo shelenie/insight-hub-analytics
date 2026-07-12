@@ -176,6 +176,23 @@ describe("ai-helper-run code-versioned analysis playbooks", () => {
     );
   });
 
+
+  it("adds evidence-first safe system diagnostics guidance to operations readiness", () => {
+    expect(playbookSource).toContain("do not claim the site/system is down without evidence");
+    expect(playbookSource).toContain("local browser/cache/device");
+    expect(playbookSource).toContain("GitHub Pages publish/deploy");
+    expect(playbookSource).toContain("Supabase Edge Function/API");
+    expect(playbookSource).toContain("auth/session/JWT");
+    expect(playbookSource).toContain("RLS/permissions");
+    expect(playbookSource).toContain("database/query");
+    expect(playbookSource).toContain("webhook/background job");
+    expect(playbookSource).toContain("screenshot, exact URL/route, HTTP status");
+    expect(playbookSource).toContain("safe, non-destructive actions first");
+    expect(playbookSource).toContain("Never recommend deleting production data, dropping tables, disabling RLS");
+    expect(playbookSource).toContain("Do not invent incident status, current deploy state");
+    expect(playbookSource).toContain("For client-only system-diagnostics wording requests");
+  });
+
   it("recognizes only explicit client communication triggers", () => {
     expect(playbookSource).toContain("send to client|message to client");
     const triggerBlock =
@@ -413,7 +430,11 @@ describe("ai-helper-run code-versioned analysis playbooks", () => {
     expect(edgeFunctionSource).not.toContain('fetch("https://clawhub');
     expect(playbookSource).not.toContain("clawhub.ai");
     expect(
-      changedFiles.some((file) => file.startsWith("supabase/functions/ai-helper-run/")),
+      changedFiles.some(
+        (file) =>
+          file.startsWith("supabase/functions/") &&
+          !file.startsWith("supabase/functions/ai-helper-run/"),
+      ),
     ).toBe(false);
     expect(changedFiles).not.toContain("src/pages/AdsConnectors.tsx");
     expect(changedFiles).not.toContain("src/pages/Bindings.tsx");

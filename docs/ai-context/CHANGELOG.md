@@ -1,3 +1,29 @@
+## 2026-07-12 — AI Assistant Client Wording Follow-up Routing
+
+### Fixed
+
+- Aligned frontend thread-follow-up detection with explicit client communication triggers so “що сказати клієнту?”, “поясни клієнту”, “дай текст клієнту”, and “client update” preserve the previous System diagnostics or Ads Health route.
+- Added regression coverage for previous System diagnostics, previous Ads Health, standalone General fallback, and clear-new-intent switching.
+
+### Notes
+
+- No request_type/context_scope values, Supabase schema/migrations, playbooks, chat history, Data Bindings, connectors, routes/sidebar, or Edge Function code changed in this follow-up.
+
+## 2026-07-12 — AI Assistant System Diagnostics Routing
+
+### Changed
+
+- Added deterministic Ukrainian and English app/system/deploy/auth/API/runtime troubleshooting signals that route to the existing `production_readiness_summary` / `production_readiness` backend contract.
+- Renamed the Production Readiness user-facing Assistant mode label to “Системна діагностика” / “System diagnostics” while preserving admin Technical details with exact request/context values.
+- Extended thread-aware follow-up routing so system diagnostics conversations stay in Production Readiness for natural next-step/client-copy follow-ups, while clear Ads/Data/General intents still switch normally.
+- Hardened the Operations/Production Readiness playbook for evidence-first, non-destructive system troubleshooting across frontend, deploy, API, auth/JWT, RLS/permissions, database, webhook, and background-job layers.
+
+### Notes
+
+- Reuses existing DB-allowed values: `production_readiness_summary` and `production_readiness`; no new CHECK-constraint migration is required.
+- `supabase/functions/ai-helper-run` must be redeployed after merge because playbook guidance changed.
+- Existing Ads/Data/General routing remains separate and prioritized ahead of system diagnostics where the prompt is clearly about imports, data quality, mapping, or ad-platform health.
+
 ## Verified Local Follow-up — 2026-07-11 Data Bindings Repository Migration Live Defaults Sync
 
 The repository Data Bindings hardening migration now matches the exact verified live PostgreSQL defaults for the 17-argument `bind_source_entity_to_scope` RPC so future clean environment rebuilds can apply the migration without diverging from production. `p_source_table`, `p_source_id`, and `p_created_by` now default to null in the migration definition while the function body continues to derive authenticated actor identity through `require_source_manager` and auth/JWT context. No Supabase migration application, production data change, grants/role model change, frontend change, Edge Function deployment, connector change, route/sidebar change, or AI Assistant change was made.
