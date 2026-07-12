@@ -1,3 +1,10 @@
+## Step 3 Status — Ready for review after source workflow completion
+
+- Deploy changed Edge Functions after merge: `binding-create-or-update`, `binding-archive`, `onboarding-client-upsert`, `onboarding-project-upsert`, and `onboarding-funnel-upsert`. Do not deploy unrelated functions.
+- QA `/bindings` as admin/superadmin: source create, source same-scope edit, selected two-phase source rebind including partial archive-failure handling, source archive, ad-account create/edit/rebind/archive, primary intent, and Add Client/Project/Funnel dialogs.
+- QA member access: members should still load read-only binding tables, should not run source-candidate queries, and should not see or invoke binding/onboarding mutation actions.
+- No Data Bindings migration is expected; do not reapply `20260711_harden_data_binding_mutation_rpcs.sql`.
+
 ## Step 3 Status — Data Bindings frontend wiring ready for review
 
 - Review and deploy `binding-create-or-update` after merge because its source resolver and deprecated ad-account branch changed; keep `verify_jwt = true`.

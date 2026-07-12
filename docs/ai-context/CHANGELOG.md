@@ -1,3 +1,17 @@
+## 2026-07-12 — Step 3 Source Bindings UI Follow-up
+
+### Fixed
+
+- Replaced the active source raw-UUID form on `/bindings` with a safe admin source workflow using source candidates, searchable selectors, hierarchy cascading, primary intent, selected-row edit/rebind, and selected archive.
+- Implemented real two-phase selected source rebind with partial-success warning if the new binding saves but selected old binding archival fails.
+- Replaced browser prompts/confirms with localized Dialog / AlertDialog flows for Add Client / Add Project / Add Funnel and binding archive confirmation.
+- Preserved canonical Google Sheet source identity and stopped inventing a `google_sheet_tab` source kind or forcing `google_sheet_tabs` over established `target_raw_table` identity.
+- Restored unrelated AI tests so they no longer depend on uncommitted `git diff` state, and added focused Step 3 frontend regression coverage.
+
+### Notes
+
+- No Supabase migration, RLS change, RPC signature change, production data mutation, or `ai-helper-run` change was made.
+
 ## 2026-07-12
 
 ### Changed

@@ -15,6 +15,25 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   CompactStatusSummaryCard,
@@ -63,7 +82,19 @@ const EMPTY_AD_FORM = {
   original_client_id: "",
   original_project_id: "",
   original_funnel_id: "",
-  primary_intent: "unchanged" as PrimaryIntent,
+  primary_intent: "remove_primary" as PrimaryIntent,
+};
+
+const EMPTY_SOURCE_FORM = {
+  binding_id: "",
+  source_id: "",
+  client_id: "",
+  project_id: "",
+  funnel_id: "",
+  original_client_id: "",
+  original_project_id: "",
+  original_funnel_id: "",
+  primary_intent: "remove_primary" as PrimaryIntent,
 };
 
 type Row = Record<string, string | number | boolean | null>;
@@ -72,6 +103,13 @@ type OptionalJsonData = {
   payload: Record<string, unknown> | null;
   unavailableReason: string | null;
 };
+type SafeSourceCandidate = {
+  id: string;
+  sourceType: "google_sheet_source" | "google_sheet_tab" | "raw_external_dataset";
+  label: string;
+  description: string;
+};
+type SourceCandidatesData = { candidates: SafeSourceCandidate[] };
 type BindingsData = {
   sourceBindings: Row[];
   adAccountBindings: Row[];
@@ -99,7 +137,8 @@ type BindingActionTechnicalDetails = {
   binding_id?: string;
   result?: unknown;
 };
-type AdAccountBindingStatusFilter = "active" | "archived" | "all";
+type BindingStatusFilter = "active" | "archived" | "all";
+type AdAccountBindingStatusFilter = BindingStatusFilter;
 type BindingsTab =
   | "overview"
   | "source"
@@ -263,12 +302,12 @@ export default function Bindings() {
 
   const [pending, setPending] = useState<string>("");
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
-  const [sourceForm, setSourceForm] = useState({
-    source_id: "",
-    client_id: "",
-    project_id: "",
-    funnel_id: "",
-  });
+  const [sourceForm, setSourceForm] = useState(EMPTY_SOURCE_FORM);
+  const [sourceFormOpen, setSourceFormOpen] = useState(false);
+  const [sourceFormMode, setSourceFormMode] = useState<"create" | "edit">("create");
+  const [sourceFormError, setSourceFormError] = useState("");
+  const [sourceFeedback, setSourceFeedback] = useState<BindingActionFeedback | null>(null);
+  const [sourceStatusFilter, setSourceStatusFilter] = useState<BindingStatusFilter>("active");
   const [normalAdForm, setNormalAdForm] = useState(EMPTY_AD_FORM);
 
   const [adFormOpen, setAdFormOpen] = useState(false);
@@ -276,6 +315,10 @@ export default function Bindings() {
   const [adFormError, setAdFormError] = useState("");
   const [adAccountStatusFilter, setAdAccountStatusFilter] =
     useState<AdAccountBindingStatusFilter>("active");
+  const [hierarchyDialog, setHierarchyDialog] = useState<{ type: "client" | "project" | "funnel"; target: "ad" | "source" } | null>(null);
+  const [hierarchyName, setHierarchyName] = useState("");
+  const [hierarchyError, setHierarchyError] = useState("");
+  const [archiveTarget, setArchiveTarget] = useState<{ row: Row; type: BindingType } | null>(null);
 
   const query = useQuery<BindingsData>({
     queryKey: ["bindings-mapping-workspace", WORKSPACE_ID],
@@ -348,6 +391,13 @@ export default function Bindings() {
     },
   });
 
+
+  const sourceCandidatesQuery = useQuery<SourceCandidatesData>({
+    queryKey: ["source-binding-candidates", WORKSPACE_ID],
+    enabled: Boolean(session) && canManage,
+    queryFn: readSourceCandidates,
+  });
+
   const clearFormFeedback = (bindingType?: BindingType) => {
     if (bindingType) {
       setFormFeedback((current) => ({ ...current, [bindingType]: null }));
@@ -355,13 +405,15 @@ export default function Bindings() {
     }
     setFormFeedback({ source: null, ad_account: null });
     setNormalAdFeedback(null);
-
+    setSourceFeedback(null);
   };
 
   const updateSourceForm: React.Dispatch<
     React.SetStateAction<typeof sourceForm>
   > = (update) => {
     clearFormFeedback("source");
+    setSourceFeedback(null);
+    setSourceFormError("");
     setSourceForm(update);
   };
 
@@ -505,43 +557,63 @@ export default function Bindings() {
   };
 
 
-  const handleAddClient = async () => {
-    if (!canManageOnboarding) return;
-    const clientName = window.prompt(t("bindingsAddClientPrompt"));
-    if (!clientName?.trim()) return;
-    const result = await upsertClient({ workspaceId: WORKSPACE_ID, clientName: clientName.trim() });
-    if (result.error) return setAdFormError(getFriendlyBindingActionMessage({ ok: false, error: result.error.message, code: result.error.code }, t));
-    await refreshBindings();
-    updateNormalAdForm((current) => ({ ...current, client_id: result.data ?? current.client_id, project_id: "", funnel_id: "" }));
-    toast({ title: t("bindingsClientCreatedTitle"), description: t("bindingsHierarchyCreatedDescription") });
+  const openHierarchyDialog = (type: "client" | "project" | "funnel", target: "ad" | "source") => {
+    setHierarchyDialog({ type, target });
+    setHierarchyName("");
+    setHierarchyError("");
   };
 
-  const handleAddProject = async () => {
-    if (!canManageOnboarding || !normalAdForm.client_id) return;
-    const projectName = window.prompt(t("bindingsAddProjectPrompt"));
-    if (!projectName?.trim()) return;
-    const result = await upsertProject({ workspaceId: WORKSPACE_ID, clientId: normalAdForm.client_id, projectName: projectName.trim() });
-    if (result.error) return setAdFormError(getFriendlyBindingActionMessage({ ok: false, error: result.error.message, code: result.error.code }, t));
+  const handleHierarchySubmit = async () => {
+    if (!hierarchyDialog || !canManageOnboarding || pending === "hierarchy-save") return;
+    const name = hierarchyName.trim();
+    if (!name) {
+      setHierarchyError(t("bindingsHierarchyNameRequired"));
+      return;
+    }
+    const targetForm = hierarchyDialog.target === "ad" ? normalAdForm : sourceForm;
+    setPending("hierarchy-save");
+    setHierarchyError("");
+    const result =
+      hierarchyDialog.type === "client"
+        ? await upsertClient({ workspaceId: WORKSPACE_ID, clientName: name })
+        : hierarchyDialog.type === "project"
+          ? await upsertProject({
+              workspaceId: WORKSPACE_ID,
+              clientId: targetForm.client_id,
+              projectName: name,
+            })
+          : await upsertFunnel({
+              workspaceId: WORKSPACE_ID,
+              projectId: targetForm.project_id,
+              funnelName: name,
+            });
+    setPending("");
+    if (result.error || !result.data) {
+      setHierarchyError(getFriendlyBindingActionMessage({ ok: false, error: result.error?.message, code: result.error?.code }, t));
+      return;
+    }
     await refreshBindings();
-    updateNormalAdForm((current) => ({ ...current, project_id: result.data ?? current.project_id, funnel_id: "" }));
-    toast({ title: t("bindingsProjectCreatedTitle"), description: t("bindingsHierarchyCreatedDescription") });
+    const applySelection = (current: typeof EMPTY_AD_FORM | typeof EMPTY_SOURCE_FORM) => {
+      if (hierarchyDialog.type === "client") return { ...current, client_id: result.data!, project_id: "", funnel_id: "" };
+      if (hierarchyDialog.type === "project") return { ...current, project_id: result.data!, funnel_id: "" };
+      return { ...current, funnel_id: result.data! };
+    };
+    if (hierarchyDialog.target === "ad") {
+      updateNormalAdForm((current) => applySelection(current) as typeof EMPTY_AD_FORM);
+    } else {
+      updateSourceForm((current) => applySelection(current) as typeof EMPTY_SOURCE_FORM);
+    }
+    toast({ title: t("bindingsHierarchyCreatedTitle"), description: t("bindingsHierarchyCreatedDescription") });
+    setHierarchyDialog(null);
+    setHierarchyName("");
   };
 
-  const handleAddFunnel = async () => {
-    if (!canManageOnboarding || !normalAdForm.project_id) return;
-    const funnelName = window.prompt(t("bindingsAddFunnelPrompt"));
-    if (!funnelName?.trim()) return;
-    const result = await upsertFunnel({ workspaceId: WORKSPACE_ID, projectId: normalAdForm.project_id, funnelName: funnelName.trim() });
-    if (result.error) return setAdFormError(getFriendlyBindingActionMessage({ ok: false, error: result.error.message, code: result.error.code }, t));
-    await refreshBindings();
-    updateNormalAdForm((current) => ({ ...current, funnel_id: result.data ?? current.funnel_id }));
-    toast({ title: t("bindingsFunnelCreatedTitle"), description: t("bindingsHierarchyCreatedDescription") });
-  };
-
-  const filteredSourceBindings = useMemo(
-    () => filterRows(query.data?.sourceBindings ?? []),
-    [query.data?.sourceBindings],
-  );
+  const filteredSourceBindings = useMemo(() => {
+    const rows = filterRows(query.data?.sourceBindings ?? []);
+    return rows.filter((row) =>
+      matchesAdAccountBindingStatusFilter(row, sourceStatusFilter),
+    );
+  }, [query.data?.sourceBindings, sourceStatusFilter]);
   const filteredAdAccountBindings = useMemo(() => {
     const rows = filterRows(query.data?.adAccountBindings ?? []);
     return rows.filter((row) =>
@@ -559,6 +631,10 @@ export default function Bindings() {
   const adFormOptions = useMemo(
     () => buildAdFormOptions(query.data, normalAdForm, t, lang),
     [lang, normalAdForm, query.data, t],
+  );
+  const sourceFormOptions = useMemo(
+    () => buildSourceFormOptions(query.data, sourceCandidatesQuery.data, sourceForm, t, lang),
+    [lang, query.data, sourceCandidatesQuery.data, sourceForm, t],
   );
   const filteredMappingReviewQueue = useMemo(
     () => filterRows(query.data?.mappingReviewQueue ?? []),
@@ -603,6 +679,93 @@ export default function Bindings() {
   const refreshLabel = isRefreshing
     ? t("bindingsRefreshRefreshing")
     : t("refresh");
+  const saveSourceBinding = async () => {
+    const validationError = validateSourceForm(sourceForm, t);
+    if (validationError) return setSourceFormError(validationError);
+    const sameScope =
+      sourceForm.binding_id &&
+      sourceForm.client_id === sourceForm.original_client_id &&
+      sourceForm.project_id === sourceForm.original_project_id &&
+      sourceForm.funnel_id === sourceForm.original_funnel_id;
+    const oldBindingId = sourceForm.binding_id;
+    const saved = await runAction(
+      "create-source",
+      () =>
+        supabase.functions.invoke("binding-create-or-update", {
+          body: {
+            workspace_id: WORKSPACE_ID,
+            binding_type: "source",
+            binding_id: sourceForm.binding_id || null,
+            source_id: sourceForm.source_id,
+            client_id: sourceForm.client_id,
+            project_id: sourceForm.project_id,
+            funnel_id: sourceForm.funnel_id,
+            is_primary: sourceForm.primary_intent === "make_primary"
+              ? true
+              : sourceForm.primary_intent === "remove_primary"
+                ? false
+                : null,
+            metadata: { ui: "bindings_page" },
+          },
+        }),
+      {
+        bindingType: "source",
+        successMessage: t("bindingsSourceSaved"),
+        feedbackHandler: setSourceFeedback,
+        successFeedback: false,
+      },
+    );
+    if (!saved) return;
+
+    if (sourceFormMode === "edit" && oldBindingId && !sameScope) {
+      const archiveResult = await archiveBinding({
+        workspaceId: WORKSPACE_ID,
+        bindingType: "source",
+        bindingId: oldBindingId,
+        metadata: { ui: "bindings_page", rebind: true },
+      });
+      await refreshBindings();
+      if (archiveResult.error || archiveResult.data !== true) {
+        setSourceFeedback({
+          message: t("bindingsSourcePartialRebindWarning"),
+          variant: "error",
+          technical: {
+            action: "source_rebind_partial",
+            rpc: "archive_binding",
+            binding_id: oldBindingId,
+            result: { new_source_id: sourceForm.source_id },
+          },
+        });
+        return;
+      }
+    }
+
+    setSourceForm(EMPTY_SOURCE_FORM);
+    setSourceFormOpen(false);
+    toast({ title: t("bindingsToastUpdatedTitle"), description: t("bindingsSourceSaved") });
+  };
+
+  const handleArchiveSelected = async () => {
+    if (!archiveTarget || pending === "archive-binding") return;
+    const bindingId = getBindingId(archiveTarget.row);
+    if (!bindingId) return;
+    setPending("archive-binding");
+    const result = await archiveBinding({
+      workspaceId: WORKSPACE_ID,
+      bindingType: archiveTarget.type,
+      bindingId,
+      metadata: { ui: "bindings_page" },
+    });
+    setPending("");
+    if (result.error || result.data !== true) {
+      setMessage(result.error ? getFriendlyBindingActionMessage({ ok: false, error: result.error.message, code: result.error.code }, t) : t("bindingsArchiveFalseError"));
+      return;
+    }
+    setArchiveTarget(null);
+    await refreshBindings();
+    toast({ title: t("bindingsArchiveSuccessTitle"), description: t("bindingsArchiveSuccessDescription") });
+  };
+
   const headerActions =
     session && !query.isLoading && !query.error ? (
       <>
@@ -754,54 +917,115 @@ export default function Bindings() {
             </TabsContent>
 
             <TabsContent value="source" className="mt-1">
-              <SectionCard
-                title={t("bindingsSourcesTitle")}
-                description={t("bindingsSourcesDescription")}
-              >
-                <KnownColumnsTable
-                  rows={filteredSourceBindings}
-                  columns={[
-                    "source_name",
-                    "source_kind",
-                    "platform",
-                    "client_name",
-                    "project_name",
-                    "funnel_name",
-                    "mapping_status",
-                    "binding_status",
-                    "confidence",
-                    "binding_method",
-                    "created_at",
-                    "updated_at",
-                  ]}
-                  emptyText={t("bindingsSourcesEmpty")}
-                />
-                <AdminBindingForm
-                  type="source"
-                  canManage={canManage}
-                  session={Boolean(session)}
-                  pending={pending}
-                  form={sourceForm}
-                  setForm={updateSourceForm}
-                  feedback={formFeedback.source}
-                  onSubmit={() =>
-                    runAction(
-                      "create-source",
-                      () =>
-                        supabase.functions.invoke("binding-create-or-update", {
-                          body: {
-                            workspace_id: WORKSPACE_ID,
-                            binding_type: "source",
-                            ...sourceForm,
-                          },
-                        }),
-                      {
-                        bindingType: "source",
-                        successMessage: t("bindingsSourceSaved"),
-                      },
-                    )
-                  }
-                />
+              <SectionCard noPadding>
+                <div className="flex flex-col gap-3 border-b border-border/60 px-4 py-3.5 lg:flex-row lg:items-center lg:justify-between">
+                  <div className="min-w-0">
+                    <h2 className="text-[14px] font-semibold tracking-tight">
+                      {t("bindingsSourcesTitle")}
+                    </h2>
+                    <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+                      {t("bindingsSourcesDescription")}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end lg:shrink-0">
+                    <Select
+                      value={sourceStatusFilter}
+                      onValueChange={(value) => setSourceStatusFilter(value as BindingStatusFilter)}
+                    >
+                      <SelectTrigger className="h-9 w-full bg-background sm:w-[14.5rem] sm:shrink-0">
+                        <SelectValue placeholder={t("bindingsStatusPlaceholder")} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">{t("bindingsStatusActive")}</SelectItem>
+                        <SelectItem value="archived">{t("bindingsStatusArchivedPaused")}</SelectItem>
+                        <SelectItem value="all">{t("bindingsStatusAll")}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      className="h-9 sm:shrink-0"
+                      disabled={!session || !canManage || sourceCandidatesQuery.isLoading}
+                      onClick={() => {
+                        setSourceForm(EMPTY_SOURCE_FORM);
+                        setSourceFormMode("create");
+                        setSourceFeedback(null);
+                        setSourceFormError("");
+                        setSourceFormOpen(true);
+                      }}
+                    >
+                      {t("bindingsCreateSourceButton")}
+                    </Button>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <Sheet
+                    open={sourceFormOpen}
+                    onOpenChange={(open) => {
+                      setSourceFormOpen(open);
+                      if (!open) setSourceFormError("");
+                    }}
+                  >
+                    <SheetContent side="right" className="flex h-full w-full flex-col overflow-y-auto sm:max-w-xl">
+                      <SheetHeader className="pr-8">
+                        <SheetTitle>
+                          {sourceFormMode === "edit"
+                            ? t("bindingsSourceDrawerEditTitle")
+                            : t("bindingsSourceDrawerCreateTitle")}
+                        </SheetTitle>
+                        <SheetDescription>{t("bindingsSourceDrawerDescription")}</SheetDescription>
+                      </SheetHeader>
+                      <SourceBindingCard
+                        canManage={canManage}
+                        session={Boolean(session)}
+                        pending={pending}
+                        form={sourceForm}
+                        setForm={updateSourceForm}
+                        options={sourceFormOptions}
+                        error={sourceFormError}
+                        feedback={sourceFeedback}
+                        onCancel={() => setSourceFormOpen(false)}
+                        canManageOnboarding={canManageOnboarding}
+                        onAddClient={() => openHierarchyDialog("client", "source")}
+                        onAddProject={() => openHierarchyDialog("project", "source")}
+                        onAddFunnel={() => openHierarchyDialog("funnel", "source")}
+                        mode={sourceFormMode}
+                        onSubmit={saveSourceBinding}
+                      />
+                    </SheetContent>
+                  </Sheet>
+                  {sourceCandidatesQuery.error && canManage ? (
+                    <p className="mb-3 text-xs text-muted-foreground">
+                      {t("bindingsSourceCandidatesUnavailable")}
+                    </p>
+                  ) : null}
+                  <SourceBindingsBusinessTable
+                    rows={filteredSourceBindings}
+                    canManage={canManage}
+                    onArchive={(row) => setArchiveTarget({ row, type: "source" })}
+                    onEdit={(row) => {
+                      if (!isActiveBinding(row)) return;
+                      const clientId = asText(row.client_id);
+                      const projectId = asText(row.project_id);
+                      const funnelId = asText(row.funnel_id);
+                      setSourceForm({
+                        ...EMPTY_SOURCE_FORM,
+                        binding_id: getBindingId(row),
+                        source_id: asText(row.source_id) || asText(row.source_entity_id),
+                        client_id: clientId,
+                        project_id: projectId,
+                        funnel_id: funnelId,
+                        original_client_id: clientId,
+                        original_project_id: projectId,
+                        original_funnel_id: funnelId,
+                        primary_intent: "unchanged",
+                      });
+                      setSourceFormMode("edit");
+                      setSourceFeedback(null);
+                      setSourceFormError("");
+                      setSourceFormOpen(true);
+                    }}
+                  />
+                </div>
               </SectionCard>
             </TabsContent>
 
@@ -906,9 +1130,9 @@ export default function Bindings() {
                         }
                         onCancel={() => setAdFormOpen(false)}
                         canManageOnboarding={canManageOnboarding}
-                        onAddClient={handleAddClient}
-                        onAddProject={handleAddProject}
-                        onAddFunnel={handleAddFunnel}
+                        onAddClient={() => openHierarchyDialog("client", "ad")}
+                        onAddProject={() => openHierarchyDialog("project", "ad")}
+                        onAddFunnel={() => openHierarchyDialog("funnel", "ad")}
                         mode={adFormMode}
                         onSubmit={async () => {
                           const validationError = validateAdForm(
@@ -981,10 +1205,9 @@ export default function Bindings() {
                       setNormalAdFeedback(null);
                       setAdFormMode("create");
                       setNormalAdForm({
+                        ...EMPTY_AD_FORM,
                         ad_account_id: adAccountId,
-                        client_id: "",
-                        project_id: "",
-                        funnel_id: "",
+                        primary_intent: "remove_primary",
                       });
                       setAdFormOpen(true);
                     }}
@@ -992,17 +1215,7 @@ export default function Bindings() {
                   <AdAccountsBusinessTable
                     rows={filteredAdAccountBindings}
                     canManage={canManage}
-                    onArchive={async (row) => {
-                      const bindingId = getBindingId(row);
-                      if (!bindingId || !window.confirm(t("bindingsArchiveConfirm"))) return;
-                      const result = await archiveBinding({ workspaceId: WORKSPACE_ID, bindingType: "ad_account", bindingId, metadata: { ui: "bindings_page" } });
-                      if (result.error || result.data !== true) {
-                        setMessage(result.error ? getFriendlyBindingActionMessage({ ok: false, error: result.error.message, code: result.error.code }, t) : t("bindingsArchiveFalseError"));
-                        return;
-                      }
-                      await refreshBindings();
-                      toast({ title: t("bindingsArchiveSuccessTitle"), description: t("bindingsArchiveSuccessDescription") });
-                    }}
+onArchive={(row) => setArchiveTarget({ row, type: "ad_account" })}
                     onEdit={(row) => {
                       setAdFormError("");
                       setNormalAdFeedback(null);
@@ -1012,6 +1225,7 @@ export default function Bindings() {
                       const projectId = asText(row.project_id);
                       const funnelId = asText(row.funnel_id);
                       setNormalAdForm({
+                        ...EMPTY_AD_FORM,
                         binding_id: getBindingId(row),
                         ad_account_id: asText(row.ad_account_id ?? row.id),
                         client_id: clientId,
@@ -1214,6 +1428,22 @@ export default function Bindings() {
             </TabsContent>
           </Tabs>
         )}
+        <HierarchyCreateDialog
+          open={Boolean(hierarchyDialog)}
+          type={hierarchyDialog?.type ?? "client"}
+          name={hierarchyName}
+          error={hierarchyError}
+          pending={pending === "hierarchy-save"}
+          onNameChange={setHierarchyName}
+          onCancel={() => setHierarchyDialog(null)}
+          onSubmit={handleHierarchySubmit}
+        />
+        <ArchiveBindingDialog
+          target={archiveTarget}
+          pending={pending === "archive-binding"}
+          onCancel={() => setArchiveTarget(null)}
+          onConfirm={handleArchiveSelected}
+        />
       </div>
     </DashboardLayout>
   );
@@ -1269,7 +1499,9 @@ function getFriendlyBindingActionMessage(
   if (
     response.code === "permission_denied" ||
     response.code === "insufficient_role" ||
-    response.error?.toLowerCase().includes("insufficient")
+    response.code === "42501" ||
+    response.error?.toLowerCase().includes("insufficient") ||
+    response.error?.toLowerCase().includes("permission")
   ) {
     return t("bindingsPermissionDenied");
   }
@@ -1282,6 +1514,7 @@ function getFriendlyBindingActionMessage(
   }
 
   if (
+    response.code === "22023" ||
     response.code === "invalid_payload" ||
     response.code === "target_not_found" ||
     response.code === "target_workspace_mismatch" ||
@@ -1291,12 +1524,15 @@ function getFriendlyBindingActionMessage(
     response.code === "ad_account_lookup_failed" ||
     response.code === "ad_account_platform_missing" ||
     response.code === "source_not_found" ||
+    response.code === "inactive_source" ||
+    response.code === "invalid_replacement_binding" ||
     response.code === "source_workspace_mismatch"
   ) {
     return t("bindingsInvalidTargetError");
   }
 
   if (
+    response.code === "PGRST202" ||
     response.code === "rpc_failed" ||
     response.code === "rpc_not_wired" ||
     response.code === "access_check_failed"
@@ -1304,7 +1540,11 @@ function getFriendlyBindingActionMessage(
     return t("bindingsBackendSaveError");
   }
 
-  return response.error || t("bindingsActionFailed");
+  if (response.code === "partial_source_rebind") {
+    return t("bindingsSourcePartialRebindWarning");
+  }
+
+  return t("bindingsActionFailed");
 }
 
 function getBindingActionTechnicalDetails(
@@ -1348,6 +1588,60 @@ const getBindingType = (row: Row): BindingType =>
   String(row.binding_type ?? "source") === "ad_account"
     ? "ad_account"
     : "source";
+
+
+async function readSourceCandidates(): Promise<SourceCandidatesData> {
+  const [sheets, tabs, datasets] = await Promise.all([
+    supabase
+      .from("google_sheet_sources")
+      .select("id, spreadsheet_name, spreadsheet_id, status")
+      .eq("workspace_id", WORKSPACE_ID),
+    supabase
+      .from("google_sheet_tabs")
+      .select("id, google_sheet_source_id, source_id, tab_name, source_type, target_raw_table, is_active")
+      .eq("workspace_id", WORKSPACE_ID),
+    supabase
+      .from("raw_external_datasets")
+      .select("id, dataset_name, sheet_name, source_type, target_raw_table, status, parser_type")
+      .eq("workspace_id", WORKSPACE_ID),
+  ]);
+  if (sheets.error) throw sheets.error;
+  if (tabs.error) throw tabs.error;
+  if (datasets.error) throw datasets.error;
+
+  const sheetNameById = new Map(
+    ((sheets.data ?? []) as Row[]).map((row) => [asText(row.id), asText(row.spreadsheet_name)]),
+  );
+  const sheetCandidates = ((sheets.data ?? []) as Row[])
+    .filter((row) => !isInactiveStatus(row.status))
+    .map((row) => ({
+      id: asText(row.id),
+      sourceType: "google_sheet_source" as const,
+      label: asText(row.spreadsheet_name) || asText(row.spreadsheet_id) || asText(row.id),
+      description: "Google Sheet",
+    }));
+  const tabCandidates = ((tabs.data ?? []) as Row[])
+    .filter((row) => row.is_active !== false)
+    .map((row) => {
+      const parentId = asText(row.google_sheet_source_id) || asText(row.source_id);
+      const parentName = sheetNameById.get(parentId) || parentId;
+      return {
+        id: asText(row.id),
+        sourceType: "google_sheet_tab" as const,
+        label: [parentName, asText(row.tab_name)].filter(Boolean).join(" · ") || asText(row.id),
+        description: [asText(row.source_type) || "Google Sheet tab", asText(row.target_raw_table)].filter(Boolean).join(" · "),
+      };
+    });
+  const datasetCandidates = ((datasets.data ?? []) as Row[])
+    .filter((row) => !isInactiveStatus(row.status))
+    .map((row) => ({
+      id: asText(row.id),
+      sourceType: "raw_external_dataset" as const,
+      label: [asText(row.dataset_name), asText(row.sheet_name)].filter(Boolean).join(" · ") || asText(row.id),
+      description: [asText(row.source_type) || asText(row.parser_type) || "Dataset", asText(row.target_raw_table)].filter(Boolean).join(" · "),
+    }));
+  return { candidates: [...sheetCandidates, ...tabCandidates, ...datasetCandidates].filter((candidate) => candidate.id) };
+}
 
 async function readOptionalView(viewName: string): Promise<OptionalViewData> {
   const result = await supabase.from(viewName).select("*");
@@ -1643,6 +1937,133 @@ type AdFormOptions = {
   projectEmptyText: string;
   funnelEmptyText: string;
 };
+type SourceFormOptions = Omit<AdFormOptions, "adAccounts"> & {
+  sources: SelectOption[];
+};
+
+
+function SourceBindingCard({
+  canManage,
+  session,
+  pending,
+  form,
+  setForm,
+  options,
+  error,
+  feedback,
+  onCancel,
+  onSubmit,
+  canManageOnboarding,
+  onAddClient,
+  onAddProject,
+  onAddFunnel,
+  mode,
+}: {
+  canManage: boolean;
+  session: boolean;
+  pending: string;
+  form: Record<string, string>;
+  setForm: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  options: SourceFormOptions;
+  error: string;
+  feedback: BindingActionFeedback | null;
+  onCancel: () => void;
+  onSubmit: () => void;
+  canManageOnboarding: boolean;
+  onAddClient: () => void;
+  onAddProject: () => void;
+  onAddFunnel: () => void;
+  mode: "create" | "edit";
+}) {
+  const { t } = useI18n();
+  const disabled = !session || !canManage || pending === "create-source";
+  return (
+    <div className="mt-6 flex min-h-0 flex-1 flex-col">
+      <div className="grid gap-3">
+        <BindingSelect
+          label={t("bindingsSelectSourceLabel")}
+          placeholder={t("bindingsSelectSourcePlaceholder")}
+          value={form.source_id}
+          options={options.sources}
+          emptyText={t("bindingsSelectSourceEmpty")}
+          disabled={disabled || mode === "edit"}
+          onChange={(value) => setForm((current) => ({ ...current, source_id: value }))}
+        />
+        <BindingSelect
+          label={t("bindingsSelectClientLabel")}
+          placeholder={t("bindingsSelectClientPlaceholder")}
+          value={form.client_id}
+          options={options.clients}
+          emptyText={t("bindingsSelectClientEmpty")}
+          disabled={disabled}
+          onChange={(value) =>
+            setForm((current) => ({ ...current, client_id: value, project_id: "", funnel_id: "" }))
+          }
+        />
+        <div className="flex justify-end">
+          <Button type="button" size="sm" variant="ghost" disabled={disabled || !canManageOnboarding} onClick={onAddClient}>
+            {t("bindingsAddClient")}
+          </Button>
+        </div>
+        <BindingSelect
+          label={t("bindingsSelectProjectLabel")}
+          placeholder={t("bindingsSelectProjectPlaceholder")}
+          value={form.project_id}
+          options={options.projects}
+          emptyText={options.projectEmptyText}
+          disabled={disabled || !form.client_id || options.projects.length === 0}
+          onChange={(value) => setForm((current) => ({ ...current, project_id: value, funnel_id: "" }))}
+        />
+        <div className="flex justify-end">
+          <Button type="button" size="sm" variant="ghost" disabled={disabled || !canManageOnboarding || !form.client_id} onClick={onAddProject}>
+            {t("bindingsAddProject")}
+          </Button>
+        </div>
+        <BindingSelect
+          label={t("bindingsSelectFunnelLabel")}
+          placeholder={t("bindingsSelectFunnelPlaceholder")}
+          value={form.funnel_id}
+          options={options.funnels}
+          emptyText={options.funnelEmptyText}
+          disabled={disabled || !form.project_id || options.funnels.length === 0}
+          onChange={(value) => setForm((current) => ({ ...current, funnel_id: value }))}
+        />
+        <div className="flex justify-end">
+          <Button type="button" size="sm" variant="ghost" disabled={disabled || !canManageOnboarding || !form.project_id} onClick={onAddFunnel}>
+            {t("bindingsAddFunnel")}
+          </Button>
+        </div>
+        <PrimaryIntentSelect value={form.primary_intent} onChange={(value) => setForm((current) => ({ ...current, primary_intent: value }))} />
+      </div>
+      {error ? <p className="mt-3 text-sm font-medium text-destructive" role="alert">{error}</p> : null}
+      <div className="mt-6 flex flex-wrap items-center gap-2">
+        <Button type="button" disabled={disabled} onClick={onSubmit}>
+          {pending === "create-source" ? t("bindingsSaveInProgress") : t("bindingsSaveBinding")}
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          {t("bindingsCancel")}
+        </Button>
+      </div>
+      <BindingFeedback feedback={feedback} />
+    </div>
+  );
+}
+
+function PrimaryIntentSelect({ value, onChange }: { value: string; onChange: (value: PrimaryIntent) => void }) {
+  const { t } = useI18n();
+  return (
+    <Select value={value} onValueChange={(next) => onChange(next as PrimaryIntent)}>
+      <SelectTrigger className="h-10 bg-background">
+        <SelectValue placeholder={t("bindingsPrimaryIntentNotPrimary")} />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="remove_primary">{t("bindingsPrimaryIntentNotPrimary")}</SelectItem>
+        <SelectItem value="make_primary">{t("bindingsPrimaryIntentMake")}</SelectItem>
+        <SelectItem value="unchanged">{t("bindingsPrimaryIntentUnchanged")}</SelectItem>
+      </SelectContent>
+    </Select>
+  );
+}
 
 function AdAccountBindingCard({
   canManage,
@@ -1754,19 +2175,10 @@ function AdAccountBindingCard({
             {t("bindingsAddFunnel")}
           </Button>
         </div>
-        <Select
+        <PrimaryIntentSelect
           value={form.primary_intent}
-          onValueChange={(value) => setForm((current) => ({ ...current, primary_intent: value }))}
-        >
-          <SelectTrigger className="h-10 bg-background">
-            <SelectValue placeholder={t("bindingsPrimaryIntentUnchanged")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="unchanged">{t("bindingsPrimaryIntentUnchanged")}</SelectItem>
-            <SelectItem value="make_primary">{t("bindingsPrimaryIntentMake")}</SelectItem>
-            <SelectItem value="remove_primary">{t("bindingsPrimaryIntentRemove")}</SelectItem>
-          </SelectContent>
-        </Select>
+          onChange={(value) => setForm((current) => ({ ...current, primary_intent: value }))}
+        />
       </div>
       {error ? (
         <p className="mt-3 text-sm font-medium text-destructive" role="alert">
@@ -2007,6 +2419,158 @@ function AdAccountsBusinessTable({
         </tbody>
       </table>
     </div>
+  );
+}
+
+
+function SourceBindingsBusinessTable({
+  rows,
+  canManage,
+  onEdit,
+  onArchive,
+}: {
+  rows: Row[];
+  canManage: boolean;
+  onEdit: (row: Row) => void;
+  onArchive: (row: Row) => void;
+}) {
+  const { t } = useI18n();
+  if (rows.length === 0) return <p className="text-sm text-muted-foreground">{t("bindingsSourcesEmpty")}</p>;
+  return (
+    <div className="overflow-x-auto rounded-xl border border-border/60 bg-card/40">
+      <table className="min-w-full table-auto text-left text-sm">
+        <thead>
+          <tr className="border-b border-border/70 text-muted-foreground">
+            {[
+              t("bindingsSelectSourceLabel"),
+              t("bindingsSelectClientLabel"),
+              t("bindingsSelectProjectLabel"),
+              t("bindingsSelectFunnelLabel"),
+              t("tableMappingStatus"),
+              t("tableStatus"),
+              t("tableUpdatedAt"),
+              t("bindingsColumnAction"),
+            ].map((header) => (
+              <th key={header} className="px-3 py-2 font-medium">{header}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={`${getBindingId(row) || asText(row.source_id) || index}`} className="border-b border-border/40 last:border-0">
+              <td className="px-3 py-2">
+                <div className="font-medium text-foreground">{sourceName(row)}</div>
+                <div className="text-xs text-muted-foreground">{asText(row.source_kind) || "—"}</div>
+              </td>
+              <td className="px-3 py-2">{asText(row.client_name) || "—"}</td>
+              <td className="px-3 py-2">{asText(row.project_name) || "—"}</td>
+              <td className="px-3 py-2">{asText(row.funnel_name) || "—"}</td>
+              <td className="px-3 py-2"><FormattedValue value={row.mapping_status} column="mapping_status" /></td>
+              <td className="px-3 py-2"><FormattedValue value={row.binding_status ?? row.status} column="binding_status" /></td>
+              <td className="whitespace-nowrap px-3 py-2"><FormattedValue value={row.updated_at} column="updated_at" /></td>
+              <td className="px-3 py-2">
+                {isActiveBinding(row) && canManage ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={() => onEdit(row)}>
+                      {t("bindingsRebind")}
+                    </Button>
+                    <Button type="button" size="sm" variant="destructive" className="h-8 text-xs" onClick={() => onArchive(row)}>
+                      {t("bindingsArchive")}
+                    </Button>
+                  </div>
+                ) : (
+                  <span className="text-xs text-muted-foreground">{t("bindingsReadOnly")}</span>
+                )}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function HierarchyCreateDialog({
+  open,
+  type,
+  name,
+  error,
+  pending,
+  onNameChange,
+  onCancel,
+  onSubmit,
+}: {
+  open: boolean;
+  type: "client" | "project" | "funnel";
+  name: string;
+  error: string;
+  pending: boolean;
+  onNameChange: (value: string) => void;
+  onCancel: () => void;
+  onSubmit: () => void;
+}) {
+  const { t } = useI18n();
+  const label = type === "client" ? t("bindingsSelectClientLabel") : type === "project" ? t("bindingsSelectProjectLabel") : t("bindingsSelectFunnelLabel");
+  return (
+    <Dialog open={open} onOpenChange={(next) => { if (!next && !pending) onCancel(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{type === "client" ? t("bindingsAddClient") : type === "project" ? t("bindingsAddProject") : t("bindingsAddFunnel")}</DialogTitle>
+          <DialogDescription>{t("bindingsHierarchyDialogDescription")}</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground" htmlFor="hierarchy-name">{label}</label>
+          <Input id="hierarchy-name" value={name} disabled={pending} onChange={(event) => onNameChange(event.target.value)} />
+          {error ? <p className="text-sm font-medium text-destructive" role="alert">{error}</p> : null}
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" disabled={pending} onClick={onCancel}>{t("bindingsCancel")}</Button>
+          <Button type="button" disabled={pending || !name.trim()} onClick={onSubmit}>
+            {pending ? t("bindingsSaveInProgress") : t("bindingsSaveBinding")}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ArchiveBindingDialog({
+  target,
+  pending,
+  onCancel,
+  onConfirm,
+}: {
+  target: { row: Row; type: BindingType } | null;
+  pending: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  const { t } = useI18n();
+  const row = target?.row;
+  const title = target?.type === "ad_account" ? (row ? accountName(row, t) : "") : (row ? sourceName(row) : "");
+  const hierarchy = row ? [row.client_name, row.project_name, row.funnel_name].map(asText).filter(Boolean).join(" → ") : "";
+  return (
+    <AlertDialog open={Boolean(target)} onOpenChange={(next) => { if (!next && !pending) onCancel(); }}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t("bindingsArchive")}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t("bindingsArchiveDialogDescription")}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="rounded-md border border-border/70 bg-muted/25 p-3 text-sm">
+          <p className="font-medium text-foreground">{title || "—"}</p>
+          <p className="mt-1 text-muted-foreground">{hierarchy || "—"}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{t("bindingsArchiveSelectedOnly")}</p>
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>{t("bindingsCancel")}</AlertDialogCancel>
+          <AlertDialogAction disabled={pending} onClick={(event) => { event.preventDefault(); onConfirm(); }}>
+            {pending ? t("bindingsRunning") : t("bindingsArchive")}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -2324,9 +2888,49 @@ function buildAdFormOptions(
   };
 }
 
+
+function isInactiveStatus(status: unknown) {
+  return ["archived", "inactive", "removed", "deleted", "disabled"].includes(
+    String(status ?? "").trim().toLowerCase(),
+  );
+}
+
 function isSelectableHierarchyRow(row: Row) {
-  const status = String(row.status ?? row.binding_status ?? "active").toLowerCase();
-  return !["archived", "inactive", "removed", "deleted"].includes(status);
+  return !isInactiveStatus(row.status ?? row.binding_status);
+}
+
+
+function buildSourceFormOptions(
+  data: BindingsData | undefined,
+  sourceData: SourceCandidatesData | undefined,
+  form: Record<string, string>,
+  t: (key: TranslationKey) => string,
+  lang: Lang,
+): SourceFormOptions {
+  const hierarchy = buildAdFormOptions(data, form, t, lang);
+  return {
+    sources: (sourceData?.candidates ?? []).map((source) => ({
+      value: source.id,
+      label: source.label,
+      description: source.description,
+    })),
+    clients: hierarchy.clients,
+    projects: hierarchy.projects,
+    funnels: hierarchy.funnels,
+    projectEmptyText: hierarchy.projectEmptyText,
+    funnelEmptyText: hierarchy.funnelEmptyText,
+  };
+}
+
+function validateSourceForm(
+  form: Record<string, string>,
+  t: (key: TranslationKey) => string,
+) {
+  if (!form.source_id) return t("bindingsValidationSource");
+  if (!form.client_id) return t("bindingsValidationClient");
+  if (!form.project_id) return t("bindingsValidationProject");
+  if (!form.funnel_id) return t("bindingsValidationFunnel");
+  return "";
 }
 
 function validateAdForm(
@@ -2352,6 +2956,14 @@ function entityName(
     asText(row[`${entity}_name`]) ||
     asText(row.name) ||
     t("bindingsUnnamedEntity")
+  );
+}
+function sourceName(row: Row) {
+  return (
+    asText(row.source_name) ||
+    asText(row.name) ||
+    asText(row.source_id) ||
+    "—"
   );
 }
 function accountName(row: Row, t: (key: TranslationKey) => string) {

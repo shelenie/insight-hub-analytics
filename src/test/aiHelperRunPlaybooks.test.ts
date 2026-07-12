@@ -1,4 +1,3 @@
-import { execSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
@@ -419,21 +418,8 @@ describe("ai-helper-run code-versioned analysis playbooks", () => {
     );
   });
 
-  it("does not add runtime network, schema/RLS, connector, route, or sidebar changes", () => {
-    const changedFiles = execSync("git diff --name-only HEAD", {
-      encoding: "utf8",
-    })
-      .split("\n")
-      .filter(Boolean);
-
+  it("does not add runtime network calls to external marketing references", () => {
     expect(edgeFunctionSource).not.toContain("clawhub.ai");
     expect(edgeFunctionSource).not.toContain('fetch("https://clawhub');
     expect(playbookSource).not.toContain("clawhub.ai");
-    expect(changedFiles).not.toContain("supabase/functions/ai-helper-run/index.ts");
-    expect(changedFiles).not.toContain("src/pages/AdsConnectors.tsx");
-    expect(changedFiles).toContain("src/pages/Bindings.tsx");
-    expect(changedFiles.some((file) => /route|sidebar/i.test(file))).toBe(
-      false,
-    );
-  });
-});
+  });});

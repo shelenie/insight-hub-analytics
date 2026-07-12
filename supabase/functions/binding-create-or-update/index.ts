@@ -256,8 +256,8 @@ async function lookupGoogleSheetTabSource(adminClient: any, sourceId: string, wo
 
   return {
     source: {
-      source_kind: data.source_type ?? "google_sheet_tab",
-      source_table: "google_sheet_tabs",
+      source_kind: data.source_type ?? "google_sheet_source",
+      source_table: data.target_raw_table ?? "google_sheet_sources",
       source_id: data.id,
       source_external_id: parentSheet?.spreadsheet_id && tabName ? `${parentSheet.spreadsheet_id}:${tabName}` : (parentSheet?.spreadsheet_id ?? parentSheetId ?? null),
       source_name: spreadsheetName && tabName ? `google_sheet:${spreadsheetName}:${tabName}` : (tabName ?? spreadsheetName),
