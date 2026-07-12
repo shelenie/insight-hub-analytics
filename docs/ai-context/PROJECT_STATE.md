@@ -1,3 +1,7 @@
+## Verified Local Follow-up — 2026-07-11 Data Bindings Repository Migration Live Defaults Sync
+
+The repository Data Bindings hardening migration now matches the exact verified live PostgreSQL defaults for the 17-argument `bind_source_entity_to_scope` RPC so future clean environment rebuilds can apply the migration without diverging from production. `p_source_table`, `p_source_id`, and `p_created_by` now default to null in the migration definition while the function body continues to derive authenticated actor identity through `require_source_manager` and auth/JWT context. No Supabase migration application, production data change, grants/role model change, frontend change, Edge Function deployment, connector change, route/sidebar change, or AI Assistant change was made.
+
 ## Verified Local Follow-up — 2026-07-11 Data Bindings Onboarding Return-Type Compatibility
 
 PR #242 migration now preserves the verified live UUID return types for `upsert_client`, `upsert_project`, and `upsert_funnel`. The onboarding functions keep the corrected canonical field writes and hierarchy validation but return only the resulting row id (`v_client.id`, `v_project.id`, or `v_funnel.id`) so PostgreSQL `CREATE OR REPLACE FUNCTION` can apply against the existing exact signatures without a return-type change.

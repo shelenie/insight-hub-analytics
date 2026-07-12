@@ -87,6 +87,19 @@ describe("data binding RPC hardening migration", () => {
   });
 
 
+  it("matches verified live defaults for bind_source_entity_to_scope", () => {
+    const bindFunction = normalized.slice(
+      normalized.indexOf("create or replace function public.bind_source_entity_to_scope"),
+      normalized.indexOf("language plpgsql", normalized.indexOf("create or replace function public.bind_source_entity_to_scope")),
+    );
+
+    expect(bindFunction).toContain("p_source_table text default null");
+    expect(bindFunction).toContain("p_source_id uuid default null");
+    expect(bindFunction).toContain("p_created_by uuid default null");
+    expect(bindFunction).not.toContain("p_created_by uuid default auth.uid()");
+    expect(bindFunction).toContain("returns uuid");
+  });
+
   it("preserves exact live UUID return types for onboarding upsert RPCs", () => {
     const functionBlock = (name: string) => normalized.slice(
       normalized.indexOf(`create or replace function public.${name}(`),
