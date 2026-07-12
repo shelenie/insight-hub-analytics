@@ -58,11 +58,34 @@ Project decisions for Internal Analytics Workspace.
 
 ---
 
+## Decision: AI Assistant System Troubleshooting Reuses Production Readiness
+
+Status: active
+Date: 2026-07-12
+Scope: AI Assistant routing and Edge Function playbooks
+
+Decision:
+
+Application/system/deploy/auth/API/runtime troubleshooting in the AI Assistant uses the existing backend contract:
+
+```text
+request_type = production_readiness_summary
+context_scope = production_readiness
+```
+
+The user-facing label is “Системна діагностика” / “System diagnostics”. Answers must be evidence-first, must not claim outages or exact causes without evidence, and must recommend safe non-destructive checks before configuration or data changes. Ads, Data Quality/Imports, Mapping, and General routing remain separate and should win when the prompt clearly belongs to those domains.
+
+Reason:
+
+These request/context values already exist in the frontend, Edge Function defaults, and `ai_helper_requests` CHECK constraints, avoiding another schema migration while preserving admin Technical details for QA.
+
+---
+
 ## Decision: Current Working Stack
 
-Status: active  
-Date: 2026-06-24  
-Scope: project-wide  
+Status: active
+Date: 2026-06-24
+Scope: project-wide
 
 Decision:
 
@@ -78,9 +101,9 @@ Revisit when Olena explicitly changes the stack.
 
 ## Decision: GitHub Is Source of Truth
 
-Status: active  
-Date: 2026-06-24  
-Scope: code and repo docs  
+Status: active
+Date: 2026-06-24
+Scope: code and repo docs
 
 Decision:
 
@@ -94,9 +117,9 @@ New chats may lose memory. Repo files provide durable context.
 
 ## Decision: Maintain Project Context In Repo
 
-Status: active  
-Date: 2026-06-24  
-Scope: project memory  
+Status: active
+Date: 2026-06-24
+Scope: project memory
 
 Decision:
 
@@ -117,9 +140,9 @@ docs/ai-context/
 
 ## Decision: Client Approval Is Not Final
 
-Status: active  
-Date: 2026-06-24  
-Scope: project planning  
+Status: active
+Date: 2026-06-24
+Scope: project planning
 
 Decision:
 
@@ -131,9 +154,9 @@ Keep changes reversible and reviewable.
 
 ## Decision: Do Not Weaken Supabase Security
 
-Status: active  
-Date: 2026-06-24  
-Scope: Supabase/security  
+Status: active
+Date: 2026-06-24
+Scope: Supabase/security
 
 Decision:
 
@@ -143,9 +166,9 @@ Do not weaken RLS, policies, role checks, or service role protections for quick 
 
 ## Decision: Archive Before Delete
 
-Status: active  
-Date: 2026-06-24  
-Scope: project-wide  
+Status: active
+Date: 2026-06-24
+Scope: project-wide
 
 Decision:
 
@@ -157,9 +180,9 @@ Prefer archive, disable, deprecate, backup, rollback copy.
 
 ## Decision: Metrics Before Dashboard UI
 
-Status: active  
-Date: 2026-06-24  
-Scope: dashboard/reporting  
+Status: active
+Date: 2026-06-24
+Scope: dashboard/reporting
 
 Decision:
 
@@ -169,9 +192,9 @@ Define dashboard metric logic before UI polish or expansion.
 
 ## Decision: Data Quality Must Be Visible
 
-Status: active  
-Date: 2026-06-24  
-Scope: imports/data/dashboard  
+Status: active
+Date: 2026-06-24
+Scope: imports/data/dashboard
 
 Decision:
 
@@ -183,9 +206,9 @@ Rejected rows, missing values, duplicates, and mapping issues should be visible 
 
 ## Decision: Auth User Is Not Workspace Access
 
-Status: active  
-Date: 2026-06-24  
-Scope: user management/security  
+Status: active
+Date: 2026-06-24
+Scope: user management/security
 
 Decision:
 
@@ -197,9 +220,9 @@ Access should require active workspace membership and valid role/permissions enf
 
 ## Decision: Do Not Delete Users By Default
 
-Status: active  
-Date: 2026-06-24  
-Scope: user management/audit  
+Status: active
+Date: 2026-06-24
+Scope: user management/audit
 
 Decision:
 

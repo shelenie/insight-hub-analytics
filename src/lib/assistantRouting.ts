@@ -116,7 +116,11 @@ export function isThreadFollowUpPrompt(prompt: string) {
     /що перевірити першим/,
     /дай коротше/,
     /дай простіше/,
-    /а що з (meta|tiktok|google ads)/,
+    /а що з (meta|tiktok|google ads|supabase|github pages)/,
+    /як це виправити/,
+    /що тобі показати/,
+    /які логи потрібні/,
+    /дай короткий апдейт клієнту/,
     /які причини/,
     /які гіпотези/,
     /що це означає/,
@@ -257,6 +261,17 @@ export function detectAssistantRoutingSignals(prompt: string): SignalMap {
   ]);
   const systemReadinessSignal = matches(text, [
     /system readiness|production readiness|готовність системи|операційн[аої] готовн/,
+    /впав сайт|сайт не відкривається|сторінка не працює|білий екран/,
+    /blank screen|frontend error|runtime error|javascript error|console error/,
+    /deploy впав|деплой не працює|після merge не оновил(ось|ася)/,
+    /github pages|publish failed|build failed|deployment failed/,
+    /supabase не відповідає|edge function|edge function 500/,
+    /api не відповідає|api error|(?<!\d)500(?!\d)|timeout|network error|failed to fetch/,
+    /(?<!\d)401(?!\d)|(?<!\d)403(?!\d)|auth error|session expired|не можу увійти|немає доступу|permission denied/,
+    /row level security|jwt/,
+    /rls.*(error|помил|permission|доступ|denied)|(?:error|помил|permission|доступ|denied).*rls/,
+    /sync job failed|cron не спрацював|webhook не працює|storage error|database error/,
+    /щось зламалось у системі|не працює авторизац/,
   ]);
 
   return {
@@ -310,7 +325,10 @@ export function resolveAssistantContext(
 
   if (signals.dataQualitySignal || signals.importSignal)
     return option("assistantContextDataQuality");
-  if (signals.adsHealthSignal) return option("assistantContextAdsHealth");
+  if (signals.adsHealthSignal && (!signals.systemReadinessSignal || signals.adsSignal))
+    return option("assistantContextAdsHealth");
+  if (signals.systemReadinessSignal)
+    return option("assistantContextSystemReadiness");
   if (
     signals.anomalySignal &&
     (signals.adsSignal ||
@@ -328,7 +346,5 @@ export function resolveAssistantContext(
     return option("assistantContextAdsPerformance");
   }
   if (signals.mappingSignal) return option("assistantContextMappingReview");
-  if (signals.systemReadinessSignal)
-    return option("assistantContextSystemReadiness");
   return option("assistantContextGeneral");
 }

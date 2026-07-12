@@ -363,6 +363,17 @@ describe("AI Assistant smart routing and answer UX", () => {
     );
     expect(route("Чи працює live API?")).toBe("assistantContextAdsHealth");
 
+    expect(route("У мене впав сайт")).toBe("assistantContextSystemReadiness");
+    expect(route("Сайт не відкривається після deploy")).toBe("assistantContextSystemReadiness");
+    expect(route("GitHub Pages не оновився після merge")).toBe("assistantContextSystemReadiness");
+    expect(route("Edge Function повертає 500")).toBe("assistantContextSystemReadiness");
+    expect(route("Supabase повертає 401")).toBe("assistantContextSystemReadiness");
+    expect(route("Помилка 403 у Supabase")).toBe("assistantContextSystemReadiness");
+    expect(route("Білий екран після оновлення")).toBe("assistantContextSystemReadiness");
+    expect(route("API не відповідає")).toBe("assistantContextSystemReadiness");
+    expect(route("Supabase permission denied")).toBe("assistantContextSystemReadiness");
+    expect(route("Google Ads permission denied")).toBe("assistantContextAdsHealth");
+
     expect(route("Які кампанії потребують уваги?")).toBe(
       "assistantContextAdsPerformance",
     );
@@ -410,7 +421,7 @@ describe("AI Assistant smart routing and answer UX", () => {
     );
     expect(route("Проблеми з імпортами")).toBe("assistantContextDataQuality");
 
-    expect(route("У мене впав сайт")).not.toBe("assistantContextAdsAnomalies");
+    expect(route("У мене впав сайт")).toBe("assistantContextSystemReadiness");
     expect(route("Впав доступ до Google Ads")).not.toBe(
       "assistantContextAdsAnomalies",
     );
@@ -549,12 +560,47 @@ describe("AI Assistant smart routing and answer UX", () => {
     expect(route("Тест історії чату")).toBe("assistantContextGeneral");
   });
 
+
+  it("keeps system diagnostics thread follow-ups while allowing clear new intents", async () => {
+    const { OPTIONS, resolveAssistantContextWithHistory } =
+      await import("@/lib/assistantRouting");
+    const defaultOption =
+      OPTIONS.find((option) => option.labelKey === "assistantContextGeneral") ??
+      OPTIONS[0];
+    const previousSystem =
+      OPTIONS.find(
+        (option) => option.labelKey === "assistantContextSystemReadiness",
+      ) ?? OPTIONS[0];
+    const route = (prompt: string) =>
+      resolveAssistantContextWithHistory(
+        prompt,
+        defaultOption,
+        false,
+        previousSystem,
+      ).labelKey;
+
+    expect(route("що перевірити першим?")).toBe("assistantContextSystemReadiness");
+    expect(route("а чому так?")).toBe("assistantContextSystemReadiness");
+    expect(route("сформулюй клієнту")).toBe("assistantContextSystemReadiness");
+    expect(route("а що з Supabase?")).toBe("assistantContextSystemReadiness");
+    expect(route("а що з GitHub Pages?")).toBe("assistantContextSystemReadiness");
+
+    expect(route("чому немає свіжих рекламних даних?")).toBe("assistantContextAdsHealth");
+    expect(route("що таке CPL?")).toBe("assistantContextGeneral");
+  });
+
   it("shows resolved context badges and copy actions for assistant answers", () => {
     expect(source).toContain("assistantContextPrefix");
     expect(source).toContain("assistantAutoContextPrefix");
     expect(translations.assistantAutoContextPrefix.uk).toBe("Автоконтекст");
     expect(translations.assistantAutoRoutingBadge.uk).toBe(
       "AI сам обере режим",
+    );
+    expect(translations.assistantContextSystemReadiness.uk).toBe(
+      "Системна діагностика",
+    );
+    expect(translations.assistantContextSystemReadiness.en).toBe(
+      "System diagnostics",
     );
     expect(translations.assistantAutoRoutingBadge.en).toBe(
       "AI will choose the mode",

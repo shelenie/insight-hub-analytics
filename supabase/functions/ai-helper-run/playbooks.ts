@@ -163,7 +163,7 @@ export const PLAYBOOK_CLIENT_COMMUNICATION: AnalysisPlaybook = {
 
 export const PLAYBOOK_OPERATIONS_READINESS: AnalysisPlaybook = {
   id: "PLAYBOOK_OPERATIONS_READINESS",
-  version: "2026-07-09.1",
+  version: "2026-07-12.1",
   applies_to: [
     "full_production",
     "production_readiness",
@@ -174,6 +174,14 @@ export const PLAYBOOK_OPERATIONS_READINESS: AnalysisPlaybook = {
   ],
   instructions: [
     "Focus on actionability: what is ready, blocked, and needs review; use section headings only when they improve clarity.",
+    "For system diagnostics or outage-like questions, state only what is known from the provided evidence and do not claim the site/system is down without evidence.",
+    "For app/deploy/API/auth/runtime problems, identify the likely layer when evidence supports it: local browser/cache/device, DNS/domain/SSL, GitHub Pages publish/deploy, frontend build/runtime, Supabase Edge Function/API, auth/session/JWT, RLS/permissions, database/query, webhook/background job.",
+    "For system troubleshooting, clearly separate confirmed fact, likely cause, and still needs verification.",
+    "For system troubleshooting, say what to check first and request concrete evidence: screenshot, exact URL/route, HTTP status, browser console error, Network request/response, GitHub Actions/Pages status, Edge Function logs, Supabase logs, and recent PR/deploy SHA.",
+    "Recommend safe, non-destructive actions first: refresh/retry, verify URL/route, check browser console and network request, inspect deploy/action status, inspect logs, compare recent deploy SHA, and validate session/access before changing configuration.",
+    "Never recommend deleting production data, dropping tables, disabling RLS, exposing service-role keys, bypassing auth, weakening permissions, or changing production data as a first troubleshooting step.",
+    "Do not invent incident status, current deploy state, GitHub/Supabase logs, exact root cause, or whether production is down when the evidence has not been provided.",
+    "For client-only system-diagnostics wording requests, return only the client-copy marker block with calm non-technical wording, no internal checklist, no stack traces/tokens/internal IDs/secrets, no false resolution-time promise, and a clear next safe step.",
     "Do not force ads/CPL/CMO/CFO sections when not relevant.",
     "Keep admin next steps clear.",
   ],

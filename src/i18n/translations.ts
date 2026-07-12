@@ -512,7 +512,7 @@ export const translations = {
   assistantClientCopyTitle: { uk: "Текст для клієнта", en: "Client text" },
   assistantClientCopyCopyLabel: { uk: "Скопіювати текст для клієнта", en: "Copy client text" },
   assistantContextGeneral: { uk: "Загальний режим", en: "General mode" },
-  assistantContextSystemReadiness: { uk: "Готовність системи", en: "System readiness" },
+  assistantContextSystemReadiness: { uk: "Системна діагностика", en: "System diagnostics" },
   assistantContextClientsFunnels: { uk: "Клієнти та воронки", en: "Clients and funnels" },
   assistantContextMappingReview: { uk: "Мапінг", en: "Mapping" },
   assistantContextAlerts: { uk: "Сповіщення", en: "Alerts" },
