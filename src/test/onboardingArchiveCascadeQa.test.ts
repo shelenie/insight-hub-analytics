@@ -78,7 +78,8 @@ describe("onboarding archive cascade production QA fix", () => {
   });
 
   it("frontend confirms archive, parses backend JSON details, and uses semantic toast variants", () => {
-    expect(onboarding).toContain("confirmArchive");
+    expect(onboarding).toContain("<AlertDialog");
+    expect(onboarding).not.toContain("window.confirm");
     expect(onboarding).toContain("getFriendlyFunctionError");
     expect(onboarding).toContain("formatBackendError");
     expect(onboarding).not.toContain('variant: "destructive"');

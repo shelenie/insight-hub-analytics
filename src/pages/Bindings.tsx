@@ -706,15 +706,14 @@ export default function Bindings() {
       },
     });
     setPending("");
-    if (error || (response && typeof response === "object" && (response as { ok?: boolean }).ok === false)) {
-      const actionResponse = response && typeof response === "object"
-        ? (response as BindingActionResponse)
-        : ({ ok: false, error: error?.message } satisfies BindingActionResponse);
-      setSourceFeedback({
-        message: getFriendlyBindingActionMessage(actionResponse, t),
-        variant: "error",
-        technical: getBindingActionTechnicalDetails(actionResponse),
-      });
+    if (error) {
+      const friendlyMessage = await getFriendlyBindingActionError(error, t);
+      toast({ title: t("bindingsSourceSaveErrorTitle"), description: friendlyMessage, variant: "error", duration: 5000 });
+      return;
+    }
+    if (response && typeof response === "object" && (response as { ok?: boolean }).ok === false) {
+      const actionResponse = response as BindingActionResponse;
+      toast({ title: t("bindingsSourceSaveErrorTitle"), description: getFriendlyBindingActionMessage(actionResponse, t), variant: "error", duration: 5000 });
       return;
     }
     const newBindingId = extractBindingId(response);
@@ -967,15 +966,10 @@ export default function Bindings() {
                       if (!open) setSourceFormError("");
                     }}
                   >
-                    <SheetContent side="right" className="flex h-full w-full flex-col overflow-y-auto sm:max-w-xl">
-                      <SheetHeader className="pr-8">
-                        <SheetTitle>
-                          {sourceFormMode === "edit"
-                            ? t("bindingsSourceDrawerEditTitle")
-                            : t("bindingsSourceDrawerCreateTitle")}
-                        </SheetTitle>
-                        <SheetDescription>{t("bindingsSourceDrawerDescription")}</SheetDescription>
-                      </SheetHeader>
+                    <BindingDrawerLayout
+                      title={sourceFormMode === "edit" ? t("bindingsSourceDrawerEditTitle") : t("bindingsSourceDrawerCreateTitle")}
+                      description={t("bindingsSourceDrawerDescription")}
+                    >
                       <SourceBindingCard
                         canManage={canManage}
                         session={Boolean(session)}
@@ -994,7 +988,7 @@ export default function Bindings() {
                         mode={sourceFormMode}
                         onSubmit={saveSourceBinding}
                       />
-                    </SheetContent>
+                    </BindingDrawerLayout>
                   </Sheet>
                   {sourceCandidatesQuery.error && canManage ? (
                     <OperationalStatusSurface tone="warning" withTextTone className="mb-3 flex flex-wrap items-center gap-2 p-3 text-xs">
@@ -1115,20 +1109,10 @@ export default function Bindings() {
                       if (!open) setAdFormError("");
                     }}
                   >
-                    <SheetContent
-                      side="right"
-                      className="flex h-full w-full flex-col overflow-y-auto sm:max-w-xl"
+                    <BindingDrawerLayout
+                      title={adFormMode === "edit" ? t("bindingsAdDrawerEditTitle") : t("bindingsAdDrawerCreateTitle")}
+                      description={t("bindingsAdDrawerDescription")}
                     >
-                      <SheetHeader className="pr-8">
-                        <SheetTitle>
-                          {adFormMode === "edit"
-                            ? t("bindingsAdDrawerEditTitle")
-                            : t("bindingsAdDrawerCreateTitle")}
-                        </SheetTitle>
-                        <SheetDescription>
-                          {t("bindingsAdDrawerDescription")}
-                        </SheetDescription>
-                      </SheetHeader>
                       <AdAccountBindingCard
                         canManage={canManage}
                         session={Boolean(session)}
@@ -1207,7 +1191,7 @@ export default function Bindings() {
                           }
                         }}
                       />
-                    </SheetContent>
+                    </BindingDrawerLayout>
                   </Sheet>
 
                   <BindingGapsPanel
@@ -1530,6 +1514,8 @@ function getFriendlyBindingActionMessage(
   }
 
   if (
+    response.code === "23514" ||
+    response.error?.includes("source_entity_bindings_source_kind_check") ||
     response.code === "22023" ||
     response.code === "invalid_payload" ||
     response.code === "target_not_found" ||
@@ -1990,6 +1976,14 @@ type SourceFormOptions = Omit<AdFormOptions, "adAccounts"> & {
 };
 
 
+function BindingDrawerLayout({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+  return <SheetContent side="right" className="flex h-full w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl"><SheetHeader className="shrink-0 border-b border-border/70 px-6 py-5 pr-10"><SheetTitle>{title}</SheetTitle><SheetDescription>{description}</SheetDescription></SheetHeader><div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5 pb-28">{children}</div></SheetContent>;
+}
+
+function BindingDrawerFooter({ pending, disabled, onSubmit, onCancel, pendingLabel, submitLabel, cancelLabel, feedback }: { pending: boolean; disabled: boolean; onSubmit: () => void; onCancel: () => void; pendingLabel: string; submitLabel: string; cancelLabel: string; feedback: BindingActionFeedback | null }) {
+  return <div className="sticky bottom-0 -mx-6 mt-6 border-t border-border/70 bg-background/95 px-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4 backdrop-blur supports-[backdrop-filter]:bg-background/85"><div className="flex flex-wrap items-center gap-2"><Button type="button" disabled={disabled} onClick={onSubmit}>{pending ? pendingLabel : submitLabel}</Button><Button type="button" variant="outline" onClick={onCancel}>{cancelLabel}</Button></div><BindingFeedback feedback={feedback} /></div>;
+}
+
 function SourceBindingCard({
   canManage,
   session,
@@ -2028,7 +2022,7 @@ function SourceBindingCard({
   const { t } = useI18n();
   const disabled = !session || !canManage || pending === "create-source" || sourceCandidatesUnavailable;
   return (
-    <div className="mt-6 flex min-h-0 flex-1 flex-col">
+    <>
       <div className="grid gap-3">
         <BindingSelect
           label={t("bindingsSelectSourceLabel")}
@@ -2086,16 +2080,8 @@ function SourceBindingCard({
         <PrimaryIntentSelect value={form.primary_intent} onChange={(value) => setForm((current) => ({ ...current, primary_intent: value }))} />
       </div>
       {error ? <p className="mt-3 text-sm font-medium text-destructive" role="alert">{error}</p> : null}
-      <div className="mt-6 flex flex-wrap items-center gap-2">
-        <Button type="button" disabled={disabled} onClick={onSubmit}>
-          {pending === "create-source" ? t("bindingsSaveInProgress") : t("bindingsSaveBinding")}
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
-          {t("bindingsCancel")}
-        </Button>
-      </div>
-      <BindingFeedback feedback={feedback} />
-    </div>
+      <BindingDrawerFooter pending={pending === "create-source"} disabled={disabled} onSubmit={onSubmit} onCancel={onCancel} pendingLabel={t("bindingsSaveInProgress")} submitLabel={t("bindingsSaveBinding")} cancelLabel={t("bindingsCancel")} feedback={feedback} />
+    </>
   );
 }
 
@@ -2151,7 +2137,7 @@ function AdAccountBindingCard({
   const { t } = useI18n();
   const disabled = !session || !canManage || pending === "create-ad";
   return (
-    <div className="mt-6 flex min-h-0 flex-1 flex-col">
+    <>
       <div className="grid gap-3">
         <BindingSelect
           label={t("bindingsSelectAdAccountLabel")}
@@ -2235,18 +2221,8 @@ function AdAccountBindingCard({
           {error}
         </p>
       ) : null}
-      <div className="mt-6 flex flex-wrap items-center gap-2">
-        <Button type="button" disabled={disabled} onClick={onSubmit}>
-          {pending === "create-ad"
-            ? t("bindingsSaveInProgress")
-            : t("bindingsSaveBinding")}
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel}>
-          {t("bindingsCancel")}
-        </Button>
-      </div>
-      <BindingFeedback feedback={feedback} />
-    </div>
+      <BindingDrawerFooter pending={pending === "create-ad"} disabled={disabled} onSubmit={onSubmit} onCancel={onCancel} pendingLabel={t("bindingsSaveInProgress")} submitLabel={t("bindingsSaveBinding")} cancelLabel={t("bindingsCancel")} feedback={feedback} />
+    </>
   );
 }
 
@@ -2294,7 +2270,7 @@ function BindingSelect({
         <PopoverContent className="w-[min(92vw,520px)] p-0" align="start">
           <Command filter={filterComboboxOptions}>
             <CommandInput placeholder={searchPlaceholder} />
-            <CommandList>
+            <CommandList className="max-h-72 overflow-y-auto overscroll-contain" onWheel={(event) => event.stopPropagation()}>
               <CommandEmpty>{emptyText}</CommandEmpty>
               <CommandGroup>
                 {options.map((option) => (

@@ -29,3 +29,8 @@ function referenceId(row: OnboardingArchiveRow, field: string) {
   const value = row[field];
   return typeof value === "string" ? value : "";
 }
+
+export function isActiveCascadeBindingStatus(row: OnboardingArchiveRow) {
+  const normalized = String(row.binding_status ?? "").trim().toLowerCase();
+  return normalized === "" || normalized === "active";
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { countActiveClientDescendants, countActiveProjectDescendants, isInactiveOnboardingStatus } from "@/lib/onboardingArchiveHelpers";
+import { countActiveClientDescendants, countActiveProjectDescendants, isActiveCascadeBindingStatus, isInactiveOnboardingStatus } from "@/lib/onboardingArchiveHelpers";
 
 const projects = [
   { project_id: "p1", client_id: "c1", status: "active" },
@@ -34,5 +34,15 @@ describe("onboarding archive count helpers", () => {
   it("counts only active funnels for the selected project", () => {
     expect(countActiveProjectDescendants({ projectId: "p1", funnels })).toEqual({ activeFunnels: 1 });
     expect(countActiveProjectDescendants({ projectId: "p2", funnels })).toEqual({ activeFunnels: 1 });
+  });
+
+  it("matches cascade RPC binding active semantics exactly", () => {
+    expect(isActiveCascadeBindingStatus({ binding_status: "active" })).toBe(true);
+    expect(isActiveCascadeBindingStatus({ binding_status: null })).toBe(true);
+    expect(isActiveCascadeBindingStatus({ binding_status: "" })).toBe(true);
+    expect(isActiveCascadeBindingStatus({ binding_status: "paused" })).toBe(false);
+    expect(isActiveCascadeBindingStatus({ binding_status: "pending" })).toBe(false);
+    expect(isActiveCascadeBindingStatus({ binding_status: "archived" })).toBe(false);
+    expect(isActiveCascadeBindingStatus({ binding_status: "inactive" })).toBe(false);
   });
 });

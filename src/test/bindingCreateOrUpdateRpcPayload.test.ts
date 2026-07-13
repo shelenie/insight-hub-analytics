@@ -45,7 +45,7 @@ describe("binding-create-or-update RPC payloads", () => {
     expect(functionSource).not.toContain('.from("google_sheet_tabs")\n    .select("id, workspace_id, status');
     expect(functionSource).toContain("google_sheet_source_id");
     expect(functionSource).toContain("data.is_active === false");
-    expect(functionSource).toContain('source_kind: "google_sheet_source"');
+    expect(functionSource).toContain('source_kind: "google_sheet_tab"');
   });
 
   it("does not send empty metadata as the default RPC payload", () => {

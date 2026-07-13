@@ -54,6 +54,7 @@ type SourceEntity = {
   source_id: string;
   source_external_id: string | null;
   source_name: string | null;
+  metadata: Record<string, unknown>;
 };
 
 function json(payload: unknown, status = 200) {
@@ -263,11 +264,12 @@ async function lookupGoogleSheetTabSource(adminClient: any, sourceId: string, wo
 
   return {
     source: {
-      source_kind: data.source_type ?? "google_sheet_source",
-      source_table: data.target_raw_table ?? "google_sheet_sources",
+      source_kind: "google_sheet_tab",
+      source_table: "google_sheet_tabs",
       source_id: data.id,
       source_external_id: parentSheet?.spreadsheet_id && tabName ? `${parentSheet.spreadsheet_id}:${tabName}` : (parentSheet?.spreadsheet_id ?? parentSheetId ?? null),
       source_name: spreadsheetName && tabName ? `google_sheet:${spreadsheetName}:${tabName}` : (tabName ?? spreadsheetName),
+      metadata: { source_type: data.source_type ?? null, target_raw_table: data.target_raw_table ?? null, google_sheet_source_id: parentSheetId },
     },
     error: null,
   };
@@ -292,11 +294,12 @@ async function lookupRawExternalDatasetSource(adminClient: any, sourceId: string
 
   return {
     source: {
-      source_kind: data.source_type ?? data.parser_type ?? "manual_file_upload",
-      source_table: data.target_raw_table ?? "raw_external_datasets",
+      source_kind: "file_dataset",
+      source_table: "raw_external_datasets",
       source_id: data.id,
       source_external_id: data.file_asset_id ?? data.id,
       source_name: datasetName && sheetName ? `file_upload:${datasetName}:${sheetName}` : (datasetName ?? sheetName),
+      metadata: { source_type: data.source_type ?? null, target_raw_table: data.target_raw_table ?? null, parser_type: data.parser_type ?? null },
     },
     error: null,
   };
@@ -323,6 +326,7 @@ async function lookupGoogleSheetSource(adminClient: any, sourceId: string, works
       source_id: data.id,
       source_external_id: data.spreadsheet_id ?? null,
       source_name: data.spreadsheet_name ?? null,
+      metadata: {},
     },
     error: null,
   };
@@ -416,6 +420,10 @@ async function getActiveAdAccount(adminClient: any, adAccountId: string, workspa
   return { adAccount, error: null };
 }
 
+function mergeSourceMetadata(uiMetadata: Record<string, unknown> | null | undefined, sourceMetadata: Record<string, unknown>) {
+  return { ...(uiMetadata ?? {}), source: sourceMetadata };
+}
+
 function sharedBindingRpcPayload(body: RequestBody, workspaceId: string) {
   return {
     p_workspace_id: workspaceId,
@@ -497,6 +505,7 @@ Deno.serve(async (req) => {
       p_source_id: source!.source_id,
       p_source_external_id: source!.source_external_id,
       p_source_name: source!.source_name,
+      p_metadata: mergeSourceMetadata(body.metadata, source!.metadata),
       p_is_primary: body.is_primary === null ? null : (typeof body.is_primary === "boolean" ? body.is_primary : (body.binding_id ? null : false)),
     };
 

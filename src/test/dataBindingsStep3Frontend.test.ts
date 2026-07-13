@@ -108,14 +108,17 @@ describe("Step 3 Data Bindings frontend production flow", () => {
   it("preserves source resolver canonical identity conventions", () => {
     expect(edge).toContain('source_kind: "google_sheet_source"');
     expect(edge).toContain('source_table: "google_sheet_sources"');
-    expect(edge).toContain("source_kind: data.source_type ?? \"google_sheet_source\"");
-    expect(edge).toContain("source_table: data.target_raw_table ?? \"google_sheet_sources\"");
+    expect(edge).toContain('source_kind: "google_sheet_tab"');
+    expect(edge).toContain('source_table: "google_sheet_tabs"');
     expect(edge).toContain("data.is_active === false || isInactiveStatus(data.status)");
     expect(edge).toContain("google_sheet_source_id ?? data.source_id");
     expect(edge).toContain('.select("id, spreadsheet_id, spreadsheet_name, status, is_active")');
     expect(edge).toContain("if (!parentSheetId)");
     expect(edge).toContain("sheet.is_active === false || isInactiveStatus(sheet.status)");
     expect(edge).toContain("await userClient.rpc(rpcName, rpcPayload)");
-    expect(edge).not.toContain('source_kind: "google_sheet_tab"');
+    expect(edge).toContain('source_table: "google_sheet_tabs"');
+    expect(edge).toContain('source_kind: "file_dataset"');
+    expect(edge).toContain('source_table: "raw_external_datasets"');
+    expect(edge).not.toContain("source_kind: data.source_type");
   });
 });

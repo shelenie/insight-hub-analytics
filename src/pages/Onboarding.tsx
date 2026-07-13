@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
@@ -14,7 +15,7 @@ import { DeveloperDetails } from "@/components/common/DeveloperDetails";
 import { RefreshCw } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { Lang, TranslationKey } from "@/i18n/translations";
-import { countActiveClientDescendants, countActiveProjectDescendants, isInactiveOnboardingStatus } from "@/lib/onboardingArchiveHelpers";
+import { countActiveClientDescendants, countActiveProjectDescendants, isActiveCascadeBindingStatus, isInactiveOnboardingStatus } from "@/lib/onboardingArchiveHelpers";
 
 type OnboardingRow = Record<string, string | number | boolean | null>;
 
@@ -30,7 +31,11 @@ type OnboardingData = {
   projects: OnboardingRow[];
   funnels: OnboardingRow[];
   health: OnboardingRow[];
+  sourceBindings: OnboardingRow[];
+  adAccountBindings: OnboardingRow[];
 };
+type ArchiveCounts = { activeProjects: number; activeFunnels: number; activeSourceBindings: number; activeAdAccountBindings: number };
+type ArchiveConfirmState = { scope: "client" | "project" | "funnel"; name: string; counts: ArchiveCounts; onConfirm: () => void } | null;
 
 type ClientForm = { client_id: string; name: string; code: string; status: string; originalStatus: string };
 type ProjectForm = { project_id: string; client_id: string; name: string; code: string; status: string; originalStatus: string };
@@ -67,6 +72,7 @@ export default function Onboarding() {
   const [projectError, setProjectError] = useState("");
   const [funnelError, setFunnelError] = useState("");
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
+  const [archiveConfirm, setArchiveConfirm] = useState<ArchiveConfirmState>(null);
   const { capabilities, isLoading: roleLoading, error: roleError } = useWorkspaceRole(WORKSPACE_ID);
   const canManageOnboarding = capabilities.can_manage_onboarding;
   const canEditOnboarding = Boolean(session) && canManageOnboarding && !roleLoading;
@@ -80,12 +86,14 @@ export default function Onboarding() {
     queryKey: ["onboarding-management-data", WORKSPACE_ID],
     enabled: Boolean(session),
     queryFn: async () => {
-      const [hierarchyRes, clientsRes, projectsRes, funnelsRes, healthRes] = await Promise.all([
+      const [hierarchyRes, clientsRes, projectsRes, funnelsRes, healthRes, sourceBindingsRes, adAccountBindingsRes] = await Promise.all([
         supabase.from("v_onboarding_hierarchy").select("*").eq("workspace_id", WORKSPACE_ID),
         supabase.from("v_clients").select("*").eq("workspace_id", WORKSPACE_ID),
         supabase.from("v_projects").select("*").eq("workspace_id", WORKSPACE_ID),
         supabase.from("v_funnels").select("*").eq("workspace_id", WORKSPACE_ID),
         supabase.from("v_onboarding_health").select("*").eq("workspace_id", WORKSPACE_ID),
+        supabase.from("source_entity_bindings").select("*").eq("workspace_id", WORKSPACE_ID),
+        supabase.from("ad_account_bindings").select("*").eq("workspace_id", WORKSPACE_ID),
       ]);
 
       if (hierarchyRes.error) throw hierarchyRes.error;
@@ -93,6 +101,8 @@ export default function Onboarding() {
       if (projectsRes.error) throw projectsRes.error;
       if (funnelsRes.error) throw funnelsRes.error;
       if (healthRes.error) throw healthRes.error;
+      if (sourceBindingsRes.error) throw sourceBindingsRes.error;
+      if (adAccountBindingsRes.error) throw adAccountBindingsRes.error;
 
       return {
         hierarchy: (hierarchyRes.data ?? []) as OnboardingRow[],
@@ -100,6 +110,8 @@ export default function Onboarding() {
         projects: (projectsRes.data ?? []) as OnboardingRow[],
         funnels: (funnelsRes.data ?? []) as OnboardingRow[],
         health: (healthRes.data ?? []) as OnboardingRow[],
+        sourceBindings: (sourceBindingsRes.data ?? []) as OnboardingRow[],
+        adAccountBindings: (adAccountBindingsRes.data ?? []) as OnboardingRow[],
       };
     },
   });
@@ -108,6 +120,8 @@ export default function Onboarding() {
   const projects = useMemo(() => filterRows(onboardingQuery.data?.projects ?? []), [onboardingQuery.data?.projects]);
   const funnels = useMemo(() => filterRows(onboardingQuery.data?.funnels ?? []), [onboardingQuery.data?.funnels]);
   const healthRows = useMemo(() => filterRows(onboardingQuery.data?.health ?? []), [onboardingQuery.data?.health]);
+  const sourceBindings = useMemo(() => onboardingQuery.data?.sourceBindings ?? [], [onboardingQuery.data?.sourceBindings]);
+  const adAccountBindings = useMemo(() => onboardingQuery.data?.adAccountBindings ?? [], [onboardingQuery.data?.adAccountBindings]);
 
   const clientOptions = useMemo<SelectOption[]>(() => clients.map((row) => {
     const value = entityId(row, "client_id");
@@ -293,12 +307,12 @@ export default function Onboarding() {
               <TabsContent value="clients" className="mt-1"><SectionCard title={t("onboardingClientsTitle")} description={t("onboardingClientsDescription")}>
                 <UpsertPanel title={t("onboardingClient")} editModeLabel={t("onboardingEditClient")} isEditing={Boolean(clientForm.client_id)} onCancel={resetClientForm} form={clientForm} setForm={setClientForm} isPending={clientMutation.isPending} error={clientError} signedIn={Boolean(session)} canSubmit={canEditOnboarding && Boolean(clientForm.name.trim())} disabled={!canEditOnboarding} submitLabel={clientForm.client_id ? t("onboardingSaveChanges") : t("onboardingCreateClient")} pendingLabel={t("onboardingSavingClient")} statusOptions={statusOptions} t={t} onSubmit={() => {
                   if (!clientForm.name.trim()) return setClientError(t("onboardingNameRequiredClient"));
+                  const submit = () => { setClientError(""); clientMutation.mutate({ client_id: clientForm.client_id || undefined, name: clientForm.name.trim(), code: clientForm.code || undefined, status: clientForm.status || undefined }); };
                   if (clientForm.client_id && isArchiveTransition(clientForm.originalStatus, clientForm.status)) {
-                    const affected = countActiveClientDescendants({ clientId: clientForm.client_id, projects, funnels });
-                    if (!confirmArchive("client", clientForm.name, affected.activeProjects, affected.activeFunnels, t)) return;
+                    setArchiveConfirm({ scope: "client", name: clientForm.name, counts: countArchiveScope({ scope: "client", id: clientForm.client_id, projects, funnels, sourceBindings, adAccountBindings }), onConfirm: submit });
+                    return;
                   }
-                  setClientError("");
-                  clientMutation.mutate({ client_id: clientForm.client_id || undefined, name: clientForm.name.trim(), code: clientForm.code || undefined, status: clientForm.status || undefined });
+                  submit();
                 }}>
                   <DeveloperDetails title={t("onboardingTechnicalDetails")}><p>{t("onboardingClientId")}: {clientForm.client_id || t("onboardingAutoCreated")}</p></DeveloperDetails>
                 </UpsertPanel>
@@ -309,12 +323,12 @@ export default function Onboarding() {
                 <UpsertPanel title={t("onboardingProject")} compact fieldsBeforeInputs editModeLabel={t("onboardingEditProject")} isEditing={Boolean(projectForm.project_id)} onCancel={resetProjectForm} form={projectForm} setForm={setProjectForm} isPending={projectMutation.isPending} error={projectError} signedIn={Boolean(session)} canSubmit={canEditOnboarding && Boolean(projectForm.name.trim() && projectForm.client_id.trim())} disabled={!canEditOnboarding || clientsMissingClientId || !projectForm.client_id.trim()} submitLabel={projectForm.project_id ? t("onboardingSaveChanges") : t("onboardingCreateProject")} helperText={!projectForm.client_id.trim() ? t("onboardingChooseClientFirst") : undefined} pendingLabel={t("onboardingSavingProject")} details={ <DeveloperDetails title={t("onboardingTechnicalDetails")}><p>{t("onboardingProjectId")}: {projectForm.project_id || t("onboardingAutoCreated")}</p><p>{t("onboardingClientId")}: {projectForm.client_id || t("onboardingNotSelected")}</p>{clientsMissingClientId ? <p>{t("onboardingClientIdMissing")}</p> : null}</DeveloperDetails> } statusOptions={statusOptions} t={t} onSubmit={() => {
                   if (!projectForm.client_id.trim()) return setProjectError(t("onboardingChooseClientError"));
                   if (!projectForm.name.trim()) return setProjectError(t("onboardingNameRequiredProject"));
+                  const submit = () => { setProjectError(""); projectMutation.mutate({ project_id: projectForm.project_id || undefined, client_id: projectForm.client_id.trim(), name: projectForm.name.trim(), code: projectForm.code || undefined, status: projectForm.status || undefined }); };
                   if (projectForm.project_id && isArchiveTransition(projectForm.originalStatus, projectForm.status)) {
-                    const affected = countActiveProjectDescendants({ projectId: projectForm.project_id, funnels });
-                    if (!confirmArchive("project", projectForm.name, 0, affected.activeFunnels, t)) return;
+                    setArchiveConfirm({ scope: "project", name: projectForm.name, counts: countArchiveScope({ scope: "project", id: projectForm.project_id, projects, funnels, sourceBindings, adAccountBindings }), onConfirm: submit });
+                    return;
                   }
-                  setProjectError("");
-                  projectMutation.mutate({ project_id: projectForm.project_id || undefined, client_id: projectForm.client_id.trim(), name: projectForm.name.trim(), code: projectForm.code || undefined, status: projectForm.status || undefined });
+                  submit();
                 }}>
                   <SelectField disabled={!canEditOnboarding || projectMutation.isPending || clientsMissingClientId || Boolean(projectForm.project_id)} label={t("onboardingClient")} placeholder={t("onboardingSelectClient")} value={projectForm.client_id} options={clientOptions} emptyText={t("onboardingClientsEmptyCreateFirst")} onChange={(value) => setProjectForm((current) => ({ ...current, client_id: value }))} />
                 </UpsertPanel>
@@ -325,8 +339,12 @@ export default function Onboarding() {
                 <UpsertPanel title={t("onboardingFunnel")} compact fieldsBeforeInputs editModeLabel={t("onboardingEditFunnel")} isEditing={Boolean(funnelForm.funnel_id)} onCancel={resetFunnelForm} form={funnelForm} setForm={setFunnelForm} isPending={funnelMutation.isPending} error={funnelError} signedIn={Boolean(session)} canSubmit={canEditOnboarding && Boolean(funnelForm.name.trim() && funnelForm.project_id.trim())} disabled={!canEditOnboarding || projectsMissingProjectId || !funnelForm.project_id.trim()} submitLabel={funnelForm.funnel_id ? t("onboardingSaveChanges") : t("onboardingCreateFunnel")} helperText={!funnelForm.project_id.trim() ? t("onboardingChooseProjectFirst") : undefined} pendingLabel={t("onboardingSavingFunnel")} details={ <DeveloperDetails title={t("onboardingTechnicalDetails")}><p>{t("onboardingFunnelId")}: {funnelForm.funnel_id || t("onboardingAutoCreated")}</p><p>{t("onboardingProjectId")}: {funnelForm.project_id || t("onboardingNotSelected")}</p>{projectsMissingProjectId ? <p>{t("onboardingProjectIdMissing")}</p> : null}</DeveloperDetails> } statusOptions={statusOptions} t={t} onSubmit={() => {
                   if (!funnelForm.project_id.trim()) return setFunnelError(t("onboardingChooseProjectError"));
                   if (!funnelForm.name.trim()) return setFunnelError(t("onboardingNameRequiredFunnel"));
-                  setFunnelError("");
-                  funnelMutation.mutate({ funnel_id: funnelForm.funnel_id || undefined, project_id: funnelForm.project_id.trim(), name: funnelForm.name.trim(), code: funnelForm.code || undefined, status: funnelForm.status || undefined });
+                  const submit = () => { setFunnelError(""); funnelMutation.mutate({ funnel_id: funnelForm.funnel_id || undefined, project_id: funnelForm.project_id.trim(), name: funnelForm.name.trim(), code: funnelForm.code || undefined, status: funnelForm.status || undefined }); };
+                  if (funnelForm.funnel_id && isArchiveTransition(funnelForm.originalStatus, funnelForm.status)) {
+                    setArchiveConfirm({ scope: "funnel", name: funnelForm.name, counts: countArchiveScope({ scope: "funnel", id: funnelForm.funnel_id, projects, funnels, sourceBindings, adAccountBindings }), onConfirm: submit });
+                    return;
+                  }
+                  submit();
                 }}>
                   <SelectField disabled={!canEditOnboarding || funnelMutation.isPending || Boolean(funnelForm.funnel_id)} label={t("onboardingClient")} placeholder={t("onboardingAllClients")} value={funnelForm.client_id || "all"} emptyText={t("onboardingClientsEmptyCreateFirst")} options={clientOptions.length ? [{ value: "all", label: t("onboardingAllClients") }, ...clientOptions] : []} onChange={(value) => setFunnelForm((current) => ({ ...current, client_id: value === "all" ? "" : value, project_id: "" }))} />
                   <SelectField disabled={!canEditOnboarding || funnelMutation.isPending || projectsMissingProjectId || Boolean(funnelForm.funnel_id)} label={t("onboardingProject")} placeholder={t("onboardingSelectProject")} value={funnelForm.project_id} options={filteredProjectOptions} onChange={(value) => setFunnelForm((current) => ({ ...current, project_id: value }))} emptyText={funnelForm.client_id ? t("onboardingClientProjectsEmpty") : t("onboardingProjectsEmptyCreateFirst")} />
@@ -345,7 +363,7 @@ export default function Onboarding() {
               </SectionCard></TabsContent>
             </Tabs></>}
     </div>
-  </DashboardLayout>;
+  <ArchiveConfirmDialog state={archiveConfirm} t={t} onCancel={() => setArchiveConfirm(null)} onConfirm={() => { const action = archiveConfirm?.onConfirm; setArchiveConfirm(null); action?.(); }} /></DashboardLayout>;
 }
 
 function UpsertPanel<T extends { name: string; code: string; status: string }>({ title, editModeLabel, isEditing, onCancel, form, setForm, isPending, error, signedIn, canSubmit, disabled, submitLabel, pendingLabel, helperText, onSubmit, children, fieldsBeforeInputs = false, details, compact = false, statusOptions, t }: { title: string; editModeLabel: string; isEditing: boolean; onCancel: () => void; form: T; setForm: React.Dispatch<React.SetStateAction<T>>; isPending: boolean; error: string; signedIn: boolean; canSubmit: boolean; disabled?: boolean; submitLabel: string; pendingLabel: string; helperText?: string; onSubmit: () => void; children?: React.ReactNode; fieldsBeforeInputs?: boolean; details?: React.ReactNode; compact?: boolean; statusOptions: SelectOption[]; t: (key: TranslationKey) => string; }) {
@@ -401,11 +419,19 @@ function EntityTable({ rows, columns, countColumnTitle, countForRow, emptyText, 
 function isInactiveStatus(status: string) { return isInactiveOnboardingStatus(status); }
 function isArchiveTransition(existingStatus: string, requestedStatus: string) { return !isInactiveStatus(existingStatus) && isInactiveStatus(requestedStatus); }
 
-function confirmArchive(scope: "client" | "project", name: string, projectCount: number, funnelCount: number, t: (key: TranslationKey) => string) {
-  const childSummary = scope === "client"
-    ? `${t("onboardingArchiveProjectsAffected")}: ${projectCount}. ${t("onboardingArchiveFunnelsAffected")}: ${funnelCount}.`
-    : `${t("onboardingArchiveFunnelsAffected")}: ${funnelCount}.`;
-  return window.confirm(`${t("onboardingArchiveConfirmTitle")}\n\n${name}\n\n${childSummary} ${t("onboardingArchiveBindingsAffected")}`);
+function countArchiveScope({ scope, id, projects, funnels, sourceBindings, adAccountBindings }: { scope: "client" | "project" | "funnel"; id: string; projects: OnboardingRow[]; funnels: OnboardingRow[]; sourceBindings: OnboardingRow[]; adAccountBindings: OnboardingRow[] }): ArchiveCounts {
+  const inScope = (row: OnboardingRow) => scope === "client" ? referenceId(row, "client_id") === id : scope === "project" ? referenceId(row, "project_id") === id : referenceId(row, "funnel_id") === id;
+  return { activeProjects: scope === "client" ? projects.filter((row) => inScope(row) && !isInactiveStatus(asText(row.status))).length : 0, activeFunnels: scope !== "funnel" ? funnels.filter((row) => inScope(row) && !isInactiveStatus(asText(row.status))).length : 0, activeSourceBindings: sourceBindings.filter((row) => inScope(row) && isActiveBindingStatus(row)).length, activeAdAccountBindings: adAccountBindings.filter((row) => inScope(row) && isActiveBindingStatus(row)).length };
+}
+function isActiveBindingStatus(row: OnboardingRow) { return isActiveCascadeBindingStatus(row); }
+function ArchiveConfirmDialog({ state, t, onCancel, onConfirm }: { state: ArchiveConfirmState; t: (key: TranslationKey) => string; onCancel: () => void; onConfirm: () => void }) {
+  const counts = state?.counts;
+  return <AlertDialog open={Boolean(state)} onOpenChange={(open) => { if (!open) onCancel(); }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{t("onboardingArchiveDialogTitle")}</AlertDialogTitle><AlertDialogDescription asChild><div className="space-y-3"><p>{formatArchiveIntro(state?.scope, t)}</p>{state?.name ? <p className="font-semibold text-foreground">{state.name}</p> : null}{counts ? <div className="space-y-1 tabular-nums text-foreground">{state?.scope === "client" ? <p>{t("onboardingArchiveActiveProjects")} — {counts.activeProjects}</p> : null}{state?.scope !== "funnel" ? <p>{t("onboardingArchiveActiveFunnels")} — {counts.activeFunnels}</p> : null}<p>{t("onboardingArchiveActiveSourceBindings")} — {counts.activeSourceBindings}</p><p>{t("onboardingArchiveActiveAdAccountBindings")} — {counts.activeAdAccountBindings}</p></div> : null}<p>{t("onboardingArchiveRestoreOrder")}</p></div></AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>{t("onboardingCancel")}</AlertDialogCancel><AlertDialogAction onClick={(event) => { event.preventDefault(); onConfirm(); }}>{t("onboardingArchiveConfirmAction")}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>;
+}
+function formatArchiveIntro(scope: "client" | "project" | "funnel" | undefined, t: (key: TranslationKey) => string) {
+  if (scope === "client") return t("onboardingArchiveClientIntro");
+  if (scope === "project") return t("onboardingArchiveProjectIntro");
+  return t("onboardingArchiveFunnelIntro");
 }
 
 async function getFriendlyFunctionError(error: unknown, t: (key: TranslationKey) => string) {
