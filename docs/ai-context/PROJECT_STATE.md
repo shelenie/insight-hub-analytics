@@ -1,4 +1,9 @@
 
+## Review Follow-up — 2026-07-13 PR #248 Source Error Payloads and Exact Archive Counts
+
+Review follow-up for PR #248 now parses structured `FunctionsHttpError` JSON payloads for source binding save failures through the existing helper before showing the single global error toast. Source resolver identity is canonical (`google_sheet_source` / `google_sheet_tab` / `file_dataset`) with source business/ingestion details preserved in metadata, and onboarding archive binding counts now match cascade RPC semantics exactly by counting only blank/null or `active` binding statuses. Fake string-test compatibility comments were removed and formatting-only churn was reduced. No migration, RPC signature change, RLS change, production data change, Edge Function deployment, AI Helper change, or Ads synchronization change was made.
+
+
 ## Local QA Fix — 2026-07-13 Production Binding Source Kinds, Drawer UX, and Archive Dialog
 
 A narrow production QA fix maps binding source entities to canonical RPC-safe source kinds: Google Sheet roots use `google_sheet_source`, Google Sheet tabs use `google_sheet_tab`, and raw external/file datasets use `file_dataset`, so business classifications such as questionnaires are no longer passed as `source_kind`. Binding source save failures now parse Edge Function JSON where available and show one global semantic error toast without a persistent duplicate drawer error block. Source and ad-account binding drawers share one scrollable layout with padded sticky safe-area footer, and shared `BindingSelect` uses one wheel-scrollable, overscroll-contained list. Onboarding archive confirmation now uses the shared AlertDialog and shows active Project/Funnel/source-binding/ad-account-binding counts separately for only the selected active scope; no migration, RLS change, archive RPC change, binding RPC signature change, production data change, AI Helper change, or Ads synchronization change was made.
