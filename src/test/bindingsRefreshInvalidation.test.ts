@@ -28,19 +28,14 @@ describe("Bindings page ad account behavior", () => {
       'useState<AdAccountBindingStatusFilter>("active")',
     );
     expect(source).toContain(
-      "matchesAdAccountBindingStatusFilter(row, adAccountStatusFilter)",
+      "matchesBindingStatusFilter(row, adAccountStatusFilter)",
     );
-    expect(source).toContain(
-      'if (filter === "active") return isActiveBinding(row);',
-    );
-    expect(source).toContain(
-      'if (filter === "archived") return isArchivedOrPausedBinding(row);',
-    );
+    expect(source).toContain("matchesBindingStatusFilter");
     expect(source).toContain("onValueChange={(value) =>");
     expect(source).toContain("setAdAccountStatusFilter(");
     expect(source).toContain('value="archived"');
-    expect(source).toContain('t("bindingsStatusArchivedPaused")');
-    expect(translationsSource).toContain("Archived/paused");
+    expect(source).toContain('t("bindingsStatusArchived")');
+    expect(translationsSource).toContain("Archived");
     expect(source).toContain('value="all"');
     expect(source).toContain('t("bindingsStatusAll")');
     expect(source).not.toContain(
@@ -193,7 +188,7 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain("setAdFormOpen(false)");
     expect(source).toContain('import { toast } from "@/hooks/use-toast";');
     expect(source).toContain("toast({");
-    expect(source).toContain("hasMatchingActiveAdBinding");
+    expect(source).toContain('const isCreate = adFormMode === "create" || !normalAdForm.binding_id;');
     expect(source).toContain('t("bindingsToastUpdatedTitle")');
     expect(source).toContain('t("bindingsToastUpdatedDescription")');
     expect(source).toContain('t("bindingsToastCreatedTitle")');

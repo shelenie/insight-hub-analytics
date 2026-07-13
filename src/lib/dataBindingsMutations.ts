@@ -63,6 +63,22 @@ export async function archiveBinding(input: {
   return { data: data as boolean | null, error: toSafeError(error, "archive_binding", rpc) };
 }
 
+export async function reactivateBinding(input: {
+  workspaceId: string;
+  bindingType: "source" | "ad_account";
+  bindingId: string;
+  metadata?: Record<string, unknown> | null;
+}) {
+  const rpc = "reactivate_binding";
+  const { data, error } = await supabase.rpc(rpc as never, {
+    p_workspace_id: input.workspaceId,
+    p_binding_type: input.bindingType,
+    p_binding_id: input.bindingId,
+    p_metadata: input.metadata ?? null,
+  } as never);
+  return { data: data as boolean | null, error: toSafeError(error, "reactivate_binding", rpc) };
+}
+
 export async function upsertClient(input: { workspaceId: string; clientName: string; clientCode?: string | null; status?: string | null }) {
   const rpc = "upsert_client";
   const { data, error } = await supabase.rpc(rpc as never, {

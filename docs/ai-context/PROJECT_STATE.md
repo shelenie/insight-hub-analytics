@@ -1,4 +1,14 @@
 
+## Review Follow-up — 2026-07-13 PR #249 Data Bindings Restore Schema and Status Semantics
+
+Review blockers for PR #249 were addressed locally. The `reactivate_binding` migration now matches the verified production Google Sheet tab schema (`google_sheet_source_id`, `is_active`) and validates exact active Client/Project/Funnel parents plus active source/ad-account `is_active` state without applying the migration. Bindings UI status semantics now separate archived from paused: archived filters and restore actions target only exact archived rows, paused rows remain read-only and appear only under All, and restore errors are mapped to friendly UI copy. Ad Account success copy is now determined by create/edit action mode instead of duplicate detection. No production migration application, production data change, Edge Function deployment, archive cascade RPC change, AI Helper change, or Ads synchronization change was made.
+
+
+## Local Production UX Fix — 2026-07-13 Data Bindings Drawer, Archive Visibility, and Restore RPC
+
+A narrow Data Bindings production UX fix is prepared locally. Source and Ad Account binding drawers now use a three-region Sheet layout with a fixed header, the only scrollable body region, and a non-sticky safe-area footer; pending saves keep fields, Cancel, X, outside click, and Escape disabled until refreshed binding data returns. Source create/edit success copy now distinguishes “Зв’язок створено” from “Зв’язок оновлено”. Source and Ad Account business tables use desktop table-fixed layouts with safe long-name wrapping. Archive success now refreshes data, switches the relevant filter to archived, keeps the archived row visible, and offers a “Переглянути архівні” CTA when active rows are empty. Archived source/ad-account bindings show a real “Відновити” action backed by a new `reactivate_binding` SECURITY DEFINER RPC that restores the existing archived row only after role, workspace, parent hierarchy, source/ad-account active-state, duplicate, and primary-scope validation. Production migration application, production data changes, and Edge Function deployment were not performed.
+
+
 ## Review Follow-up — 2026-07-13 PR #248 Source Error Payloads and Exact Archive Counts
 
 Review follow-up for PR #248 now parses structured `FunctionsHttpError` JSON payloads for source binding save failures through the existing helper before showing the single global error toast. Source resolver identity is canonical (`google_sheet_source` / `google_sheet_tab` / `file_dataset`) with source business/ingestion details preserved in metadata, and onboarding archive binding counts now match cascade RPC semantics exactly by counting only blank/null or `active` binding statuses. Fake string-test compatibility comments were removed and formatting-only churn was reduced. No migration, RPC signature change, RLS change, production data change, Edge Function deployment, AI Helper change, or Ads synchronization change was made.
