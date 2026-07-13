@@ -1,3 +1,18 @@
+## 2026-07-13 — Bindings Desktop Table Layout Follow-up
+
+### Fixed
+
+- Updated Source binding table proportions to 20/11/10/10/9/7/13/20 so Updated and Action remain separate at desktop widths.
+- Updated Ad Account binding table proportions to 17/7/9/9/9/9/7/13/20 and removed hidden desktop overflow clipping from both binding tables.
+- Added shared `BindingRowActions` for vertical full-width active, archived restore, loading, and read-only action-cell states.
+- Rendered Updated timestamps as date and time on separate lines with the full formatted timestamp in `title`.
+- Changed Source Archive/Restore dialog labels to use friendly `formatBindingSourceName(row)` values while preserving existing ad-account friendly names.
+
+### Notes
+
+- No database schema, migrations, RPCs, RLS, Edge Functions, permission logic, production data, archive/restore semantics, or unbound ad-account card redesign changed.
+- Local browser viewport verification was unavailable and remains required in preview/QA.
+
 ## Local Frontend Fix — 2026-07-13 Bindings UI Defects
 
 A narrow frontend-only `/bindings` fix is prepared locally. The archived bindings filter now has the missing `bindingsStatusArchived` translation while retaining the older archived/paused key. Source and Ad Account binding tables keep real semantic `<td>` cells, move line clamping into inner `<div>` wrappers for Client/Project/Funnel values, use explicit desktop `<colgroup>` widths, and keep desktop overflow clipped inside the table container. Google Sheet tab sources now display a friendly `Sheet name · Tab name` label while preserving the raw technical value in the title/developer path. `useWorkspaceRole` now uses the existing React Query cache keyed by workspace and session user to prevent permission flicker and repeated Edge Function calls during cache freshness; binding action cells show a compact loading placeholder until permissions resolve. Archive/restore semantics, RPCs, migrations, RLS, Edge Functions, production data, AI Helper, and Ads sync were not changed.

@@ -52,7 +52,8 @@ describe("Data Bindings production UX fix", () => {
   });
 
   it("uses desktop table-fixed layouts with safe wrapping for long source and account names", () => {
-    expect(bindings).toContain("xl:overflow-x-hidden");
+    expect(bindings).toContain("overflow-x-auto rounded-xl border");
+    expect(bindings).not.toContain("xl:overflow-x-hidden");
     expect(bindings).toContain("<colgroup>");
     expect(bindings).toContain("table-fixed");
     expect(bindings).toContain("[overflow-wrap:anywhere] break-words font-medium");
