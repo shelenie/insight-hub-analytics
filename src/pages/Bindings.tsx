@@ -2413,18 +2413,18 @@ export function AdAccountsBusinessTable({
       </p>
     );
   return (
-    <div className="overflow-x-auto xl:overflow-x-hidden rounded-xl border border-border/60 bg-card/40">
+    <div className="overflow-x-auto rounded-xl border border-border/60 bg-card/40">
       <table className="min-w-[900px] w-full table-fixed text-left text-sm xl:min-w-0">
         <colgroup>
+          <col className="w-[17%]" />
+          <col className="w-[7%]" />
+          <col className="w-[9%]" />
+          <col className="w-[9%]" />
+          <col className="w-[9%]" />
+          <col className="w-[9%]" />
+          <col className="w-[7%]" />
+          <col className="w-[13%]" />
           <col className="w-[20%]" />
-          <col className="w-[8%]" />
-          <col className="w-[11%]" />
-          <col className="w-[11%]" />
-          <col className="w-[11%]" />
-          <col className="w-[10%]" />
-          <col className="w-[8%]" />
-          <col className="w-[10%]" />
-          <col className="w-[11%]" />
         </colgroup>
         <thead>
           <tr className="border-b border-border/70 text-muted-foreground">
@@ -2477,26 +2477,18 @@ export function AdAccountsBusinessTable({
                   column="binding_status"
                 />
               </td>
-              <td className="px-3 py-2 whitespace-nowrap">
-                <FormattedValue value={row.updated_at} column="updated_at" />
+              <td className="px-3 py-2 align-top">
+                <BindingUpdatedAt value={row.updated_at} />
               </td>
-              <td className="px-3 py-2">
-                {roleLoading ? (
-                  <PermissionActionPlaceholder />
-                ) : isActiveBinding(row) && canManage ? (
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={() => onEdit(row)}>
-                      {t("bindingsRebind")}
-                    </Button>
-                    <Button type="button" size="sm" variant="destructive" className="h-8 text-xs" onClick={() => onArchive(row)}>
-                      {t("bindingsArchive")}
-                    </Button>
-                  </div>
-                ) : canManage && canRestoreBinding(row) ? (
-                  <Button type="button" size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={() => onRestore(row)}><RotateCcw className="h-3 w-3" />{t("bindingsRestore")}</Button>
-                ) : (
-                  <span className="text-xs text-muted-foreground">{t("bindingsReadOnly")}</span>
-                )}
+              <td className="px-3 py-2 align-top">
+                <BindingRowActions
+                  row={row}
+                  canManage={canManage}
+                  roleLoading={roleLoading}
+                  onEdit={onEdit}
+                  onArchive={onArchive}
+                  onRestore={onRestore}
+                />
               </td>
             </tr>
           ))}
@@ -2525,17 +2517,17 @@ export function SourceBindingsBusinessTable({
   const { t } = useI18n();
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">{t("bindingsSourcesEmpty")}</p>;
   return (
-    <div className="overflow-x-auto xl:overflow-x-hidden rounded-xl border border-border/60 bg-card/40">
+    <div className="overflow-x-auto rounded-xl border border-border/60 bg-card/40">
       <table className="min-w-[860px] w-full table-fixed text-left text-sm xl:min-w-0">
         <colgroup>
-          <col className="w-[26%]" />
-          <col className="w-[12%]" />
-          <col className="w-[12%]" />
-          <col className="w-[12%]" />
-          <col className="w-[10%]" />
-          <col className="w-[8%]" />
+          <col className="w-[20%]" />
+          <col className="w-[11%]" />
           <col className="w-[10%]" />
           <col className="w-[10%]" />
+          <col className="w-[9%]" />
+          <col className="w-[7%]" />
+          <col className="w-[13%]" />
+          <col className="w-[20%]" />
         </colgroup>
         <thead>
           <tr className="border-b border-border/70 text-muted-foreground">
@@ -2565,24 +2557,16 @@ export function SourceBindingsBusinessTable({
               <td className="px-3 py-2 align-top"><div className="line-clamp-2 break-words" title={asText(row.funnel_name)}>{asText(row.funnel_name) || "—"}</div></td>
               <td className="px-3 py-2"><FormattedValue value={row.mapping_status} column="mapping_status" /></td>
               <td className="px-3 py-2"><FormattedValue value={row.binding_status ?? row.status} column="binding_status" /></td>
-              <td className="whitespace-nowrap px-3 py-2"><FormattedValue value={row.updated_at} column="updated_at" /></td>
-              <td className="px-3 py-2">
-                {roleLoading ? (
-                  <PermissionActionPlaceholder />
-                ) : isActiveBinding(row) && canManage ? (
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={() => onEdit(row)}>
-                      {t("bindingsRebind")}
-                    </Button>
-                    <Button type="button" size="sm" variant="destructive" className="h-8 text-xs" onClick={() => onArchive(row)}>
-                      {t("bindingsArchive")}
-                    </Button>
-                  </div>
-                ) : canManage && canRestoreBinding(row) ? (
-                  <Button type="button" size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={() => onRestore(row)}><RotateCcw className="h-3 w-3" />{t("bindingsRestore")}</Button>
-                ) : (
-                  <span className="text-xs text-muted-foreground">{t("bindingsReadOnly")}</span>
-                )}
+              <td className="px-3 py-2 align-top"><BindingUpdatedAt value={row.updated_at} /></td>
+              <td className="px-3 py-2 align-top">
+                <BindingRowActions
+                  row={row}
+                  canManage={canManage}
+                  roleLoading={roleLoading}
+                  onEdit={onEdit}
+                  onArchive={onArchive}
+                  onRestore={onRestore}
+                />
               </td>
             </tr>
           ))}
@@ -2593,17 +2577,69 @@ export function SourceBindingsBusinessTable({
 }
 
 
+export function BindingRowActions({
+  row,
+  canManage,
+  roleLoading,
+  onEdit,
+  onArchive,
+  onRestore,
+}: {
+  row: Row;
+  canManage: boolean;
+  roleLoading: boolean;
+  onEdit: (row: Row) => void;
+  onArchive: (row: Row) => void;
+  onRestore: (row: Row) => void;
+}) {
+  const { t } = useI18n();
+  return (
+    <div className="flex w-full min-w-0 flex-col items-stretch gap-2">
+      {roleLoading ? (
+        <PermissionActionPlaceholder />
+      ) : isActiveBinding(row) && canManage ? (
+        <>
+          <Button type="button" size="sm" variant="outline" className="h-8 w-full justify-center whitespace-nowrap text-xs" onClick={() => onEdit(row)}>
+            {t("bindingsRebind")}
+          </Button>
+          <Button type="button" size="sm" variant="destructive" className="h-8 w-full justify-center whitespace-nowrap text-xs" onClick={() => onArchive(row)}>
+            {t("bindingsArchive")}
+          </Button>
+        </>
+      ) : canManage && canRestoreBinding(row) ? (
+        <Button type="button" size="sm" variant="outline" className="h-8 w-full justify-center whitespace-nowrap text-xs" onClick={() => onRestore(row)}><RotateCcw className="h-3 w-3" />{t("bindingsRestore")}</Button>
+      ) : (
+        <span className="w-full text-xs text-muted-foreground">{t("bindingsReadOnly")}</span>
+      )}
+    </div>
+  );
+}
+
+function BindingUpdatedAt({ value }: { value: string | number | boolean | null | undefined }) {
+  const { lang } = useI18n();
+  const formatted = formatValue(value, "updated_at", lang);
+  if (formatted === "—") return <span className="text-muted-foreground">—</span>;
+  const [date, ...timeParts] = formatted.split(/,?\s+/).filter(Boolean);
+  const time = timeParts.join(" ");
+  return (
+    <span className="block leading-tight" title={formatted}>
+      <span className="block">{date}</span>
+      {time ? <span className="block text-muted-foreground">{time}</span> : null}
+    </span>
+  );
+}
+
 function PermissionActionPlaceholder() {
   return (
     <div
-      className="h-8 w-[7.5rem] animate-pulse rounded-md border border-border/70 bg-muted/60"
+      className="h-8 w-full animate-pulse rounded-md border border-border/70 bg-muted/60"
       aria-label="Loading permissions"
     />
   );
 }
 
 
-function RestoreBindingDialog({
+export function RestoreBindingDialog({
   target,
   pending,
   onCancel,
@@ -2616,7 +2652,7 @@ function RestoreBindingDialog({
 }) {
   const { t } = useI18n();
   const row = target?.row;
-  const name = row ? (target.type === "source" ? sourceName(row) : accountName(row, t)) : "";
+  const name = row ? (target.type === "source" ? formatBindingSourceName(row) : accountName(row, t)) : "";
   const scope = row ? [row.client_name, row.project_name, row.funnel_name].map(asText).filter(Boolean).join(" → ") : "";
   return (
     <AlertDialog open={Boolean(target)} onOpenChange={(open) => { if (!open && !pending) onCancel(); }}>
@@ -2685,7 +2721,7 @@ function HierarchyCreateDialog({
   );
 }
 
-function ArchiveBindingDialog({
+export function ArchiveBindingDialog({
   target,
   pending,
   onCancel,
@@ -2698,7 +2734,7 @@ function ArchiveBindingDialog({
 }) {
   const { t } = useI18n();
   const row = target?.row;
-  const title = target?.type === "ad_account" ? (row ? accountName(row, t) : "") : (row ? sourceName(row) : "");
+  const title = target?.type === "ad_account" ? (row ? accountName(row, t) : "") : (row ? formatBindingSourceName(row) : "");
   const hierarchy = row ? [row.client_name, row.project_name, row.funnel_name].map(asText).filter(Boolean).join(" → ") : "";
   return (
     <AlertDialog open={Boolean(target)} onOpenChange={(next) => { if (!next && !pending) onCancel(); }}>

@@ -1,12 +1,15 @@
 import React from "react";
 import { QueryClient } from "@tanstack/react-query";
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { I18nProvider } from "@/i18n/I18nProvider";
 import { translations } from "@/i18n/translations";
 import { canRestoreBinding, isActiveBinding } from "@/lib/bindingStatus";
 import {
   AdAccountsBusinessTable,
+  ArchiveBindingDialog,
+  BindingRowActions,
+  RestoreBindingDialog,
   SourceBindingsBusinessTable,
   formatBindingSourceName,
 } from "@/pages/Bindings";
@@ -14,6 +17,19 @@ import { workspaceRoleQueryKey } from "@/hooks/useWorkspaceRole";
 
 vi.mock("@/auth/AuthProvider", () => ({ useAuth: () => ({ session: null }) }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { functions: { invoke: vi.fn() } } }));
+
+const activeRow = {
+  binding_id: "binding-active",
+  source_id: "source-active",
+  source_kind: "google_sheet_tab",
+  source_name: "google_sheet:insight_hub_dev_google_sheet_template:Реги АВ - БД",
+  client_name: "Client A",
+  project_name: "Project B",
+  funnel_name: "Funnel C",
+  mapping_status: "confirmed",
+  binding_status: "active",
+  updated_at: "2026-07-13T14:28:00.000Z",
+};
 
 const archivedRow = {
   binding_id: "binding-1",
@@ -94,6 +110,105 @@ describe("Bindings confirmed UI defects", () => {
       </I18nProvider>,
     );
     expect(screen.getByText("Лише перегляд")).toBeTruthy();
+  });
+
+
+
+  it("uses requested Source table column proportions and gives Action more width than Updated", () => {
+    const { container } = renderWithI18n(
+      <SourceBindingsBusinessTable rows={[activeRow]} canManage={true} roleLoading={false} onEdit={vi.fn()} onArchive={vi.fn()} onRestore={vi.fn()} />,
+    );
+    const widths = Array.from(container.querySelectorAll("col")).map((col) => Number(col.getAttribute("class")?.match(/w-\[(\d+)%\]/)?.[1]));
+    expect(widths).toEqual([20, 11, 10, 10, 9, 7, 13, 20]);
+    expect(widths.reduce((sum, width) => sum + width, 0)).toBe(100);
+    expect(widths[7]).toBeGreaterThan(widths[6]);
+    expect(container.innerHTML).not.toContain("xl:overflow-x-hidden");
+  });
+
+  it("uses requested Ad Account table column proportions and gives Action more width than Updated", () => {
+    const { container } = renderWithI18n(
+      <AdAccountsBusinessTable rows={[{ ...activeRow, external_account_id: "act_1", external_account_name: "Account", platform: "meta" }]} canManage={true} roleLoading={false} onEdit={vi.fn()} onArchive={vi.fn()} onRestore={vi.fn()} />,
+    );
+    const widths = Array.from(container.querySelectorAll("col")).map((col) => Number(col.getAttribute("class")?.match(/w-\[(\d+)%\]/)?.[1]));
+    expect(widths).toEqual([17, 7, 9, 9, 9, 9, 7, 13, 20]);
+    expect(widths.reduce((sum, width) => sum + width, 0)).toBe(100);
+    expect(widths[8]).toBeGreaterThan(widths[7]);
+  });
+
+  it("renders active Source actions in one vertical full-width non-wrapping container", () => {
+    const { container } = renderWithI18n(
+      <SourceBindingsBusinessTable rows={[activeRow]} canManage={true} roleLoading={false} onEdit={vi.fn()} onArchive={vi.fn()} onRestore={vi.fn()} />,
+    );
+    const actionContainer = container.querySelector("td:last-child > div");
+    expect(actionContainer).toHaveClass("flex", "w-full", "min-w-0", "flex-col", "items-stretch", "gap-2");
+    expect(actionContainer).not.toHaveClass("flex-wrap");
+    const buttons = within(actionContainer as HTMLElement).getAllByRole("button");
+    expect(buttons).toHaveLength(2);
+    for (const button of buttons) expect(button).toHaveClass("w-full", "justify-center", "whitespace-nowrap", "h-8");
+  });
+
+  it("renders active Ad Account actions through the same shared component classes", () => {
+    const { container } = renderWithI18n(
+      <AdAccountsBusinessTable rows={[{ ...activeRow, external_account_id: "act_1", external_account_name: "Account", platform: "meta" }]} canManage={true} roleLoading={false} onEdit={vi.fn()} onArchive={vi.fn()} onRestore={vi.fn()} />,
+    );
+    const actionContainer = container.querySelector("td:last-child > div");
+    expect(actionContainer).toHaveClass("flex", "w-full", "min-w-0", "flex-col", "items-stretch", "gap-2");
+    expect(actionContainer).not.toHaveClass("flex-wrap");
+  });
+
+  it("keeps existing archive and restore callbacks wired to the selected row", () => {
+    const onEdit = vi.fn();
+    const onArchive = vi.fn();
+    const onRestore = vi.fn();
+    const { rerender } = renderWithI18n(
+      <BindingRowActions row={activeRow} canManage={true} roleLoading={false} onEdit={onEdit} onArchive={onArchive} onRestore={onRestore} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: /переприв/i }));
+    fireEvent.click(screen.getByRole("button", { name: /архівувати/i }));
+    expect(onEdit).toHaveBeenCalledWith(activeRow);
+    expect(onArchive).toHaveBeenCalledWith(activeRow);
+
+    rerender(<I18nProvider><BindingRowActions row={archivedRow} canManage={true} roleLoading={false} onEdit={onEdit} onArchive={onArchive} onRestore={onRestore} /></I18nProvider>);
+    fireEvent.click(screen.getByRole("button", { name: /відновити/i }));
+    expect(onRestore).toHaveBeenCalledWith(archivedRow);
+  });
+
+  it("uses the same action container for archived Restore, permission loading, and Read-only", () => {
+    const { container, rerender } = renderWithI18n(
+      <BindingRowActions row={archivedRow} canManage={true} roleLoading={false} onEdit={vi.fn()} onArchive={vi.fn()} onRestore={vi.fn()} />,
+    );
+    let actionContainer = container.firstElementChild as HTMLElement;
+    expect(actionContainer).toHaveClass("flex", "w-full", "flex-col", "items-stretch");
+    expect(screen.getByRole("button", { name: /відновити/i })).toHaveClass("w-full", "justify-center", "whitespace-nowrap", "h-8");
+    rerender(<I18nProvider><BindingRowActions row={activeRow} canManage={false} roleLoading={true} onEdit={vi.fn()} onArchive={vi.fn()} onRestore={vi.fn()} /></I18nProvider>);
+    actionContainer = container.firstElementChild as HTMLElement;
+    expect(actionContainer).toHaveClass("w-full");
+    expect(screen.getByLabelText("Loading permissions")).toHaveClass("w-full", "h-8");
+    rerender(<I18nProvider><BindingRowActions row={activeRow} canManage={false} roleLoading={false} onEdit={vi.fn()} onArchive={vi.fn()} onRestore={vi.fn()} /></I18nProvider>);
+    expect(screen.getByText("Лише перегляд")).toHaveClass("w-full");
+  });
+
+  it("renders Updated timestamps as separate date and time lines without nowrap cells", () => {
+    const { container } = renderWithI18n(
+      <SourceBindingsBusinessTable rows={[activeRow]} canManage={false} roleLoading={false} onEdit={vi.fn()} onArchive={vi.fn()} onRestore={vi.fn()} />,
+    );
+    const updatedCell = container.querySelector("tbody td:nth-child(7)") as HTMLElement;
+    expect(updatedCell).not.toHaveClass("whitespace-nowrap");
+    expect(within(updatedCell).getByText("13.07.2026")).toBeTruthy();
+    expect(within(updatedCell).getByText(/17:28|16:28/)).toBeTruthy();
+    expect(updatedCell.querySelector("[title]")?.getAttribute("title")).toContain("13.07.2026");
+  });
+
+  it("uses friendly source names in archive and restore dialogs without primary raw google_sheet prefix", () => {
+    renderWithI18n(
+      <>
+        <ArchiveBindingDialog target={{ row: archivedRow, type: "source" }} pending={false} onCancel={vi.fn()} onConfirm={vi.fn()} />
+        <RestoreBindingDialog target={{ row: archivedRow, type: "source" }} pending={false} onCancel={vi.fn()} onConfirm={vi.fn()} />
+      </>,
+    );
+    const friendly = screen.getAllByText("insight_hub_dev_google_sheet_template · Реги АВ - БД");
+    expect(friendly).toHaveLength(2);
+    expect(screen.queryByText(/^google_sheet:/)).toBeNull();
   });
 
   it("reuses the same workspace-role query key and creates new keys for session or workspace changes", async () => {
