@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/auth/AuthProvider";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -35,53 +36,49 @@ type RoleResponse = {
   error?: string;
 };
 
+export const workspaceRoleQueryKey = (workspaceId: string, userId: string | undefined) => [
+  "workspace-role",
+  workspaceId,
+  userId ?? "anonymous",
+] as const;
+
+async function fetchWorkspaceRole(workspaceId: string): Promise<{ role: WorkspaceRole; capabilities: WorkspaceCapabilities }> {
+  const { data, error: invokeError } = await supabase.functions.invoke<RoleResponse>("workspace-role-info", {
+    body: { workspace_id: workspaceId },
+  });
+
+  if (invokeError) throw new Error(invokeError.message || "Role unavailable");
+  if (!data?.ok || !data.role) throw new Error(data?.error ?? "Role unavailable");
+
+  return {
+    role: data.role,
+    capabilities: { ...NO_CAPABILITIES, ...(data.capabilities ?? {}) },
+  };
+}
+
 export function useWorkspaceRole(workspaceId: string) {
   const { session } = useAuth();
-  const [role, setRole] = useState<WorkspaceRole | null>(null);
-  const [capabilities, setCapabilities] = useState<WorkspaceCapabilities>(NO_CAPABILITIES);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const userId = session?.user?.id;
+  const query = useQuery({
+    queryKey: workspaceRoleQueryKey(workspaceId, userId),
+    enabled: Boolean(session && workspaceId && userId),
+    queryFn: () => fetchWorkspaceRole(workspaceId),
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 1,
+  });
 
   const refetch = useCallback(async () => {
-    if (!session || !workspaceId) {
-      setRole(null);
-      setCapabilities(NO_CAPABILITIES);
-      setError(null);
-      setIsLoading(false);
-      return;
-    }
+    const result = await query.refetch();
+    return result;
+  }, [query]);
 
-    setIsLoading(true);
-    setError(null);
-
-    const { data, error: invokeError } = await supabase.functions.invoke<RoleResponse>("workspace-role-info", {
-      body: { workspace_id: workspaceId },
-    });
-
-    if (invokeError) {
-      setRole(null);
-      setCapabilities(NO_CAPABILITIES);
-      setError(invokeError.message || "Role unavailable");
-      setIsLoading(false);
-      return;
-    }
-
-    if (!data?.ok || !data.role) {
-      setRole(null);
-      setCapabilities(NO_CAPABILITIES);
-      setError(data?.error ?? "Role unavailable");
-      setIsLoading(false);
-      return;
-    }
-
-    setRole(data.role);
-    setCapabilities({ ...NO_CAPABILITIES, ...(data.capabilities ?? {}) });
-    setIsLoading(false);
-  }, [session, workspaceId]);
-
-  useEffect(() => {
-    void refetch();
-  }, [refetch]);
-
-  return { role, capabilities, isLoading, error, refetch };
+  return {
+    role: query.data?.role ?? null,
+    capabilities: query.data?.capabilities ?? NO_CAPABILITIES,
+    isLoading: query.isLoading || query.isPending,
+    error: query.error instanceof Error ? query.error.message : query.error ? "Role unavailable" : null,
+    refetch,
+  };
 }

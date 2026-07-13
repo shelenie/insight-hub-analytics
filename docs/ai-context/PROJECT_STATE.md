@@ -1,3 +1,7 @@
+## Local Frontend Fix — 2026-07-13 Bindings UI Defects
+
+A narrow frontend-only `/bindings` fix is prepared locally. The archived bindings filter now has the missing `bindingsStatusArchived` translation while retaining the older archived/paused key. Source and Ad Account binding tables keep real semantic `<td>` cells, move line clamping into inner `<div>` wrappers for Client/Project/Funnel values, use explicit desktop `<colgroup>` widths, and keep desktop overflow clipped inside the table container. Google Sheet tab sources now display a friendly `Sheet name · Tab name` label while preserving the raw technical value in the title/developer path. `useWorkspaceRole` now uses the existing React Query cache keyed by workspace and session user to prevent permission flicker and repeated Edge Function calls during cache freshness; binding action cells show a compact loading placeholder until permissions resolve. Archive/restore semantics, RPCs, migrations, RLS, Edge Functions, production data, AI Helper, and Ads sync were not changed.
+
 
 ## Review Follow-up — 2026-07-13 PR #249 Data Bindings Restore Schema and Status Semantics
 

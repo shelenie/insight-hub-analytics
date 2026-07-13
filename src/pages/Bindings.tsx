@@ -890,12 +890,12 @@ export default function Bindings() {
               {t("bindingsPageScopeNote")}
             </p>
 
-            {message || (!roleLoading && (!canManage || roleError)) ? (
+            {message || (!roleLoading && (roleError || !canManage)) ? (
               <div className="space-y-1">
                 {message ? (
                   <p className="text-xs text-muted-foreground">{message}</p>
                 ) : null}
-                {!roleLoading && !canManage ? (
+                {!roleLoading && !roleError && !canManage ? (
                   <p className="text-xs text-muted-foreground">
                     {t("bindingsNoManageAccess")}
                   </p>
@@ -956,7 +956,7 @@ export default function Bindings() {
                     <Button
                       type="button"
                       className="h-9 sm:shrink-0"
-                      disabled={!session || !canManage || sourceCandidatesQuery.isLoading || Boolean(sourceCandidatesQuery.error)}
+                      disabled={!session || roleLoading || !canManage || sourceCandidatesQuery.isLoading || Boolean(sourceCandidatesQuery.error)}
                       onClick={() => {
                         setSourceForm(EMPTY_SOURCE_FORM);
                         setSourceFormMode("create");
@@ -1021,6 +1021,7 @@ export default function Bindings() {
                   <SourceBindingsBusinessTable
                     rows={filteredSourceBindings}
                     canManage={canManage}
+                    roleLoading={roleLoading}
                     onArchive={(row) => setArchiveTarget({ row, type: "source" })}
                     onRestore={(row) => { if (canRestoreBinding(row)) setRestoreTarget({ row, type: "source" }); }}
                     onEdit={(row) => {
@@ -1230,6 +1231,7 @@ export default function Bindings() {
                   <AdAccountsBusinessTable
                     rows={filteredAdAccountBindings}
                     canManage={canManage}
+                    roleLoading={roleLoading}
                     onArchive={(row) => setArchiveTarget({ row, type: "ad_account" })}
                     onRestore={(row) => { if (canRestoreBinding(row)) setRestoreTarget({ row, type: "ad_account" }); }}
                     onEdit={(row) => {
@@ -2388,15 +2390,17 @@ function BindingFeedback({
   );
 }
 
-function AdAccountsBusinessTable({
+export function AdAccountsBusinessTable({
   rows,
   canManage,
+  roleLoading,
   onEdit,
   onArchive,
   onRestore,
 }: {
   rows: Row[];
   canManage: boolean;
+  roleLoading: boolean;
   onEdit: (row: Row) => void;
   onArchive: (row: Row) => void;
   onRestore: (row: Row) => void;
@@ -2409,8 +2413,19 @@ function AdAccountsBusinessTable({
       </p>
     );
   return (
-    <div className="overflow-x-auto xl:overflow-x-visible rounded-xl border border-border/60 bg-card/40">
+    <div className="overflow-x-auto xl:overflow-x-hidden rounded-xl border border-border/60 bg-card/40">
       <table className="min-w-[900px] w-full table-fixed text-left text-sm xl:min-w-0">
+        <colgroup>
+          <col className="w-[20%]" />
+          <col className="w-[8%]" />
+          <col className="w-[11%]" />
+          <col className="w-[11%]" />
+          <col className="w-[11%]" />
+          <col className="w-[10%]" />
+          <col className="w-[8%]" />
+          <col className="w-[10%]" />
+          <col className="w-[11%]" />
+        </colgroup>
         <thead>
           <tr className="border-b border-border/70 text-muted-foreground">
             {[
@@ -2424,7 +2439,7 @@ function AdAccountsBusinessTable({
               t("tableUpdatedAt"),
               t("bindingsColumnAction"),
             ].map((h) => (
-              <th key={h} className="px-3 py-2 font-medium first:w-[24%] last:w-[10rem]">
+              <th key={h} className="px-3 py-2 font-medium">
                 {h}
               </th>
             ))}
@@ -2434,7 +2449,7 @@ function AdAccountsBusinessTable({
           {rows.map((row, index) => (
             <tr
               key={`${getBindingId(row) || asText(row.external_account_id) || index}`}
-              className="border-b border-border/40 last:border-0"
+              className="border-b border-border/40 align-top last:border-0"
             >
               <td className="px-3 py-2">
                 <div className="[overflow-wrap:anywhere] break-words font-medium text-foreground" title={accountName(row, t)}>
@@ -2447,9 +2462,9 @@ function AdAccountsBusinessTable({
               <td className="px-3 py-2">
                 {formatPlatform(asText(row.platform) || "—")}
               </td>
-              <td className="px-3 py-2 break-words line-clamp-2" title={asText(row.client_name)}>{asText(row.client_name) || "—"}</td>
-              <td className="px-3 py-2 break-words line-clamp-2" title={asText(row.project_name)}>{asText(row.project_name) || "—"}</td>
-              <td className="px-3 py-2 break-words line-clamp-2" title={asText(row.funnel_name)}>{asText(row.funnel_name) || "—"}</td>
+              <td className="px-3 py-2 align-top"><div className="line-clamp-2 break-words" title={asText(row.client_name)}>{asText(row.client_name) || "—"}</div></td>
+              <td className="px-3 py-2 align-top"><div className="line-clamp-2 break-words" title={asText(row.project_name)}>{asText(row.project_name) || "—"}</div></td>
+              <td className="px-3 py-2 align-top"><div className="line-clamp-2 break-words" title={asText(row.funnel_name)}>{asText(row.funnel_name) || "—"}</div></td>
               <td className="px-3 py-2">
                 <FormattedValue
                   value={row.mapping_status}
@@ -2466,7 +2481,9 @@ function AdAccountsBusinessTable({
                 <FormattedValue value={row.updated_at} column="updated_at" />
               </td>
               <td className="px-3 py-2">
-                {isActiveBinding(row) && canManage ? (
+                {roleLoading ? (
+                  <PermissionActionPlaceholder />
+                ) : isActiveBinding(row) && canManage ? (
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={() => onEdit(row)}>
                       {t("bindingsRebind")}
@@ -2490,15 +2507,17 @@ function AdAccountsBusinessTable({
 }
 
 
-function SourceBindingsBusinessTable({
+export function SourceBindingsBusinessTable({
   rows,
   canManage,
+  roleLoading,
   onEdit,
   onArchive,
   onRestore,
 }: {
   rows: Row[];
   canManage: boolean;
+  roleLoading: boolean;
   onEdit: (row: Row) => void;
   onArchive: (row: Row) => void;
   onRestore: (row: Row) => void;
@@ -2506,8 +2525,18 @@ function SourceBindingsBusinessTable({
   const { t } = useI18n();
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">{t("bindingsSourcesEmpty")}</p>;
   return (
-    <div className="overflow-x-auto xl:overflow-x-visible rounded-xl border border-border/60 bg-card/40">
+    <div className="overflow-x-auto xl:overflow-x-hidden rounded-xl border border-border/60 bg-card/40">
       <table className="min-w-[860px] w-full table-fixed text-left text-sm xl:min-w-0">
+        <colgroup>
+          <col className="w-[26%]" />
+          <col className="w-[12%]" />
+          <col className="w-[12%]" />
+          <col className="w-[12%]" />
+          <col className="w-[10%]" />
+          <col className="w-[8%]" />
+          <col className="w-[10%]" />
+          <col className="w-[10%]" />
+        </colgroup>
         <thead>
           <tr className="border-b border-border/70 text-muted-foreground">
             {[
@@ -2520,25 +2549,27 @@ function SourceBindingsBusinessTable({
               t("tableUpdatedAt"),
               t("bindingsColumnAction"),
             ].map((header) => (
-              <th key={header} className="px-3 py-2 font-medium first:w-[28%] last:w-[10rem]">{header}</th>
+              <th key={header} className="px-3 py-2 font-medium">{header}</th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            <tr key={`${getBindingId(row) || asText(row.source_id) || index}`} className="border-b border-border/40 last:border-0">
+            <tr key={`${getBindingId(row) || asText(row.source_id) || index}`} className="border-b border-border/40 align-top last:border-0">
               <td className="px-3 py-2">
-                <div className="[overflow-wrap:anywhere] break-words font-medium text-foreground" title={sourceName(row)}>{sourceName(row)}</div>
+                <div className="[overflow-wrap:anywhere] break-words font-medium text-foreground" title={sourceName(row)}>{formatBindingSourceName(row)}</div>
                 <div className="text-xs text-muted-foreground">{asText(row.source_kind) || "—"}</div>
               </td>
-              <td className="px-3 py-2 break-words line-clamp-2" title={asText(row.client_name)}>{asText(row.client_name) || "—"}</td>
-              <td className="px-3 py-2 break-words line-clamp-2" title={asText(row.project_name)}>{asText(row.project_name) || "—"}</td>
-              <td className="px-3 py-2 break-words line-clamp-2" title={asText(row.funnel_name)}>{asText(row.funnel_name) || "—"}</td>
+              <td className="px-3 py-2 align-top"><div className="line-clamp-2 break-words" title={asText(row.client_name)}>{asText(row.client_name) || "—"}</div></td>
+              <td className="px-3 py-2 align-top"><div className="line-clamp-2 break-words" title={asText(row.project_name)}>{asText(row.project_name) || "—"}</div></td>
+              <td className="px-3 py-2 align-top"><div className="line-clamp-2 break-words" title={asText(row.funnel_name)}>{asText(row.funnel_name) || "—"}</div></td>
               <td className="px-3 py-2"><FormattedValue value={row.mapping_status} column="mapping_status" /></td>
               <td className="px-3 py-2"><FormattedValue value={row.binding_status ?? row.status} column="binding_status" /></td>
               <td className="whitespace-nowrap px-3 py-2"><FormattedValue value={row.updated_at} column="updated_at" /></td>
               <td className="px-3 py-2">
-                {isActiveBinding(row) && canManage ? (
+                {roleLoading ? (
+                  <PermissionActionPlaceholder />
+                ) : isActiveBinding(row) && canManage ? (
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" size="sm" variant="outline" className="h-8 text-xs" onClick={() => onEdit(row)}>
                       {t("bindingsRebind")}
@@ -2558,6 +2589,16 @@ function SourceBindingsBusinessTable({
         </tbody>
       </table>
     </div>
+  );
+}
+
+
+function PermissionActionPlaceholder() {
+  return (
+    <div
+      className="h-8 w-[7.5rem] animate-pulse rounded-md border border-border/70 bg-muted/60"
+      aria-label="Loading permissions"
+    />
   );
 }
 
@@ -2807,7 +2848,7 @@ function GenericDataTable({
           {rows.map((row, index) => (
             <tr
               key={`${index}-${row.id ?? "row"}`}
-              className="border-b border-border/40 last:border-0"
+              className="border-b border-border/40 align-top last:border-0"
             >
               {columns.map((column) => (
                 <td
@@ -3068,6 +3109,33 @@ function entityName(
     t("bindingsUnnamedEntity")
   );
 }
+export function formatBindingSourceName(row: Row) {
+  const raw = asText(row.source_name) || asText(row.name) || asText(row.source_id);
+  const kind = asText(row.source_kind);
+
+  if (kind === "google_sheet_tab" && raw.startsWith("google_sheet:")) {
+    const withoutPrefix = raw.slice("google_sheet:".length);
+    const separator = withoutPrefix.lastIndexOf(":");
+    if (separator > 0 && separator < withoutPrefix.length - 1) {
+      return `${withoutPrefix.slice(0, separator)} · ${withoutPrefix.slice(separator + 1)}`;
+    }
+    return withoutPrefix || "—";
+  }
+
+  if (raw && !isUuid(raw)) return raw;
+
+  return (
+    asText(row.display_name) ||
+    asText(row.friendly_name) ||
+    asText(row.source_label) ||
+    "—"
+  );
+}
+
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 function sourceName(row: Row) {
   return (
     asText(row.source_name) ||
