@@ -68,6 +68,7 @@ import {
 } from "@/components/common/DeveloperDetails";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { toast } from "@/hooks/use-toast";
+import { ACTION_TOAST_DURATION_MS, SUCCESS_TOAST_CLASSNAME } from "@/lib/toastStyles";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { Lang, TranslationKey } from "@/i18n/translations";
 
@@ -946,7 +947,7 @@ export default function Bindings() {
                     <Button
                       type="button"
                       className="h-9 sm:shrink-0"
-                      disabled={!session || !canManage || sourceCandidatesQuery.isLoading}
+                      disabled={!session || !canManage || sourceCandidatesQuery.isLoading || Boolean(sourceCandidatesQuery.error)}
                       onClick={() => {
                         setSourceForm(EMPTY_SOURCE_FORM);
                         setSourceFormMode("create");
@@ -983,6 +984,7 @@ export default function Bindings() {
                         form={sourceForm}
                         setForm={updateSourceForm}
                         options={sourceFormOptions}
+                        sourceCandidatesUnavailable={Boolean(sourceCandidatesQuery.error)}
                         error={sourceFormError}
                         feedback={sourceFeedback}
                         onCancel={() => setSourceFormOpen(false)}
@@ -996,9 +998,19 @@ export default function Bindings() {
                     </SheetContent>
                   </Sheet>
                   {sourceCandidatesQuery.error && canManage ? (
-                    <p className="mb-3 text-xs text-muted-foreground">
-                      {t("bindingsSourceCandidatesUnavailable")}
-                    </p>
+                    <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-amber-500/30 bg-amber-50/70 p-3 text-xs text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
+                      <span>{t("bindingsSourceCandidatesUnavailable")}</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        onClick={() => sourceCandidatesQuery.refetch()}
+                        disabled={sourceCandidatesQuery.isFetching}
+                      >
+                        {sourceCandidatesQuery.isFetching ? t("bindingsRefreshRefreshing") : t("refresh")}
+                      </Button>
+                    </div>
                   ) : null}
                   <SourceBindingsBusinessTable
                     rows={filteredSourceBindings}
@@ -1190,9 +1202,8 @@ export default function Bindings() {
                               description: existingActiveBinding
                                 ? t("bindingsToastUpdatedDescription")
                                 : t("bindingsToastCreatedDescription"),
-                              className:
-                                "border-emerald-500/50 bg-emerald-50 text-emerald-950 shadow-xl dark:bg-emerald-950 dark:text-emerald-50",
-                              duration: 5000,
+                              className: SUCCESS_TOAST_CLASSNAME,
+                              duration: ACTION_TOAST_DURATION_MS,
                             });
                           }
                         }}
@@ -1996,6 +2007,7 @@ function SourceBindingCard({
   onAddProject,
   onAddFunnel,
   mode,
+  sourceCandidatesUnavailable = false,
 }: {
   canManage: boolean;
   session: boolean;
@@ -2012,9 +2024,10 @@ function SourceBindingCard({
   onAddProject: () => void;
   onAddFunnel: () => void;
   mode: "create" | "edit";
+  sourceCandidatesUnavailable?: boolean;
 }) {
   const { t } = useI18n();
-  const disabled = !session || !canManage || pending === "create-source";
+  const disabled = !session || !canManage || pending === "create-source" || sourceCandidatesUnavailable;
   return (
     <div className="mt-6 flex min-h-0 flex-1 flex-col">
       <div className="grid gap-3">
@@ -2023,7 +2036,7 @@ function SourceBindingCard({
           placeholder={t("bindingsSelectSourcePlaceholder")}
           value={form.source_id}
           options={options.sources}
-          emptyText={t("bindingsSelectSourceEmpty")}
+          emptyText={sourceCandidatesUnavailable ? t("bindingsSourceCandidatesUnavailable") : t("bindingsSelectSourceEmpty")}
           disabled={disabled || mode === "edit"}
           onChange={(value) => setForm((current) => ({ ...current, source_id: value }))}
         />

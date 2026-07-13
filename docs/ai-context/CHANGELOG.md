@@ -1,3 +1,16 @@
+## 2026-07-13 — Post-QA Source Candidate Privileges and Onboarding Toast Styling
+
+### Fixed
+
+- Added a Supabase migration to allow authenticated frontend source-candidate reads by granting only `SELECT` on `google_sheet_sources`, `google_sheet_tabs`, and `raw_external_datasets` while revoking unnecessary direct `MAINTAIN`, `REFERENCES`, `TRIGGER`, and `TRUNCATE` privileges.
+- Updated `/bindings` source-candidate UI states so query failures show a temporary-unavailable message with retry/refresh and do not also claim that no sources exist; successful zero-candidate responses still show the genuine empty state.
+- Updated Onboarding Client/Project/Funnel success toasts to match the green Bindings success toast styling/duration and kept failure toasts destructive with explicit red styling.
+
+### Notes
+
+- No production records, RLS policy predicates, RPC signatures, Edge Functions, Data Binding RPC behavior, onboarding create/edit behavior, ads connectors, `ai-helper-run`, or binding archive/rebind behavior changed.
+- Production migration application and live privilege verification still require Supabase migration access.
+
 ## 2026-07-12 — PR #245 Final Step 3 Stabilization
 
 ### Fixed
