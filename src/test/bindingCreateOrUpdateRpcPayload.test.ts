@@ -2,7 +2,13 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const functionSource = readFileSync(resolve(process.cwd(), "supabase/functions/binding-create-or-update/index.ts"), "utf8");
+const functionSource = readFileSync(
+  resolve(
+    process.cwd(),
+    "supabase/functions/binding-create-or-update/index.ts",
+  ),
+  "utf8",
+);
 
 describe("binding-create-or-update RPC payloads", () => {
   it("does not send legacy generic binding parameters to binding RPCs", () => {
@@ -11,9 +17,17 @@ describe("binding-create-or-update RPC payloads", () => {
   });
 
   it("builds the source RPC payload from the existing bind_source_entity_to_scope signature", () => {
-    const sourcePayloadStart = functionSource.indexOf('if (binding_type === "source")');
-    const adAccountBranchStart = functionSource.indexOf("} else {", sourcePayloadStart);
-    const sourcePayloadSource = functionSource.slice(sourcePayloadStart, adAccountBranchStart);
+    const sourcePayloadStart = functionSource.indexOf(
+      'if (binding_type === "source")',
+    );
+    const adAccountBranchStart = functionSource.indexOf(
+      "} else {",
+      sourcePayloadStart,
+    );
+    const sourcePayloadSource = functionSource.slice(
+      sourcePayloadStart,
+      adAccountBranchStart,
+    );
 
     expect(sourcePayloadSource).toContain("getActiveSourceEntity");
     expect(sourcePayloadSource).toContain("p_source_kind:");
@@ -28,24 +42,42 @@ describe("binding-create-or-update RPC payloads", () => {
 
   it("deprecates the ad-account branch instead of calling legacy bind_ad_account_to_scope", () => {
     expect(functionSource).toContain("deprecated_ad_account_binding_path");
-    expect(functionSource).not.toContain('rpcName = "bind_ad_account_to_scope"');
+    expect(functionSource).not.toContain(
+      'rpcName = "bind_ad_account_to_scope"',
+    );
     expect(functionSource).not.toContain("p_platform:");
     expect(functionSource).not.toContain("p_external_account_id:");
     expect(functionSource).not.toContain("p_external_account_name:");
   });
 
   it("uses the authenticated user client for source mutations", () => {
-    expect(functionSource).toContain("await userClient.rpc(rpcName, rpcPayload)");
-    expect(functionSource).not.toContain("await adminClient.rpc(rpcName, rpcPayload)");
+    expect(functionSource).toContain(
+      "await userClient.rpc(rpcName, rpcPayload)",
+    );
+    expect(functionSource).not.toContain(
+      "await adminClient.rpc(rpcName, rpcPayload)",
+    );
   });
 
   it("resolves Google Sheet tabs with is_active and google_sheet_source_id", () => {
     expect(functionSource).toContain('from("google_sheet_tabs")');
     expect(functionSource).not.toContain("google_sheet_tabs.status");
-    expect(functionSource).not.toContain('.from("google_sheet_tabs")\n    .select("id, workspace_id, status');
+    expect(functionSource).not.toContain(
+      '.from("google_sheet_tabs")\n    .select("id, workspace_id, status',
+    );
     expect(functionSource).toContain("google_sheet_source_id");
     expect(functionSource).toContain("data.is_active === false");
+    expect(functionSource).toContain('source_kind: "google_sheet_tab"');
+  });
+
+  it("maps canonical source kinds instead of business dataset types", () => {
     expect(functionSource).toContain('source_kind: "google_sheet_source"');
+    expect(functionSource).toContain('source_kind: "google_sheet_tab"');
+    expect(functionSource).toContain('source_kind: "file_dataset"');
+    expect(functionSource).not.toContain("source_kind: data.source_type");
+    expect(functionSource).not.toContain(
+      "source_kind: data.source_type ?? data.parser_type",
+    );
   });
 
   it("does not send empty metadata as the default RPC payload", () => {

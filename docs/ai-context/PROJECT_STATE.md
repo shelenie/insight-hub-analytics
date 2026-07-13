@@ -1,4 +1,9 @@
 
+## Local QA Fix — 2026-07-13 Production Binding Source Kinds, Drawer UX, and Archive Dialog
+
+A narrow production QA fix maps binding source entities to canonical RPC-safe source kinds: Google Sheet roots use `google_sheet_source`, Google Sheet tabs use `google_sheet_tab`, and raw external/file datasets use `file_dataset`, so business classifications such as questionnaires are no longer passed as `source_kind`. Binding source save failures now parse Edge Function JSON where available and show one global semantic error toast without a persistent duplicate drawer error block. Source and ad-account binding drawers share one scrollable layout with padded sticky safe-area footer, and shared `BindingSelect` uses one wheel-scrollable, overscroll-contained list. Onboarding archive confirmation now uses the shared AlertDialog and shows active Project/Funnel/source-binding/ad-account-binding counts separately for only the selected active scope; no migration, RLS change, archive RPC change, binding RPC signature change, production data change, AI Helper change, or Ads synchronization change was made.
+
+
 ## Review Follow-up — 2026-07-13 Funnel Activation Parent Validation
 
 Final review fix extends `onboarding-funnel-upsert` parent validation so Funnel reactivation and active edits require both an active Project and the owning active Client in the same workspace. Funnel archive transitions still run before parent checks, and archived-to-archived edits still skip parent checks. No migration, deployment, production data, binding behavior, Ads connector, AI helper, or frontend count-helper changes were made in this follow-up.
