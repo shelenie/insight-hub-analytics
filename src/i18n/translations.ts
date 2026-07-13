@@ -253,6 +253,14 @@ export const translations = {
   onboardingFunnelUnexpectedResponseError: { uk: "Не вдалося зберегти воронку. Backend не повернув очікувану відповідь.", en: "Could not save funnel. The backend did not return the expected response." },
   onboardingProjectSaveError: { uk: "Не вдалося зберегти проєкт", en: "Could not save project" },
   onboardingFunnelSaveError: { uk: "Не вдалося зберегти воронку", en: "Could not save funnel" },
+  onboardingArchiveConfirmTitle: { uk: "Підтвердьте архівацію. Дочірні записи та привʼязки також буде архівовано.", en: "Confirm archive. Child records and bindings will also be archived." },
+  onboardingArchiveProjectsAffected: { uk: "Проєктів буде перевірено", en: "Projects affected" },
+  onboardingArchiveFunnelsAffected: { uk: "Воронок буде перевірено", en: "Funnels affected" },
+  onboardingArchiveBindingsAffected: { uk: "Активні рекламні та source-привʼязки в цьому scope також буде архівовано.", en: "Active ad and source bindings in this scope will also be archived." },
+  onboardingFriendlyBackendError: { uk: "Backend не зміг виконати дію. Перевірте деталі або спробуйте ще раз.", en: "The backend could not complete the action. Check details or try again." },
+  onboardingFriendlyInactiveParentError: { uk: "Спочатку активуйте батьківський клієнт/проєкт, а потім повторіть дію.", en: "Reactivate the parent client/project first, then try again." },
+  onboardingFriendlyNotFoundError: { uk: "Запис не знайдено в цьому workspace. Оновіть сторінку й повторіть.", en: "The record was not found in this workspace. Refresh and try again." },
+  onboardingFriendlyForbiddenError: { uk: "Недостатньо прав для цієї дії.", en: "You do not have permission for this action." },
 
 
   // Pages — Campaigns

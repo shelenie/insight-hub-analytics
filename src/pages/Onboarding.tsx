@@ -165,8 +165,8 @@ export default function Onboarding() {
       const { data, error } = await supabase.functions.invoke("onboarding-client-upsert", {
         body: { workspace_id: WORKSPACE_ID, ...payload },
       });
-      if (error) throw error;
-      if (!data?.ok) throw new Error(t("onboardingClientUnexpectedResponseError"));
+      if (error) throw new Error(await getFriendlyFunctionError(error, t));
+      if (!data?.ok) throw new Error(formatBackendError(data, t));
       return data;
     },
     onSuccess: async () => {
@@ -185,8 +185,8 @@ export default function Onboarding() {
       const { data, error } = await supabase.functions.invoke("onboarding-project-upsert", {
         body: { workspace_id: WORKSPACE_ID, ...payload },
       });
-      if (error) throw error;
-      if (!data?.ok) throw new Error(t("onboardingProjectUnexpectedResponseError"));
+      if (error) throw new Error(await getFriendlyFunctionError(error, t));
+      if (!data?.ok) throw new Error(formatBackendError(data, t));
       return data;
     },
     onSuccess: async () => {
@@ -205,8 +205,8 @@ export default function Onboarding() {
       const { data, error } = await supabase.functions.invoke("onboarding-funnel-upsert", {
         body: { workspace_id: WORKSPACE_ID, ...payload },
       });
-      if (error) throw error;
-      if (!data?.ok) throw new Error(t("onboardingFunnelUnexpectedResponseError"));
+      if (error) throw new Error(await getFriendlyFunctionError(error, t));
+      if (!data?.ok) throw new Error(formatBackendError(data, t));
       return data;
     },
     onSuccess: async () => {
@@ -292,6 +292,7 @@ export default function Onboarding() {
               <TabsContent value="clients" className="mt-1"><SectionCard title={t("onboardingClientsTitle")} description={t("onboardingClientsDescription")}>
                 <UpsertPanel title={t("onboardingClient")} editModeLabel={t("onboardingEditClient")} isEditing={Boolean(clientForm.client_id)} onCancel={resetClientForm} form={clientForm} setForm={setClientForm} isPending={clientMutation.isPending} error={clientError} signedIn={Boolean(session)} canSubmit={canEditOnboarding && Boolean(clientForm.name.trim())} disabled={!canEditOnboarding} submitLabel={clientForm.client_id ? t("onboardingSaveChanges") : t("onboardingCreateClient")} pendingLabel={t("onboardingSavingClient")} statusOptions={statusOptions} t={t} onSubmit={() => {
                   if (!clientForm.name.trim()) return setClientError(t("onboardingNameRequiredClient"));
+                  if (clientForm.client_id && isInactiveStatus(clientForm.status) && !confirmArchive("client", clientForm.name, projects.length, funnels.length, t)) return;
                   setClientError("");
                   clientMutation.mutate({ client_id: clientForm.client_id || undefined, name: clientForm.name.trim(), code: clientForm.code || undefined, status: clientForm.status || undefined });
                 }}>
@@ -304,6 +305,7 @@ export default function Onboarding() {
                 <UpsertPanel title={t("onboardingProject")} compact fieldsBeforeInputs editModeLabel={t("onboardingEditProject")} isEditing={Boolean(projectForm.project_id)} onCancel={resetProjectForm} form={projectForm} setForm={setProjectForm} isPending={projectMutation.isPending} error={projectError} signedIn={Boolean(session)} canSubmit={canEditOnboarding && Boolean(projectForm.name.trim() && projectForm.client_id.trim())} disabled={!canEditOnboarding || clientsMissingClientId || !projectForm.client_id.trim()} submitLabel={projectForm.project_id ? t("onboardingSaveChanges") : t("onboardingCreateProject")} helperText={!projectForm.client_id.trim() ? t("onboardingChooseClientFirst") : undefined} pendingLabel={t("onboardingSavingProject")} details={ <DeveloperDetails title={t("onboardingTechnicalDetails")}><p>{t("onboardingProjectId")}: {projectForm.project_id || t("onboardingAutoCreated")}</p><p>{t("onboardingClientId")}: {projectForm.client_id || t("onboardingNotSelected")}</p>{clientsMissingClientId ? <p>{t("onboardingClientIdMissing")}</p> : null}</DeveloperDetails> } statusOptions={statusOptions} t={t} onSubmit={() => {
                   if (!projectForm.client_id.trim()) return setProjectError(t("onboardingChooseClientError"));
                   if (!projectForm.name.trim()) return setProjectError(t("onboardingNameRequiredProject"));
+                  if (projectForm.project_id && isInactiveStatus(projectForm.status) && !confirmArchive("project", projectForm.name, 0, funnels.length, t)) return;
                   setProjectError("");
                   projectMutation.mutate({ project_id: projectForm.project_id || undefined, client_id: projectForm.client_id.trim(), name: projectForm.name.trim(), code: projectForm.code || undefined, status: projectForm.status || undefined });
                 }}>
@@ -387,6 +389,39 @@ function SelectField({ label, placeholder, value, options, onChange, emptyText, 
 function EntityTable({ rows, columns, countColumnTitle, countForRow, emptyText, onEdit, canEdit = true, canEditRow, t, lang }: { rows: OnboardingRow[]; columns: string[]; countColumnTitle?: string; countForRow?: (row: OnboardingRow) => number; emptyText: string; onEdit?: (row: OnboardingRow) => void; canEdit?: boolean; canEditRow?: (row: OnboardingRow) => boolean; t: (key: TranslationKey) => string; lang: Lang; }) {
   if (rows.length === 0) return <EmptyMessage>{emptyText}</EmptyMessage>;
   return <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead><tr className="border-b border-border/70 text-muted-foreground">{columns.map((column) => <th key={column} className="px-2 py-2 font-medium">{columnLabel(column, t)}</th>)}{countColumnTitle ? <th className="w-24 px-2 py-2 text-center font-medium">{countColumnTitle}</th> : null}{onEdit ? <th className="w-28 px-2 py-2 text-center font-medium">{t("onboardingActions")}</th> : null}</tr></thead><tbody>{rows.map((row, index) => <tr key={rowKey(row, columns, index)} className="border-b border-border/40 last:border-0">{columns.map((column) => <td key={`${index}-${column}`} className="px-2 py-2 text-foreground">{formatDisplayCell(row, column, t, lang)}</td>)}{countColumnTitle ? <td className="w-24 px-2 py-2 text-center tabular-nums text-foreground">{countForRow ? countForRow(row) : "—"}</td> : null}{onEdit ? <td className="w-28 whitespace-nowrap px-2 py-2 text-center"><Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" disabled={!canEdit || (canEditRow ? !canEditRow(row) : false)} onClick={() => onEdit(row)}>{t("onboardingEdit")}</Button></td> : null}</tr>)}</tbody></table></div>;
+}
+
+function isInactiveStatus(status: string) { return ["archived", "inactive", "removed", "deleted", "disabled"].includes(String(status ?? "").toLowerCase()); }
+
+function confirmArchive(scope: "client" | "project", name: string, projectCount: number, funnelCount: number, t: (key: TranslationKey) => string) {
+  const childSummary = scope === "client"
+    ? `${t("onboardingArchiveProjectsAffected")}: ${projectCount}. ${t("onboardingArchiveFunnelsAffected")}: ${funnelCount}.`
+    : `${t("onboardingArchiveFunnelsAffected")}: ${funnelCount}.`;
+  return window.confirm(`${t("onboardingArchiveConfirmTitle")}\n\n${name}\n\n${childSummary} ${t("onboardingArchiveBindingsAffected")}`);
+}
+
+async function getFriendlyFunctionError(error: unknown, t: (key: TranslationKey) => string) {
+  const context = (error as { context?: { json?: () => Promise<unknown>; text?: () => Promise<string> } })?.context;
+  if (context?.json) {
+    try { return formatBackendError(await context.json(), t); } catch { /* fall through */ }
+  }
+  if (context?.text) {
+    try {
+      const text = await context.text();
+      if (text) return formatBackendError(JSON.parse(text), t);
+    } catch { /* fall through */ }
+  }
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return message.includes("non-2xx") ? t("onboardingFriendlyBackendError") : message;
+}
+
+function formatBackendError(payload: unknown, t: (key: TranslationKey) => string) {
+  const body = payload && typeof payload === "object" ? payload as { error?: string; code?: string } : {};
+  const code = body.code ?? "";
+  if (["inactive_client", "inactive_project", "reactivation_requires_active_client", "reactivation_requires_active_project"].includes(code)) return t("onboardingFriendlyInactiveParentError");
+  if (code.includes("not_found")) return t("onboardingFriendlyNotFoundError");
+  if (code.includes("forbidden")) return t("onboardingFriendlyForbiddenError");
+  return body.error || t("onboardingFriendlyBackendError");
 }
 
 function columnLabel(column: string, t: (key: TranslationKey) => string) {

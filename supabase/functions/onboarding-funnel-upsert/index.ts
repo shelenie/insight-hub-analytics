@@ -29,6 +29,13 @@ Deno.serve(async (req) => {
     if (project_id !== existing.project_id) {
       return json({ ok: false, error: "Funnel reparent requires a dedicated action", code: "funnel_reparent_requires_dedicated_action" }, 409);
     }
+    const requestedStatus = "status" in body ? String(body.status ?? "") : String(existing.status ?? "");
+    const archiveTransition = isInactiveStatus(requestedStatus);
+    if (archiveTransition) {
+      const { data, error } = await userClient["rpc"]("archive_onboarding_funnel_cascade", { p_workspace_id: workspace_id, p_funnel_id: funnel_id, p_status: requestedStatus, p_metadata: body.metadata ?? null });
+      if (error) return json({ ok: false, error: friendlyRpcError(error.message), code: stableRpcErrorCode(error.message, "funnel_archive_failed"), rpc: "archive_onboarding_funnel_cascade" }, 400);
+      return json({ ok: true, action: "archive_funnel_cascade", funnel_id, cascade: data });
+    }
     const projectCheck = await requireActiveProject(userClient, workspace_id, project_id);
     if (projectCheck.error) return projectCheck.error;
     const client_id = projectCheck.project.client_id;
@@ -110,4 +117,18 @@ function mergeAuditMetadata(existing: unknown, requested: unknown, actor: { id: 
   const safeRequested = isPlainObject(requested) ? requested : {};
   return { ...safeExisting, ...safeRequested, updated_by: actor.id, updated_by_email: actor.email, updated_via: updatedVia, updated_at: updatedAt };
 }
+function friendlyRpcError(message: string) {
+  if (message.includes("not found")) return message;
+  if (message.includes("requires an inactive status")) return "Archive requires an inactive status.";
+  if (message.includes("permission") || message.includes("manage")) return "You do not have permission to archive this onboarding record.";
+  return message || "Archive operation failed.";
+}
+function stableRpcErrorCode(message: string, fallback: string) {
+  const lower = message.toLowerCase();
+  if (lower.includes("not found")) return "onboarding_entity_not_found";
+  if (lower.includes("inactive status")) return "invalid_archive_status";
+  if (lower.includes("permission") || lower.includes("manage")) return "onboarding_archive_forbidden";
+  return fallback;
+}
+
 function json(payload: unknown, status = 200) { return new Response(JSON.stringify(payload), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }); }

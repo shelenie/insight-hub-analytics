@@ -1,3 +1,8 @@
+
+## Local QA Fix — 2026-07-13 Onboarding Archive Cascade Semantics
+
+A narrow production QA fix adds authenticated transactional onboarding archive cascade RPCs for Clients, Projects, and Funnels. Archive transitions are soft-only, preserve IDs, update timestamps/metadata, cascade inactive status to descendants where applicable, and archive active ad-account/source bindings in the affected scope. Onboarding Edge Functions now distinguish archive transitions from normal edits/reactivation so archive is allowed under inactive parents, while reactivation and normal edits still require active parents in Client → Project → Funnel order. `/onboarding` now confirms Client/Project archive actions and parses JSON Edge Function error payloads into friendly localized messages instead of surfacing only generic non-2xx text. Production migration application, Edge Function deployment, and live manual retest are still required.
+
 ## Next Action — 2026-07-13 Post-QA Source Candidate Privilege Verification
 
 After merge, apply `supabase/migrations/20260713_fix_source_candidate_table_privileges.sql` through the project-standard Supabase migration workflow if it has not already been applied, then verify live table privileges and RLS state for `google_sheet_sources`, `google_sheet_tabs`, and `raw_external_datasets`. Manually retest `/bindings` → `Джерела даних` source candidate visibility, create one source binding, then edit one test Onboarding record and confirm the semantic success toast. No Edge Function redeploy is expected.
