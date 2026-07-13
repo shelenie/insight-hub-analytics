@@ -40,6 +40,14 @@ describe("production QA review fixes", () => {
     expect(archiveHelpers).not.toContain("isInactiveStatus(status || \"active\")");
   });
 
+  it("renders the selected archive entity name before affected counts", () => {
+    const dialogBlock = onboarding.slice(onboarding.indexOf("function ArchiveConfirmDialog"), onboarding.indexOf("function formatArchiveIntro"));
+    expect(dialogBlock).toContain("state?.name");
+    expect(dialogBlock).toContain("font-semibold text-foreground");
+    expect(dialogBlock.indexOf("state.name")).toBeGreaterThan(dialogBlock.indexOf("formatArchiveIntro"));
+    expect(dialogBlock.indexOf("state.name")).toBeLessThan(dialogBlock.indexOf("activeSourceBindings"));
+  });
+
   it("keeps shared drawer and wheel scrolling behavior without fake compatibility markers", () => {
     expect(bindings).toContain("function BindingDrawerLayout");
     expect(bindings).toContain("function BindingDrawerFooter");
