@@ -1,3 +1,17 @@
+## 2026-07-12 — PR #245 Final Step 3 Stabilization
+
+### Fixed
+
+- Completed Step 3 Data Bindings frontend actions on `/bindings` with authenticated hardened RPC usage, safe source candidates, selected source/ad-account edit-rebind-archive flows, explicit primary behavior, localized dialogs, and member read-only protections.
+- Completed onboarding Client/Project/Funnel exact create/edit paths: create uses hardened `upsert_*` RPCs, edit updates exact selected rows by ID/workspace, supports inactive/archived reactivation, writes server-derived audit metadata, and blocks normal Project/Funnel reparenting.
+- Enforced inactive/missing Google Sheet parent validation for source tabs and preserved canonical source identity.
+- Updated CI workflow to run typecheck, lint, build, and tests on pull requests.
+
+### Notes
+
+- No Supabase migration, RLS change, RPC signature change, production data mutation, or `ai-helper-run` change was made.
+- After merge, deploy only `binding-create-or-update`, `binding-archive`, `onboarding-client-upsert`, `onboarding-project-upsert`, and `onboarding-funnel-upsert`, then complete manual production QA.
+
 ## 2026-07-12 — AI Assistant Client Wording Follow-up Routing
 
 ### Fixed

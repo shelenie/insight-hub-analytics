@@ -1,3 +1,17 @@
+## Decision: Data Binding frontend mutations use authenticated RPC helpers
+
+Status: active
+Date: 2026-07-12
+Scope: Data Bindings Step 3
+
+Decision:
+
+Operational Data Binding frontend actions should call hardened authenticated RPCs through a narrow frontend mutation module instead of embedding large inline payloads in `Bindings.tsx`. Ad-account mutations use `manage_ad_account_binding`, selected archival uses `archive_binding`, and hierarchy creation uses `upsert_client`, `upsert_project`, and `upsert_funnel` with actor fields omitted/null so the backend derives the authenticated actor. Source identity remains server-resolved in `binding-create-or-update`, and source mutations must use the authenticated user client; service role may be used only for narrow verified lookups when needed. Source rebind remains a non-atomic two-phase frontend/backend workflow unless a dedicated transactional source replacement RPC is approved later.
+
+Reason:
+
+This keeps production binding actions aligned with hardened RPC authorization, prevents browsers from supplying account/source identity or actor identity, and keeps selected replacement/archive behavior reviewable without adding DDL or weakening RLS.
+
 ## 2026-07-11 — Data Bindings mutation RPC authorization model
 
 Decision: operational source and binding mutations are admin/superadmin-only through `can_manage_sources`; members remain read-only/proposal-only until a separate proposal workflow is explicitly designed. Binding replacement must be archive-first, soft-only, and transactional: when an operator supplies a replacement binding id, only that selected active binding is archived and the new exact-scope binding is created/upserted in the same transaction. Multiple active ad-account bindings may exist when scopes differ; setting a binding primary unsets other active primary bindings for the same ad account in the same transaction, but no new global one-binding-per-account constraint is added. Frontend callers must not supply platform/external account identifiers or actor identity for the new ad-account binding contract; those values are derived from database rows and the authenticated session.

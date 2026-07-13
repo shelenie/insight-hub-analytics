@@ -108,9 +108,8 @@ describe("Bindings ads multi-account readiness", () => {
     expect(adAccountTabSource.indexOf("<BindingGapsPanel")).toBeLessThan(
       adAccountTabSource.indexOf("<AdAccountsBusinessTable"),
     );
-    expect(adAccountTabSource.indexOf("<AdAccountsBusinessTable")).toBeLessThan(
-      adAccountTabSource.indexOf("<AdminBindingForm"),
-    );
+    expect(adAccountTabSource).not.toContain('type="ad_account"');
+    expect(adAccountTabSource).toContain("manageAdAccountBinding");
   });
 
   it("uses shared amber warning badge and surface styles for needs-binding UI", () => {
@@ -195,12 +194,13 @@ describe("Bindings ads multi-account readiness", () => {
     expect(bindingsSource).not.toContain("fake");
   });
 
-  it("keeps the existing manual create button and binding-create-or-update flow", () => {
+  it("uses hardened direct RPC helpers for ad-account binding actions", () => {
     expect(bindingsSource).toContain("bindingsCreateAdAccountButton");
     expect(translationsSource).toContain("+ Привʼязати рекламний акаунт");
     expect(bindingsSource).toContain("setNormalAdForm(EMPTY_AD_FORM)");
-    expect(bindingsSource).toContain('binding_type: "ad_account"');
-    expect(bindingsSource).toContain('"binding-create-or-update"');
+    expect(bindingsSource).toContain("manageAdAccountBinding");
+    expect(bindingsSource).toContain("replaceBindingId: sameScope ? null : normalAdForm.binding_id || null");
+    expect(bindingsSource).not.toContain('binding_type: "ad_account"');
   });
 
   it("does not render backend gap codes or backend English messages in normal Bindings UI", () => {

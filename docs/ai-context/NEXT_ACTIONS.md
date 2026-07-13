@@ -1,3 +1,11 @@
+## PR #245 Final Step 3 Status — Ready for merge after main sync and CI
+
+- Step 3 Data Bindings frontend actions and onboarding exact create/edit paths are complete locally.
+- No Data Bindings migration is required; do not reapply `20260711_harden_data_binding_mutation_rpcs.sql`.
+- After merge, deploy only: `binding-create-or-update`, `binding-archive`, `onboarding-client-upsert`, `onboarding-project-upsert`, and `onboarding-funnel-upsert`. Do not deploy unrelated functions.
+- Manual production QA after deployment: binding create/edit/rebind/archive for source and ad-account rows, member read-only behavior, source parent validation, onboarding create/edit/reactivation, audit metadata, and reparent guard behavior.
+- Local environment could not fetch GitHub `main` because outbound GitHub access is blocked by a CONNECT 403; complete final GitHub mergeability/CI confirmation on the remote PR head after branch sync.
+
 ## Verified Local Follow-up — 2026-07-12 AI Assistant Client Wording Follow-up Routing
 
 AI Assistant thread-follow-up detection now explicitly recognizes client-wording follow-ups such as “що сказати клієнту?”, “поясни клієнту”, “дай текст клієнту”, and “client update” without treating every generic mention of “client” as a continuation. After a System diagnostics or Ads Health answer, those explicit wording requests preserve the previous assistant route; standalone client-wording prompts without previous assistant context continue to fall back to General. No request_type/context_scope values, Supabase schema/migrations, playbook behavior, chat history, Data Bindings, connectors, routes/sidebar, or Edge Function code changed in this follow-up.
