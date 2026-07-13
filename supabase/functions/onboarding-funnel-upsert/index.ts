@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
       return json({ ok: true, action: "archive_funnel_cascade", funnel_id, cascade: data });
     }
     const projectCheck = !transition.existingInactive || reactivationTransition
-      ? await requireActiveProject(userClient, workspace_id, project_id)
+      ? await requireActiveProjectAndClient(userClient, workspace_id, project_id)
       : { project: { client_id: existing.client_id }, error: null };
     if (projectCheck.error) return projectCheck.error;
     const client_id = projectCheck.project.client_id;
@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
     return json({ ok: true, action: "update_funnel", funnel_id: data.id });
   }
 
-  const projectCheck = await requireActiveProject(userClient, workspace_id, project_id);
+  const projectCheck = await requireActiveProjectAndClient(userClient, workspace_id, project_id);
   if (projectCheck.error) return projectCheck.error;
 
   const { data, error } = await userClient.rpc("upsert_funnel", {
@@ -101,17 +101,29 @@ Deno.serve(async (req) => {
   if (error) return json({ ok: false, error: error.message, rpc: "upsert_funnel" }, 400);
   return json({ ok: true, rpc: "upsert_funnel", funnel_id: data });
 });
-async function requireActiveProject(userClient: any, workspace_id: string, project_id: string): Promise<{ project: { client_id: string }; error: Response | null }> {
-  const { data, error } = await userClient
+async function requireActiveProjectAndClient(userClient: any, workspace_id: string, project_id: string): Promise<{ project: { client_id: string }; error: Response | null }> {
+  const { data: project, error: projectError } = await userClient
     .from("projects")
     .select("id, workspace_id, client_id, status")
     .eq("id", project_id)
     .eq("workspace_id", workspace_id)
     .maybeSingle();
-  if (error) return { project: { client_id: "" }, error: json({ ok: false, error: error.message, code: error.code, action: "lookup_project" }, 400) };
-  if (!data) return { project: { client_id: "" }, error: json({ ok: false, error: "Project not found in workspace", code: "project_not_found" }, 404) };
-  if (isInactiveStatus(data.status)) return { project: { client_id: "" }, error: json({ ok: false, error: "Project is inactive", code: "inactive_project" }, 409) };
-  return { project: { client_id: data.client_id }, error: null };
+  if (projectError) return { project: { client_id: "" }, error: json({ ok: false, error: projectError.message, code: projectError.code, action: "lookup_project" }, 400) };
+  if (!project) return { project: { client_id: "" }, error: json({ ok: false, error: "Project not found in workspace", code: "project_not_found" }, 404) };
+  if (isInactiveStatus(project.status)) return { project: { client_id: "" }, error: json({ ok: false, error: "Project is inactive", code: "inactive_project" }, 409) };
+  if (!project.client_id) return { project: { client_id: "" }, error: json({ ok: false, error: "Project client not found in workspace", code: "client_not_found" }, 404) };
+
+  const { data: client, error: clientError } = await userClient
+    .from("clients")
+    .select("id, workspace_id, status")
+    .eq("id", project.client_id)
+    .eq("workspace_id", workspace_id)
+    .maybeSingle();
+  if (clientError) return { project: { client_id: "" }, error: json({ ok: false, error: clientError.message, code: clientError.code, action: "lookup_client" }, 400) };
+  if (!client) return { project: { client_id: "" }, error: json({ ok: false, error: "Client not found in workspace", code: "client_not_found" }, 404) };
+  if (isInactiveStatus(client.status)) return { project: { client_id: "" }, error: json({ ok: false, error: "Client is inactive", code: "inactive_client" }, 409) };
+
+  return { project: { client_id: project.client_id }, error: null };
 }
 function isInactiveStatus(status: unknown) { return inactiveStatuses.has(String(status ?? "").trim().toLowerCase()); }
 function classifyStatusTransition(existingStatus: unknown, requestedStatus: unknown) {

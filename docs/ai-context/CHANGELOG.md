@@ -1,4 +1,9 @@
 
+## Review Follow-up — 2026-07-13 Funnel Activation Parent Validation
+
+Final review fix extends `onboarding-funnel-upsert` parent validation so Funnel reactivation and active edits require both an active Project and the owning active Client in the same workspace. Funnel archive transitions still run before parent checks, and archived-to-archived edits still skip parent checks. No migration, deployment, production data, binding behavior, Ads connector, AI helper, or frontend count-helper changes were made in this follow-up.
+
+
 ## Review Follow-up — 2026-07-13 Onboarding Archive Transition and Count Fix
 
 Review fixes refined onboarding archive semantics: Edge Functions now classify existing/requested statuses so only active-to-inactive transitions invoke cascade RPCs. Already-inactive records saved as inactive update the selected row normally without parent-active checks or descendant changes; reactivation and active normal edits retain parent-active validation. `/onboarding` archive confirmations now count only active descendants in the selected Client or Project scope and exclude unrelated/already-inactive rows. Production migration application and live verification remain blocked in this environment because Supabase apply_migration tooling/credentials are unavailable.

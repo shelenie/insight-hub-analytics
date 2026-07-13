@@ -40,11 +40,32 @@ describe("onboarding archive cascade production QA fix", () => {
     expect(projectWrapper).toContain("if (!transition.existingInactive || reactivationTransition)");
     expect(projectWrapper).toContain("const clientCheck = await requireActiveClient");
     expect(funnelWrapper).toContain("const projectCheck = !transition.existingInactive || reactivationTransition");
-    expect(funnelWrapper).toContain("await requireActiveProject");
+    expect(funnelWrapper).toContain("await requireActiveProjectAndClient");
     expect(projectWrapper).toContain(".update(patch)");
     expect(funnelWrapper).toContain(".update(patch)");
     expect(projectWrapper).toContain("stableRpcErrorCode");
     expect(funnelWrapper).toContain("stableRpcErrorCode");
+  });
+
+
+  it("funnel activation and active edits require both active project and active client", () => {
+    expect(funnelWrapper).toContain("requireActiveProjectAndClient");
+    expect(funnelWrapper).toContain('.from("projects")');
+    expect(funnelWrapper).toContain('.from("clients")');
+    expect(funnelWrapper).toContain('code: "inactive_project"');
+    expect(funnelWrapper).toContain('code: "inactive_client"');
+    expect(funnelWrapper).toContain('code: "project_not_found"');
+    expect(funnelWrapper).toContain('code: "client_not_found"');
+    expect(funnelWrapper).toContain('if (!project.client_id)');
+    expect(funnelWrapper).toContain('if (isInactiveStatus(client.status))');
+  });
+
+  it("funnel archived-to-archived edits skip parent checks but reactivation/active edits validate client", () => {
+    expect(funnelWrapper).toContain("const projectCheck = !transition.existingInactive || reactivationTransition");
+    expect(funnelWrapper).toContain("? await requireActiveProjectAndClient(userClient, workspace_id, project_id)");
+    expect(funnelWrapper).toContain(': { project: { client_id: existing.client_id }, error: null }');
+    expect(funnelWrapper.indexOf("if (archiveTransition)")).toBeLessThan(funnelWrapper.indexOf("const projectCheck = !transition.existingInactive || reactivationTransition"));
+    expect(funnelWrapper).toContain("const projectCheck = await requireActiveProjectAndClient(userClient, workspace_id, project_id)");
   });
 
   it("migration signatures and grants remain restricted", () => {
