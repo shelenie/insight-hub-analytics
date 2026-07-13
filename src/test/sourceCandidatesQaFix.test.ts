@@ -4,31 +4,43 @@ import { describe, expect, it } from "vitest";
 
 const bindings = readFileSync(resolve(process.cwd(), "src/pages/Bindings.tsx"), "utf8");
 const onboarding = readFileSync(resolve(process.cwd(), "src/pages/Onboarding.tsx"), "utf8");
-const toastStyles = readFileSync(resolve(process.cwd(), "src/lib/toastStyles.ts"), "utf8");
+const toastComponent = readFileSync(resolve(process.cwd(), "src/components/ui/toast.tsx"), "utf8");
 const migration = readFileSync(
   resolve(process.cwd(), "supabase/migrations/20260713_fix_source_candidate_table_privileges.sql"),
   "utf8",
 );
 
 describe("post-deployment QA source candidates and onboarding toasts", () => {
-  it("uses green success styling for all Onboarding success toasts", () => {
-    expect(toastStyles).toContain("SUCCESS_TOAST_CLASSNAME");
-    expect(toastStyles).toContain("border-emerald-500/50 bg-emerald-50 text-emerald-950 shadow-xl dark:bg-emerald-950 dark:text-emerald-50");
-    expect(toastStyles).toContain("ACTION_TOAST_DURATION_MS = 5000");
-    expect(onboarding.match(/className: SUCCESS_TOAST_CLASSNAME/g)).toHaveLength(3);
-    expect(onboarding.match(/duration: ACTION_TOAST_DURATION_MS/g)).toHaveLength(6);
+  it("exposes semantic toast variants in the shared toast component", () => {
+    for (const variant of ["default", "success", "error", "warning", "info", "destructive"]) {
+      expect(toastComponent).toContain(`${variant}:`);
+    }
+    expect(toastComponent).toContain("border-emerald-500/50 bg-emerald-50");
+    expect(toastComponent).toContain("dark:bg-emerald-950 dark:text-emerald-50");
+    expect(toastComponent).toContain("border-red-500/50 bg-red-50");
+    expect(toastComponent).toContain("dark:bg-red-950 dark:text-red-50");
+    expect(toastComponent).toContain("border-amber-500/50 bg-amber-50");
+    expect(toastComponent).toContain("dark:bg-amber-950 dark:text-amber-50");
+    expect(toastComponent).toContain("border-sky-500/50 bg-sky-50");
+    expect(toastComponent).toContain("dark:bg-sky-950 dark:text-sky-50");
+  });
+
+  it("uses success variants for all Onboarding success toasts", () => {
+    expect(onboarding.match(/variant: "success"/g)).toHaveLength(3);
+    expect(onboarding.match(/duration: 5000/g)).toHaveLength(6);
     expect(onboarding).toContain('t("onboardingClientSavedTitle")');
     expect(onboarding).toContain('t("onboardingProjectSavedTitle")');
     expect(onboarding).toContain('t("onboardingFunnelSavedTitle")');
+    expect(onboarding).not.toContain("border-emerald-500/50 bg-emerald-50");
   });
 
-  it("keeps Onboarding error toasts destructive with explicit red styling", () => {
-    expect(toastStyles).toContain("ERROR_TOAST_CLASSNAME");
-    expect(toastStyles).toContain("border-red-500/50 bg-red-50 text-red-950 shadow-xl dark:bg-red-950 dark:text-red-50");
-    expect(onboarding.match(/variant: "destructive", className: ERROR_TOAST_CLASSNAME/g)).toHaveLength(3);
+  it("uses semantic error variants for Onboarding error toasts", () => {
+    expect(onboarding.match(/variant: "error"/g)).toHaveLength(3);
     expect(onboarding).toContain('t("onboardingClientSaveError")');
     expect(onboarding).toContain('t("onboardingProjectSaveError")');
     expect(onboarding).toContain('t("onboardingFunnelSaveError")');
+    expect(onboarding).not.toContain("border-red-500/50 bg-red-50");
+    expect(onboarding).not.toContain('variant: "destructive"');
   });
 
   it("does not show the genuine-empty source message when source candidate query failed", () => {
@@ -54,6 +66,14 @@ describe("post-deployment QA source candidates and onboarding toasts", () => {
     expect(migration).not.toMatch(/ TO anon\b/);
     expect(migration).not.toMatch(/disable row level security/i);
     expect(migration).not.toMatch(/drop policy|create policy|alter policy/i);
+  });
+
+  it("uses semantic toast and warning states in Bindings without local emerald toast classes", () => {
+    expect(bindings).toContain('variant: "success"');
+    expect(bindings).toContain('variant: "warning"');
+    expect(bindings).toContain("source_rebind_partial");
+    expect(bindings).not.toContain("SUCCESS_TOAST_CLASSNAME");
+    expect(bindings).not.toContain("border-emerald-500/50 bg-emerald-50");
   });
 
   it("keeps existing source candidate inactive-parent filtering covered", () => {

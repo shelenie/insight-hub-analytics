@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { ACTION_TOAST_DURATION_MS, ERROR_TOAST_CLASSNAME, SUCCESS_TOAST_CLASSNAME } from "@/lib/toastStyles";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { DeveloperDetails } from "@/components/common/DeveloperDetails";
 import { RefreshCw } from "lucide-react";
@@ -171,13 +170,13 @@ export default function Onboarding() {
       return data;
     },
     onSuccess: async () => {
-      toast({ title: t("onboardingClientSavedTitle"), description: t("onboardingClientSavedDescription"), className: SUCCESS_TOAST_CLASSNAME, duration: ACTION_TOAST_DURATION_MS });
+      toast({ title: t("onboardingClientSavedTitle"), description: t("onboardingClientSavedDescription"), variant: "success", duration: 5000 });
       resetClientForm();
       await refreshOnboarding();
     },
     onError: (error: Error) => {
       setClientError(error.message);
-      toast({ title: t("onboardingClientSaveError"), description: error.message, variant: "destructive", className: ERROR_TOAST_CLASSNAME, duration: ACTION_TOAST_DURATION_MS });
+      toast({ title: t("onboardingClientSaveError"), description: error.message, variant: "error", duration: 5000 });
     },
   });
 
@@ -191,13 +190,13 @@ export default function Onboarding() {
       return data;
     },
     onSuccess: async () => {
-      toast({ title: t("onboardingProjectSavedTitle"), description: t("onboardingProjectSavedDescription"), className: SUCCESS_TOAST_CLASSNAME, duration: ACTION_TOAST_DURATION_MS });
+      toast({ title: t("onboardingProjectSavedTitle"), description: t("onboardingProjectSavedDescription"), variant: "success", duration: 5000 });
       resetProjectForm();
       await refreshOnboarding();
     },
     onError: (error: Error) => {
       setProjectError(error.message);
-      toast({ title: t("onboardingProjectSaveError"), description: error.message, variant: "destructive", className: ERROR_TOAST_CLASSNAME, duration: ACTION_TOAST_DURATION_MS });
+      toast({ title: t("onboardingProjectSaveError"), description: error.message, variant: "error", duration: 5000 });
     },
   });
 
@@ -211,13 +210,13 @@ export default function Onboarding() {
       return data;
     },
     onSuccess: async () => {
-      toast({ title: t("onboardingFunnelSavedTitle"), description: t("onboardingFunnelSavedDescription"), className: SUCCESS_TOAST_CLASSNAME, duration: ACTION_TOAST_DURATION_MS });
+      toast({ title: t("onboardingFunnelSavedTitle"), description: t("onboardingFunnelSavedDescription"), variant: "success", duration: 5000 });
       resetFunnelForm();
       await refreshOnboarding();
     },
     onError: (error: Error) => {
       setFunnelError(error.message);
-      toast({ title: t("onboardingFunnelSaveError"), description: error.message, variant: "destructive", className: ERROR_TOAST_CLASSNAME, duration: ACTION_TOAST_DURATION_MS });
+      toast({ title: t("onboardingFunnelSaveError"), description: error.message, variant: "error", duration: 5000 });
     },
   });
 

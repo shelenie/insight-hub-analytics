@@ -884,7 +884,7 @@ export default function AdsConnectors() {
     if (error) {
       const errorDetails = await readFunctionErrorDetails(error);
       setFacebookLeadSyncState({ loading: false, error: errorDetails, success: null, details: null });
-      toast({ title: ui.fbSyncFailedTitle, description: errorDetails, variant: "destructive" });
+      toast({ title: ui.fbSyncFailedTitle, description: errorDetails, variant: "error" });
       return;
     }
 
@@ -892,7 +892,7 @@ export default function AdsConnectors() {
     const message = buildFacebookLeadSyncSuccessMessage(details, ui);
 
     setFacebookLeadSyncState({ loading: false, error: null, success: message, details });
-    toast({ title: ui.fbSyncSuccessTitle, description: message });
+    toast({ title: ui.fbSyncSuccessTitle, description: message, variant: "success" });
 
     await Promise.all([
       query.refetch(),
@@ -910,7 +910,7 @@ export default function AdsConnectors() {
 
     if (error) {
       setSyncRunState({ loading: false, error: error.message, success: null, details: null });
-      toast({ title: ui.syncFailedToastTitle, description: error.message, variant: "destructive" });
+      toast({ title: ui.syncFailedToastTitle, description: error.message, variant: "error" });
       return;
     }
 
@@ -921,7 +921,7 @@ export default function AdsConnectors() {
       ui.syncSuccess;
 
     setSyncRunState({ loading: false, error: null, success: message, details });
-    toast({ title: ui.syncSubmittedToastTitle, description: message });
+    toast({ title: ui.syncSubmittedToastTitle, description: message, variant: "info" });
 
     await Promise.all([
       query.refetch(),
@@ -965,7 +965,7 @@ export default function AdsConnectors() {
 
     if (error) {
       setDisconnectLoading(false);
-      toast({ title: ui.disconnectErrorTitle, description: error.message, variant: "destructive" });
+      toast({ title: ui.disconnectErrorTitle, description: error.message, variant: "error" });
       return;
     }
 
@@ -975,7 +975,7 @@ export default function AdsConnectors() {
     ]);
     setDisconnectLoading(false);
     setDisconnectTarget(null);
-    toast({ title: ui.disconnectSuccessTitle, description: ui.disconnectSuccessDescription });
+    toast({ title: ui.disconnectSuccessTitle, description: ui.disconnectSuccessDescription, variant: "success" });
   };
 
   const connectionRaw = readString(overview.snapshot, "ads_connector_status");

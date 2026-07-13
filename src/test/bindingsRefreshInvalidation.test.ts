@@ -10,10 +10,6 @@ const translationsSource = readFileSync(
   resolve(process.cwd(), "src/i18n/translations.ts"),
   "utf8",
 );
-const toastStylesSource = readFileSync(
-  resolve(process.cwd(), "src/lib/toastStyles.ts"),
-  "utf8",
-);
 
 describe("Bindings page ad account behavior", () => {
   it("refreshes Ads connectors data after binding actions", () => {
@@ -202,10 +198,10 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain('t("bindingsToastUpdatedDescription")');
     expect(source).toContain('t("bindingsToastCreatedTitle")');
     expect(source).toContain('t("bindingsToastCreatedDescription")');
-    expect(source).toContain("className: SUCCESS_TOAST_CLASSNAME");
-    expect(source).toContain("duration: ACTION_TOAST_DURATION_MS");
-    expect(toastStylesSource).toContain("border-emerald-500/50 bg-emerald-50");
-    expect(toastStylesSource).toContain("ACTION_TOAST_DURATION_MS = 5000");
+    expect(source).toContain('variant: "success"');
+    expect(source).toContain("duration: 5000");
+    expect(source).not.toContain("border-emerald-500/50 bg-emerald-50");
+    expect(source).not.toContain("SUCCESS_TOAST_CLASSNAME");
     expect(source).not.toContain("normalAdSuccess");
     expect(source).not.toContain("setNormalAdSuccess");
     expect(source).toContain('normalAdFeedback?.variant === "error"');
@@ -228,7 +224,8 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain('t("bindingsSourceSaved")');
     expect(source).toContain('role="status"');
     expect(source).toContain('variant: "success"');
-    expect(source).toContain("border-emerald-500/40");
+    expect(source).toContain('variant: "warning"');
+    expect(source).toContain("<OperationalStatusSurface");
     expect(source).toContain("clearFormFeedback");
     expect(source).toContain("onValueChange={handleTabChange}");
     expect(source).toContain('normalAdFeedback?.variant === "error"');

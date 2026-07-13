@@ -1,3 +1,17 @@
+## Decision: Semantic visual states live in shared UI/design-system layer
+
+Status: active
+Date: 2026-07-13
+Scope: Shared UI / design system
+
+Decision:
+
+Reusable visual states and component variants must be defined in the shared UI/design-system layer. Pages must not independently define success, error, warning, info, active, or destructive color schemes for reusable components such as toasts, status surfaces, and badges. Application code should use semantic variants such as `success`, `error`, `warning`, and `info` rather than page-local Tailwind color strings.
+
+Reason:
+
+Centralized semantic variants keep light/dark-mode appearance consistent across the application, prevent local page drift, and make future visual QA fixes reversible and reviewable without touching unrelated page logic.
+
 ## Decision: Data Binding frontend mutations use authenticated RPC helpers
 
 Status: active

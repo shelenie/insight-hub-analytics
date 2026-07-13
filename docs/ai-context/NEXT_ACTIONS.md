@@ -1,6 +1,6 @@
 ## Next Action — 2026-07-13 Post-QA Source Candidate Privilege Verification
 
-After merge, apply `supabase/migrations/20260713_fix_source_candidate_table_privileges.sql` through the project-standard Supabase migration workflow if it has not already been applied, then verify live table privileges and RLS state for `google_sheet_sources`, `google_sheet_tabs`, and `raw_external_datasets`. Manually retest `/bindings` → `Джерела даних` source candidate visibility, create one source binding, then edit one test Onboarding record and confirm the green success toast. No Edge Function redeploy is expected.
+After merge, apply `supabase/migrations/20260713_fix_source_candidate_table_privileges.sql` through the project-standard Supabase migration workflow if it has not already been applied, then verify live table privileges and RLS state for `google_sheet_sources`, `google_sheet_tabs`, and `raw_external_datasets`. Manually retest `/bindings` → `Джерела даних` source candidate visibility, create one source binding, then edit one test Onboarding record and confirm the semantic success toast. No Edge Function redeploy is expected.
 
 ## PR #245 Final Step 3 Status — Ready for merge after main sync and CI
 

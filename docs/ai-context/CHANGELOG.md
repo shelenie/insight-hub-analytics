@@ -4,7 +4,7 @@
 
 - Added a Supabase migration to allow authenticated frontend source-candidate reads by granting only `SELECT` on `google_sheet_sources`, `google_sheet_tabs`, and `raw_external_datasets` while revoking unnecessary direct `MAINTAIN`, `REFERENCES`, `TRIGGER`, and `TRUNCATE` privileges.
 - Updated `/bindings` source-candidate UI states so query failures show a temporary-unavailable message with retry/refresh and do not also claim that no sources exist; successful zero-candidate responses still show the genuine empty state.
-- Updated Onboarding Client/Project/Funnel success toasts to match the green Bindings success toast styling/duration and kept failure toasts destructive with explicit red styling.
+- Centralized toast success/error/warning/info styling in the shared toast component and migrated Onboarding/Bindings toast calls to semantic variants instead of page-local color classes.
 
 ### Notes
 

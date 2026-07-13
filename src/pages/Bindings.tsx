@@ -68,7 +68,6 @@ import {
 } from "@/components/common/DeveloperDetails";
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { toast } from "@/hooks/use-toast";
-import { ACTION_TOAST_DURATION_MS, SUCCESS_TOAST_CLASSNAME } from "@/lib/toastStyles";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { Lang, TranslationKey } from "@/i18n/translations";
 
@@ -132,7 +131,7 @@ type BindingType = "source" | "ad_account";
 type BindingActionFeedback = {
   message: string;
   technical: BindingActionTechnicalDetails | null;
-  variant: "success" | "error";
+  variant: "success" | "warning" | "error";
 };
 type BindingActionTechnicalDetails = {
   rpc?: string;
@@ -606,7 +605,7 @@ export default function Bindings() {
     } else {
       updateSourceForm((current) => applySelection(current) as typeof EMPTY_SOURCE_FORM);
     }
-    toast({ title: t("bindingsHierarchyCreatedTitle"), description: t("bindingsHierarchyCreatedDescription") });
+    toast({ title: t("bindingsHierarchyCreatedTitle"), description: t("bindingsHierarchyCreatedDescription"), variant: "success", duration: 5000 });
     setHierarchyDialog(null);
     setHierarchyName("");
   };
@@ -731,7 +730,7 @@ export default function Bindings() {
       if (archiveResult.error || archiveResult.data !== true) {
         setSourceFeedback({
           message: t("bindingsSourcePartialRebindWarning"),
-          variant: "error",
+          variant: "warning",
           technical: {
             action: "source_rebind_partial",
             rpc: "archive_binding",
@@ -745,7 +744,7 @@ export default function Bindings() {
 
     setSourceForm(EMPTY_SOURCE_FORM);
     setSourceFormOpen(false);
-    toast({ title: t("bindingsToastUpdatedTitle"), description: t("bindingsSourceSaved") });
+    toast({ title: t("bindingsToastUpdatedTitle"), description: t("bindingsSourceSaved"), variant: "success", duration: 5000 });
   };
 
   const handleArchiveSelected = async () => {
@@ -766,7 +765,7 @@ export default function Bindings() {
     }
     setArchiveTarget(null);
     await refreshBindings();
-    toast({ title: t("bindingsArchiveSuccessTitle"), description: t("bindingsArchiveSuccessDescription") });
+    toast({ title: t("bindingsArchiveSuccessTitle"), description: t("bindingsArchiveSuccessDescription"), variant: "success", duration: 5000 });
   };
 
   const headerActions =
@@ -1202,8 +1201,8 @@ export default function Bindings() {
                               description: existingActiveBinding
                                 ? t("bindingsToastUpdatedDescription")
                                 : t("bindingsToastCreatedDescription"),
-                              className: SUCCESS_TOAST_CLASSNAME,
-                              duration: ACTION_TOAST_DURATION_MS,
+                              variant: "success",
+                              duration: 5000,
                             });
                           }
                         }}
@@ -2357,8 +2356,10 @@ function BindingFeedback({
   const { t } = useI18n();
   if (!feedback) return null;
   return (
-    <div
-      className={`mt-3 rounded-md border p-3 text-sm shadow-sm ${feedback.variant === "success" ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-950 dark:text-emerald-100" : "border-destructive/40 bg-destructive/10 text-destructive"}`}
+    <OperationalStatusSurface
+      tone={feedback.variant}
+      withTextTone
+      className="mt-3 p-3 text-sm shadow-sm"
       role="status"
       aria-live="polite"
     >
@@ -2373,7 +2374,7 @@ function BindingFeedback({
           </pre>
         </details>
       ) : null}
-    </div>
+    </OperationalStatusSurface>
   );
 }
 
