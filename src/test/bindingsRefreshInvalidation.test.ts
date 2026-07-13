@@ -39,7 +39,7 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain("onValueChange={(value) =>");
     expect(source).toContain("setAdAccountStatusFilter(");
     expect(source).toContain('value="archived"');
-    expect(source).toContain('t("bindingsStatusArchivedPaused")');
+    expect(source).toContain('t("bindingsStatusArchived")');
     expect(translationsSource).toContain("Archived/paused");
     expect(source).toContain('value="all"');
     expect(source).toContain('t("bindingsStatusAll")');

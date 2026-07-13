@@ -1,4 +1,9 @@
 
+## Local Production UX Fix — 2026-07-13 Data Bindings Drawer, Archive Visibility, and Restore RPC
+
+A narrow Data Bindings production UX fix is prepared locally. Source and Ad Account binding drawers now use a three-region Sheet layout with a fixed header, the only scrollable body region, and a non-sticky safe-area footer; pending saves keep fields, Cancel, X, outside click, and Escape disabled until refreshed binding data returns. Source create/edit success copy now distinguishes “Зв’язок створено” from “Зв’язок оновлено”. Source and Ad Account business tables use desktop table-fixed layouts with safe long-name wrapping. Archive success now refreshes data, switches the relevant filter to archived, keeps the archived row visible, and offers a “Переглянути архівні” CTA when active rows are empty. Archived source/ad-account bindings show a real “Відновити” action backed by a new `reactivate_binding` SECURITY DEFINER RPC that restores the existing archived row only after role, workspace, parent hierarchy, source/ad-account active-state, duplicate, and primary-scope validation. Production migration application, production data changes, and Edge Function deployment were not performed.
+
+
 ## Review Follow-up — 2026-07-13 Funnel Activation Parent Validation
 
 Final review fix extends `onboarding-funnel-upsert` parent validation so Funnel reactivation and active edits require both an active Project and the owning active Client in the same workspace. Funnel archive transitions still run before parent checks, and archived-to-archived edits still skip parent checks. No migration, deployment, production data, binding behavior, Ads connector, AI helper, or frontend count-helper changes were made in this follow-up.
