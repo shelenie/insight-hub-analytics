@@ -14,6 +14,7 @@ import { DeveloperDetails } from "@/components/common/DeveloperDetails";
 import { RefreshCw } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { Lang, TranslationKey } from "@/i18n/translations";
+import { countActiveClientDescendants, countActiveProjectDescendants, isInactiveOnboardingStatus } from "@/lib/onboardingArchiveHelpers";
 
 type OnboardingRow = Record<string, string | number | boolean | null>;
 
@@ -31,9 +32,9 @@ type OnboardingData = {
   health: OnboardingRow[];
 };
 
-type ClientForm = { client_id: string; name: string; code: string; status: string };
-type ProjectForm = { project_id: string; client_id: string; name: string; code: string; status: string };
-type FunnelForm = { funnel_id: string; client_id: string; project_id: string; name: string; code: string; status: string };
+type ClientForm = { client_id: string; name: string; code: string; status: string; originalStatus: string };
+type ProjectForm = { project_id: string; client_id: string; name: string; code: string; status: string; originalStatus: string };
+type FunnelForm = { funnel_id: string; client_id: string; project_id: string; name: string; code: string; status: string; originalStatus: string };
 
 type SelectOption = { value: string; label: string; clientId?: string; clientName?: string; projectId?: string; projectName?: string; code?: string };
 
@@ -48,9 +49,9 @@ const PLACEHOLDER_PATTERNS = ["test agency", "test client", "northstar digital c
 function isPlaceholderRow(row: OnboardingRow) { const text = Object.values(row).join(" ").toLowerCase(); return PLACEHOLDER_PATTERNS.some((p) => text.includes(p)); }
 function filterRows(rows: OnboardingRow[]) { return rows.filter((r) => !isPlaceholderRow(r)); }
 
-const emptyClientForm: ClientForm = { client_id: "", name: "", code: "", status: "active" };
-const emptyProjectForm: ProjectForm = { project_id: "", client_id: "", name: "", code: "", status: "active" };
-const emptyFunnelForm: FunnelForm = { funnel_id: "", client_id: "", project_id: "", name: "", code: "", status: "active" };
+const emptyClientForm: ClientForm = { client_id: "", name: "", code: "", status: "active", originalStatus: "active" };
+const emptyProjectForm: ProjectForm = { project_id: "", client_id: "", name: "", code: "", status: "active", originalStatus: "active" };
+const emptyFunnelForm: FunnelForm = { funnel_id: "", client_id: "", project_id: "", name: "", code: "", status: "active", originalStatus: "active" };
 
 const ADS_SUBNAV_TRIGGER_CLASS =
   "h-10 whitespace-nowrap rounded-lg border border-transparent px-4 text-sm font-semibold transition-all hover:border-primary/30 hover:bg-primary/10 hover:text-primary data-[state=active]:border-primary/40 data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm";
@@ -292,26 +293,32 @@ export default function Onboarding() {
               <TabsContent value="clients" className="mt-1"><SectionCard title={t("onboardingClientsTitle")} description={t("onboardingClientsDescription")}>
                 <UpsertPanel title={t("onboardingClient")} editModeLabel={t("onboardingEditClient")} isEditing={Boolean(clientForm.client_id)} onCancel={resetClientForm} form={clientForm} setForm={setClientForm} isPending={clientMutation.isPending} error={clientError} signedIn={Boolean(session)} canSubmit={canEditOnboarding && Boolean(clientForm.name.trim())} disabled={!canEditOnboarding} submitLabel={clientForm.client_id ? t("onboardingSaveChanges") : t("onboardingCreateClient")} pendingLabel={t("onboardingSavingClient")} statusOptions={statusOptions} t={t} onSubmit={() => {
                   if (!clientForm.name.trim()) return setClientError(t("onboardingNameRequiredClient"));
-                  if (clientForm.client_id && isInactiveStatus(clientForm.status) && !confirmArchive("client", clientForm.name, projects.length, funnels.length, t)) return;
+                  if (clientForm.client_id && isArchiveTransition(clientForm.originalStatus, clientForm.status)) {
+                    const affected = countActiveClientDescendants({ clientId: clientForm.client_id, projects, funnels });
+                    if (!confirmArchive("client", clientForm.name, affected.activeProjects, affected.activeFunnels, t)) return;
+                  }
                   setClientError("");
                   clientMutation.mutate({ client_id: clientForm.client_id || undefined, name: clientForm.name.trim(), code: clientForm.code || undefined, status: clientForm.status || undefined });
                 }}>
                   <DeveloperDetails title={t("onboardingTechnicalDetails")}><p>{t("onboardingClientId")}: {clientForm.client_id || t("onboardingAutoCreated")}</p></DeveloperDetails>
                 </UpsertPanel>
-                <EntityTable rows={clients} columns={["name", "client_code", "status", "created_at", "updated_at"]} countColumnTitle={t("onboardingProjectsCount")} countForRow={(row) => countForStrictMatches(projectCountByClient, safeClientMatches(row))} emptyText={t("onboardingRecordsEmpty")} canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "client_id"))} t={t} lang={lang} onEdit={(row) => setClientForm({ client_id: entityId(row, "client_id"), name: preferredName(row, "client"), code: asText(row.client_code), status: asText(row.status) || "active" })} />
+                <EntityTable rows={clients} columns={["name", "client_code", "status", "created_at", "updated_at"]} countColumnTitle={t("onboardingProjectsCount")} countForRow={(row) => countForStrictMatches(projectCountByClient, safeClientMatches(row))} emptyText={t("onboardingRecordsEmpty")} canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "client_id"))} t={t} lang={lang} onEdit={(row) => setClientForm({ client_id: entityId(row, "client_id"), name: preferredName(row, "client"), code: asText(row.client_code), status: asText(row.status) || "active", originalStatus: asText(row.status) || "active" })} />
               </SectionCard></TabsContent>
 
               <TabsContent value="projects" className="mt-1"><SectionCard title={t("onboardingProjectsTitle")} description={t("onboardingProjectsDescription")}>
                 <UpsertPanel title={t("onboardingProject")} compact fieldsBeforeInputs editModeLabel={t("onboardingEditProject")} isEditing={Boolean(projectForm.project_id)} onCancel={resetProjectForm} form={projectForm} setForm={setProjectForm} isPending={projectMutation.isPending} error={projectError} signedIn={Boolean(session)} canSubmit={canEditOnboarding && Boolean(projectForm.name.trim() && projectForm.client_id.trim())} disabled={!canEditOnboarding || clientsMissingClientId || !projectForm.client_id.trim()} submitLabel={projectForm.project_id ? t("onboardingSaveChanges") : t("onboardingCreateProject")} helperText={!projectForm.client_id.trim() ? t("onboardingChooseClientFirst") : undefined} pendingLabel={t("onboardingSavingProject")} details={ <DeveloperDetails title={t("onboardingTechnicalDetails")}><p>{t("onboardingProjectId")}: {projectForm.project_id || t("onboardingAutoCreated")}</p><p>{t("onboardingClientId")}: {projectForm.client_id || t("onboardingNotSelected")}</p>{clientsMissingClientId ? <p>{t("onboardingClientIdMissing")}</p> : null}</DeveloperDetails> } statusOptions={statusOptions} t={t} onSubmit={() => {
                   if (!projectForm.client_id.trim()) return setProjectError(t("onboardingChooseClientError"));
                   if (!projectForm.name.trim()) return setProjectError(t("onboardingNameRequiredProject"));
-                  if (projectForm.project_id && isInactiveStatus(projectForm.status) && !confirmArchive("project", projectForm.name, 0, funnels.length, t)) return;
+                  if (projectForm.project_id && isArchiveTransition(projectForm.originalStatus, projectForm.status)) {
+                    const affected = countActiveProjectDescendants({ projectId: projectForm.project_id, funnels });
+                    if (!confirmArchive("project", projectForm.name, 0, affected.activeFunnels, t)) return;
+                  }
                   setProjectError("");
                   projectMutation.mutate({ project_id: projectForm.project_id || undefined, client_id: projectForm.client_id.trim(), name: projectForm.name.trim(), code: projectForm.code || undefined, status: projectForm.status || undefined });
                 }}>
                   <SelectField disabled={!canEditOnboarding || projectMutation.isPending || clientsMissingClientId || Boolean(projectForm.project_id)} label={t("onboardingClient")} placeholder={t("onboardingSelectClient")} value={projectForm.client_id} options={clientOptions} emptyText={t("onboardingClientsEmptyCreateFirst")} onChange={(value) => setProjectForm((current) => ({ ...current, client_id: value }))} />
                 </UpsertPanel>
-                <EntityTable rows={projects} columns={["name", "client_name", "project_code", "status"]} countColumnTitle={t("onboardingFunnelsCount")} countForRow={(row) => countForStrictMatches(funnelCountByProject, safeProjectMatches(row))} emptyText={t("onboardingRecordsEmpty")} canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "project_id"))} t={t} lang={lang} onEdit={(row) => setProjectForm({ project_id: entityId(row, "project_id"), client_id: referenceId(row, "client_id") || clientIdByName.get(asText(row.client_name)) || "", name: preferredName(row, "project"), code: asText(row.project_code), status: asText(row.status) || "active" })} />
+                <EntityTable rows={projects} columns={["name", "client_name", "project_code", "status"]} countColumnTitle={t("onboardingFunnelsCount")} countForRow={(row) => countForStrictMatches(funnelCountByProject, safeProjectMatches(row))} emptyText={t("onboardingRecordsEmpty")} canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "project_id"))} t={t} lang={lang} onEdit={(row) => setProjectForm({ project_id: entityId(row, "project_id"), client_id: referenceId(row, "client_id") || clientIdByName.get(asText(row.client_name)) || "", name: preferredName(row, "project"), code: asText(row.project_code), status: asText(row.status) || "active", originalStatus: asText(row.status) || "active" })} />
               </SectionCard></TabsContent>
 
               <TabsContent value="funnels" className="mt-1"><SectionCard title={t("onboardingFunnelsTitle")} description={t("onboardingFunnelsDescription")}>
@@ -327,7 +334,7 @@ export default function Onboarding() {
                 <EntityTable rows={funnels} columns={["name", "client_name", "project_name", "funnel_code", "status"]} emptyText={t("onboardingRecordsEmpty")} canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "funnel_id"))} t={t} lang={lang} onEdit={(row) => {
                   const projectId = referenceId(row, "project_id") || projectIdByName.get(asText(row.project_name)) || "";
                   const projectOption = projectOptions.find((option) => option.value === projectId);
-                  setFunnelForm({ funnel_id: entityId(row, "funnel_id"), client_id: projectOption?.clientId ?? (referenceId(row, "client_id") || clientIdByName.get(asText(row.client_name)) || ""), project_id: projectId, name: preferredName(row, "funnel"), code: asText(row.funnel_code), status: asText(row.status) || "active" });
+                  setFunnelForm({ funnel_id: entityId(row, "funnel_id"), client_id: projectOption?.clientId ?? (referenceId(row, "client_id") || clientIdByName.get(asText(row.client_name)) || ""), project_id: projectId, name: preferredName(row, "funnel"), code: asText(row.funnel_code), status: asText(row.status) || "active", originalStatus: asText(row.status) || "active" });
                 }} />
               </SectionCard></TabsContent>
 
@@ -391,7 +398,8 @@ function EntityTable({ rows, columns, countColumnTitle, countForRow, emptyText, 
   return <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead><tr className="border-b border-border/70 text-muted-foreground">{columns.map((column) => <th key={column} className="px-2 py-2 font-medium">{columnLabel(column, t)}</th>)}{countColumnTitle ? <th className="w-24 px-2 py-2 text-center font-medium">{countColumnTitle}</th> : null}{onEdit ? <th className="w-28 px-2 py-2 text-center font-medium">{t("onboardingActions")}</th> : null}</tr></thead><tbody>{rows.map((row, index) => <tr key={rowKey(row, columns, index)} className="border-b border-border/40 last:border-0">{columns.map((column) => <td key={`${index}-${column}`} className="px-2 py-2 text-foreground">{formatDisplayCell(row, column, t, lang)}</td>)}{countColumnTitle ? <td className="w-24 px-2 py-2 text-center tabular-nums text-foreground">{countForRow ? countForRow(row) : "—"}</td> : null}{onEdit ? <td className="w-28 whitespace-nowrap px-2 py-2 text-center"><Button type="button" size="sm" variant="ghost" className="h-8 px-2 text-xs" disabled={!canEdit || (canEditRow ? !canEditRow(row) : false)} onClick={() => onEdit(row)}>{t("onboardingEdit")}</Button></td> : null}</tr>)}</tbody></table></div>;
 }
 
-function isInactiveStatus(status: string) { return ["archived", "inactive", "removed", "deleted", "disabled"].includes(String(status ?? "").toLowerCase()); }
+function isInactiveStatus(status: string) { return isInactiveOnboardingStatus(status); }
+function isArchiveTransition(existingStatus: string, requestedStatus: string) { return !isInactiveStatus(existingStatus) && isInactiveStatus(requestedStatus); }
 
 function confirmArchive(scope: "client" | "project", name: string, projectCount: number, funnelCount: number, t: (key: TranslationKey) => string) {
   const childSummary = scope === "client"

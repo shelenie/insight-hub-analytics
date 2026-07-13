@@ -31,7 +31,9 @@ Deno.serve(async (req) => {
     if (!existing) return json({ ok: false, error: "Client not found in workspace", code: "client_not_found" }, 404);
 
     const requestedStatus = "status" in body ? String(body.status ?? "") : String(existing.status ?? "");
-    const archiveTransition = isInactiveStatus(requestedStatus);
+    const transition = classifyStatusTransition(existing.status, requestedStatus);
+    const archiveTransition = transition.archiveTransition;
+    const reactivationTransition = transition.reactivationTransition;
     if (archiveTransition) {
       const { data, error } = await userClient["rpc"]("archive_onboarding_client_cascade", {
         p_workspace_id: workspace_id,
@@ -93,6 +95,17 @@ Deno.serve(async (req) => {
 
 function isInactiveStatus(status: unknown) {
   return inactiveStatuses.has(String(status ?? "").trim().toLowerCase());
+}
+
+function classifyStatusTransition(existingStatus: unknown, requestedStatus: unknown) {
+  const existingInactive = isInactiveStatus(existingStatus);
+  const requestedInactive = isInactiveStatus(requestedStatus);
+  return {
+    existingInactive,
+    requestedInactive,
+    archiveTransition: !existingInactive && requestedInactive,
+    reactivationTransition: existingInactive && !requestedInactive,
+  };
 }
 
 function actorContext(user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null }) {

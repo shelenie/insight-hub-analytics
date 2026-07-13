@@ -21,20 +21,39 @@ describe("onboarding archive cascade production QA fix", () => {
     expect(migration).toContain("where workspace_id = p_workspace_id and client_id = p_client_id and coalesce(binding_status::text, 'active') = 'active'");
   });
 
-  it("project and funnel archive can run when parents are inactive and cascade scoped bindings", () => {
+  it("project and funnel archive run only for active-to-inactive transitions", () => {
+    for (const wrapper of [clientWrapper, projectWrapper, funnelWrapper]) {
+      expect(wrapper).toContain("const existingInactive = isInactiveStatus(existingStatus);");
+      expect(wrapper).toContain("const requestedInactive = isInactiveStatus(requestedStatus);");
+      expect(wrapper).toContain("archiveTransition: !existingInactive && requestedInactive");
+      expect(wrapper).toContain("reactivationTransition: existingInactive && !requestedInactive");
+    }
     expect(projectWrapper).toContain('userClient["rpc"]("archive_onboarding_project_cascade"');
     expect(funnelWrapper).toContain('userClient["rpc"]("archive_onboarding_funnel_cascade"');
-    expect(projectWrapper.indexOf("archiveTransition")).toBeLessThan(projectWrapper.indexOf("requireActiveClient"));
-    expect(funnelWrapper.indexOf("archiveTransition")).toBeLessThan(funnelWrapper.indexOf("requireActiveProject"));
+    expect(projectWrapper.indexOf("if (archiveTransition)")).toBeLessThan(projectWrapper.indexOf("if (!transition.existingInactive || reactivationTransition)"));
+    expect(funnelWrapper.indexOf("if (archiveTransition)")).toBeLessThan(funnelWrapper.indexOf("const projectCheck = !transition.existingInactive || reactivationTransition"));
     expect(migration).toContain("where workspace_id = p_workspace_id and project_id = p_project_id and coalesce(binding_status::text, 'active') = 'active'");
     expect(migration).toContain("where workspace_id = p_workspace_id and funnel_id = p_funnel_id and coalesce(binding_status::text, 'active') = 'active'");
   });
 
-  it("normal edits/reactivation still keep active-parent validation and stable error codes", () => {
+  it("inactive-to-inactive edits skip parent guards while reactivation and active edits keep them", () => {
+    expect(projectWrapper).toContain("if (!transition.existingInactive || reactivationTransition)");
     expect(projectWrapper).toContain("const clientCheck = await requireActiveClient");
-    expect(funnelWrapper).toContain("const projectCheck = await requireActiveProject");
+    expect(funnelWrapper).toContain("const projectCheck = !transition.existingInactive || reactivationTransition");
+    expect(funnelWrapper).toContain("await requireActiveProject");
+    expect(projectWrapper).toContain(".update(patch)");
+    expect(funnelWrapper).toContain(".update(patch)");
     expect(projectWrapper).toContain("stableRpcErrorCode");
     expect(funnelWrapper).toContain("stableRpcErrorCode");
+  });
+
+  it("migration signatures and grants remain restricted", () => {
+    for (const name of ["client", "project", "funnel"]) {
+      expect(migration).toContain(`archive_onboarding_${name}_cascade(uuid, uuid, text, jsonb)`);
+      expect(migration).toContain(`revoke all on function public.archive_onboarding_${name}_cascade(uuid, uuid, text, jsonb) from public, anon`);
+      expect(migration).toContain(`grant execute on function public.archive_onboarding_${name}_cascade(uuid, uuid, text, jsonb) to authenticated, service_role`);
+    }
+    expect(migration).toMatch(/security definer/g);
   });
 
   it("frontend confirms archive, parses backend JSON details, and uses semantic toast variants", () => {

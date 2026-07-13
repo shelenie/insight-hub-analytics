@@ -30,13 +30,17 @@ Deno.serve(async (req) => {
       return json({ ok: false, error: "Funnel reparent requires a dedicated action", code: "funnel_reparent_requires_dedicated_action" }, 409);
     }
     const requestedStatus = "status" in body ? String(body.status ?? "") : String(existing.status ?? "");
-    const archiveTransition = isInactiveStatus(requestedStatus);
+    const transition = classifyStatusTransition(existing.status, requestedStatus);
+    const archiveTransition = transition.archiveTransition;
+    const reactivationTransition = transition.reactivationTransition;
     if (archiveTransition) {
       const { data, error } = await userClient["rpc"]("archive_onboarding_funnel_cascade", { p_workspace_id: workspace_id, p_funnel_id: funnel_id, p_status: requestedStatus, p_metadata: body.metadata ?? null });
       if (error) return json({ ok: false, error: friendlyRpcError(error.message), code: stableRpcErrorCode(error.message, "funnel_archive_failed"), rpc: "archive_onboarding_funnel_cascade" }, 400);
       return json({ ok: true, action: "archive_funnel_cascade", funnel_id, cascade: data });
     }
-    const projectCheck = await requireActiveProject(userClient, workspace_id, project_id);
+    const projectCheck = !transition.existingInactive || reactivationTransition
+      ? await requireActiveProject(userClient, workspace_id, project_id)
+      : { project: { client_id: existing.client_id }, error: null };
     if (projectCheck.error) return projectCheck.error;
     const client_id = projectCheck.project.client_id;
 
@@ -110,6 +114,17 @@ async function requireActiveProject(userClient: any, workspace_id: string, proje
   return { project: { client_id: data.client_id }, error: null };
 }
 function isInactiveStatus(status: unknown) { return inactiveStatuses.has(String(status ?? "").trim().toLowerCase()); }
+function classifyStatusTransition(existingStatus: unknown, requestedStatus: unknown) {
+  const existingInactive = isInactiveStatus(existingStatus);
+  const requestedInactive = isInactiveStatus(requestedStatus);
+  return {
+    existingInactive,
+    requestedInactive,
+    archiveTransition: !existingInactive && requestedInactive,
+    reactivationTransition: existingInactive && !requestedInactive,
+  };
+}
+
 function actorContext(user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null }) { return { id: user.id, email: user.email ?? (typeof user.user_metadata?.email === "string" ? user.user_metadata.email : null) }; }
 function isPlainObject(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === "object" && !Array.isArray(value); }
 function mergeAuditMetadata(existing: unknown, requested: unknown, actor: { id: string; email: string | null }, updatedVia: string, updatedAt: string) {
