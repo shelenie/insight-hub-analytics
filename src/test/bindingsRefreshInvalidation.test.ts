@@ -198,8 +198,10 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain('t("bindingsToastUpdatedDescription")');
     expect(source).toContain('t("bindingsToastCreatedTitle")');
     expect(source).toContain('t("bindingsToastCreatedDescription")');
-    expect(source).toContain("border-emerald-500/50 bg-emerald-50");
+    expect(source).toContain('variant: "success"');
     expect(source).toContain("duration: 5000");
+    expect(source).not.toContain("border-emerald-500/50 bg-emerald-50");
+    expect(source).not.toContain("SUCCESS_TOAST_CLASSNAME");
     expect(source).not.toContain("normalAdSuccess");
     expect(source).not.toContain("setNormalAdSuccess");
     expect(source).toContain('normalAdFeedback?.variant === "error"');
@@ -222,7 +224,8 @@ describe("Bindings page ad account behavior", () => {
     expect(source).toContain('t("bindingsSourceSaved")');
     expect(source).toContain('role="status"');
     expect(source).toContain('variant: "success"');
-    expect(source).toContain("border-emerald-500/40");
+    expect(source).toContain('variant: "warning"');
+    expect(source).toContain("<OperationalStatusSurface");
     expect(source).toContain("clearFormFeedback");
     expect(source).toContain("onValueChange={handleTabChange}");
     expect(source).toContain('normalAdFeedback?.variant === "error"');

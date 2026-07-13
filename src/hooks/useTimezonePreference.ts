@@ -92,6 +92,7 @@ export function useTimezonePreference() {
         toast({
           title: "Налаштування часу не збережено",
           description: "Час показано тимчасово для цієї сторінки. Після перезавантаження може знову використовуватись UTC.",
+          variant: "warning",
         });
       }
     },

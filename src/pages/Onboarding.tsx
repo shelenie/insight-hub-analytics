@@ -170,13 +170,13 @@ export default function Onboarding() {
       return data;
     },
     onSuccess: async () => {
-      toast({ title: t("onboardingClientSavedTitle"), description: t("onboardingClientSavedDescription") });
+      toast({ title: t("onboardingClientSavedTitle"), description: t("onboardingClientSavedDescription"), variant: "success", duration: 5000 });
       resetClientForm();
       await refreshOnboarding();
     },
     onError: (error: Error) => {
       setClientError(error.message);
-      toast({ title: t("onboardingClientSaveError"), description: error.message, variant: "destructive" });
+      toast({ title: t("onboardingClientSaveError"), description: error.message, variant: "error", duration: 5000 });
     },
   });
 
@@ -190,13 +190,13 @@ export default function Onboarding() {
       return data;
     },
     onSuccess: async () => {
-      toast({ title: t("onboardingProjectSavedTitle"), description: t("onboardingProjectSavedDescription") });
+      toast({ title: t("onboardingProjectSavedTitle"), description: t("onboardingProjectSavedDescription"), variant: "success", duration: 5000 });
       resetProjectForm();
       await refreshOnboarding();
     },
     onError: (error: Error) => {
       setProjectError(error.message);
-      toast({ title: t("onboardingProjectSaveError"), description: error.message, variant: "destructive" });
+      toast({ title: t("onboardingProjectSaveError"), description: error.message, variant: "error", duration: 5000 });
     },
   });
 
@@ -210,13 +210,13 @@ export default function Onboarding() {
       return data;
     },
     onSuccess: async () => {
-      toast({ title: t("onboardingFunnelSavedTitle"), description: t("onboardingFunnelSavedDescription") });
+      toast({ title: t("onboardingFunnelSavedTitle"), description: t("onboardingFunnelSavedDescription"), variant: "success", duration: 5000 });
       resetFunnelForm();
       await refreshOnboarding();
     },
     onError: (error: Error) => {
       setFunnelError(error.message);
-      toast({ title: t("onboardingFunnelSaveError"), description: error.message, variant: "destructive" });
+      toast({ title: t("onboardingFunnelSaveError"), description: error.message, variant: "error", duration: 5000 });
     },
   });
 

@@ -131,7 +131,7 @@ type BindingType = "source" | "ad_account";
 type BindingActionFeedback = {
   message: string;
   technical: BindingActionTechnicalDetails | null;
-  variant: "success" | "error";
+  variant: "success" | "warning" | "error";
 };
 type BindingActionTechnicalDetails = {
   rpc?: string;
@@ -605,7 +605,7 @@ export default function Bindings() {
     } else {
       updateSourceForm((current) => applySelection(current) as typeof EMPTY_SOURCE_FORM);
     }
-    toast({ title: t("bindingsHierarchyCreatedTitle"), description: t("bindingsHierarchyCreatedDescription") });
+    toast({ title: t("bindingsHierarchyCreatedTitle"), description: t("bindingsHierarchyCreatedDescription"), variant: "success", duration: 5000 });
     setHierarchyDialog(null);
     setHierarchyName("");
   };
@@ -730,7 +730,7 @@ export default function Bindings() {
       if (archiveResult.error || archiveResult.data !== true) {
         setSourceFeedback({
           message: t("bindingsSourcePartialRebindWarning"),
-          variant: "error",
+          variant: "warning",
           technical: {
             action: "source_rebind_partial",
             rpc: "archive_binding",
@@ -744,7 +744,7 @@ export default function Bindings() {
 
     setSourceForm(EMPTY_SOURCE_FORM);
     setSourceFormOpen(false);
-    toast({ title: t("bindingsToastUpdatedTitle"), description: t("bindingsSourceSaved") });
+    toast({ title: t("bindingsToastUpdatedTitle"), description: t("bindingsSourceSaved"), variant: "success", duration: 5000 });
   };
 
   const handleArchiveSelected = async () => {
@@ -765,7 +765,7 @@ export default function Bindings() {
     }
     setArchiveTarget(null);
     await refreshBindings();
-    toast({ title: t("bindingsArchiveSuccessTitle"), description: t("bindingsArchiveSuccessDescription") });
+    toast({ title: t("bindingsArchiveSuccessTitle"), description: t("bindingsArchiveSuccessDescription"), variant: "success", duration: 5000 });
   };
 
   const headerActions =
@@ -946,7 +946,7 @@ export default function Bindings() {
                     <Button
                       type="button"
                       className="h-9 sm:shrink-0"
-                      disabled={!session || !canManage || sourceCandidatesQuery.isLoading}
+                      disabled={!session || !canManage || sourceCandidatesQuery.isLoading || Boolean(sourceCandidatesQuery.error)}
                       onClick={() => {
                         setSourceForm(EMPTY_SOURCE_FORM);
                         setSourceFormMode("create");
@@ -983,6 +983,7 @@ export default function Bindings() {
                         form={sourceForm}
                         setForm={updateSourceForm}
                         options={sourceFormOptions}
+                        sourceCandidatesUnavailable={Boolean(sourceCandidatesQuery.error)}
                         error={sourceFormError}
                         feedback={sourceFeedback}
                         onCancel={() => setSourceFormOpen(false)}
@@ -996,9 +997,19 @@ export default function Bindings() {
                     </SheetContent>
                   </Sheet>
                   {sourceCandidatesQuery.error && canManage ? (
-                    <p className="mb-3 text-xs text-muted-foreground">
-                      {t("bindingsSourceCandidatesUnavailable")}
-                    </p>
+                    <OperationalStatusSurface tone="warning" withTextTone className="mb-3 flex flex-wrap items-center gap-2 p-3 text-xs">
+                      <span>{t("bindingsSourceCandidatesUnavailable")}</span>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        onClick={() => sourceCandidatesQuery.refetch()}
+                        disabled={sourceCandidatesQuery.isFetching}
+                      >
+                        {sourceCandidatesQuery.isFetching ? t("bindingsRefreshRefreshing") : t("refresh")}
+                      </Button>
+                    </OperationalStatusSurface>
                   ) : null}
                   <SourceBindingsBusinessTable
                     rows={filteredSourceBindings}
@@ -1190,8 +1201,7 @@ export default function Bindings() {
                               description: existingActiveBinding
                                 ? t("bindingsToastUpdatedDescription")
                                 : t("bindingsToastCreatedDescription"),
-                              className:
-                                "border-emerald-500/50 bg-emerald-50 text-emerald-950 shadow-xl dark:bg-emerald-950 dark:text-emerald-50",
+                              variant: "success",
                               duration: 5000,
                             });
                           }
@@ -1996,6 +2006,7 @@ function SourceBindingCard({
   onAddProject,
   onAddFunnel,
   mode,
+  sourceCandidatesUnavailable = false,
 }: {
   canManage: boolean;
   session: boolean;
@@ -2012,9 +2023,10 @@ function SourceBindingCard({
   onAddProject: () => void;
   onAddFunnel: () => void;
   mode: "create" | "edit";
+  sourceCandidatesUnavailable?: boolean;
 }) {
   const { t } = useI18n();
-  const disabled = !session || !canManage || pending === "create-source";
+  const disabled = !session || !canManage || pending === "create-source" || sourceCandidatesUnavailable;
   return (
     <div className="mt-6 flex min-h-0 flex-1 flex-col">
       <div className="grid gap-3">
@@ -2023,7 +2035,7 @@ function SourceBindingCard({
           placeholder={t("bindingsSelectSourcePlaceholder")}
           value={form.source_id}
           options={options.sources}
-          emptyText={t("bindingsSelectSourceEmpty")}
+          emptyText={sourceCandidatesUnavailable ? t("bindingsSourceCandidatesUnavailable") : t("bindingsSelectSourceEmpty")}
           disabled={disabled || mode === "edit"}
           onChange={(value) => setForm((current) => ({ ...current, source_id: value }))}
         />
@@ -2344,8 +2356,10 @@ function BindingFeedback({
   const { t } = useI18n();
   if (!feedback) return null;
   return (
-    <div
-      className={`mt-3 rounded-md border p-3 text-sm shadow-sm ${feedback.variant === "success" ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-950 dark:text-emerald-100" : "border-destructive/40 bg-destructive/10 text-destructive"}`}
+    <OperationalStatusSurface
+      tone={feedback.variant}
+      withTextTone
+      className="mt-3 p-3 text-sm shadow-sm"
       role="status"
       aria-live="polite"
     >
@@ -2360,7 +2374,7 @@ function BindingFeedback({
           </pre>
         </details>
       ) : null}
-    </div>
+    </OperationalStatusSurface>
   );
 }
 
