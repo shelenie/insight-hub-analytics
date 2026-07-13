@@ -5,6 +5,8 @@ const mutations = readFileSync("src/lib/dataBindingsMutations.ts", "utf8");
 const sheet = readFileSync("src/components/ui/sheet.tsx", "utf8");
 const migration = readFileSync("supabase/migrations/20260713_reactivate_binding_rpc.sql", "utf8");
 
+import { canRestoreBinding, isArchivedBinding, isPausedBinding, matchesBindingStatusFilter } from "@/lib/bindingStatus";
+
 describe("Data Bindings production UX fix", () => {
   it("uses a three-region binding drawer with footer outside the scrollable body", () => {
     expect(bindings).toContain("function BindingDrawerLayout");
@@ -72,6 +74,30 @@ describe("Data Bindings production UX fix", () => {
     expect(mutations).toContain('const rpc = "reactivate_binding"');
   });
 
+  it("executable status helpers separate archived and paused statuses", () => {
+    expect(isArchivedBinding({ binding_status: "archived" })).toBe(true);
+    expect(isArchivedBinding({ binding_status: "paused" })).toBe(false);
+    expect(isPausedBinding({ binding_status: "paused" })).toBe(true);
+    expect(canRestoreBinding({ binding_status: "archived" })).toBe(true);
+    expect(canRestoreBinding({ binding_status: "paused" })).toBe(false);
+    expect(matchesBindingStatusFilter({ binding_status: "paused" }, "archived")).toBe(false);
+    expect(matchesBindingStatusFilter({ binding_status: "paused" }, "all")).toBe(true);
+  });
+
+  it("restore UI is gated by executable archived-only helper", () => {
+    expect(bindings).toContain("canManage && canRestoreBinding(row)");
+    expect(bindings).toContain("if (canRestoreBinding(row)) setRestoreTarget");
+  });
+
+  it("ad account save copy is based on create/edit action, not duplicate lookup", () => {
+    const adSubmit = bindings.slice(bindings.indexOf('mode={adFormMode}'), bindings.indexOf('<BindingGapsPanel'));
+    expect(adSubmit).toContain('const isCreate = adFormMode === "create" || !normalAdForm.binding_id;');
+    expect(adSubmit).toContain('title: isCreate');
+    expect(adSubmit).toContain('t("bindingsToastCreatedTitle")');
+    expect(adSubmit).toContain('t("bindingsToastUpdatedTitle")');
+    expect(adSubmit).not.toContain('existingActiveBinding');
+  });
+
   it("reactivate_binding restores existing rows and hardens grants/security", () => {
     expect(migration).toContain("create or replace function public.reactivate_binding");
     expect(migration).toContain("security definer");
@@ -87,6 +113,15 @@ describe("Data Bindings production UX fix", () => {
     expect(migration).toContain("google_sheet_source");
     expect(migration).toContain("google_sheet_tab");
     expect(migration).toContain("file_dataset");
+    expect(migration).toContain("t.google_sheet_source_id");
+    expect(migration).not.toContain("t.sheet_source_id");
+    expect(migration).not.toContain("t.status");
+    expect(migration).toContain("coalesce(t.is_active, true) = true");
+    expect(migration).toContain("coalesce(s.is_active, true) = true");
+    expect(migration).toContain("coalesce(a.is_active, true) = true");
+    expect(migration).toContain("lower(coalesce(c.status::text, 'active')) = 'active'");
+    expect(migration).toContain("lower(coalesce(p.status::text, 'active')) = 'active'");
+    expect(migration).toContain("lower(coalesce(f.status::text, 'active')) = 'active'");
     expect(migration).toContain("Cannot restore: an active duplicate binding already exists");
     expect(migration).toContain("reactivated_from_archive");
     expect(migration).toContain("revoke all on function public.reactivate_binding(uuid, text, uuid, jsonb) from public");

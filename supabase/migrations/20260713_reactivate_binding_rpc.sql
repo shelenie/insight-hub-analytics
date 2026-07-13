@@ -37,21 +37,45 @@ begin
       raise exception 'Only archived source bindings can be restored' using errcode = '22023';
     end if;
 
-    if not exists (select 1 from public.clients c where c.id = v_source.client_id and c.workspace_id = p_workspace_id and coalesce(c.status::text, 'active') not in ('archived','inactive','removed','deleted')) then
+    if not exists (select 1 from public.clients c where c.id = v_source.client_id and c.workspace_id = p_workspace_id and lower(coalesce(c.status::text, 'active')) = 'active') then
       raise exception 'Cannot restore: Client is archived or inactive' using errcode = '22023';
     end if;
-    if not exists (select 1 from public.projects p where p.id = v_source.project_id and p.workspace_id = p_workspace_id and p.client_id = v_source.client_id and coalesce(p.status::text, 'active') not in ('archived','inactive','removed','deleted')) then
+    if not exists (select 1 from public.projects p where p.id = v_source.project_id and p.workspace_id = p_workspace_id and p.client_id = v_source.client_id and lower(coalesce(p.status::text, 'active')) = 'active') then
       raise exception 'Cannot restore: Project is archived, inactive, or no longer belongs to Client' using errcode = '22023';
     end if;
-    if not exists (select 1 from public.funnels f where f.id = v_source.funnel_id and f.workspace_id = p_workspace_id and f.project_id = v_source.project_id and f.client_id = v_source.client_id and coalesce(f.status::text, 'active') not in ('archived','inactive','removed','deleted')) then
+    if not exists (select 1 from public.funnels f where f.id = v_source.funnel_id and f.workspace_id = p_workspace_id and f.project_id = v_source.project_id and f.client_id = v_source.client_id and lower(coalesce(f.status::text, 'active')) = 'active') then
       raise exception 'Cannot restore: Funnel is archived, inactive, or no longer belongs to Project/Client' using errcode = '22023';
     end if;
 
-    if v_source.source_kind = 'google_sheet_source' and not exists (select 1 from public.google_sheet_sources s where s.id = v_source.source_id and s.workspace_id = p_workspace_id and coalesce(s.status::text, 'active') not in ('archived','inactive','removed','deleted')) then
+    if v_source.source_kind = 'google_sheet_source' and not exists (
+      select 1
+      from public.google_sheet_sources s
+      where s.id = v_source.source_id
+        and s.workspace_id = p_workspace_id
+        and coalesce(s.is_active, true) = true
+        and lower(coalesce(s.status::text, 'active')) = 'active'
+    ) then
       raise exception 'Cannot restore: source is archived or inactive' using errcode = '22023';
-    elsif v_source.source_kind = 'google_sheet_tab' and not exists (select 1 from public.google_sheet_tabs t join public.google_sheet_sources s on s.id = t.sheet_source_id and s.workspace_id = t.workspace_id where t.id = v_source.source_id and t.workspace_id = p_workspace_id and coalesce(t.status::text, 'active') not in ('archived','inactive','removed','deleted') and coalesce(s.status::text, 'active') not in ('archived','inactive','removed','deleted')) then
+    elsif v_source.source_kind = 'google_sheet_tab' and not exists (
+      select 1
+      from public.google_sheet_tabs t
+      join public.google_sheet_sources s
+        on s.id = t.google_sheet_source_id
+       and s.workspace_id = t.workspace_id
+      where t.id = v_source.source_id
+        and t.workspace_id = p_workspace_id
+        and coalesce(t.is_active, true) = true
+        and coalesce(s.is_active, true) = true
+        and lower(coalesce(s.status::text, 'active')) = 'active'
+    ) then
       raise exception 'Cannot restore: sheet tab or parent sheet is archived or inactive' using errcode = '22023';
-    elsif v_source.source_kind = 'file_dataset' and not exists (select 1 from public.raw_external_datasets d where d.id = v_source.source_id and d.workspace_id = p_workspace_id and coalesce(d.status::text, 'active') not in ('archived','inactive','removed','deleted')) then
+    elsif v_source.source_kind = 'file_dataset' and not exists (
+      select 1
+      from public.raw_external_datasets d
+      where d.id = v_source.source_id
+        and d.workspace_id = p_workspace_id
+        and lower(coalesce(d.status::text, 'uploaded')) not in ('archived','inactive','removed','deleted','disabled')
+    ) then
       raise exception 'Cannot restore: dataset is archived or inactive' using errcode = '22023';
     end if;
 
@@ -89,10 +113,10 @@ begin
     raise exception 'Only archived ad account bindings can be restored' using errcode = '22023';
   end if;
 
-  if not exists (select 1 from public.clients c where c.id = v_ad.client_id and c.workspace_id = p_workspace_id and coalesce(c.status::text, 'active') not in ('archived','inactive','removed','deleted')) then raise exception 'Cannot restore: Client is archived or inactive' using errcode = '22023'; end if;
-  if not exists (select 1 from public.projects p where p.id = v_ad.project_id and p.workspace_id = p_workspace_id and p.client_id = v_ad.client_id and coalesce(p.status::text, 'active') not in ('archived','inactive','removed','deleted')) then raise exception 'Cannot restore: Project is archived, inactive, or no longer belongs to Client' using errcode = '22023'; end if;
-  if not exists (select 1 from public.funnels f where f.id = v_ad.funnel_id and f.workspace_id = p_workspace_id and f.project_id = v_ad.project_id and f.client_id = v_ad.client_id and coalesce(f.status::text, 'active') not in ('archived','inactive','removed','deleted')) then raise exception 'Cannot restore: Funnel is archived, inactive, or no longer belongs to Project/Client' using errcode = '22023'; end if;
-  if not exists (select 1 from public.ad_accounts a where a.id = v_ad.ad_account_id and a.workspace_id = p_workspace_id and coalesce(a.status::text, 'active') not in ('archived','inactive','removed','deleted')) then raise exception 'Cannot restore: ad account is archived or inactive' using errcode = '22023'; end if;
+  if not exists (select 1 from public.clients c where c.id = v_ad.client_id and c.workspace_id = p_workspace_id and lower(coalesce(c.status::text, 'active')) = 'active') then raise exception 'Cannot restore: Client is archived or inactive' using errcode = '22023'; end if;
+  if not exists (select 1 from public.projects p where p.id = v_ad.project_id and p.workspace_id = p_workspace_id and p.client_id = v_ad.client_id and lower(coalesce(p.status::text, 'active')) = 'active') then raise exception 'Cannot restore: Project is archived, inactive, or no longer belongs to Client' using errcode = '22023'; end if;
+  if not exists (select 1 from public.funnels f where f.id = v_ad.funnel_id and f.workspace_id = p_workspace_id and f.project_id = v_ad.project_id and f.client_id = v_ad.client_id and lower(coalesce(f.status::text, 'active')) = 'active') then raise exception 'Cannot restore: Funnel is archived, inactive, or no longer belongs to Project/Client' using errcode = '22023'; end if;
+  if not exists (select 1 from public.ad_accounts a where a.id = v_ad.ad_account_id and a.workspace_id = p_workspace_id and coalesce(a.is_active, true) = true and lower(coalesce(a.status::text, 'active')) = 'active') then raise exception 'Cannot restore: ad account is archived or inactive' using errcode = '22023'; end if;
 
   if exists (select 1 from public.ad_account_bindings b where b.id <> v_ad.id and b.workspace_id = p_workspace_id and b.ad_account_id = v_ad.ad_account_id and b.client_id is not distinct from v_ad.client_id and b.project_id is not distinct from v_ad.project_id and b.funnel_id is not distinct from v_ad.funnel_id and coalesce(b.binding_status::text, 'active') = 'active') then
     raise exception 'Cannot restore: an active duplicate binding already exists' using errcode = '23505';

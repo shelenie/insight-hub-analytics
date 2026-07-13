@@ -62,6 +62,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { canRestoreBinding, getBindingStatus, isActiveBinding, isArchivedBinding, matchesBindingStatusFilter } from "@/lib/bindingStatus";
 import {
   DeveloperDetails,
   FriendlyError,
@@ -245,40 +246,6 @@ function isPlaceholderRow(row: Row) {
 
 function filterRows(rows: Row[]) {
   return rows.filter((row) => !isPlaceholderRow(row));
-}
-
-function getBindingStatus(row: Row) {
-  return String(row.binding_status ?? row.status ?? "")
-    .trim()
-    .toLowerCase();
-}
-
-function isActiveBinding(row: Row) {
-  return getBindingStatus(row) === "active";
-}
-
-function isArchivedOrPausedBinding(row: Row) {
-  return ["archived", "paused"].includes(getBindingStatus(row));
-}
-
-function matchesAdAccountBindingStatusFilter(
-  row: Row,
-  filter: AdAccountBindingStatusFilter,
-) {
-  if (filter === "active") return isActiveBinding(row);
-  if (filter === "archived") return isArchivedOrPausedBinding(row);
-  return true;
-}
-
-function hasMatchingActiveAdBinding(rows: Row[], form: Record<string, string>) {
-  return rows.some(
-    (row) =>
-      isActiveBinding(row) &&
-      asText(row.ad_account_id) === form.ad_account_id &&
-      asText(row.client_id) === form.client_id &&
-      asText(row.project_id) === form.project_id &&
-      asText(row.funnel_id) === form.funnel_id,
-  );
 }
 
 export default function Bindings() {
@@ -617,13 +584,13 @@ export default function Bindings() {
   const filteredSourceBindings = useMemo(() => {
     const rows = filterRows(query.data?.sourceBindings ?? []);
     return rows.filter((row) =>
-      matchesAdAccountBindingStatusFilter(row, sourceStatusFilter),
+      matchesBindingStatusFilter(row, sourceStatusFilter),
     );
   }, [query.data?.sourceBindings, sourceStatusFilter]);
   const filteredAdAccountBindings = useMemo(() => {
     const rows = filterRows(query.data?.adAccountBindings ?? []);
     return rows.filter((row) =>
-      matchesAdAccountBindingStatusFilter(row, adAccountStatusFilter),
+      matchesBindingStatusFilter(row, adAccountStatusFilter),
     );
   }, [adAccountStatusFilter, query.data?.adAccountBindings]);
   const filteredProjectDataBindings = useMemo(
@@ -797,7 +764,7 @@ export default function Bindings() {
         metadata: { ui: "bindings_page" },
       });
       if (result.error || result.data !== true) {
-        toast({ title: t("bindingsRestoreErrorTitle"), description: result.error?.message ?? t("bindingsRestoreFalseError"), variant: "error", duration: 5000 });
+        toast({ title: t("bindingsRestoreErrorTitle"), description: getFriendlyRestoreErrorMessage(result.error?.message, t), variant: "error", duration: 5000 });
         return;
       }
       await refreshBindings();
@@ -1054,7 +1021,7 @@ export default function Bindings() {
                     rows={filteredSourceBindings}
                     canManage={canManage}
                     onArchive={(row) => setArchiveTarget({ row, type: "source" })}
-                    onRestore={(row) => setRestoreTarget({ row, type: "source" })}
+                    onRestore={(row) => { if (canRestoreBinding(row)) setRestoreTarget({ row, type: "source" }); }}
                     onEdit={(row) => {
                       if (!isActiveBinding(row)) return;
                       const clientId = asText(row.client_id);
@@ -1079,7 +1046,7 @@ export default function Bindings() {
                       setSourceFormOpen(true);
                     }}
                   />
-                  {sourceStatusFilter === "active" && filteredSourceBindings.length === 0 && (query.data?.sourceBindings ?? []).some(isArchivedOrPausedBinding) ? (
+                  {sourceStatusFilter === "active" && filteredSourceBindings.length === 0 && (query.data?.sourceBindings ?? []).some(isArchivedBinding) ? (
                     <Button type="button" variant="outline" className="mt-3" onClick={() => setSourceStatusFilter("archived")}>{t("bindingsViewArchived")}</Button>
                   ) : null}
                 </div>
@@ -1195,10 +1162,7 @@ export default function Bindings() {
                             normalAdForm.client_id === normalAdForm.original_client_id &&
                             normalAdForm.project_id === normalAdForm.original_project_id &&
                             normalAdForm.funnel_id === normalAdForm.original_funnel_id;
-                          const existingActiveBinding = hasMatchingActiveAdBinding(
-                            query.data?.adAccountBindings ?? [],
-                            normalAdForm,
-                          );
+                          const isCreate = adFormMode === "create" || !normalAdForm.binding_id;
                           const isRebind = Boolean(normalAdForm.binding_id && !sameScope);
                           const outgoingPrimaryIntent = primaryIntentForValue(resolvePrimaryForMutation(normalAdForm, isRebind));
                           const saved = await runAction(
@@ -1230,12 +1194,12 @@ export default function Bindings() {
                             setNormalAdForm(EMPTY_AD_FORM);
                             setAdFormOpen(false);
                             toast({
-                              title: existingActiveBinding
-                                ? t("bindingsToastUpdatedTitle")
-                                : t("bindingsToastCreatedTitle"),
-                              description: existingActiveBinding
-                                ? t("bindingsToastUpdatedDescription")
-                                : t("bindingsToastCreatedDescription"),
+                              title: isCreate
+                                ? t("bindingsToastCreatedTitle")
+                                : t("bindingsToastUpdatedTitle"),
+                              description: isCreate
+                                ? t("bindingsToastCreatedDescription")
+                                : t("bindingsToastUpdatedDescription"),
                               variant: "success",
                               duration: 5000,
                             });
@@ -1266,7 +1230,7 @@ export default function Bindings() {
                     rows={filteredAdAccountBindings}
                     canManage={canManage}
                     onArchive={(row) => setArchiveTarget({ row, type: "ad_account" })}
-                    onRestore={(row) => setRestoreTarget({ row, type: "ad_account" })}
+                    onRestore={(row) => { if (canRestoreBinding(row)) setRestoreTarget({ row, type: "ad_account" }); }}
                     onEdit={(row) => {
                       setAdFormError("");
                       setNormalAdFeedback(null);
@@ -1291,7 +1255,7 @@ export default function Bindings() {
                       setAdFormOpen(true);
                     }}
                   />
-                  {adAccountStatusFilter === "active" && filteredAdAccountBindings.length === 0 && (query.data?.adAccountBindings ?? []).some(isArchivedOrPausedBinding) ? (
+                  {adAccountStatusFilter === "active" && filteredAdAccountBindings.length === 0 && (query.data?.adAccountBindings ?? []).some(isArchivedBinding) ? (
                     <Button type="button" variant="outline" className="mt-3" onClick={() => setAdAccountStatusFilter("archived")}>{t("bindingsViewArchived")}</Button>
                   ) : null}
                 </div>
@@ -1608,6 +1572,19 @@ function getFriendlyBindingActionMessage(
   }
 
   return t("bindingsActionFailed");
+}
+
+function getFriendlyRestoreErrorMessage(message: string | undefined, t: (key: TranslationKey) => string) {
+  const normalized = String(message ?? "").toLowerCase();
+  if (normalized.includes("permission") || normalized.includes("source_manager") || normalized.includes("insufficient")) return t("bindingsRestorePermissionError");
+  if (normalized.includes("client")) return t("bindingsRestoreInactiveClientError");
+  if (normalized.includes("project")) return t("bindingsRestoreInactiveProjectError");
+  if (normalized.includes("funnel")) return t("bindingsRestoreInactiveFunnelError");
+  if (normalized.includes("ad account")) return t("bindingsRestoreInactiveAdAccountError");
+  if (normalized.includes("sheet tab") || normalized.includes("parent sheet") || normalized.includes("source") || normalized.includes("dataset")) return t("bindingsRestoreInactiveSourceError");
+  if (normalized.includes("duplicate")) return t("bindingsRestoreDuplicateError");
+  if (normalized.includes("only archived") || normalized.includes("not archived")) return t("bindingsRestoreNotArchivedError");
+  return t("bindingsRestoreFalseError");
 }
 
 function getBindingActionTechnicalDetails(
@@ -2510,7 +2487,7 @@ function AdAccountsBusinessTable({
                       {t("bindingsArchive")}
                     </Button>
                   </div>
-                ) : !isActiveBinding(row) && canManage ? (
+                ) : canManage && canRestoreBinding(row) ? (
                   <Button type="button" size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={() => onRestore(row)}><RotateCcw className="h-3 w-3" />{t("bindingsRestore")}</Button>
                 ) : (
                   <span className="text-xs text-muted-foreground">{t("bindingsReadOnly")}</span>
@@ -2582,7 +2559,7 @@ function SourceBindingsBusinessTable({
                       {t("bindingsArchive")}
                     </Button>
                   </div>
-                ) : !isActiveBinding(row) && canManage ? (
+                ) : canManage && canRestoreBinding(row) ? (
                   <Button type="button" size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={() => onRestore(row)}><RotateCcw className="h-3 w-3" />{t("bindingsRestore")}</Button>
                 ) : (
                   <span className="text-xs text-muted-foreground">{t("bindingsReadOnly")}</span>
