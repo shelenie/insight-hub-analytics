@@ -814,6 +814,7 @@ export const translations = {
   bindingsStatusLabel: { uk: "Статус:", en: "Status:" },
   bindingsStatusPlaceholder: { uk: "Статус", en: "Status" },
   bindingsStatusActive: { uk: "Активні", en: "Active" },
+  bindingsStatusArchived: { uk: "Архівні", en: "Archived" },
   bindingsStatusArchivedPaused: { uk: "Архівні/призупинені", en: "Archived/paused" },
   bindingsStatusAll: { uk: "Усі", en: "All" },
   bindingsCreateAdAccountButton: { uk: "+ Привʼязати рекламний акаунт", en: "+ Bind ad account" },
