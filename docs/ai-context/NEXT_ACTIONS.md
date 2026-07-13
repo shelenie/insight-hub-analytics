@@ -1,38 +1,10 @@
-## Step 3 Status — Ready for review after onboarding reactivation, audit, and reparent guards
+## PR #245 Final Step 3 Status — Ready for merge after main sync and CI
 
-- Deploy changed Edge Functions after merge: `binding-create-or-update`, `binding-archive`, `onboarding-client-upsert`, `onboarding-project-upsert`, and `onboarding-funnel-upsert`. Do not deploy unrelated functions.
-- QA `/onboarding` edit mode for inactive/archived Client/Project/Funnel records: name/code/status changes should update the exact row and allow reactivation when parent hierarchy is valid.
-- QA that normal Project edit cannot change Client and normal Funnel edit cannot change Project; dedicated transactional reparenting remains a future task.
-- QA edit metadata audit fields are server-derived and preserve existing metadata.
-- No Data Bindings migration is expected; do not reapply `20260711_harden_data_binding_mutation_rpcs.sql`.
-
-## Step 3 Status — Ready for review after onboarding edit and source-parent fixes
-
-- Deploy changed Edge Functions after merge: `binding-create-or-update`, `binding-archive`, `onboarding-client-upsert`, `onboarding-project-upsert`, and `onboarding-funnel-upsert`. Do not deploy unrelated functions.
-- QA `/onboarding` edit mode for Client/Project/Funnel records with existing IDs, including code changes and records with null codes, and confirm no duplicate hierarchy rows are created.
-- QA `/bindings` source selector and source save with Google Sheet tabs under active, inactive, archived, and missing parent Sheets.
-- No Data Bindings migration is expected; do not reapply `20260711_harden_data_binding_mutation_rpcs.sql`.
-
-## Step 3 Status — Ready for review after RPC payload and primary-state fixes
-
-- Deploy changed Edge Functions after merge: `binding-create-or-update`, `binding-archive`, `onboarding-client-upsert`, `onboarding-project-upsert`, and `onboarding-funnel-upsert`. Do not deploy unrelated functions.
-- QA `/bindings` as admin/superadmin: exact onboarding Add Client/Project/Funnel RPC payloads, source/ad selected rebind primary preservation, Google Sheet source inactive filtering, partial source rebind Technical details, and existing source/ad archive flows.
-- QA member access: members should remain read-only, should not run source-candidate queries, and should not see or invoke binding/onboarding mutation actions.
-- No Data Bindings migration is expected; do not reapply `20260711_harden_data_binding_mutation_rpcs.sql`.
-
-## Step 3 Status — Ready for review after source workflow completion
-
-- Deploy changed Edge Functions after merge: `binding-create-or-update`, `binding-archive`, `onboarding-client-upsert`, `onboarding-project-upsert`, and `onboarding-funnel-upsert`. Do not deploy unrelated functions.
-- QA `/bindings` as admin/superadmin: source create, source same-scope edit, selected two-phase source rebind including partial archive-failure handling, source archive, ad-account create/edit/rebind/archive, primary intent, and Add Client/Project/Funnel dialogs.
-- QA member access: members should still load read-only binding tables, should not run source-candidate queries, and should not see or invoke binding/onboarding mutation actions.
-- No Data Bindings migration is expected; do not reapply `20260711_harden_data_binding_mutation_rpcs.sql`.
-
-## Step 3 Status — Data Bindings frontend wiring ready for review
-
-- Review and deploy `binding-create-or-update` after merge because its source resolver and deprecated ad-account branch changed; keep `verify_jwt = true`.
-- QA `/bindings` as admin/superadmin: create ad-account binding, same-scope edit, selected rebind, primary unchanged/make/remove, selected archive, and Add Client/Project/Funnel flows.
-- QA member access: members should remain read-only and should not see or invoke binding/onboarding mutation actions.
-- No Data Bindings migration is expected for this Step 3 PR; do not reapply `20260711_harden_data_binding_mutation_rpcs.sql`.
+- Step 3 Data Bindings frontend actions and onboarding exact create/edit paths are complete locally.
+- No Data Bindings migration is required; do not reapply `20260711_harden_data_binding_mutation_rpcs.sql`.
+- After merge, deploy only: `binding-create-or-update`, `binding-archive`, `onboarding-client-upsert`, `onboarding-project-upsert`, and `onboarding-funnel-upsert`. Do not deploy unrelated functions.
+- Manual production QA after deployment: binding create/edit/rebind/archive for source and ad-account rows, member read-only behavior, source parent validation, onboarding create/edit/reactivation, audit metadata, and reparent guard behavior.
+- Local environment could not fetch GitHub `main` because outbound GitHub access is blocked by a CONNECT 403; complete final GitHub mergeability/CI confirmation on the remote PR head after branch sync.
 
 ## Verified Local Follow-up — 2026-07-12 AI Assistant Client Wording Follow-up Routing
 

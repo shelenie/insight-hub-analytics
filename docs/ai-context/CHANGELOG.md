@@ -1,71 +1,16 @@
-## 2026-07-12 — Step 3 Onboarding Reactivation Audit and Reparent Guard Follow-up
+## 2026-07-12 — PR #245 Final Step 3 Stabilization
 
 ### Fixed
 
-- Allowed exact selected inactive/archived onboarding entities to be edited or reactivated by authorized admins instead of rejecting the entity solely due to its current status.
-- Added server-derived edit audit metadata for onboarding wrapper edit paths while preserving existing metadata and safe plain-object request metadata.
-- Blocked normal Project and Funnel hierarchy reparenting in edit mode with dedicated friendly codes and disabled hierarchy selectors while editing existing Project/Funnel records.
+- Completed Step 3 Data Bindings frontend actions on `/bindings` with authenticated hardened RPC usage, safe source candidates, selected source/ad-account edit-rebind-archive flows, explicit primary behavior, localized dialogs, and member read-only protections.
+- Completed onboarding Client/Project/Funnel exact create/edit paths: create uses hardened `upsert_*` RPCs, edit updates exact selected rows by ID/workspace, supports inactive/archived reactivation, writes server-derived audit metadata, and blocks normal Project/Funnel reparenting.
+- Enforced inactive/missing Google Sheet parent validation for source tabs and preserved canonical source identity.
+- Updated CI workflow to run typecheck, lint, build, and tests on pull requests.
 
 ### Notes
 
 - No Supabase migration, RLS change, RPC signature change, production data mutation, or `ai-helper-run` change was made.
-
-## 2026-07-12 — Step 3 Onboarding Edit and Source Parent Validation Follow-up
-
-### Fixed
-
-- Changed onboarding Edge Function wrappers so edit mode with an entity ID updates the exact selected Client/Project/Funnel row through authenticated `userClient` instead of calling create/upsert RPCs that key only by non-null code.
-- Kept create mode on the hardened `upsert_client`, `upsert_project`, and `upsert_funnel` RPC paths when no entity ID is supplied.
-- Added active hierarchy validation for Project edits and Funnel edits, with Funnel `client_id` derived from the selected active Project.
-- Excluded Google Sheet tabs from source candidates when their parent Sheet is inactive, archived, disabled, deleted, or missing; server-side tab resolution now enforces the same parent validation.
-
-### Notes
-
-- No Supabase migration, RLS change, RPC signature change, production data mutation, or `ai-helper-run` change was made.
-
-## 2026-07-12 — Step 3 RPC Payload and Primary Preservation Follow-up
-
-### Fixed
-
-- Aligned frontend onboarding mutation helpers and onboarding Edge Function wrappers to the exact hardened production `upsert_client`, `upsert_project`, and `upsert_funnel` RPC argument sets.
-- Removed unsupported stale onboarding parameters from frontend and wrapper payloads while keeping actor fields null for backend-derived identity.
-- Preserved original primary state for selected source and ad-account rebinds when primary intent remains unchanged; same-scope edits still send null.
-- Added Google Sheet source `is_active` filtering/validation in frontend candidates and server-side resolver.
-- Retained the new source binding UUID for partial source rebind Technical details and localized the Binding feedback Technical details label.
-
-### Notes
-
-- No Supabase migration, RLS change, RPC signature change, production data mutation, or `ai-helper-run` change was made.
-
-## 2026-07-12 — Step 3 Source Bindings UI Follow-up
-
-### Fixed
-
-- Replaced the active source raw-UUID form on `/bindings` with a safe admin source workflow using source candidates, searchable selectors, hierarchy cascading, primary intent, selected-row edit/rebind, and selected archive.
-- Implemented real two-phase selected source rebind with partial-success warning if the new binding saves but selected old binding archival fails.
-- Replaced browser prompts/confirms with localized Dialog / AlertDialog flows for Add Client / Add Project / Add Funnel and binding archive confirmation.
-- Preserved canonical Google Sheet source identity and stopped inventing a `google_sheet_tab` source kind or forcing `google_sheet_tabs` over established `target_raw_table` identity.
-- Restored unrelated AI tests so they no longer depend on uncommitted `git diff` state, and added focused Step 3 frontend regression coverage.
-
-### Notes
-
-- No Supabase migration, RLS change, RPC signature change, production data mutation, or `ai-helper-run` change was made.
-
-## 2026-07-12
-
-### Changed
-
-- Wired `/bindings` ad-account create/edit/rebind to authenticated `manage_ad_account_binding` through a frontend mutation helper, with explicit primary intent and selected binding replacement IDs.
-- Added authenticated `archive_binding` usage for selected ad-account row archival and removed the ad-account raw UUID technical form from the active workflow.
-- Added compact Add Client / Add Project / Add Funnel actions in the binding drawer using authenticated `upsert_client`, `upsert_project`, and `upsert_funnel` with backend-derived actor identity.
-- Changed `binding-create-or-update` so ad-account mutations return a deprecated/unsupported response while source mutations continue through the source resolver.
-- Updated the legacy onboarding and binding-archive wrappers to call hardened RPCs with the authenticated user client and exact canonical argument names.
-- Fixed the source resolver Google Sheet tab lookup to use `is_active` and `google_sheet_source_id`, preserve canonical Google Sheet source identity, and call `bind_source_entity_to_scope` through the authenticated user client.
-
-### Notes
-
-- No Supabase migration or production data mutation was added.
-- `ai-helper-run` was not changed.
+- After merge, deploy only `binding-create-or-update`, `binding-archive`, `onboarding-client-upsert`, `onboarding-project-upsert`, and `onboarding-funnel-upsert`, then complete manual production QA.
 
 ## 2026-07-12 — AI Assistant Client Wording Follow-up Routing
 
