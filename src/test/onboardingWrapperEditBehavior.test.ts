@@ -50,7 +50,7 @@ describe("onboarding Edge Function edit behavior", () => {
 
   it("updates an exact selected funnel row without rejecting its own inactive status, but validates parent", () => {
     const block = editBlock(funnelWrapper, "funnel_id");
-    expect(funnelWrapper).toContain("requireActiveProject(userClient, workspace_id, project_id)");
+    expect(funnelWrapper).toContain("requireActiveProjectAndClient(userClient, workspace_id, project_id)");
     expect(funnelWrapper).toContain('.select("id, workspace_id, client_id, status")');
     expect(funnelWrapper).toContain("const client_id = projectCheck.project.client_id");
     expect(block).toContain('.from("funnels")');

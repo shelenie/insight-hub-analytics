@@ -30,6 +30,21 @@ Deno.serve(async (req) => {
     if (lookupError) return json({ ok: false, error: lookupError.message, code: lookupError.code, action: "lookup_client" }, 400);
     if (!existing) return json({ ok: false, error: "Client not found in workspace", code: "client_not_found" }, 404);
 
+    const requestedStatus = "status" in body ? String(body.status ?? "") : String(existing.status ?? "");
+    const transition = classifyStatusTransition(existing.status, requestedStatus);
+    const archiveTransition = transition.archiveTransition;
+    const reactivationTransition = transition.reactivationTransition;
+    if (archiveTransition) {
+      const { data, error } = await userClient["rpc"]("archive_onboarding_client_cascade", {
+        p_workspace_id: workspace_id,
+        p_client_id: client_id,
+        p_status: requestedStatus,
+        p_metadata: body.metadata ?? null,
+      });
+      if (error) return json({ ok: false, error: friendlyRpcError(error.message), code: stableRpcErrorCode(error.message, "client_archive_failed"), rpc: "archive_onboarding_client_cascade" }, 400);
+      return json({ ok: true, action: "archive_client_cascade", client_id, cascade: data });
+    }
+
     const actor = actorContext(authData.user);
     const now = new Date().toISOString();
     const patch: Record<string, unknown> = {
@@ -82,6 +97,17 @@ function isInactiveStatus(status: unknown) {
   return inactiveStatuses.has(String(status ?? "").trim().toLowerCase());
 }
 
+function classifyStatusTransition(existingStatus: unknown, requestedStatus: unknown) {
+  const existingInactive = isInactiveStatus(existingStatus);
+  const requestedInactive = isInactiveStatus(requestedStatus);
+  return {
+    existingInactive,
+    requestedInactive,
+    archiveTransition: !existingInactive && requestedInactive,
+    reactivationTransition: existingInactive && !requestedInactive,
+  };
+}
+
 function actorContext(user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null }) {
   return { id: user.id, email: user.email ?? (typeof user.user_metadata?.email === "string" ? user.user_metadata.email : null) };
 }
@@ -101,6 +127,20 @@ function mergeAuditMetadata(existing: unknown, requested: unknown, actor: { id: 
     updated_via: updatedVia,
     updated_at: updatedAt,
   };
+}
+
+function friendlyRpcError(message: string) {
+  if (message.includes("not found")) return message;
+  if (message.includes("requires an inactive status")) return "Archive requires an inactive status.";
+  if (message.includes("permission") || message.includes("manage")) return "You do not have permission to archive this onboarding record.";
+  return message || "Archive operation failed.";
+}
+function stableRpcErrorCode(message: string, fallback: string) {
+  const lower = message.toLowerCase();
+  if (lower.includes("not found")) return "onboarding_entity_not_found";
+  if (lower.includes("inactive status")) return "invalid_archive_status";
+  if (lower.includes("permission") || lower.includes("manage")) return "onboarding_archive_forbidden";
+  return fallback;
 }
 
 function json(payload: unknown, status = 200) {

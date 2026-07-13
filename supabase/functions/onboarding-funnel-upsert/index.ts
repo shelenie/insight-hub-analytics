@@ -29,7 +29,18 @@ Deno.serve(async (req) => {
     if (project_id !== existing.project_id) {
       return json({ ok: false, error: "Funnel reparent requires a dedicated action", code: "funnel_reparent_requires_dedicated_action" }, 409);
     }
-    const projectCheck = await requireActiveProject(userClient, workspace_id, project_id);
+    const requestedStatus = "status" in body ? String(body.status ?? "") : String(existing.status ?? "");
+    const transition = classifyStatusTransition(existing.status, requestedStatus);
+    const archiveTransition = transition.archiveTransition;
+    const reactivationTransition = transition.reactivationTransition;
+    if (archiveTransition) {
+      const { data, error } = await userClient["rpc"]("archive_onboarding_funnel_cascade", { p_workspace_id: workspace_id, p_funnel_id: funnel_id, p_status: requestedStatus, p_metadata: body.metadata ?? null });
+      if (error) return json({ ok: false, error: friendlyRpcError(error.message), code: stableRpcErrorCode(error.message, "funnel_archive_failed"), rpc: "archive_onboarding_funnel_cascade" }, 400);
+      return json({ ok: true, action: "archive_funnel_cascade", funnel_id, cascade: data });
+    }
+    const projectCheck = !transition.existingInactive || reactivationTransition
+      ? await requireActiveProjectAndClient(userClient, workspace_id, project_id)
+      : { project: { client_id: existing.client_id }, error: null };
     if (projectCheck.error) return projectCheck.error;
     const client_id = projectCheck.project.client_id;
 
@@ -66,7 +77,7 @@ Deno.serve(async (req) => {
     return json({ ok: true, action: "update_funnel", funnel_id: data.id });
   }
 
-  const projectCheck = await requireActiveProject(userClient, workspace_id, project_id);
+  const projectCheck = await requireActiveProjectAndClient(userClient, workspace_id, project_id);
   if (projectCheck.error) return projectCheck.error;
 
   const { data, error } = await userClient.rpc("upsert_funnel", {
@@ -90,19 +101,42 @@ Deno.serve(async (req) => {
   if (error) return json({ ok: false, error: error.message, rpc: "upsert_funnel" }, 400);
   return json({ ok: true, rpc: "upsert_funnel", funnel_id: data });
 });
-async function requireActiveProject(userClient: any, workspace_id: string, project_id: string): Promise<{ project: { client_id: string }; error: Response | null }> {
-  const { data, error } = await userClient
+async function requireActiveProjectAndClient(userClient: any, workspace_id: string, project_id: string): Promise<{ project: { client_id: string }; error: Response | null }> {
+  const { data: project, error: projectError } = await userClient
     .from("projects")
     .select("id, workspace_id, client_id, status")
     .eq("id", project_id)
     .eq("workspace_id", workspace_id)
     .maybeSingle();
-  if (error) return { project: { client_id: "" }, error: json({ ok: false, error: error.message, code: error.code, action: "lookup_project" }, 400) };
-  if (!data) return { project: { client_id: "" }, error: json({ ok: false, error: "Project not found in workspace", code: "project_not_found" }, 404) };
-  if (isInactiveStatus(data.status)) return { project: { client_id: "" }, error: json({ ok: false, error: "Project is inactive", code: "inactive_project" }, 409) };
-  return { project: { client_id: data.client_id }, error: null };
+  if (projectError) return { project: { client_id: "" }, error: json({ ok: false, error: projectError.message, code: projectError.code, action: "lookup_project" }, 400) };
+  if (!project) return { project: { client_id: "" }, error: json({ ok: false, error: "Project not found in workspace", code: "project_not_found" }, 404) };
+  if (isInactiveStatus(project.status)) return { project: { client_id: "" }, error: json({ ok: false, error: "Project is inactive", code: "inactive_project" }, 409) };
+  if (!project.client_id) return { project: { client_id: "" }, error: json({ ok: false, error: "Project client not found in workspace", code: "client_not_found" }, 404) };
+
+  const { data: client, error: clientError } = await userClient
+    .from("clients")
+    .select("id, workspace_id, status")
+    .eq("id", project.client_id)
+    .eq("workspace_id", workspace_id)
+    .maybeSingle();
+  if (clientError) return { project: { client_id: "" }, error: json({ ok: false, error: clientError.message, code: clientError.code, action: "lookup_client" }, 400) };
+  if (!client) return { project: { client_id: "" }, error: json({ ok: false, error: "Client not found in workspace", code: "client_not_found" }, 404) };
+  if (isInactiveStatus(client.status)) return { project: { client_id: "" }, error: json({ ok: false, error: "Client is inactive", code: "inactive_client" }, 409) };
+
+  return { project: { client_id: project.client_id }, error: null };
 }
 function isInactiveStatus(status: unknown) { return inactiveStatuses.has(String(status ?? "").trim().toLowerCase()); }
+function classifyStatusTransition(existingStatus: unknown, requestedStatus: unknown) {
+  const existingInactive = isInactiveStatus(existingStatus);
+  const requestedInactive = isInactiveStatus(requestedStatus);
+  return {
+    existingInactive,
+    requestedInactive,
+    archiveTransition: !existingInactive && requestedInactive,
+    reactivationTransition: existingInactive && !requestedInactive,
+  };
+}
+
 function actorContext(user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> | null }) { return { id: user.id, email: user.email ?? (typeof user.user_metadata?.email === "string" ? user.user_metadata.email : null) }; }
 function isPlainObject(value: unknown): value is Record<string, unknown> { return Boolean(value) && typeof value === "object" && !Array.isArray(value); }
 function mergeAuditMetadata(existing: unknown, requested: unknown, actor: { id: string; email: string | null }, updatedVia: string, updatedAt: string) {
@@ -110,4 +144,18 @@ function mergeAuditMetadata(existing: unknown, requested: unknown, actor: { id: 
   const safeRequested = isPlainObject(requested) ? requested : {};
   return { ...safeExisting, ...safeRequested, updated_by: actor.id, updated_by_email: actor.email, updated_via: updatedVia, updated_at: updatedAt };
 }
+function friendlyRpcError(message: string) {
+  if (message.includes("not found")) return message;
+  if (message.includes("requires an inactive status")) return "Archive requires an inactive status.";
+  if (message.includes("permission") || message.includes("manage")) return "You do not have permission to archive this onboarding record.";
+  return message || "Archive operation failed.";
+}
+function stableRpcErrorCode(message: string, fallback: string) {
+  const lower = message.toLowerCase();
+  if (lower.includes("not found")) return "onboarding_entity_not_found";
+  if (lower.includes("inactive status")) return "invalid_archive_status";
+  if (lower.includes("permission") || lower.includes("manage")) return "onboarding_archive_forbidden";
+  return fallback;
+}
+
 function json(payload: unknown, status = 200) { return new Response(JSON.stringify(payload), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } }); }
