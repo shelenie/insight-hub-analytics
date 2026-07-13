@@ -50,6 +50,21 @@ describe("post-deployment QA source candidates and onboarding toasts", () => {
     expect(bindings).toContain("sourceCandidatesQuery.refetch()");
   });
 
+  it("uses the shared warning semantic component for the source-candidate error panel", () => {
+    const panelStart = bindings.indexOf("sourceCandidatesQuery.error && canManage");
+    const panelEnd = bindings.indexOf("<SourceBindingsBusinessTable", panelStart);
+    const panelSource = bindings.slice(panelStart, panelEnd);
+
+    expect(panelSource).toContain('<OperationalStatusSurface tone="warning" withTextTone className="mb-3 flex flex-wrap items-center gap-2 p-3 text-xs">');
+    expect(panelSource).toContain('t("bindingsSourceCandidatesUnavailable")');
+    expect(panelSource).toContain("sourceCandidatesQuery.refetch()");
+    expect(panelSource).not.toContain("border-amber-500/30");
+    expect(panelSource).not.toContain("bg-amber-50/70");
+    expect(panelSource).not.toContain("text-amber-950");
+    expect(panelSource).not.toContain("dark:bg-amber-950/30");
+    expect(panelSource).not.toContain("dark:text-amber-100");
+  });
+
   it("shows the genuine-empty source message only for a successful zero-result query", () => {
     expect(bindings).toContain('emptyText={sourceCandidatesUnavailable ? t("bindingsSourceCandidatesUnavailable") : t("bindingsSelectSourceEmpty")}');
     expect(bindings).toContain('t("bindingsSelectSourceEmpty")');

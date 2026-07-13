@@ -997,7 +997,7 @@ export default function Bindings() {
                     </SheetContent>
                   </Sheet>
                   {sourceCandidatesQuery.error && canManage ? (
-                    <div className="mb-3 flex flex-wrap items-center gap-2 rounded-md border border-amber-500/30 bg-amber-50/70 p-3 text-xs text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
+                    <OperationalStatusSurface tone="warning" withTextTone className="mb-3 flex flex-wrap items-center gap-2 p-3 text-xs">
                       <span>{t("bindingsSourceCandidatesUnavailable")}</span>
                       <Button
                         type="button"
@@ -1009,7 +1009,7 @@ export default function Bindings() {
                       >
                         {sourceCandidatesQuery.isFetching ? t("bindingsRefreshRefreshing") : t("refresh")}
                       </Button>
-                    </div>
+                    </OperationalStatusSurface>
                   ) : null}
                   <SourceBindingsBusinessTable
                     rows={filteredSourceBindings}
