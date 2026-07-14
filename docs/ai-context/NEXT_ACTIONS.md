@@ -1,3 +1,7 @@
+## Next Action — 2026-07-13 Bindings Final Geometry Review
+
+After branch sync/CI has access to browser tooling, run `npm run test:browser` for the 1280px, 1440px, and 1700px binding-table geometry harness and review `/bindings` in preview for active, archived, permission-loading, read-only, missing optional scope names, and long-name rows. Confirm Source/Account columns flex while compact columns stay fixed, Platform/Client, Mapping status/Status, and Updated/Action stay separated, action buttons are 144px wide and aligned, friendly source names remain in table/archive/restore dialog copy, and no Supabase migration or deployment is needed.
+
 ## Next Action — 2026-07-13 Bindings Layout Manual QA
 
 After CI/preview is available, manually verify `/bindings` at approximately 1440px and 1700px for active and archived Source bindings plus active and archived Ad Account bindings. Confirm no Updated/Action overlap, no desktop horizontal scrollbar, action buttons stay within the table border, Restore uses the same action alignment, friendly source names appear in Archive/Restore dialogs, and the yellow unbound Ad Account cards remain unchanged. No Supabase migration/deployment action is required for this frontend-only task.

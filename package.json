@@ -11,7 +11,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test:browser": "node tests/browser/bindings-table-geometry.spec.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

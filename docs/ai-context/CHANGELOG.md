@@ -1,3 +1,18 @@
+## 2026-07-13 — Bindings Final Table Geometry
+
+### Fixed
+
+- Removed percentage-based `<colgroup>` widths from Source and Ad Account binding tables.
+- Replaced them with fixed pixel widths for compact columns and flexible remaining width for the Source/Account columns.
+- Set desktop table minimum widths to 1180px for Source bindings and 1200px for Ad Account bindings.
+- Changed shared binding action controls to 144px × 32px buttons aligned at the start of the Action cell instead of stretched full-width buttons.
+- Added a browser geometry harness covering 1280px, 1440px, and 1700px mocked Source/Ad Account active and archived rows.
+
+### Notes
+
+- No migrations, RPCs, RLS policies, Edge Functions, archive/restore semantics, filters, permissions, unbound ad-account cards, production data, or deployment changed.
+- Local browser harness execution requires Playwright availability; package registry access is blocked in this environment.
+
 ## 2026-07-13 — Bindings Desktop Table Layout Follow-up
 
 ### Fixed
