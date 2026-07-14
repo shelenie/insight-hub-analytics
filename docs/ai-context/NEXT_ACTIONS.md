@@ -1,6 +1,7 @@
-## Next Action — 2026-07-13 Bindings Final Geometry Review
+## Next Action — 2026-07-14 Bindings Final Manual Geometry Review
 
-After branch sync/CI has access to browser tooling, run `npm run test:browser` for the 1280px, 1440px, and 1700px binding-table geometry harness and review `/bindings` in preview for active, archived, permission-loading, read-only, missing optional scope names, and long-name rows. Confirm Source/Account columns flex while compact columns stay fixed, Platform/Client, Mapping status/Status, and Updated/Action stay separated, action buttons are 144px wide and aligned, friendly source names remain in table/archive/restore dialog copy, and no Supabase migration or deployment is needed.
+After merge to a previewable environment, manually verify `/bindings` with the expanded 256px DashboardLayout sidebar at 1280px, 1440px, and 1700px. Confirm an internal table scrollbar is acceptable at 1280px, no internal table scrollbar appears at 1440px/1700px, the page itself never gains horizontal overflow, Platform/Client, Mapping status/Status, and Updated/Action remain visually separated, and active/archived/permission-loading/read-only action states align inside the compact Action column. No Supabase migration, RPC, Edge Function, production data, deployment, or automated browser harness action is required for this frontend-only review fix.
+
 
 ## Next Action — 2026-07-13 Bindings Layout Manual QA
 

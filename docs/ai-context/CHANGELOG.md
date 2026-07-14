@@ -1,17 +1,17 @@
-## 2026-07-13 — Bindings Final Table Geometry
+## 2026-07-14 — Bindings Real-Page Geometry Review Fix
 
 ### Fixed
 
-- Removed percentage-based `<colgroup>` widths from Source and Ad Account binding tables.
-- Replaced them with fixed pixel widths for compact columns and flexible remaining width for the Source/Account columns.
-- Set desktop table minimum widths to 1180px for Source bindings and 1200px for Ad Account bindings.
-- Changed shared binding action controls to 144px × 32px buttons aligned at the start of the Action cell instead of stretched full-width buttons.
-- Added a browser geometry harness covering 1280px, 1440px, and 1700px mocked Source/Ad Account active and archived rows.
+- Resized Source and Ad Account binding tables for the real DashboardLayout content area with 990px and 1030px minimum widths.
+- Kept percentage-based `<colgroup>` widths removed while tightening compact fixed pixel columns and leaving Source/Account flexible.
+- Changed shared binding action controls back to compact `w-full` buttons inside the fixed 150px Action column so active, archived restore, and permission-loading states share the same available width.
+- Removed the dead standalone browser geometry harness and unused `test:browser` npm script.
+- Updated focused executable component tests for the compact fixed pixel widths, absent percentage widths, shared action container/classes, callbacks, permission states, two-line timestamps, and friendly Source dialog names.
 
 ### Notes
 
-- No migrations, RPCs, RLS policies, Edge Functions, archive/restore semantics, filters, permissions, unbound ad-account cards, production data, or deployment changed.
-- Local browser harness execution requires Playwright availability; package registry access is blocked in this environment.
+- No migrations, RPCs, RLS policies, Edge Functions, archive/restore semantics, filters, permissions, unbound ad-account cards, production data, deployment, or browser automation infrastructure changed.
+- Final viewport geometry verification is expected as a manual preview/production check at 1280px, 1440px, and 1700px.
 
 ## 2026-07-13 — Bindings Desktop Table Layout Follow-up
 

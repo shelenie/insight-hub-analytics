@@ -2414,17 +2414,17 @@ export function AdAccountsBusinessTable({
     );
   return (
     <div className="overflow-x-auto rounded-xl border border-border/60 bg-card/40">
-      <table className="w-full min-w-[1200px] table-fixed text-left text-sm">
+      <table className="w-full min-w-[1030px] table-fixed text-left text-sm">
         <colgroup>
           <col />
+          <col style={{ width: 85 }} />
           <col style={{ width: 95 }} />
-          <col style={{ width: 125 }} />
-          <col style={{ width: 125 }} />
-          <col style={{ width: 125 }} />
-          <col style={{ width: 135 }} />
-          <col style={{ width: 105 }} />
+          <col style={{ width: 95 }} />
+          <col style={{ width: 95 }} />
           <col style={{ width: 115 }} />
-          <col style={{ width: 160 }} />
+          <col style={{ width: 80 }} />
+          <col style={{ width: 95 }} />
+          <col style={{ width: 150 }} />
         </colgroup>
         <thead>
           <tr className="border-b border-border/70 text-muted-foreground">
@@ -2518,16 +2518,16 @@ export function SourceBindingsBusinessTable({
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">{t("bindingsSourcesEmpty")}</p>;
   return (
     <div className="overflow-x-auto rounded-xl border border-border/60 bg-card/40">
-      <table className="w-full min-w-[1180px] table-fixed text-left text-sm">
+      <table className="w-full min-w-[990px] table-fixed text-left text-sm">
         <colgroup>
           <col />
-          <col style={{ width: 145 }} />
-          <col style={{ width: 135 }} />
-          <col style={{ width: 135 }} />
-          <col style={{ width: 135 }} />
-          <col style={{ width: 105 }} />
+          <col style={{ width: 110 }} />
+          <col style={{ width: 100 }} />
+          <col style={{ width: 100 }} />
           <col style={{ width: 115 }} />
-          <col style={{ width: 160 }} />
+          <col style={{ width: 80 }} />
+          <col style={{ width: 95 }} />
+          <col style={{ width: 150 }} />
         </colgroup>
         <thead>
           <tr className="border-b border-border/70 text-muted-foreground">
@@ -2594,20 +2594,20 @@ export function BindingRowActions({
 }) {
   const { t } = useI18n();
   return (
-    <div className="flex w-full flex-col items-start gap-2">
+    <div className="flex w-full flex-col items-stretch gap-2">
       {roleLoading ? (
         <PermissionActionPlaceholder />
       ) : isActiveBinding(row) && canManage ? (
         <>
-          <Button type="button" size="sm" variant="outline" className="h-8 w-[144px] max-w-full justify-center whitespace-nowrap text-xs" onClick={() => onEdit(row)}>
+          <Button type="button" size="sm" variant="outline" className="h-8 w-full max-w-full justify-center whitespace-nowrap text-xs" onClick={() => onEdit(row)}>
             {t("bindingsRebind")}
           </Button>
-          <Button type="button" size="sm" variant="destructive" className="h-8 w-[144px] max-w-full justify-center whitespace-nowrap text-xs" onClick={() => onArchive(row)}>
+          <Button type="button" size="sm" variant="destructive" className="h-8 w-full max-w-full justify-center whitespace-nowrap text-xs" onClick={() => onArchive(row)}>
             {t("bindingsArchive")}
           </Button>
         </>
       ) : canManage && canRestoreBinding(row) ? (
-        <Button type="button" size="sm" variant="outline" className="h-8 w-[144px] max-w-full justify-center whitespace-nowrap text-xs" onClick={() => onRestore(row)}><RotateCcw className="h-3 w-3" />{t("bindingsRestore")}</Button>
+        <Button type="button" size="sm" variant="outline" className="h-8 w-full max-w-full justify-center whitespace-nowrap text-xs" onClick={() => onRestore(row)}><RotateCcw className="h-3 w-3" />{t("bindingsRestore")}</Button>
       ) : (
         <span className="w-full text-xs text-muted-foreground">{t("bindingsReadOnly")}</span>
       )}
@@ -2632,7 +2632,7 @@ function BindingUpdatedAt({ value }: { value: string | number | boolean | null |
 function PermissionActionPlaceholder() {
   return (
     <div
-      className="h-8 w-[144px] max-w-full animate-pulse rounded-md border border-border/70 bg-muted/60"
+      className="h-8 w-full max-w-full animate-pulse rounded-md border border-border/70 bg-muted/60"
       aria-label="Loading permissions"
     />
   );
