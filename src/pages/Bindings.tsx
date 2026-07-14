@@ -2414,16 +2414,16 @@ export function AdAccountsBusinessTable({
     );
   return (
     <div className="overflow-x-auto rounded-xl border border-border/60 bg-card/40">
-      <table className="w-full min-w-[1030px] table-fixed text-left text-sm">
+      <table className="w-full min-w-[1155px] table-fixed text-left text-sm">
         <colgroup>
-          <col />
-          <col style={{ width: 85 }} />
-          <col style={{ width: 95 }} />
-          <col style={{ width: 95 }} />
-          <col style={{ width: 95 }} />
+          <col style={{ width: 260 }} />
+          <col style={{ width: 90 }} />
           <col style={{ width: 115 }} />
-          <col style={{ width: 80 }} />
-          <col style={{ width: 95 }} />
+          <col style={{ width: 115 }} />
+          <col style={{ width: 115 }} />
+          <col style={{ width: 120 }} />
+          <col style={{ width: 90 }} />
+          <col style={{ width: 100 }} />
           <col style={{ width: 150 }} />
         </colgroup>
         <thead>
@@ -2449,38 +2449,38 @@ export function AdAccountsBusinessTable({
           {rows.map((row, index) => (
             <tr
               key={`${getBindingId(row) || asText(row.external_account_id) || index}`}
-              className="border-b border-border/40 align-top last:border-0"
+              className="border-b border-border/40 last:border-0"
             >
-              <td className="px-3 py-2">
-                <div className="[overflow-wrap:anywhere] break-words font-medium text-foreground" title={accountName(row, t)}>
+              <td className="px-3 py-2 align-middle">
+                <div className="line-clamp-2 [overflow-wrap:anywhere] break-words font-medium text-foreground" title={accountName(row, t)}>
                   {accountName(row, t)}
                 </div>
                 <div className="text-xs text-muted-foreground">
                   {asText(row.external_account_id) || "—"}
                 </div>
               </td>
-              <td className="px-3 py-2">
+              <td className="px-3 py-2 align-middle">
                 {formatPlatform(asText(row.platform) || "—")}
               </td>
-              <td className="px-3 py-2 align-top"><div className="line-clamp-2 break-words" title={asText(row.client_name)}>{asText(row.client_name) || "—"}</div></td>
-              <td className="px-3 py-2 align-top"><div className="line-clamp-2 break-words" title={asText(row.project_name)}>{asText(row.project_name) || "—"}</div></td>
-              <td className="px-3 py-2 align-top"><div className="line-clamp-2 break-words" title={asText(row.funnel_name)}>{asText(row.funnel_name) || "—"}</div></td>
-              <td className="px-3 py-2">
+              <td className="px-3 py-2 align-middle"><div className="line-clamp-2 break-words" title={asText(row.client_name)}>{asText(row.client_name) || "—"}</div></td>
+              <td className="px-3 py-2 align-middle"><div className="line-clamp-2 break-words" title={asText(row.project_name)}>{asText(row.project_name) || "—"}</div></td>
+              <td className="px-3 py-2 align-middle"><div className="line-clamp-2 break-words" title={asText(row.funnel_name)}>{asText(row.funnel_name) || "—"}</div></td>
+              <td className="px-3 py-2 align-middle">
                 <FormattedValue
                   value={row.mapping_status}
                   column="mapping_status"
                 />
               </td>
-              <td className="px-3 py-2">
+              <td className="px-3 py-2 align-middle">
                 <FormattedValue
                   value={row.binding_status ?? row.status}
                   column="binding_status"
                 />
               </td>
-              <td className="px-3 py-2 align-top">
+              <td className="px-3 py-2 align-middle">
                 <BindingUpdatedAt value={row.updated_at} />
               </td>
-              <td className="px-3 py-2 align-top">
+              <td className="px-3 py-2 align-middle">
                 <BindingRowActions
                   row={row}
                   canManage={canManage}
@@ -2518,15 +2518,15 @@ export function SourceBindingsBusinessTable({
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">{t("bindingsSourcesEmpty")}</p>;
   return (
     <div className="overflow-x-auto rounded-xl border border-border/60 bg-card/40">
-      <table className="w-full min-w-[990px] table-fixed text-left text-sm">
+      <table className="w-full min-w-[1095px] table-fixed text-left text-sm">
         <colgroup>
-          <col />
-          <col style={{ width: 110 }} />
-          <col style={{ width: 100 }} />
-          <col style={{ width: 100 }} />
+          <col style={{ width: 280 }} />
+          <col style={{ width: 125 }} />
           <col style={{ width: 115 }} />
-          <col style={{ width: 80 }} />
-          <col style={{ width: 95 }} />
+          <col style={{ width: 115 }} />
+          <col style={{ width: 120 }} />
+          <col style={{ width: 90 }} />
+          <col style={{ width: 100 }} />
           <col style={{ width: 150 }} />
         </colgroup>
         <thead>
@@ -2547,18 +2547,18 @@ export function SourceBindingsBusinessTable({
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            <tr key={`${getBindingId(row) || asText(row.source_id) || index}`} className="border-b border-border/40 align-top last:border-0">
-              <td className="px-3 py-2">
-                <div className="[overflow-wrap:anywhere] break-words font-medium text-foreground" title={sourceName(row)}>{formatBindingSourceName(row)}</div>
+            <tr key={`${getBindingId(row) || asText(row.source_id) || index}`} className="border-b border-border/40 last:border-0">
+              <td className="px-3 py-2 align-middle">
+                <div className="line-clamp-2 [overflow-wrap:anywhere] break-words font-medium text-foreground" title={sourceName(row)}>{formatBindingSourceName(row)}</div>
                 <div className="text-xs text-muted-foreground">{asText(row.source_kind) || "—"}</div>
               </td>
-              <td className="px-3 py-2 align-top"><div className="line-clamp-2 break-words" title={asText(row.client_name)}>{asText(row.client_name) || "—"}</div></td>
-              <td className="px-3 py-2 align-top"><div className="line-clamp-2 break-words" title={asText(row.project_name)}>{asText(row.project_name) || "—"}</div></td>
-              <td className="px-3 py-2 align-top"><div className="line-clamp-2 break-words" title={asText(row.funnel_name)}>{asText(row.funnel_name) || "—"}</div></td>
-              <td className="px-3 py-2"><FormattedValue value={row.mapping_status} column="mapping_status" /></td>
-              <td className="px-3 py-2"><FormattedValue value={row.binding_status ?? row.status} column="binding_status" /></td>
-              <td className="px-3 py-2 align-top"><BindingUpdatedAt value={row.updated_at} /></td>
-              <td className="px-3 py-2 align-top">
+              <td className="px-3 py-2 align-middle"><div className="line-clamp-2 break-words" title={asText(row.client_name)}>{asText(row.client_name) || "—"}</div></td>
+              <td className="px-3 py-2 align-middle"><div className="line-clamp-2 break-words" title={asText(row.project_name)}>{asText(row.project_name) || "—"}</div></td>
+              <td className="px-3 py-2 align-middle"><div className="line-clamp-2 break-words" title={asText(row.funnel_name)}>{asText(row.funnel_name) || "—"}</div></td>
+              <td className="px-3 py-2 align-middle"><FormattedValue value={row.mapping_status} column="mapping_status" /></td>
+              <td className="px-3 py-2 align-middle"><FormattedValue value={row.binding_status ?? row.status} column="binding_status" /></td>
+              <td className="px-3 py-2 align-middle"><BindingUpdatedAt value={row.updated_at} /></td>
+              <td className="px-3 py-2 align-middle">
                 <BindingRowActions
                   row={row}
                   canManage={canManage}
@@ -2594,7 +2594,7 @@ export function BindingRowActions({
 }) {
   const { t } = useI18n();
   return (
-    <div className="flex w-full flex-col items-stretch gap-2">
+    <div className="flex w-full flex-col items-stretch justify-center gap-2">
       {roleLoading ? (
         <PermissionActionPlaceholder />
       ) : isActiveBinding(row) && canManage ? (

@@ -1,3 +1,16 @@
+## 2026-07-14 — Bindings Table Visual Polish
+
+### Fixed
+
+- Rebalanced `/bindings` Source and Ad Account operational table column widths with compact fixed pixel first columns instead of flexible oversized Source/Account columns.
+- Changed Source and Ad Account table body cells, Updated cells, status/mapping cells, and Action cells to vertical-middle alignment.
+- Centered the shared binding row action stack within the row while preserving compact full-width Rebind, Archive, Restore, and permission-loading controls.
+- Updated focused component tests for compact first-column widths, vertical-middle cells, action centering, absent percentage widths, callbacks, friendly source names, and two-line Updated timestamps.
+
+### Notes
+
+- No Supabase migrations, RPCs, RLS policies, Edge Functions, permission logic, archive/restore semantics, filters, data queries, toasts, CI configuration, production data, or PR description behavior changed.
+
 ## 2026-07-14 — Bindings Real-Page Geometry Review Fix
 
 ### Fixed
