@@ -1,3 +1,16 @@
+## 2026-07-14 — Bindings Compact Geometry Regression Fix
+
+### Fixed
+
+- Reduced `/bindings` Source table geometry from the oversized 1095px minimum to the requested 990px compact fixed column layout, including a narrower 220px Source column.
+- Reduced `/bindings` Ad Account table geometry from the oversized 1155px minimum to the requested 1030px compact fixed column layout, including a narrower 210px Account column.
+- Kept body-cell vertical centering, two-line primary name clamps, and centered shared action stacks while adding compact `px-2` full-width action buttons so Action columns do not force the tables wider.
+- Updated focused component tests for the 990px/1030px minimum widths, 220px/210px first columns, absent percentage widths, `align-middle` cells, centered action containers, full-width action buttons, callbacks, friendly source names, and two-line Updated timestamps.
+
+### Notes
+
+- No Supabase migrations, RPCs, RLS policies, Edge Functions, permissions, archive/restore logic, filters, data queries, toasts, CI configuration, or production data changed.
+
 ## 2026-07-14 — Bindings Table Visual Polish
 
 ### Fixed

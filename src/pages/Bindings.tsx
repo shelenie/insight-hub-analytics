@@ -2414,17 +2414,17 @@ export function AdAccountsBusinessTable({
     );
   return (
     <div className="overflow-x-auto rounded-xl border border-border/60 bg-card/40">
-      <table className="w-full min-w-[1155px] table-fixed text-left text-sm">
+      <table className="w-full min-w-[1030px] table-fixed text-left text-sm">
         <colgroup>
-          <col style={{ width: 260 }} />
-          <col style={{ width: 90 }} />
+          <col style={{ width: 210 }} />
+          <col style={{ width: 85 }} />
+          <col style={{ width: 110 }} />
+          <col style={{ width: 105 }} />
+          <col style={{ width: 105 }} />
           <col style={{ width: 115 }} />
-          <col style={{ width: 115 }} />
-          <col style={{ width: 115 }} />
+          <col style={{ width: 85 }} />
+          <col style={{ width: 95 }} />
           <col style={{ width: 120 }} />
-          <col style={{ width: 90 }} />
-          <col style={{ width: 100 }} />
-          <col style={{ width: 150 }} />
         </colgroup>
         <thead>
           <tr className="border-b border-border/70 text-muted-foreground">
@@ -2518,16 +2518,16 @@ export function SourceBindingsBusinessTable({
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">{t("bindingsSourcesEmpty")}</p>;
   return (
     <div className="overflow-x-auto rounded-xl border border-border/60 bg-card/40">
-      <table className="w-full min-w-[1095px] table-fixed text-left text-sm">
+      <table className="w-full min-w-[990px] table-fixed text-left text-sm">
         <colgroup>
-          <col style={{ width: 280 }} />
-          <col style={{ width: 125 }} />
-          <col style={{ width: 115 }} />
-          <col style={{ width: 115 }} />
+          <col style={{ width: 220 }} />
           <col style={{ width: 120 }} />
-          <col style={{ width: 90 }} />
-          <col style={{ width: 100 }} />
-          <col style={{ width: 150 }} />
+          <col style={{ width: 115 }} />
+          <col style={{ width: 110 }} />
+          <col style={{ width: 115 }} />
+          <col style={{ width: 85 }} />
+          <col style={{ width: 95 }} />
+          <col style={{ width: 130 }} />
         </colgroup>
         <thead>
           <tr className="border-b border-border/70 text-muted-foreground">
@@ -2599,15 +2599,15 @@ export function BindingRowActions({
         <PermissionActionPlaceholder />
       ) : isActiveBinding(row) && canManage ? (
         <>
-          <Button type="button" size="sm" variant="outline" className="h-8 w-full max-w-full justify-center whitespace-nowrap text-xs" onClick={() => onEdit(row)}>
+          <Button type="button" size="sm" variant="outline" className="h-8 w-full max-w-full justify-center whitespace-nowrap px-2 text-xs" onClick={() => onEdit(row)}>
             {t("bindingsRebind")}
           </Button>
-          <Button type="button" size="sm" variant="destructive" className="h-8 w-full max-w-full justify-center whitespace-nowrap text-xs" onClick={() => onArchive(row)}>
+          <Button type="button" size="sm" variant="destructive" className="h-8 w-full max-w-full justify-center whitespace-nowrap px-2 text-xs" onClick={() => onArchive(row)}>
             {t("bindingsArchive")}
           </Button>
         </>
       ) : canManage && canRestoreBinding(row) ? (
-        <Button type="button" size="sm" variant="outline" className="h-8 w-full max-w-full justify-center whitespace-nowrap text-xs" onClick={() => onRestore(row)}><RotateCcw className="h-3 w-3" />{t("bindingsRestore")}</Button>
+        <Button type="button" size="sm" variant="outline" className="h-8 w-full max-w-full justify-center whitespace-nowrap px-2 text-xs" onClick={() => onRestore(row)}><RotateCcw className="h-3 w-3" />{t("bindingsRestore")}</Button>
       ) : (
         <span className="w-full text-xs text-muted-foreground">{t("bindingsReadOnly")}</span>
       )}
