@@ -1,3 +1,8 @@
+## Next Action — 2026-07-14 Bindings Final Manual Geometry Review
+
+After merge to a previewable environment, manually verify `/bindings` with the expanded 256px DashboardLayout sidebar at 1280px, 1440px, and 1700px. Confirm an internal table scrollbar is acceptable at 1280px, no internal table scrollbar appears at 1440px/1700px, the page itself never gains horizontal overflow, Platform/Client, Mapping status/Status, and Updated/Action remain visually separated, and active/archived/permission-loading/read-only action states align inside the compact Action column. No Supabase migration, RPC, Edge Function, production data, deployment, or automated browser harness action is required for this frontend-only review fix. Local container visual verification is blocked because no browser/runtime is available, so this manual check remains required before marking PR #253 fully ready.
+
+
 ## Next Action — 2026-07-13 Bindings Layout Manual QA
 
 After CI/preview is available, manually verify `/bindings` at approximately 1440px and 1700px for active and archived Source bindings plus active and archived Ad Account bindings. Confirm no Updated/Action overlap, no desktop horizontal scrollbar, action buttons stay within the table border, Restore uses the same action alignment, friendly source names appear in Archive/Restore dialogs, and the yellow unbound Ad Account cards remain unchanged. No Supabase migration/deployment action is required for this frontend-only task.

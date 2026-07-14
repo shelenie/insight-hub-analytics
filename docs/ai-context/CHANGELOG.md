@@ -1,3 +1,18 @@
+## 2026-07-14 — Bindings Real-Page Geometry Review Fix
+
+### Fixed
+
+- Resized Source and Ad Account binding tables for the real DashboardLayout content area with 990px and 1030px minimum widths.
+- Kept percentage-based `<colgroup>` widths removed while tightening compact fixed pixel columns and leaving Source/Account flexible.
+- Changed shared binding action controls back to compact `w-full` buttons inside the fixed 150px Action column so active, archived restore, and permission-loading states share the same available width.
+- Removed the dead standalone browser geometry harness and unused `test:browser` npm script.
+- Updated focused executable component tests for the compact fixed pixel widths, absent percentage widths, shared action container/classes, callbacks, permission states, two-line timestamps, and friendly Source dialog names.
+
+### Notes
+
+- No migrations, RPCs, RLS policies, Edge Functions, archive/restore semantics, filters, permissions, unbound ad-account cards, production data, deployment, or browser automation infrastructure changed.
+- Final viewport geometry verification is expected as a manual preview/production check at 1280px, 1440px, and 1700px.
+
 ## 2026-07-13 — Bindings Desktop Table Layout Follow-up
 
 ### Fixed
