@@ -1,3 +1,8 @@
+## Next Action — 2026-07-14 Bindings Visual Polish Manual QA
+
+After this frontend-only polish reaches a previewable environment, manually verify `/bindings` at common desktop widths that rows with two-line Source/Account names vertically center Platform/Client/Project/Funnel/status/Updated/Action content, the Source first column stays around 280px, the Account first column stays around 260px, middle columns do not visually touch, and Rebind/Archive/Restore/permission-loading states align to the row center. No Supabase migration, RPC, Edge Function, production data, permission, filter, toast, archive/restore, or CI action is required.
+
+
 ## Next Action — 2026-07-14 Bindings Final Manual Geometry Review
 
 After merge to a previewable environment, manually verify `/bindings` with the expanded 256px DashboardLayout sidebar at 1280px, 1440px, and 1700px. Confirm an internal table scrollbar is acceptable at 1280px, no internal table scrollbar appears at 1440px/1700px, the page itself never gains horizontal overflow, Platform/Client, Mapping status/Status, and Updated/Action remain visually separated, and active/archived/permission-loading/read-only action states align inside the compact Action column. No Supabase migration, RPC, Edge Function, production data, deployment, or automated browser harness action is required for this frontend-only review fix. Local container visual verification is blocked because no browser/runtime is available, so this manual check remains required before marking PR #253 fully ready.
