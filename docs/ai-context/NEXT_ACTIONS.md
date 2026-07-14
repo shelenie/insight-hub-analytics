@@ -1,3 +1,8 @@
+## Next Action — 2026-07-14 Bindings Compact Geometry Manual QA
+
+After this frontend-only fix reaches a previewable environment, manually verify `/bindings` that the Source table fits the 990px compact geometry with a visibly narrower `Джерело` column, the Ad Account table fits the 1030px compact geometry with a visibly narrower `Акаунт` column, middle columns are no longer squeezed by oversized first columns, no page-level horizontal scrollbar appears at normal desktop widths, and Rebind/Archive/Restore buttons remain fully visible inside the right Action column. No Supabase migration, RPC, Edge Function, production data, permission, filter, toast, archive/restore, data-query, or CI action is required.
+
+
 ## Next Action — 2026-07-14 Bindings Visual Polish Manual QA
 
 After this frontend-only polish reaches a previewable environment, manually verify `/bindings` at common desktop widths that rows with two-line Source/Account names vertically center Platform/Client/Project/Funnel/status/Updated/Action content, the Source first column stays around 280px, the Account first column stays around 260px, middle columns do not visually touch, and Rebind/Archive/Restore/permission-loading states align to the row center. No Supabase migration, RPC, Edge Function, production data, permission, filter, toast, archive/restore, or CI action is required.

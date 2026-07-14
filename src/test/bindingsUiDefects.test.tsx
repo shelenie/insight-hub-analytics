@@ -119,17 +119,17 @@ describe("Bindings confirmed UI defects", () => {
       <SourceBindingsBusinessTable rows={[activeRow]} canManage={true} roleLoading={false} onEdit={vi.fn()} onArchive={vi.fn()} onRestore={vi.fn()} />,
     );
     const table = container.querySelector("table") as HTMLTableElement;
-    expect(table).toHaveClass("w-full", "min-w-[1095px]", "table-fixed");
+    expect(table).toHaveClass("w-full", "min-w-[990px]", "table-fixed");
     const columns = Array.from(container.querySelectorAll("col"));
     expect(columns.map((col) => col.getAttribute("style"))).toEqual([
-      "width: 280px;",
-      "width: 125px;",
-      "width: 115px;",
-      "width: 115px;",
+      "width: 220px;",
       "width: 120px;",
-      "width: 90px;",
-      "width: 100px;",
-      "width: 150px;",
+      "width: 115px;",
+      "width: 110px;",
+      "width: 115px;",
+      "width: 85px;",
+      "width: 95px;",
+      "width: 130px;",
     ]);
     expect(container.innerHTML).not.toContain("%");
   });
@@ -139,18 +139,18 @@ describe("Bindings confirmed UI defects", () => {
       <AdAccountsBusinessTable rows={[{ ...activeRow, external_account_id: "act_1", external_account_name: "Account", platform: "meta" }]} canManage={true} roleLoading={false} onEdit={vi.fn()} onArchive={vi.fn()} onRestore={vi.fn()} />,
     );
     const table = container.querySelector("table") as HTMLTableElement;
-    expect(table).toHaveClass("w-full", "min-w-[1155px]", "table-fixed");
+    expect(table).toHaveClass("w-full", "min-w-[1030px]", "table-fixed");
     const columns = Array.from(container.querySelectorAll("col"));
     expect(columns.map((col) => col.getAttribute("style"))).toEqual([
-      "width: 260px;",
-      "width: 90px;",
+      "width: 210px;",
+      "width: 85px;",
+      "width: 110px;",
+      "width: 105px;",
+      "width: 105px;",
       "width: 115px;",
-      "width: 115px;",
-      "width: 115px;",
+      "width: 85px;",
+      "width: 95px;",
       "width: 120px;",
-      "width: 90px;",
-      "width: 100px;",
-      "width: 150px;",
     ]);
     expect(container.innerHTML).not.toContain("%");
   });
@@ -178,7 +178,7 @@ describe("Bindings confirmed UI defects", () => {
     expect(actionContainer).not.toHaveClass("items-start", "flex-wrap");
     const buttons = within(actionContainer as HTMLElement).getAllByRole("button");
     expect(buttons).toHaveLength(2);
-    for (const button of buttons) expect(button).toHaveClass("w-full", "max-w-full", "justify-center", "whitespace-nowrap", "h-8");
+    for (const button of buttons) expect(button).toHaveClass("w-full", "max-w-full", "justify-center", "whitespace-nowrap", "h-8", "px-2");
   });
 
   it("renders active Ad Account actions through the same fixed-width shared component classes", () => {
@@ -213,7 +213,7 @@ describe("Bindings confirmed UI defects", () => {
     );
     let actionContainer = container.firstElementChild as HTMLElement;
     expect(actionContainer).toHaveClass("flex", "w-full", "flex-col", "items-stretch", "justify-center");
-    expect(screen.getByRole("button", { name: /відновити/i })).toHaveClass("w-full", "max-w-full", "justify-center", "whitespace-nowrap", "h-8");
+    expect(screen.getByRole("button", { name: /відновити/i })).toHaveClass("w-full", "max-w-full", "justify-center", "whitespace-nowrap", "h-8", "px-2");
     rerender(<I18nProvider><BindingRowActions row={activeRow} canManage={false} roleLoading={true} onEdit={vi.fn()} onArchive={vi.fn()} onRestore={vi.fn()} /></I18nProvider>);
     actionContainer = container.firstElementChild as HTMLElement;
     expect(actionContainer).toHaveClass("w-full");
