@@ -1,4 +1,9 @@
 
+## 2026-07-15 — Production file upload entry point for Imports and Data Quality
+
+Imports / Data Quality moved from Analytics to Admin navigation after Data Bindings and before Ads Connectors. The `/imports` page now has a production file upload entry point for client-provided CSV/XLS/XLSX-compatible files: files upload directly to the Supabase Storage bucket `file-imports`, then the UI invokes the existing `file-upload-parser` Edge Function for workspace `5ebbe435-fd79-44c3-834e-642e8fba00dc`. Successful uploads are presented as sources for later binding in Data Bindings; no automatic client/project/funnel binding is performed. No Supabase schema, migrations, RLS, RPC definitions, Edge Function code, OAuth logic, Ads connector logic, Google Sheets connector logic, routes, or production data changed.
+
+
 ## 2026-07-15 — Production-clean source candidate labels in Data Bindings
 
 Frontend-only production-clean source candidate labels for Data Bindings → Data Sources: technical/dev source names are no longer shown as primary UI labels, Google Sheet template/tab candidates use admin-friendly labels, and the obvious test upload candidate is hidden from production-facing source candidates. Source IDs/candidate values and backend data remain unchanged. No Supabase schema, migrations, RPCs, RLS, Edge Functions, OAuth/sync logic, routes, archive/restore behavior, binding contracts, or production data changed.

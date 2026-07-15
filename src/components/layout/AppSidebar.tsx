@@ -42,7 +42,6 @@ const navSections: { labelKey: TranslationKey; items: { titleKey: TranslationKey
       { titleKey: "navFunnel", url: "/conversions", icon: GitBranch },
       { titleKey: "navCampaigns", url: "/campaigns", icon: Megaphone },
       { titleKey: "navSales", url: "/sales", icon: DollarSign },
-      { titleKey: "navImports", url: "/imports", icon: Database },
     ],
   },
   {
@@ -50,6 +49,7 @@ const navSections: { labelKey: TranslationKey; items: { titleKey: TranslationKey
     items: [
       { titleKey: "navOnboarding", url: "/onboarding", icon: Layers3 },
       { titleKey: "navBindingsMapping", url: "/bindings", icon: Link2 },
+      { titleKey: "navImports", url: "/imports", icon: Database },
       { titleKey: "navAdsConnectors", url: "/ads-connectors", icon: PlugZap },
       { titleKey: "navTelegramAlerts", url: "/alerts", icon: BellRing },
     ],
