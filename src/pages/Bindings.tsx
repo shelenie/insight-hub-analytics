@@ -113,13 +113,13 @@ type OptionalJsonData = {
   payload: Record<string, unknown> | null;
   unavailableReason: string | null;
 };
-type SafeSourceCandidate = {
+export type SafeSourceCandidate = {
   id: string;
   sourceType: "google_sheet_source" | "google_sheet_tab" | "raw_external_dataset";
   label: string;
   description: string;
 };
-type SourceCandidatesData = { candidates: SafeSourceCandidate[] };
+export type SourceCandidatesData = { candidates: SafeSourceCandidate[] };
 type BindingsData = {
   sourceBindings: Row[];
   adAccountBindings: Row[];
@@ -251,6 +251,7 @@ const PLACEHOLDER_PATTERNS = [
   "demo",
   "mock",
   "test_upload",
+  "test_upload_parser_small.csv",
   "backend_test",
 ];
 
@@ -1695,6 +1696,52 @@ function extractBindingId(response: unknown): string | null {
 }
 
 
+export function formatSourceCandidateLabel({
+  sourceType,
+  name,
+  parentName,
+  lang = "uk",
+}: {
+  sourceType: SafeSourceCandidate["sourceType"];
+  name: string;
+  parentName?: string;
+  lang?: Lang;
+}) {
+  const cleanName = name.trim();
+  const cleanParentName = parentName?.trim() ?? "";
+
+  if (sourceType === "google_sheet_source" && isGoogleSheetTemplateName(cleanName)) {
+    return lang === "en" ? "Google Sheet — data template" : "Google Sheet — шаблон даних";
+  }
+
+  if (sourceType === "google_sheet_tab") {
+    return cleanName || cleanParentName || "Google Sheet tab";
+  }
+
+  return cleanName || "—";
+}
+
+function isGoogleSheetTemplateName(value: string) {
+  return value.toLowerCase() === "insight_hub_dev_google_sheet_template";
+}
+
+function isInternalTestSourceCandidate(row: Row) {
+  const text = [
+    row.dataset_name,
+    row.sheet_name,
+    row.source_type,
+    row.parser_type,
+    row.target_raw_table,
+  ].map(asText).join(" ").toLowerCase();
+  return [
+    "test_upload_parser_small.csv",
+    "test_upload_",
+    "backend_test",
+    "mock",
+    "demo",
+  ].some((pattern) => text.includes(pattern));
+}
+
 async function readSourceCandidates(): Promise<SourceCandidatesData> {
   const [sheets, tabs, datasets] = await Promise.all([
     supabase
@@ -1723,7 +1770,10 @@ async function readSourceCandidates(): Promise<SourceCandidatesData> {
     .map((row) => ({
       id: asText(row.id),
       sourceType: "google_sheet_source" as const,
-      label: asText(row.spreadsheet_name) || asText(row.spreadsheet_id) || asText(row.id),
+      label: formatSourceCandidateLabel({
+        sourceType: "google_sheet_source",
+        name: asText(row.spreadsheet_name) || asText(row.spreadsheet_id) || asText(row.id),
+      }),
       description: "Google Sheet",
     }));
   const tabCandidates = ((tabs.data ?? []) as Row[])
@@ -1737,12 +1787,16 @@ async function readSourceCandidates(): Promise<SourceCandidatesData> {
       return {
         id: asText(row.id),
         sourceType: "google_sheet_tab" as const,
-        label: [parentName, asText(row.tab_name)].filter(Boolean).join(" · ") || asText(row.id),
+        label: formatSourceCandidateLabel({
+          sourceType: "google_sheet_tab",
+          name: asText(row.tab_name) || asText(row.id),
+          parentName,
+        }),
         description: [asText(row.source_type) || "Google Sheet tab", asText(row.target_raw_table)].filter(Boolean).join(" · "),
       };
     });
   const datasetCandidates = ((datasets.data ?? []) as Row[])
-    .filter((row) => !isInactiveStatus(row.status))
+    .filter((row) => !isInactiveStatus(row.status) && !isInternalTestSourceCandidate(row))
     .map((row) => ({
       id: asText(row.id),
       sourceType: "raw_external_dataset" as const,
@@ -3174,7 +3228,7 @@ function isSelectableHierarchyRow(row: Row) {
 }
 
 
-function buildSourceFormOptions(
+export function buildSourceFormOptions(
   data: BindingsData | undefined,
   sourceData: SourceCandidatesData | undefined,
   form: Record<string, string>,
@@ -3185,7 +3239,7 @@ function buildSourceFormOptions(
   return {
     sources: (sourceData?.candidates ?? []).map((source) => ({
       value: source.id,
-      label: source.label,
+      label: localizeSourceCandidateLabel(source, lang),
       description: source.description,
     })),
     clients: hierarchy.clients,
@@ -3194,6 +3248,13 @@ function buildSourceFormOptions(
     projectEmptyText: hierarchy.projectEmptyText,
     funnelEmptyText: hierarchy.funnelEmptyText,
   };
+}
+
+function localizeSourceCandidateLabel(source: SafeSourceCandidate, lang: Lang) {
+  if (source.sourceType === "google_sheet_source" && (source.label === "Google Sheet — шаблон даних" || source.label === "Google Sheet — data template")) {
+    return formatSourceCandidateLabel({ sourceType: source.sourceType, name: "insight_hub_dev_google_sheet_template", lang });
+  }
+  return source.label;
 }
 
 function validateSourceForm(
