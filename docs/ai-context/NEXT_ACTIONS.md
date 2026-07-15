@@ -1,3 +1,4 @@
+- Verify in production that `/imports` no longer introduces horizontal page scroll at normal desktop widths, selected file names truncate safely with the clear-file control, and the compact success summary can be dismissed without deleting uploaded data.
 ## 2026-07-15 — Imports upload frontend hotfix follow-up
 
 - Verify in production that `/imports` shows the aligned localized upload card, Ukrainian labels for file picker/source type while the parse-all-sheets switch remains On / Off, and the success summary after `file-upload-parser` returns success.
