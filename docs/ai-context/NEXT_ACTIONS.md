@@ -1,4 +1,9 @@
 
+## 2026-07-15 — Final Data Bindings UX polish: source candidates and status labels
+
+Frontend-only final Data Bindings UX polish: status values are formatted for users, Data Sources empty/candidate state is clarified, and the Overview zero file/table binding copy now describes zero active visible source bindings. No backend/Supabase/migrations/RPC/RLS/Edge Functions/production data changed.
+
+
 ## Next Action — 2026-07-15 Bindings Crash Fix Production Smoke Test
 
 After merge/deploy, smoke-test `/bindings` in production to confirm the page opens without the global ErrorBoundary and verify Ads Connectors unbound account cards still show the account identity/status fields plus one concise unbound-account helper. No Supabase migration, RPC, RLS, Edge Function, OAuth, sync, archive/restore, or production data action is required for this frontend-only fix.

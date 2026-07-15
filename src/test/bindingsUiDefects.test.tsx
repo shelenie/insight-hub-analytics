@@ -11,9 +11,11 @@ import {
   BindingRowActions,
   RestoreBindingDialog,
   SourceBindingsBusinessTable,
+  SourceBindingsEmptyState,
   formatBindingSourceName,
 } from "@/pages/Bindings";
 import { workspaceRoleQueryKey } from "@/hooks/useWorkspaceRole";
+import { readFileSync } from "node:fs";
 
 vi.mock("@/auth/AuthProvider", () => ({ useAuth: () => ({ session: null }) }));
 vi.mock("@/integrations/supabase/client", () => ({ supabase: { functions: { invoke: vi.fn() } } }));
@@ -112,6 +114,51 @@ describe("Bindings confirmed UI defects", () => {
     expect(screen.getByText("Лише перегляд")).toBeTruthy();
   });
 
+
+
+  it("formats backend binding statuses instead of exposing raw values", () => {
+    renderWithI18n(
+      <SourceBindingsBusinessTable
+        rows={[{ ...activeRow, mapping_status: "pending", binding_status: "needs binding" }]}
+        canManage={false}
+        roleLoading={false}
+        onEdit={vi.fn()}
+        onArchive={vi.fn()}
+        onRestore={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Потрібна прив’язка")).toBeTruthy();
+    expect(screen.queryByText("needs binding")).toBeNull();
+  });
+
+  it("shows a useful Data Sources empty state with available source candidates", () => {
+    renderWithI18n(
+      <SourceBindingsEmptyState
+        candidates={[{ value: "source-1", label: "Revenue Sheet · Leads", description: "Google Sheet · Leads" }]}
+      />,
+    );
+
+    expect(screen.getByText("Поки немає активних прив’язок джерел. Доступні джерела можна прив’язати до клієнта, проєкту або воронки.")).toBeTruthy();
+    expect(screen.getByText("Доступні джерела для прив’язки")).toBeTruthy();
+    expect(screen.getByText("Ці джерела вже знайдені системою, але ще не прив’язані до клієнта, проєкту або воронки.")).toBeTruthy();
+    expect(screen.getByText("Revenue Sheet · Leads")).toBeTruthy();
+    expect(screen.getByText("Можна вибрати для прив’язки")).toBeTruthy();
+  });
+
+  it("shows the no-candidates source empty state when no candidates are available", () => {
+    renderWithI18n(<SourceBindingsEmptyState candidates={[]} />);
+
+    expect(screen.getByText("Поки немає підключених файлів або таблиць. Спочатку додайте або синхронізуйте джерело даних.")).toBeTruthy();
+    expect(screen.queryByText("Доступні джерела для прив’язки")).toBeNull();
+  });
+
+  it("keeps the /bindings filterByOperationalStatus import intact", () => {
+    const source = readFileSync("src/pages/Bindings.tsx", "utf8");
+
+    expect(source).toContain("filterByOperationalStatus,");
+    expect(source).toContain("@/lib/activeArchiveFilters");
+  });
 
 
   it("uses fixed-pixel Source table columns with a compact primary column", () => {

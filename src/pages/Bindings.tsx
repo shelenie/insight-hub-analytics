@@ -213,6 +213,14 @@ const FRIENDLY_VALUE_LABELS: Record<string, string | Record<Lang, string>> = {
   healthy: { uk: "Все гаразд", en: "Healthy" },
   manual: { uk: "Вручну", en: "Manual" },
   pending: { uk: "Очікує", en: "Pending" },
+  "needs binding": { uk: "Потрібна прив’язка", en: "Needs binding" },
+  needs_binding: { uk: "Потрібна прив’язка", en: "Needs binding" },
+  partially_bound: { uk: "Частково прив’язано", en: "Partially bound" },
+  accounts_discovered_no_bindings: { uk: "Акаунти знайдено, прив’язок немає", en: "Accounts found, no bindings" },
+  production_ready: { uk: "Готово", en: "Ready" },
+  ready: { uk: "Готово", en: "Ready" },
+  no_data: { uk: "Без даних", en: "No data" },
+  blocked: { uk: "Заблоковано", en: "Blocked" },
   rejected: { uk: "Відхилено", en: "Rejected" },
   resolved_not_applied: { uk: "Не застосовано", en: "Not applied" },
   source: { uk: "Джерело даних", en: "Data source" },
@@ -650,7 +658,9 @@ export default function Bindings() {
     {
       title: t("bindingsOverviewFilesTitle"),
       value: visibleBindingCounts.sourceBindings,
-      description: t("bindingsOverviewFilesDescription"),
+      description: visibleBindingCounts.sourceBindings === 0
+        ? t("bindingsOverviewFilesZeroDescription")
+        : t("bindingsOverviewFilesDescription"),
     },
     {
       title: t("bindingsOverviewAdAccountsTitle"),
@@ -673,6 +683,7 @@ export default function Bindings() {
       description: t("bindingsOverviewUnboundDescription"),
     },
   ];
+  const availableSourceCandidates = sourceFormOptions.sources;
   const connectionStatusCards = buildConnectionStatusCards(
     query.data,
     visibleBindingCounts,
@@ -1054,6 +1065,7 @@ export default function Bindings() {
                   ) : null}
                   <SourceBindingsBusinessTable
                     rows={filteredSourceBindings}
+                    candidates={availableSourceCandidates}
                     canManage={canManage}
                     roleLoading={roleLoading}
                     onArchive={(row) => setArchiveTarget({ row, type: "source" })}
@@ -2434,6 +2446,7 @@ export function AdAccountsBusinessTable({
   onRestore,
 }: {
   rows: Row[];
+  candidates?: SelectOption[];
   canManage: boolean;
   roleLoading: boolean;
   onEdit: (row: Row) => void;
@@ -2536,6 +2549,7 @@ export function AdAccountsBusinessTable({
 
 export function SourceBindingsBusinessTable({
   rows,
+  candidates = [],
   canManage,
   roleLoading,
   onEdit,
@@ -2543,6 +2557,7 @@ export function SourceBindingsBusinessTable({
   onRestore,
 }: {
   rows: Row[];
+  candidates?: SelectOption[];
   canManage: boolean;
   roleLoading: boolean;
   onEdit: (row: Row) => void;
@@ -2550,7 +2565,9 @@ export function SourceBindingsBusinessTable({
   onRestore: (row: Row) => void;
 }) {
   const { t } = useI18n();
-  if (rows.length === 0) return <p className="text-sm text-muted-foreground">{t("bindingsSourcesEmpty")}</p>;
+  if (rows.length === 0) {
+    return <SourceBindingsEmptyState candidates={candidates} />;
+  }
   return (
     <div className="overflow-x-auto rounded-xl border border-border/60 bg-card/40">
       <table className="w-full min-w-[990px] table-fixed text-left text-sm">
@@ -2611,6 +2628,37 @@ export function SourceBindingsBusinessTable({
   );
 }
 
+
+
+export function SourceBindingsEmptyState({ candidates }: { candidates: SelectOption[] }) {
+  const { t } = useI18n();
+  const hasCandidates = candidates.length > 0;
+
+  return (
+    <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-4">
+      <p className="text-sm font-medium text-foreground">
+        {hasCandidates ? t("bindingsSourcesEmptyWithCandidates") : t("bindingsSourcesEmptyNoCandidates")}
+      </p>
+      {hasCandidates ? (
+        <div className="mt-4 space-y-3">
+          <div>
+            <p className="text-sm font-semibold text-foreground">{t("bindingsSourceCandidatesTitle")}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{t("bindingsSourceCandidatesDescription")}</p>
+          </div>
+          <div className="grid gap-2 md:grid-cols-2">
+            {candidates.map((candidate) => (
+              <div key={candidate.value} className="rounded-lg border border-border/60 bg-card/70 p-3">
+                <p className="line-clamp-2 text-sm font-medium text-foreground" title={candidate.label}>{candidate.label}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{candidate.description || t("bindingsSourceCandidateTypeFallback")}</p>
+                <Badge variant="secondary" className="mt-2">{t("bindingsSourceCandidateSelectable")}</Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 export function BindingRowActions({
   row,
