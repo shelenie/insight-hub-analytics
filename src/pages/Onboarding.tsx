@@ -15,7 +15,8 @@ import { DeveloperDetails } from "@/components/common/DeveloperDetails";
 import { RefreshCw } from "lucide-react";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { Lang, TranslationKey } from "@/i18n/translations";
-import { countActiveClientDescendants, countActiveProjectDescendants, isActiveCascadeBindingStatus, isInactiveOnboardingStatus } from "@/lib/onboardingArchiveHelpers";
+import { isActiveCascadeBindingStatus, isInactiveOnboardingStatus } from "@/lib/onboardingArchiveHelpers";
+import { filterByOperationalStatus, type StatusFilter } from "@/lib/activeArchiveFilters";
 
 type OnboardingRow = Record<string, string | number | boolean | null>;
 
@@ -73,6 +74,10 @@ export default function Onboarding() {
   const [funnelError, setFunnelError] = useState("");
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const [archiveConfirm, setArchiveConfirm] = useState<ArchiveConfirmState>(null);
+  const [structureStatusFilter, setStructureStatusFilter] = useState<StatusFilter>("active");
+  const [clientStatusFilter, setClientStatusFilter] = useState<StatusFilter>("active");
+  const [projectStatusFilter, setProjectStatusFilter] = useState<StatusFilter>("active");
+  const [funnelStatusFilter, setFunnelStatusFilter] = useState<StatusFilter>("active");
   const { capabilities, isLoading: roleLoading, error: roleError } = useWorkspaceRole(WORKSPACE_ID);
   const canManageOnboarding = capabilities.can_manage_onboarding;
   const canEditOnboarding = Boolean(session) && canManageOnboarding && !roleLoading;
@@ -236,10 +241,15 @@ export default function Onboarding() {
   });
 
   const hierarchyRows = useMemo(() => filterRows(onboardingQuery.data?.hierarchy ?? []), [onboardingQuery.data?.hierarchy]);
+  const visibleHierarchyRows = useMemo(() => filterHierarchyRows(hierarchyRows, structureStatusFilter), [hierarchyRows, structureStatusFilter]);
+  const activeHierarchyRows = useMemo(() => filterHierarchyRows(hierarchyRows, "active"), [hierarchyRows]);
+  const visibleClients = useMemo(() => filterByOperationalStatus(clients, clientStatusFilter), [clientStatusFilter, clients]);
+  const visibleProjects = useMemo(() => filterByOperationalStatus(projects, projectStatusFilter), [projectStatusFilter, projects]);
+  const visibleFunnels = useMemo(() => filterByOperationalStatus(funnels, funnelStatusFilter), [funnelStatusFilter, funnels]);
 
   const groupedHierarchy = useMemo(() => {
     const byClient = new Map<string, HierarchySummary>();
-    for (const row of hierarchyRows) {
+    for (const row of visibleHierarchyRows) {
       const clientName = hierarchyDisplayName(row, "client", t);
       const projectName = hierarchyDisplayName(row, "project", t);
       const funnelName = hasFunnelReference(row) ? hierarchyDisplayName(row, "funnel", t) : "";
@@ -253,13 +263,15 @@ export default function Onboarding() {
       if (funnelName) client.projects.get(projectKey)?.funnels.add(funnelName);
     }
     return Array.from(byClient.values());
-  }, [hierarchyRows, t]);
+  }, [visibleHierarchyRows, t]);
 
-  const unnamedHierarchySummary = useMemo(() => buildUnnamedHierarchySummary(hierarchyRows, t), [hierarchyRows, t]);
+  const unnamedHierarchySummary = useMemo(() => buildUnnamedHierarchySummary(visibleHierarchyRows, t), [visibleHierarchyRows, t]);
 
-  const projectCountByClient = useMemo(() => buildProjectCountByClient(projects, hierarchyRows), [hierarchyRows, projects]);
+  const activeProjectsForCounts = useMemo(() => filterByOperationalStatus(projects, "active"), [projects]);
+  const activeFunnelsForCounts = useMemo(() => filterByOperationalStatus(funnels, "active"), [funnels]);
+  const projectCountByClient = useMemo(() => buildProjectCountByClient(activeProjectsForCounts, activeHierarchyRows), [activeHierarchyRows, activeProjectsForCounts]);
 
-  const funnelCountByProject = useMemo(() => buildFunnelCountByProject(funnels, hierarchyRows), [funnels, hierarchyRows]);
+  const funnelCountByProject = useMemo(() => buildFunnelCountByProject(activeFunnelsForCounts, activeHierarchyRows), [activeFunnelsForCounts, activeHierarchyRows]);
 
   const healthDiagnostics = useMemo(() => buildHealthDiagnostics(healthRows, clients, projects, funnels, unnamedHierarchySummary, t), [clients, funnels, healthRows, projects, unnamedHierarchySummary, t]);
   const healthCards = useMemo(() => buildHealthCards(healthRows, clients, projects, funnels, healthDiagnostics.hasWarnings, t), [clients, funnels, healthDiagnostics.hasWarnings, healthRows, projects, t]);
@@ -299,9 +311,10 @@ export default function Onboarding() {
               </div>
 
               <TabsContent value="overview" className="mt-1"><SectionCard title={t("onboardingStructureTitle")} description={t("onboardingStructureDescription")}>
+                <StatusFilterSelect value={structureStatusFilter} onChange={setStructureStatusFilter} t={t} />
                 {unnamedHierarchySummary.hasUnnamed ? <NoticeBlock>{unnamedHierarchySummary.message} {t("onboardingCheckSource")}</NoticeBlock> : null}
                 {unnamedHierarchySummary.hasUnnamed ? <DeveloperDetails title={t("onboardingTechnicalDetails")}><UnnamedRowsDetails rows={unnamedHierarchySummary.rows} t={t} /></DeveloperDetails> : null}
-                {groupedHierarchy.length === 0 ? <EmptyMessage>{t("onboardingStructureEmpty")}</EmptyMessage> : <div className="space-y-3">{groupedHierarchy.map((client) => <div key={client.clientKey} className="rounded-md border border-border/70 bg-card/60 p-3"><p className="text-sm font-semibold text-foreground"><DisplayName value={client.clientName} /></p><div className="mt-2 space-y-2">{Array.from(client.projects.entries()).map(([projectKey, project]) => <div key={`${client.clientKey}-${projectKey}`} className="rounded-md bg-muted/40 p-2"><p className="text-sm font-medium"><DisplayName value={project.projectName} /></p>{project.funnels.size === 0 ? <p className="mt-1 text-xs text-muted-foreground">{t("onboardingNoFunnelsYet")}</p> : <ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground">{Array.from(project.funnels).map((funnelName) => <li key={`${client.clientKey}-${projectKey}-${funnelName}`}><DisplayName value={funnelName} /></li>)}</ul>}</div>)}</div></div>)}</div>}
+                {groupedHierarchy.length === 0 ? <EmptyMessage>{structureStatusFilter === "active" ? t("onboardingActiveRecordsEmpty") : t("onboardingStructureEmpty")}</EmptyMessage> : <div className="space-y-3">{groupedHierarchy.map((client) => <div key={client.clientKey} className="rounded-md border border-border/70 bg-card/60 p-3"><p className="text-sm font-semibold text-foreground"><DisplayName value={client.clientName} /></p><div className="mt-2 space-y-2">{Array.from(client.projects.entries()).map(([projectKey, project]) => <div key={`${client.clientKey}-${projectKey}`} className="rounded-md bg-muted/40 p-2"><p className="text-sm font-medium"><DisplayName value={project.projectName} /></p>{project.funnels.size === 0 ? <p className="mt-1 text-xs text-muted-foreground">{t("onboardingNoFunnelsYet")}</p> : <ul className="mt-1 list-disc pl-4 text-xs text-muted-foreground">{Array.from(project.funnels).map((funnelName) => <li key={`${client.clientKey}-${projectKey}-${funnelName}`}><DisplayName value={funnelName} /></li>)}</ul>}</div>)}</div></div>)}</div>}
               </SectionCard></TabsContent>
 
               <TabsContent value="clients" className="mt-1"><SectionCard title={t("onboardingClientsTitle")} description={t("onboardingClientsDescription")}>
@@ -316,7 +329,8 @@ export default function Onboarding() {
                 }}>
                   <DeveloperDetails title={t("onboardingTechnicalDetails")}><p>{t("onboardingClientId")}: {clientForm.client_id || t("onboardingAutoCreated")}</p></DeveloperDetails>
                 </UpsertPanel>
-                <EntityTable rows={clients} columns={["name", "client_code", "status", "created_at", "updated_at"]} countColumnTitle={t("onboardingProjectsCount")} countForRow={(row) => countForStrictMatches(projectCountByClient, safeClientMatches(row))} emptyText={t("onboardingRecordsEmpty")} canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "client_id"))} t={t} lang={lang} onEdit={(row) => setClientForm({ client_id: entityId(row, "client_id"), name: preferredName(row, "client"), code: asText(row.client_code), status: asText(row.status) || "active", originalStatus: asText(row.status) || "active" })} />
+                <StatusFilterSelect value={clientStatusFilter} onChange={setClientStatusFilter} t={t} />
+                <EntityTable rows={visibleClients} columns={["name", "client_code", "status", "created_at", "updated_at"]} countColumnTitle={t("onboardingProjectsCount")} countForRow={(row) => countForStrictMatches(projectCountByClient, safeClientMatches(row))} emptyText={clientStatusFilter === "active" ? t("onboardingActiveRecordsEmpty") : t("onboardingRecordsEmpty")} canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "client_id"))} t={t} lang={lang} onEdit={(row) => setClientForm({ client_id: entityId(row, "client_id"), name: preferredName(row, "client"), code: asText(row.client_code), status: asText(row.status) || "active", originalStatus: asText(row.status) || "active" })} />
               </SectionCard></TabsContent>
 
               <TabsContent value="projects" className="mt-1"><SectionCard title={t("onboardingProjectsTitle")} description={t("onboardingProjectsDescription")}>
@@ -332,7 +346,8 @@ export default function Onboarding() {
                 }}>
                   <SelectField disabled={!canEditOnboarding || projectMutation.isPending || clientsMissingClientId || Boolean(projectForm.project_id)} label={t("onboardingClient")} placeholder={t("onboardingSelectClient")} value={projectForm.client_id} options={clientOptions} emptyText={t("onboardingClientsEmptyCreateFirst")} onChange={(value) => setProjectForm((current) => ({ ...current, client_id: value }))} />
                 </UpsertPanel>
-                <EntityTable rows={projects} columns={["name", "client_name", "project_code", "status"]} countColumnTitle={t("onboardingFunnelsCount")} countForRow={(row) => countForStrictMatches(funnelCountByProject, safeProjectMatches(row))} emptyText={t("onboardingRecordsEmpty")} canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "project_id"))} t={t} lang={lang} onEdit={(row) => setProjectForm({ project_id: entityId(row, "project_id"), client_id: referenceId(row, "client_id") || clientIdByName.get(asText(row.client_name)) || "", name: preferredName(row, "project"), code: asText(row.project_code), status: asText(row.status) || "active", originalStatus: asText(row.status) || "active" })} />
+                <StatusFilterSelect value={projectStatusFilter} onChange={setProjectStatusFilter} t={t} />
+                <EntityTable rows={visibleProjects} columns={["name", "client_name", "project_code", "status"]} countColumnTitle={t("onboardingFunnelsCount")} countForRow={(row) => countForStrictMatches(funnelCountByProject, safeProjectMatches(row))} emptyText={projectStatusFilter === "active" ? t("onboardingActiveRecordsEmpty") : t("onboardingRecordsEmpty")} canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "project_id"))} t={t} lang={lang} onEdit={(row) => setProjectForm({ project_id: entityId(row, "project_id"), client_id: referenceId(row, "client_id") || clientIdByName.get(asText(row.client_name)) || "", name: preferredName(row, "project"), code: asText(row.project_code), status: asText(row.status) || "active", originalStatus: asText(row.status) || "active" })} />
               </SectionCard></TabsContent>
 
               <TabsContent value="funnels" className="mt-1"><SectionCard title={t("onboardingFunnelsTitle")} description={t("onboardingFunnelsDescription")}>
@@ -349,7 +364,8 @@ export default function Onboarding() {
                   <SelectField disabled={!canEditOnboarding || funnelMutation.isPending || Boolean(funnelForm.funnel_id)} label={t("onboardingClient")} placeholder={t("onboardingAllClients")} value={funnelForm.client_id || "all"} emptyText={t("onboardingClientsEmptyCreateFirst")} options={clientOptions.length ? [{ value: "all", label: t("onboardingAllClients") }, ...clientOptions] : []} onChange={(value) => setFunnelForm((current) => ({ ...current, client_id: value === "all" ? "" : value, project_id: "" }))} />
                   <SelectField disabled={!canEditOnboarding || funnelMutation.isPending || projectsMissingProjectId || Boolean(funnelForm.funnel_id)} label={t("onboardingProject")} placeholder={t("onboardingSelectProject")} value={funnelForm.project_id} options={filteredProjectOptions} onChange={(value) => setFunnelForm((current) => ({ ...current, project_id: value }))} emptyText={funnelForm.client_id ? t("onboardingClientProjectsEmpty") : t("onboardingProjectsEmptyCreateFirst")} />
                 </UpsertPanel>
-                <EntityTable rows={funnels} columns={["name", "client_name", "project_name", "funnel_code", "status"]} emptyText={t("onboardingRecordsEmpty")} canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "funnel_id"))} t={t} lang={lang} onEdit={(row) => {
+                <StatusFilterSelect value={funnelStatusFilter} onChange={setFunnelStatusFilter} t={t} />
+                <EntityTable rows={visibleFunnels} columns={["name", "client_name", "project_name", "funnel_code", "status"]} emptyText={funnelStatusFilter === "active" ? t("onboardingActiveRecordsEmpty") : t("onboardingRecordsEmpty")} canEdit={canEditOnboarding} canEditRow={(row) => Boolean(entityId(row, "funnel_id"))} t={t} lang={lang} onEdit={(row) => {
                   const projectId = referenceId(row, "project_id") || projectIdByName.get(asText(row.project_name)) || "";
                   const projectOption = projectOptions.find((option) => option.value === projectId);
                   setFunnelForm({ funnel_id: entityId(row, "funnel_id"), client_id: projectOption?.clientId ?? (referenceId(row, "client_id") || clientIdByName.get(asText(row.client_name)) || ""), project_id: projectId, name: preferredName(row, "funnel"), code: asText(row.funnel_code), status: asText(row.status) || "active", originalStatus: asText(row.status) || "active" });
@@ -424,6 +440,20 @@ function countArchiveScope({ scope, id, projects, funnels, sourceBindings, adAcc
   return { activeProjects: scope === "client" ? projects.filter((row) => inScope(row) && !isInactiveStatus(asText(row.status))).length : 0, activeFunnels: scope !== "funnel" ? funnels.filter((row) => inScope(row) && !isInactiveStatus(asText(row.status))).length : 0, activeSourceBindings: sourceBindings.filter((row) => inScope(row) && isActiveBindingStatus(row)).length, activeAdAccountBindings: adAccountBindings.filter((row) => inScope(row) && isActiveBindingStatus(row)).length };
 }
 function isActiveBindingStatus(row: OnboardingRow) { return isActiveCascadeBindingStatus(row); }
+
+function StatusFilterSelect({ value, onChange, t }: { value: StatusFilter; onChange: (value: StatusFilter) => void; t: (key: TranslationKey) => string }) {
+  return <div className="mb-3 flex flex-wrap items-center gap-2 text-sm"><span className="text-muted-foreground">{t("onboardingStatusFilterLabel")}</span><Select value={value} onValueChange={(next) => onChange(next as StatusFilter)}><SelectTrigger className="h-9 w-[160px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">{t("onboardingStatusFilterActive")}</SelectItem><SelectItem value="archived">{t("onboardingStatusFilterArchived")}</SelectItem><SelectItem value="all">{t("onboardingStatusFilterAll")}</SelectItem></SelectContent></Select></div>;
+}
+function rowStatusForEntity(row: OnboardingRow, entity: "client" | "project" | "funnel") { return asText(row[`${entity}_status`] ?? row.status); }
+function filterHierarchyRows(rows: OnboardingRow[], filter: StatusFilter) {
+  if (filter === "all") return rows;
+  return rows.filter((row) => {
+    const statuses = [rowStatusForEntity(row, "client") || "active"];
+    if (hasProjectReference(row)) statuses.push(rowStatusForEntity(row, "project") || "active");
+    if (hasFunnelReference(row)) statuses.push(rowStatusForEntity(row, "funnel") || "active");
+    return filter === "active" ? statuses.every((status) => status === "active") : statuses.some((status) => status === "archived");
+  });
+}
 function ArchiveConfirmDialog({ state, t, onCancel, onConfirm }: { state: ArchiveConfirmState; t: (key: TranslationKey) => string; onCancel: () => void; onConfirm: () => void }) {
   const counts = state?.counts;
   return <AlertDialog open={Boolean(state)} onOpenChange={(open) => { if (!open) onCancel(); }}><AlertDialogContent><AlertDialogHeader><AlertDialogTitle>{t("onboardingArchiveDialogTitle")}</AlertDialogTitle><AlertDialogDescription asChild><div className="space-y-3"><p>{formatArchiveIntro(state?.scope, t)}</p>{state?.name ? <p className="font-semibold text-foreground">{state.name}</p> : null}{counts ? <div className="space-y-1 tabular-nums text-foreground">{state?.scope === "client" ? <p>{t("onboardingArchiveActiveProjects")} — {counts.activeProjects}</p> : null}{state?.scope !== "funnel" ? <p>{t("onboardingArchiveActiveFunnels")} — {counts.activeFunnels}</p> : null}<p>{t("onboardingArchiveActiveSourceBindings")} — {counts.activeSourceBindings}</p><p>{t("onboardingArchiveActiveAdAccountBindings")} — {counts.activeAdAccountBindings}</p></div> : null}<p>{t("onboardingArchiveRestoreOrder")}</p></div></AlertDialogDescription></AlertDialogHeader><AlertDialogFooter><AlertDialogCancel>{t("onboardingCancel")}</AlertDialogCancel><AlertDialogAction onClick={(event) => { event.preventDefault(); onConfirm(); }}>{t("onboardingArchiveConfirmAction")}</AlertDialogAction></AlertDialogFooter></AlertDialogContent></AlertDialog>;

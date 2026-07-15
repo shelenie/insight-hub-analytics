@@ -1,3 +1,13 @@
+
+## Review Follow-up — 2026-07-15 Onboarding Active Descendant Counts
+
+Review feedback for PR #256 was addressed locally. Onboarding descendant count maps now use explicit active-only Project/Funnel datasets and active-only hierarchy fallback rows, so default active Clients and Projects views do not count archived or inactive child records. This follow-up remains frontend-only and does not change Supabase schema, migrations, RPCs, RLS, Edge Functions, archive/delete logic, production data, CI configuration, Ads connector logic, or Bindings table geometry.
+
+
+## Local Frontend Fix — 2026-07-15 Active/Archived Workspace View Filtering
+
+A frontend-only fix is prepared locally to stop archived operational records from leaking into default active workspace views. `/onboarding` now defaults Clients, Projects, Funnels, and Structure to active-only views with Active / Archived / All filters, active-view empty-state guidance, and active-descendant counts that exclude archived/inactive children. `/bindings` now filters Project bindings by binding status plus already-loaded Client/Project/Funnel statuses, defaults the Project bindings tab to active-only, exposes Active / Archived / All filters, and uses the same active-only Project binding set for the Overview “Контекст проєктів” count. No Supabase schema, migrations, RPCs, RLS, Edge Functions, archive/delete logic, production data, CI configuration, or Ads connector logic was changed.
+
 ## Local Frontend Fix — 2026-07-14 Bindings Compact Geometry Regression Fix
 
 A frontend-only `/bindings` regression fix is prepared locally. The Source table now uses the requested compact 990px fixed geometry with a 220px Source column, and the Ad Account table now uses the requested compact 1030px fixed geometry with a 210px Account column, removing the oversized 1095px/1155px table minimums that caused horizontal scroll and clipped right-side actions. Vertical-middle body cells, two-line primary name clamps, friendly Source names, two-line Updated timestamps, shared centered `BindingRowActions`, filters, unbound ad-account cards, archive/restore callbacks, permission loading, read-only states, data queries, toasts, Supabase migrations/RPCs/RLS/Edge Functions, CI configuration, and production data were not changed. Local repository has no Git remote configured, so syncing from latest `main` could not be performed in this container.
