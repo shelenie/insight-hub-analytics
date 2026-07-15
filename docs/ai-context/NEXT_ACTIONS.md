@@ -1,4 +1,5 @@
 ## 2026-07-15 — Imports upload layout hotfix review
+- Verify in production that `/imports` keeps the compact wrapping upload layout without horizontal page scroll, clears the selected file after a successful parser response while preserving the success summary, and shows the Data Bindings CTA on the right side of the success panel.
 
 Review the frontend-only Imports upload layout hotfix on `/imports`: confirm the page has no horizontal scrollbar at normal desktop widths, selected filename chips truncate safely with a compact clear control, the success confirmation remains compact/dismissible, and Data Bindings still contains uploaded data. No backend/Supabase/migrations/RLS/RPC/Edge Function/storage/production data changes were made.
 

@@ -1,4 +1,11 @@
-import { ChangeEvent, FormEvent, RefObject, useMemo, useRef, useState } from "react";
+import {
+  ChangeEvent,
+  FormEvent,
+  RefObject,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle,
@@ -16,7 +23,13 @@ import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import {
   Table,
@@ -39,7 +52,10 @@ import {
   validateImportFile,
   WORKSPACE_ID,
 } from "@/imports/upload";
-import { normalizeUploadResult, type UploadResultSummary } from "@/imports/normalizeUploadResult";
+import {
+  normalizeUploadResult,
+  type UploadResultSummary,
+} from "@/imports/normalizeUploadResult";
 
 const ROUTES = {
   bindings: "/bindings",
@@ -150,16 +166,32 @@ type NormalizedAlert = {
   isOpen: boolean | null;
 };
 
-
-type UploadErrorKind = "unsupported" | "too_large" | "storage" | "parser" | "missing_file";
+type UploadErrorKind =
+  | "unsupported"
+  | "too_large"
+  | "storage"
+  | "parser"
+  | "missing_file";
 
 type UploadErrorState = { kind: UploadErrorKind; technicalDetails?: string };
 
-const SOURCE_TYPE_OPTIONS: { value: ImportSourceType; labelUk: string; labelEn: string }[] = [
-  { value: "manual_file_upload", labelUk: "Авто / невідомо", labelEn: "Auto / Unknown" },
+const SOURCE_TYPE_OPTIONS: {
+  value: ImportSourceType;
+  labelUk: string;
+  labelEn: string;
+}[] = [
+  {
+    value: "manual_file_upload",
+    labelUk: "Авто / невідомо",
+    labelEn: "Auto / Unknown",
+  },
   { value: "traffic", labelUk: "Трафік", labelEn: "Traffic" },
   { value: "registrations", labelUk: "Реєстрації", labelEn: "Registrations" },
-  { value: "applications", labelUk: "Заявки / ліди", labelEn: "Applications / Leads" },
+  {
+    value: "applications",
+    labelUk: "Заявки / ліди",
+    labelEn: "Applications / Leads",
+  },
   { value: "bookings", labelUk: "Бронювання", labelEn: "Bookings" },
   { value: "questionnaires", labelUk: "Анкети", labelEn: "Questionnaires" },
   { value: "sales", labelUk: "Продажі", labelEn: "Sales" },
@@ -184,9 +216,44 @@ const copy = {
     status: "Статус",
     actions: "Дії",
     open: "Відкрити",
-    intro: "Тут завантажуються файли від клієнтів і контролюється якість імпортів. Рекламні дані підтягуються через Ads конектори, а CSV/XLS/XLSX файли завантажуються напряму в систему.",
-    upload: { title: "Завантажити файл", desc: "Завантажте CSV, XLS або XLSX файл від клієнта. Файл буде збережено в системі, розпарсено і додано як джерело для подальшої прив’язки.", file: "Файл", headerRow: "Рядок заголовків", parseAllSheets: "Парсити всі аркуші", sourceType: "Тип джерела", submit: "Завантажити / розпарсити", uploading: "Завантаження…", supported: "CSV, TSV, TXT, XLS або XLSX до 15 MB", successTitle: "Файл оброблено.", successDesc: "Джерело додано в систему. Тепер його можна прив’язати до клієнта, проєкту або воронки у “Зв’язках даних”.", goBindings: "Перейти до зв’язків даних", originalFileName: "Файл", datasetsCount: "Джерела", rowsInserted: "Рядки", columnsCount: "Колонки", chooseFile: "Обрати файл", noFileSelected: "Файл ще не обрано", parseAllSheetsOn: "On", parseAllSheetsOff: "Off", clearFile: "Очистити файл", dismissSuccess: "Закрити" },
-    uploadErrors: { unsupported: "Цей тип файлу не підтримується. Завантажте CSV, TSV, TXT, XLS або XLSX.", tooLarge: "Файл завеликий. Максимальний розмір — 15 MB.", storage: "Не вдалося завантажити файл у сховище. Спробуйте ще раз або перевірте доступ.", parser: "Файл завантажено, але не вдалося його обробити. Перевірте структуру файлу або помилки імпорту нижче.", missingFile: "Оберіть файл для завантаження.", details: "Технічні деталі" },
+    intro:
+      "Тут завантажуються файли від клієнтів і контролюється якість імпортів. Рекламні дані підтягуються через Ads конектори, а CSV/XLS/XLSX файли завантажуються напряму в систему.",
+    upload: {
+      title: "Завантажити файл",
+      desc: "Завантажте CSV, XLS або XLSX файл від клієнта. Файл буде збережено в системі, розпарсено і додано як джерело для подальшої прив’язки.",
+      file: "Файл",
+      headerRow: "Рядок заголовків",
+      parseAllSheets: "Парсити всі аркуші",
+      sourceType: "Тип джерела",
+      submit: "Завантажити / розпарсити",
+      uploading: "Завантаження…",
+      supported: "CSV, TSV, TXT, XLS або XLSX до 15 MB",
+      successTitle: "Файл оброблено.",
+      successDesc:
+        "Джерело додано в систему. Тепер його можна прив’язати до клієнта, проєкту або воронки у “Зв’язках даних”.",
+      goBindings: "Перейти до зв’язків даних",
+      originalFileName: "Файл",
+      datasetsCount: "Джерела",
+      rowsInserted: "Рядки",
+      columnsCount: "Колонки",
+      chooseFile: "Обрати файл",
+      noFileSelected: "Файл ще не обрано",
+      parseAllSheetsOn: "On",
+      parseAllSheetsOff: "Off",
+      clearFile: "Очистити файл",
+      dismissSuccess: "Закрити",
+    },
+    uploadErrors: {
+      unsupported:
+        "Цей тип файлу не підтримується. Завантажте CSV, TSV, TXT, XLS або XLSX.",
+      tooLarge: "Файл завеликий. Максимальний розмір — 15 MB.",
+      storage:
+        "Не вдалося завантажити файл у сховище. Спробуйте ще раз або перевірте доступ.",
+      parser:
+        "Файл завантажено, але не вдалося його обробити. Перевірте структуру файлу або помилки імпорту нижче.",
+      missingFile: "Оберіть файл для завантаження.",
+      details: "Технічні деталі",
+    },
     review: "Перевірити",
     kpis: {
       health: "Стан даних",
@@ -242,7 +309,8 @@ const copy = {
       title: "Стан мапінгу",
       desc: "Привʼязка імпортованих джерел до бізнес-структури",
       error: "Не вдалося завантажити стан мапінгу.",
-      empty: "Рядків мапінгу поки немає. Якщо джерела вже додані, перевірте зв’язки даних.",
+      empty:
+        "Рядків мапінгу поки немає. Якщо джерела вже додані, перевірте зв’язки даних.",
       name: "Назва",
       sourceType: "Тип джерела",
       targetTable: "Цільова таблиця",
@@ -301,9 +369,44 @@ const copy = {
     status: "Status",
     actions: "Actions",
     open: "Open",
-    intro: "Upload client-provided files here and monitor import quality. Ad data comes from Ads Connectors, while CSV/XLS/XLSX files are uploaded directly into the system.",
-    upload: { title: "Upload file", desc: "Upload a CSV, XLS, or XLSX file from a client. The file will be stored in the system, parsed, and added as a source that can be bound later.", file: "File", headerRow: "Header row number", parseAllSheets: "Parse all sheets", sourceType: "Source type", submit: "Upload / Parse", uploading: "Uploading…", supported: "CSV, TSV, TXT, XLS, or XLSX up to 15 MB", successTitle: "File processed.", successDesc: "The source was added to the system. You can now bind it to a client, project, or funnel in Data Bindings.", goBindings: "Go to Data Bindings", originalFileName: "File", datasetsCount: "Datasets", rowsInserted: "Rows", columnsCount: "Columns", chooseFile: "Choose file", noFileSelected: "No file selected", parseAllSheetsOn: "On", parseAllSheetsOff: "Off", clearFile: "Clear file", dismissSuccess: "Dismiss" },
-    uploadErrors: { unsupported: "This file type is not supported. Upload CSV, TSV, TXT, XLS, or XLSX.", tooLarge: "The file is too large. Maximum size is 15 MB.", storage: "Could not upload the file to storage. Try again or check access.", parser: "The file was uploaded, but it could not be processed. Check the file structure or import errors below.", missingFile: "Choose a file to upload.", details: "Technical details" },
+    intro:
+      "Upload client-provided files here and monitor import quality. Ad data comes from Ads Connectors, while CSV/XLS/XLSX files are uploaded directly into the system.",
+    upload: {
+      title: "Upload file",
+      desc: "Upload a CSV, XLS, or XLSX file from a client. The file will be stored in the system, parsed, and added as a source that can be bound later.",
+      file: "File",
+      headerRow: "Header row number",
+      parseAllSheets: "Parse all sheets",
+      sourceType: "Source type",
+      submit: "Upload / Parse",
+      uploading: "Uploading…",
+      supported: "CSV, TSV, TXT, XLS, or XLSX up to 15 MB",
+      successTitle: "File processed.",
+      successDesc:
+        "The source was added to the system. You can now bind it to a client, project, or funnel in Data Bindings.",
+      goBindings: "Go to Data Bindings",
+      originalFileName: "File",
+      datasetsCount: "Datasets",
+      rowsInserted: "Rows",
+      columnsCount: "Columns",
+      chooseFile: "Choose file",
+      noFileSelected: "No file selected",
+      parseAllSheetsOn: "On",
+      parseAllSheetsOff: "Off",
+      clearFile: "Clear file",
+      dismissSuccess: "Dismiss",
+    },
+    uploadErrors: {
+      unsupported:
+        "This file type is not supported. Upload CSV, TSV, TXT, XLS, or XLSX.",
+      tooLarge: "The file is too large. Maximum size is 15 MB.",
+      storage:
+        "Could not upload the file to storage. Try again or check access.",
+      parser:
+        "The file was uploaded, but it could not be processed. Check the file structure or import errors below.",
+      missingFile: "Choose a file to upload.",
+      details: "Technical details",
+    },
     review: "Review",
     kpis: {
       health: "Data health",
@@ -359,7 +462,8 @@ const copy = {
       title: "Mapping health",
       desc: "Imported source bindings to business structure",
       error: "Could not load mapping health.",
-      empty: "No mapping rows yet. If sources are already added, check data bindings.",
+      empty:
+        "No mapping rows yet. If sources are already added, check data bindings.",
       name: "Name",
       sourceType: "Source type",
       targetTable: "Target table",
@@ -413,9 +517,12 @@ export default function Imports() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [headerRow, setHeaderRow] = useState(1);
   const [parseAllSheets, setParseAllSheets] = useState(true);
-  const [sourceType, setSourceType] = useState<ImportSourceType>("manual_file_upload");
+  const [sourceType, setSourceType] =
+    useState<ImportSourceType>("manual_file_upload");
   const [uploadError, setUploadError] = useState<UploadErrorState | null>(null);
-  const [uploadResult, setUploadResult] = useState<UploadResultSummary | null>(null);
+  const [uploadResult, setUploadResult] = useState<UploadResultSummary | null>(
+    null,
+  );
   const [isUploading, setIsUploading] = useState(false);
 
   const query = useQuery<ImportsData>({
@@ -526,7 +633,6 @@ export default function Imports() {
       ? "review"
       : "healthy";
 
-
   const handleClearFile = () => {
     setSelectedFile(null);
     setUploadError(null);
@@ -571,41 +677,59 @@ export default function Imports() {
     let uploadStage: "storage" | "parser" = "storage";
     try {
       const storagePath = buildImportStoragePath(selectedFile.name);
-      const storageUpload = await supabase.storage.from(FILE_IMPORTS_BUCKET).upload(storagePath, selectedFile, {
-        contentType: selectedFile.type || undefined,
-        upsert: false,
-      });
+      const storageUpload = await supabase.storage
+        .from(FILE_IMPORTS_BUCKET)
+        .upload(storagePath, selectedFile, {
+          contentType: selectedFile.type || undefined,
+          upsert: false,
+        });
 
       if (storageUpload.error) {
-        setUploadError({ kind: "storage", technicalDetails: storageUpload.error.message });
+        setUploadError({
+          kind: "storage",
+          technicalDetails: storageUpload.error.message,
+        });
         return;
       }
 
       uploadStage = "parser";
-      const parser = await supabase.functions.invoke(FILE_UPLOAD_PARSER_FUNCTION, {
-        body: {
-          workspace_id: WORKSPACE_ID,
-          storage_bucket: FILE_IMPORTS_BUCKET,
-          storage_path: storagePath,
-          original_file_name: selectedFile.name,
-          mime_type: selectedFile.type || null,
-          source_type: sourceType,
-          header_row: headerRow,
-          parse_all_sheets: parseAllSheets,
-          clear_previous: true,
-          metadata: { source: "imports_page_upload" },
+      const parser = await supabase.functions.invoke(
+        FILE_UPLOAD_PARSER_FUNCTION,
+        {
+          body: {
+            workspace_id: WORKSPACE_ID,
+            storage_bucket: FILE_IMPORTS_BUCKET,
+            storage_path: storagePath,
+            original_file_name: selectedFile.name,
+            mime_type: selectedFile.type || null,
+            source_type: sourceType,
+            header_row: headerRow,
+            parse_all_sheets: parseAllSheets,
+            clear_previous: true,
+            metadata: { source: "imports_page_upload" },
+          },
         },
-      });
+      );
 
       if (parser.error) {
-        setUploadError({ kind: "parser", technicalDetails: parser.error.message });
+        setUploadError({
+          kind: "parser",
+          technicalDetails: parser.error.message,
+        });
         return;
       }
 
       setUploadResult(normalizeUploadResult(parser.data, selectedFile.name));
+      setSelectedFile(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       void query.refetch();
     } catch (error) {
-      setUploadError({ kind: uploadStage, technicalDetails: getErrorMessage(error) });
+      setUploadError({
+        kind: uploadStage,
+        technicalDetails: getErrorMessage(error),
+      });
     } finally {
       setIsUploading(false);
     }
@@ -628,9 +752,7 @@ export default function Imports() {
           <Message>{ui.loading}</Message>
         ) : null}
 
-        {!signedOut ? (
-          <IntroBlock text={ui.intro} />
-        ) : null}
+        {!signedOut ? <IntroBlock text={ui.intro} /> : null}
 
         {!signedOut ? (
           <UploadCard
@@ -816,8 +938,13 @@ export default function Imports() {
                         >
                           {fmtNum(healthSummary.rejectedRowsLast24h)}
                         </HealthSummaryItem>
-                        <HealthSummaryItem label={ui.activity.latestRejectedRow}>
-                          {formatNullableDate(healthSummary.latestRejectedRowAt, lang)}
+                        <HealthSummaryItem
+                          label={ui.activity.latestRejectedRow}
+                        >
+                          {formatNullableDate(
+                            healthSummary.latestRejectedRowAt,
+                            lang,
+                          )}
                         </HealthSummaryItem>
                       </dl>
                     ) : null}
@@ -1189,105 +1316,219 @@ function UploadCard({
 }) {
   return (
     <SectionCard title={ui.upload.title} description={ui.upload.desc}>
-      <form className="flex max-w-full min-w-0 flex-col gap-3" onSubmit={onSubmit}>
-        <div className="max-w-full min-w-0 space-y-1.5">
+      <form
+        className="flex max-w-full min-w-0 flex-wrap items-end gap-3"
+        onSubmit={onSubmit}
+      >
+        <div className="min-w-0 max-w-[360px] flex-[1_1_260px] space-y-1.5">
           <Label htmlFor="import-file-upload">{ui.upload.file}</Label>
           <div className="flex min-h-10 min-w-0 items-center">
-            <Input ref={fileInputRef} id="import-file-upload" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" onChange={onFileChange} className="sr-only" />
-            <Label htmlFor="import-file-upload" className="inline-flex h-10 max-w-full cursor-pointer items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+            <Input
+              ref={fileInputRef}
+              id="import-file-upload"
+              type="file"
+              accept=".csv,.tsv,.txt,.xlsx,.xls"
+              onChange={onFileChange}
+              className="sr-only"
+            />
+            <Label
+              htmlFor="import-file-upload"
+              className="inline-flex h-10 max-w-full cursor-pointer items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
               {ui.upload.chooseFile}
             </Label>
           </div>
           {selectedFile ? (
             <div className="inline-flex h-6 max-w-full min-w-0 items-center gap-1 rounded-full border bg-muted/40 py-0.5 pl-2.5 pr-0.5 text-xs text-muted-foreground">
-              <span className="min-w-0 flex-1 truncate leading-none" title={selectedFile.name}>{selectedFile.name}</span>
-              <button type="button" onClick={onClearFile} aria-label={ui.upload.clearFile} className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground/80 transition-colors hover:bg-background/80 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1">
+              <span
+                className="min-w-0 flex-1 truncate leading-none"
+                title={selectedFile.name}
+              >
+                {selectedFile.name}
+              </span>
+              <button
+                type="button"
+                onClick={onClearFile}
+                aria-label={ui.upload.clearFile}
+                className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground/80 transition-colors hover:bg-background/80 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1"
+              >
                 <X className="h-2.5 w-2.5" />
               </button>
             </div>
           ) : (
-            <p className="min-h-4 min-w-0 truncate text-xs text-muted-foreground">{ui.upload.noFileSelected}</p>
+            <p className="min-h-4 min-w-0 truncate text-xs text-muted-foreground">
+              {ui.upload.noFileSelected}
+            </p>
           )}
-          <p className="min-h-4 text-xs text-muted-foreground">{ui.upload.supported}</p>
+          <p className="min-h-4 text-xs text-muted-foreground">
+            {ui.upload.supported}
+          </p>
         </div>
-        <div className="grid max-w-full min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-[140px_180px_minmax(180px,1fr)_minmax(180px,220px)] xl:items-start">
-          <div className="min-w-0 space-y-1.5">
-            <Label htmlFor="import-header-row">{ui.upload.headerRow}</Label>
-            <div className="flex min-h-10 min-w-0 items-center">
-              <Input id="import-header-row" type="number" min={1} value={headerRow} onChange={(event) => onHeaderRowChange(Math.max(1, Number(event.target.value) || 1))} />
-            </div>
+        <div className="w-[140px] min-w-0 space-y-1.5">
+          <Label htmlFor="import-header-row">{ui.upload.headerRow}</Label>
+          <div className="flex min-h-10 min-w-0 items-center">
+            <Input
+              id="import-header-row"
+              type="number"
+              min={1}
+              value={headerRow}
+              onChange={(event) =>
+                onHeaderRowChange(Math.max(1, Number(event.target.value) || 1))
+              }
+            />
           </div>
-          <div className="min-w-0 space-y-1.5">
-            <Label htmlFor="import-parse-all-sheets">{ui.upload.parseAllSheets}</Label>
-            <div className="flex min-h-10 min-w-0 items-center gap-2 rounded-md border px-3">
-              <Switch id="import-parse-all-sheets" checked={parseAllSheets} onCheckedChange={onParseAllSheetsChange} />
-              <span className="text-xs text-muted-foreground">{parseAllSheets ? ui.upload.parseAllSheetsOn : ui.upload.parseAllSheetsOff}</span>
-            </div>
+        </div>
+        <div className="w-[180px] min-w-0 space-y-1.5">
+          <Label htmlFor="import-parse-all-sheets">
+            {ui.upload.parseAllSheets}
+          </Label>
+          <div className="flex min-h-10 min-w-0 items-center gap-2 rounded-md border px-3">
+            <Switch
+              id="import-parse-all-sheets"
+              checked={parseAllSheets}
+              onCheckedChange={onParseAllSheetsChange}
+            />
+            <span className="text-xs text-muted-foreground">
+              {parseAllSheets
+                ? ui.upload.parseAllSheetsOn
+                : ui.upload.parseAllSheetsOff}
+            </span>
           </div>
-          <div className="min-w-0 space-y-1.5">
-            <Label>{ui.upload.sourceType}</Label>
-            <div className="flex min-h-10 min-w-0 items-center">
-              <Select value={sourceType} onValueChange={(value) => onSourceTypeChange(value as ImportSourceType)}>
-                <SelectTrigger className="min-w-0"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {SOURCE_TYPE_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>{lang === "uk" ? option.labelUk : option.labelEn}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        </div>
+        <div className="min-w-[200px] flex-[1_1_220px] space-y-1.5">
+          <Label>{ui.upload.sourceType}</Label>
+          <div className="flex min-h-10 min-w-0 items-center">
+            <Select
+              value={sourceType}
+              onValueChange={(value) =>
+                onSourceTypeChange(value as ImportSourceType)
+              }
+            >
+              <SelectTrigger className="min-w-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {SOURCE_TYPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {lang === "uk" ? option.labelUk : option.labelEn}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-          <div className="min-w-0 space-y-1.5 sm:col-span-2 xl:col-span-1 xl:self-end">
-            <Button type="submit" disabled={isUploading || Boolean(uploadError && uploadError.kind !== "missing_file")} className="h-10 w-full max-w-full gap-2 text-center leading-tight">
-              <Upload className="h-4 w-4" />
-              {isUploading ? ui.upload.uploading : ui.upload.submit}
-            </Button>
-          </div>
+        </div>
+        <div className="max-w-full flex-[0_1_260px] space-y-1.5">
+          <Button
+            type="submit"
+            disabled={
+              isUploading ||
+              Boolean(uploadError && uploadError.kind !== "missing_file")
+            }
+            className="h-10 w-full max-w-full gap-2 text-center leading-tight"
+          >
+            <Upload className="h-4 w-4" />
+            {isUploading ? ui.upload.uploading : ui.upload.submit}
+          </Button>
         </div>
       </form>
 
       {uploadError ? <UploadErrorMessage ui={ui} error={uploadError} /> : null}
-      {uploadResult ? <UploadSuccess ui={ui} result={uploadResult} onDismiss={onDismissSuccess} /> : null}
+      {uploadResult ? (
+        <UploadSuccess
+          ui={ui}
+          result={uploadResult}
+          onDismiss={onDismissSuccess}
+        />
+      ) : null}
     </SectionCard>
   );
 }
 
-function UploadErrorMessage({ ui, error }: { ui: Copy; error: UploadErrorState }) {
-  const text = error.kind === "unsupported" ? ui.uploadErrors.unsupported
-    : error.kind === "too_large" ? ui.uploadErrors.tooLarge
-      : error.kind === "storage" ? ui.uploadErrors.storage
-        : error.kind === "parser" ? ui.uploadErrors.parser
-          : ui.uploadErrors.missingFile;
+function UploadErrorMessage({
+  ui,
+  error,
+}: {
+  ui: Copy;
+  error: UploadErrorState;
+}) {
+  const text =
+    error.kind === "unsupported"
+      ? ui.uploadErrors.unsupported
+      : error.kind === "too_large"
+        ? ui.uploadErrors.tooLarge
+        : error.kind === "storage"
+          ? ui.uploadErrors.storage
+          : error.kind === "parser"
+            ? ui.uploadErrors.parser
+            : ui.uploadErrors.missingFile;
   return (
     <div className="mt-3 rounded-lg border border-destructive/25 bg-destructive-soft/20 p-3 text-sm text-destructive">
       <p className="font-medium">{text}</p>
-      {error.technicalDetails ? <details className="mt-2 text-xs"><summary className="cursor-pointer">{ui.uploadErrors.details}</summary><pre className="mt-2 whitespace-pre-wrap">{error.technicalDetails}</pre></details> : null}
+      {error.technicalDetails ? (
+        <details className="mt-2 text-xs">
+          <summary className="cursor-pointer">
+            {ui.uploadErrors.details}
+          </summary>
+          <pre className="mt-2 whitespace-pre-wrap">
+            {error.technicalDetails}
+          </pre>
+        </details>
+      ) : null}
     </div>
   );
 }
 
-function UploadSuccess({ ui, result, onDismiss }: { ui: Copy; result: UploadResultSummary; onDismiss: () => void }) {
+function UploadSuccess({
+  ui,
+  result,
+  onDismiss,
+}: {
+  ui: Copy;
+  result: UploadResultSummary;
+  onDismiss: () => void;
+}) {
   return (
     <div className="mt-3 max-w-full min-w-0 rounded-lg border border-success/25 bg-success-soft/20 px-3 py-2">
-      <div className="flex max-w-full min-w-0 items-start gap-2">
-        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-        <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold leading-5 text-success">{ui.upload.successTitle}</p>
-          <p className="mt-0.5 max-w-full min-w-0 truncate text-xs text-muted-foreground" title={result.original_file_name ?? undefined}>
-            {result.original_file_name ?? "—"} · {ui.upload.datasetsCount}: {formatNullableNumber(result.datasets_count)} · {ui.upload.rowsInserted}: {formatNullableNumber(result.rows_inserted)} · {ui.upload.columnsCount}: {formatNullableNumber(result.columns_count)}
-          </p>
+      <div className="flex max-w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-start">
+        <div className="flex min-w-0 flex-1 items-start gap-2">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold leading-5 text-success">
+              {ui.upload.successTitle}
+            </p>
+            <p
+              className="mt-0.5 max-w-full min-w-0 truncate text-xs text-muted-foreground"
+              title={result.original_file_name ?? undefined}
+            >
+              {result.original_file_name ?? "—"} · {ui.upload.datasetsCount}:{" "}
+              {formatNullableNumber(result.datasets_count)} ·{" "}
+              {ui.upload.rowsInserted}:{" "}
+              {formatNullableNumber(result.rows_inserted)} ·{" "}
+              {ui.upload.columnsCount}:{" "}
+              {formatNullableNumber(result.columns_count)}
+            </p>
+          </div>
         </div>
-        <button type="button" onClick={onDismiss} aria-label={ui.upload.dismissSuccess} className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-success-soft hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1">
-          <X className="h-3 w-3" />
-        </button>
-      </div>
-      <div className="mt-1.5 flex max-w-full min-w-0 items-center">
-        <Button asChild size="sm" className="h-7 max-w-full px-2 text-xs"><Link to={ROUTES.bindings} className="min-w-0"><span className="min-w-0 truncate">{ui.upload.goBindings}</span><ArrowUpRight className="ml-1 h-3 w-3 shrink-0" /></Link></Button>
+        <div className="flex max-w-full shrink-0 items-center gap-1 self-start sm:ml-auto">
+          <Button asChild size="sm" className="h-7 max-w-full px-2 text-xs">
+            <Link to={ROUTES.bindings} className="min-w-0">
+              <span className="min-w-0 truncate">{ui.upload.goBindings}</span>
+              <ArrowUpRight className="ml-1 h-3 w-3 shrink-0" />
+            </Link>
+          </Button>
+          <button
+            type="button"
+            onClick={onDismiss}
+            aria-label={ui.upload.dismissSuccess}
+            className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-success-soft hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+          >
+            <X className="h-3 w-3" />
+          </button>
+        </div>
       </div>
     </div>
   );
 }
-
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);
@@ -1295,9 +1536,12 @@ function getErrorMessage(error: unknown) {
 
 async function readImportsDashboard(): Promise<ImportsData> {
   const [health, errors, mappings, mappingReview, alerts] = await Promise.all([
-    supabase.rpc("get_import_health_summary" as never, {
-      p_workspace_id: WORKSPACE_ID,
-    } as never),
+    supabase.rpc(
+      "get_import_health_summary" as never,
+      {
+        p_workspace_id: WORKSPACE_ID,
+      } as never,
+    ),
     supabase
       .from("v_import_error_summary")
       .select(
@@ -1383,7 +1627,8 @@ function normalizeImportHealthSummary(
   if (!rows?.length) return null;
 
   const normalizedRows = rows.map((row) => {
-    const importHealthStatus = readString(row.import_health_status) || "unknown";
+    const importHealthStatus =
+      readString(row.import_health_status) || "unknown";
     const latestSyncStatus = readString(row.latest_sync_status) || "unknown";
     const latestSyncRowsFailed = toNumber(row.latest_sync_rows_failed);
     const openRejectedRows = toNumber(row.open_rejected_rows);
@@ -1427,8 +1672,9 @@ function normalizeImportHealthSummary(
       )?.importHealthStatus ?? "unknown",
     importHealthStatusKind,
     latestSyncStatus:
-      normalizedRows.find((row) => row.latestSyncStatusKind === latestSyncStatusKind)
-        ?.latestSyncStatus ?? "unknown",
+      normalizedRows.find(
+        (row) => row.latestSyncStatusKind === latestSyncStatusKind,
+      )?.latestSyncStatus ?? "unknown",
     latestSyncStatusKind,
     latestSyncAt: latestDate(normalizedRows.map((row) => row.latestSyncAt)),
     latestSyncRowsFailed: maxNumber(
@@ -1456,7 +1702,8 @@ function normalizeImportErrors(
     const severity = readString(row.severity) || "unknown";
     const status = readString(row.status) || "unknown";
     return {
-      source: readString(row.source_name) || readString(row.source_table) || "—",
+      source:
+        readString(row.source_name) || readString(row.source_table) || "—",
       sourceType: readString(row.source_type) || "—",
       errorCode: readString(row.error_code) || "—",
       severity,
@@ -1792,7 +2039,6 @@ function AvailabilityBoundary({
   return <>{children}</>;
 }
 
-
 function Message({
   children,
   helper,
@@ -1814,7 +2060,9 @@ function Message({
       <p className={cn("font-medium", tone === "error" && "text-destructive")}>
         {children}
       </p>
-      {helper ? <p className="mt-1 text-xs text-muted-foreground">{helper}</p> : null}
+      {helper ? (
+        <p className="mt-1 text-xs text-muted-foreground">{helper}</p>
+      ) : null}
     </div>
   );
 }

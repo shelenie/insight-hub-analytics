@@ -1,3 +1,7 @@
+## 2026-07-15 — Imports upload deployed layout regression fix
+
+Imports upload deployed layout regression fix: compact upload form restored with a safe wrapping layout and constrained controls, selected files now clear automatically after successful parser upload while the success summary remains visible, and the success CTA moved to the right-side action area. No backend, Supabase schema, migrations, RLS, RPC definitions, Edge Function code, storage bucket, file-upload-parser contract, upload parser payload, OAuth logic, Ads connector logic, Google Sheets connector logic, binding contracts, routes, production data, uploaded files, or Google Drive uploads changed.
+
 ## 2026-07-15 — Imports upload layout hotfix
 
 Imports upload layout hotfix: remaining horizontal overflow on `/imports` was fixed by constraining page/card/form/KPI wrappers, replacing the fixed upload grid with safer rows, compacting the selected file clear control, and making the inline success state truly compact with truncating filename text. No backend, Supabase schema, migrations, RLS, RPC definitions, Edge Function code, storage bucket, file-upload-parser contract, OAuth logic, Ads connector logic, Google Sheets connector logic, routes, production data, or uploaded files changed.
