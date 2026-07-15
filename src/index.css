@@ -6,6 +6,14 @@
    Graphite + soft violet. Single-accent system. */
 
 @layer base {
+  html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
   :root {
     /* Light — premium minimal */
     --background: 228 33% 98%;        /* #F7F7FB */

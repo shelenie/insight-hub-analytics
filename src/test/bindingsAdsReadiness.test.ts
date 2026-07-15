@@ -226,6 +226,18 @@ describe("Bindings ads multi-account readiness", () => {
     );
   });
 
+  it("supports known Bindings tab query params without new routes", () => {
+    expect(bindingsSource).toContain('import { useSearchParams } from "react-router-dom";');
+    expect(bindingsSource).toContain('const VALID_BINDINGS_TABS = new Set<BindingsTab>([');
+    for (const tab of ["overview", "source", "ad-account", "project-data", "mapping-review", "health"]) {
+      expect(bindingsSource).toContain(`"${tab}"`);
+    }
+    expect(bindingsSource).toContain('function parseBindingsTab(value: string | null): BindingsTab');
+    expect(bindingsSource).toContain(': "overview";');
+    expect(bindingsSource).toContain('parseBindingsTab(searchParams.get("tab"))');
+    expect(bindingsSource).toContain('setSearchParams(nextTab === "overview" ? {} : { tab: nextTab });');
+  });
+
   it("keeps routes, sidebar, tabs, and backend contracts unchanged", () => {
     expect(bindingsSource).toContain('value="ad-account"');
     expect(bindingsSource).toContain('"binding-create-or-update"');

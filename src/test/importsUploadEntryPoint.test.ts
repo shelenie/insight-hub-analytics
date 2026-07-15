@@ -208,21 +208,18 @@ describe("Imports production upload entry point", () => {
       '"flex-1 max-w-full min-w-0 overflow-x-hidden p-4 lg:p-6 animate-fade-in"',
     );
 
-    const bodyBlock = globalCss.slice(
-      globalCss.indexOf("  body {"),
-      globalCss.indexOf("  html {"),
-    );
-    const htmlBlock = globalCss.slice(
-      globalCss.indexOf("  html {"),
-      globalCss.indexOf("}", globalCss.indexOf("  html {")) + 1,
-    );
-    expect(bodyBlock).not.toContain("overflow-x");
-    expect(htmlBlock).not.toContain("overflow-x");
+    expect(globalCss).toContain(`html,
+  body,
+  #root {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }`);
   });
 
-  it("uses aligned label/control/helper rows without the old overflow-prone desktop grid", () => {
+  it("uses a controlled responsive upload grid instead of flex-wrap", () => {
     const formStart = importsPage.indexOf(
-      'className="flex max-w-full min-w-0 flex-wrap gap-x-3 gap-y-2"',
+      'className="grid max-w-full min-w-0 grid-cols-1 gap-x-3 gap-y-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[260px_160px_190px_minmax(220px,1fr)_250px] xl:items-start"',
     );
     const form = importsPage.slice(
       formStart,
@@ -230,33 +227,16 @@ describe("Imports production upload entry point", () => {
     );
 
     expect(formStart).toBeGreaterThanOrEqual(0);
-    expect(form).toContain("flex max-w-full min-w-0 flex-wrap gap-x-3 gap-y-2");
-    expect(form).toContain("max-w-[300px] flex-[1_1_240px]");
-    expect(form).toContain("flex-[0_0_140px]");
-    expect(form).toContain("flex-[0_0_180px]");
-    expect(form).toContain("max-w-[240px] flex-[1_1_200px]");
-    expect(form).toContain("min-w-[180px] max-w-[220px] flex-[0_1_220px]");
-    expect(form).toContain("grid-rows-[1rem_2.5rem_auto]");
-    expect(form).toContain("flex min-h-10 min-w-0 items-center");
+    expect(form).toContain("xl:grid-cols-[260px_160px_190px_minmax(220px,1fr)_250px]");
+    expect(form).toContain("grid-rows-[1rem_2.5rem_auto_auto]");
+    expect(form).toContain("xl:w-[250px]");
     expect(form).toContain('aria-hidden="true"');
     expect(form).toContain(
       'className="h-10 w-full max-w-full gap-2 text-center leading-tight"',
     );
     expect(form).toContain("truncate");
-    expect(form).not.toContain("items-end");
+    expect(form).not.toContain("flex max-w-full min-w-0 flex-wrap gap-x-3 gap-y-2");
     expect(form).not.toContain("whitespace-nowrap");
-    expect(form).not.toContain("grid max-w-full min-w-0 gap-3 sm:grid-cols-2");
-    expect(importsPage).not.toContain(
-      "lg:grid-cols-[minmax(0,300px)_140px_180px_minmax(180px,220px)_minmax(150px,220px)]",
-    );
-    expect(importsPage).not.toContain(
-      "xl:grid-cols-[minmax(0,1fr)_140px_180px_minmax(180px,220px)_minmax(150px,auto)]",
-    );
-    expect(form).not.toContain("lg:grid-cols-[");
-    expect(form).not.toContain("xl:grid-cols-[");
-    expect(form).not.toContain(
-      "lg:grid-cols-[minmax(240px,1.2fr)_140px_180px_200px_auto]",
-    );
   });
 
   it("adds min-width and max-width guards around imports page wrappers and KPI grids", () => {
@@ -311,10 +291,10 @@ describe("Imports production upload entry point", () => {
       'className="mt-0.5 max-w-full min-w-0 truncate text-xs text-muted-foreground"',
     );
     expect(importsPage).toContain(
-      'className="flex max-w-full min-w-0 flex-wrap items-center gap-1 self-start sm:ml-auto sm:justify-end"',
+      'className="flex shrink-0 items-center justify-end gap-1"',
     );
-    expect(importsPage).toContain('className="min-w-0 flex-1"');
-    expect(importsPage).toContain('className="flex min-w-0 items-start gap-2"');
+    expect(importsPage).toContain('className="min-w-0"');
+    expect(importsPage).toContain('className="flex min-w-0 items-center gap-2"');
     expect(importsPage).toContain(
       'className="h-7 max-w-full min-w-0 px-2 text-xs"',
     );
@@ -357,6 +337,6 @@ describe("Imports production upload entry point", () => {
     expect(importsPage).toContain('successTitle: "File processed."');
     expect(importsPage).toContain("result.datasets_count");
     expect(importsPage).toContain("result.rows_inserted");
-    expect(importsPage).toContain("to={ROUTES.bindings}");
+    expect(importsPage).toContain("to={`${ROUTES.bindings}?tab=source`}");
   });
 });
