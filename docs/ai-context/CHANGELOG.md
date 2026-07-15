@@ -1,3 +1,7 @@
+## 2026-07-15 — Imports upload frontend hotfix
+
+Imports upload frontend hotfix: upload card controls are aligned, source type labels and file-picker copy are localized, a custom app-style file picker replaces the visible native browser file input, and upload success handling now uses safe parser-response normalization plus try/catch/finally so the submit button does not remain loading after a successful parser response or unexpected frontend exception. No backend, Supabase schema, migrations, RLS, RPC definitions, Edge Function code, OAuth logic, Ads connector logic, Google Sheets connector logic, routes, production data, or uploaded files changed.
+
 
 ## 2026-07-15 — Production file upload entry point for Imports and Data Quality
 

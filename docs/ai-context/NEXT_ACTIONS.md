@@ -1,3 +1,8 @@
+## 2026-07-15 — Imports upload frontend hotfix follow-up
+
+- Verify in production that `/imports` shows the aligned localized upload card, Ukrainian labels for file picker/source type while the parse-all-sheets switch remains On / Off, and the success summary after `file-upload-parser` returns success.
+- Backend/Supabase follow-up is not required for this hotfix; no schema, migrations, RLS, RPC, Edge Function, route, production data, or uploaded files changed.
+
 
 ## 2026-07-15 — Imports upload entry point follow-up
 
