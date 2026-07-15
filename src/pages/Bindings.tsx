@@ -626,11 +626,20 @@ export default function Bindings() {
     [query.data?.mappingReviewQueue],
   );
   const firstQueue = filteredMappingReviewQueue[0];
+  const readinessPayload = query.data?.adsMultiAccountReadiness?.payload ?? {};
+  const unboundAdAccountCount = readNumber(readObject(readinessPayload, "summary"), "unbound_accounts") ?? readArray(readinessPayload, "binding_gaps").length;
+  const activeStructureCount = filterByOperationalStatus(query.data?.funnels ?? [], "active").length;
+  const bindingsNextAction = activeStructureCount === 0
+    ? t("bindingsOverviewNextActionStructure")
+    : unboundAdAccountCount > 0
+      ? t("bindingsOverviewNextActionUnbound").replace("{count}", String(unboundAdAccountCount))
+      : t("bindingsOverviewNextActionReady");
   const visibleBindingCounts = {
     sourceBindings: filteredSourceBindings.length,
     adAccountBindings: filteredAdAccountBindings.length,
     projectDataBindings: activeProjectDataBindings.length,
     mappingReviewQueue: filteredMappingReviewQueue.length,
+    unboundAdAccounts: unboundAdAccountCount,
   };
   const overviewCards = [
     {
@@ -652,6 +661,11 @@ export default function Bindings() {
       title: t("bindingsOverviewAwaitingConfirmationTitle"),
       value: visibleBindingCounts.mappingReviewQueue,
       description: t("bindingsOverviewAwaitingConfirmationDescription"),
+    },
+    {
+      title: t("bindingsOverviewUnboundTitle"),
+      value: visibleBindingCounts.unboundAdAccounts,
+      description: t("bindingsOverviewUnboundDescription"),
     },
   ];
   const connectionStatusCards = buildConnectionStatusCards(
@@ -935,6 +949,10 @@ export default function Bindings() {
                   {filteredMappingReviewQueue.length === 0 ? (
                     <p>{t("bindingsOverviewNoReview")}</p>
                   ) : null}
+                  <div className="rounded-md border border-border/70 bg-card/70 p-3 text-foreground">
+                    <p className="text-sm font-semibold">{t("bindingsOverviewNextActionTitle")}</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{bindingsNextAction}</p>
+                  </div>
                 </div>
               </SectionCard>
             </TabsContent>
