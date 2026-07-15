@@ -37,6 +37,11 @@ describe("production UX polish", () => {
     expect(translations).toContain('Активних прив’язок до проєктів немає');
   });
 
+  it("imports the active status helper used by the Bindings overview", () => {
+    expect(bindings).toContain("filterByOperationalStatus(query.data?.funnels ?? [], \"active\")");
+    expect(bindings).toContain("filterByOperationalStatus,\n  filterProjectBindings");
+  });
+
   it("renders production copy for bindings next action and unbound ads", () => {
     expect(bindings).toContain('bindingsOverviewNextActionTitle');
     expect(bindings).toContain('bindingsOverviewUnboundTitle');
@@ -51,6 +56,8 @@ describe("production UX polish", () => {
     expect(ads).toContain('ads-scheduled-sync-run');
     expect(ads).toContain('facebook-lead-ads-sync');
     expect(ads).toContain('Акаунт знайдений в Ads конекторах, але ще не прив’язаний');
+    expect(ads).toContain('This account was found in Ads Connectors but is not bound to a client, project, or funnel yet. Missing spend/campaign data does not mean the account is fake.');
+    expect(ads).toContain('unboundRealAccount ? null : <p className="text-xs text-muted-foreground">{accountNote}</p>');
     expect(ads).toContain('Lead Ads форми поки не знайдені. Вони з’являться');
     expect(ads).toContain('Окреме OAuth-підключення не потрібне');
   });

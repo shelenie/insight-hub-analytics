@@ -1,4 +1,9 @@
 
+## 2026-07-15 — Bindings Runtime Crash and Ads Connector Copy Follow-up
+
+Frontend-only follow-up for the production UX polish: `/bindings` now imports the active/archive helper it already uses for active Funnel counts, preventing the runtime crash from the missing `filterByOperationalStatus` symbol. Ads Connectors unbound account cards now show the unbound-account helper only once while preserving account status fields and unbound-account visibility. Added a focused production UX regression test for the Bindings helper import and unbound card copy. No Supabase queries, backend, migrations, RPCs, RLS, Edge Functions, OAuth, sync logic, routes, archive/restore behavior, or production data changed.
+
+
 ## 2026-07-15 — Production UX polish for Onboarding, Bindings, and Ads Connectors
 
 Frontend-only production UX polish for the connected setup flow: Onboarding → Зв’язки даних → Ads конектори. Sidebar Admin order now places Ads конектори directly after Зв’язки даних; Onboarding, Bindings, and Ads Connectors copy/empty states/overview guidance were tightened for operational readiness. No backend/Supabase/migrations/RPC/RLS/Edge Functions/production data changed.
