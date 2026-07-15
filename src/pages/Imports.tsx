@@ -622,7 +622,7 @@ export default function Imports() {
 
   return (
     <DashboardLayout title={t("importsTitle")} subtitle={t("importsSubtitle")}>
-      <div className="space-y-4">
+      <div className="max-w-full min-w-0 space-y-4">
         {signedOut ? <Message>{ui.signIn}</Message> : null}
         {!signedOut && isInitialLoading ? (
           <Message>{ui.loading}</Message>
@@ -665,7 +665,7 @@ export default function Imports() {
         ) : null}
 
         {!signedOut && !isInitialLoading ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid max-w-full min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <MetricCard
               title={ui.kpis.health}
               value={
@@ -749,7 +749,7 @@ export default function Imports() {
         ) : null}
 
         {!signedOut && !isInitialLoading ? (
-          <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+          <div className="grid max-w-full min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)]">
             <div className="space-y-4">
               <div id="import-health">
                 <SectionCard
@@ -1189,61 +1189,60 @@ function UploadCard({
 }) {
   return (
     <SectionCard title={ui.upload.title} description={ui.upload.desc}>
-      <form className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_140px_180px_minmax(180px,220px)_minmax(150px,auto)] xl:items-start" onSubmit={onSubmit}>
-        <div className="min-w-0 space-y-1.5 md:col-span-2 xl:col-span-1">
+      <form className="flex max-w-full min-w-0 flex-col gap-3" onSubmit={onSubmit}>
+        <div className="max-w-full min-w-0 space-y-1.5">
           <Label htmlFor="import-file-upload">{ui.upload.file}</Label>
-          <div className="flex min-h-10 items-center">
+          <div className="flex min-h-10 min-w-0 items-center">
             <Input ref={fileInputRef} id="import-file-upload" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" onChange={onFileChange} className="sr-only" />
-            <Label htmlFor="import-file-upload" className="inline-flex h-10 cursor-pointer items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+            <Label htmlFor="import-file-upload" className="inline-flex h-10 max-w-full cursor-pointer items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               {ui.upload.chooseFile}
             </Label>
           </div>
-          <div className="flex min-h-4 min-w-0 items-center gap-1 text-xs text-muted-foreground">
-            <p className="min-w-0 flex-1 truncate" title={selectedFile?.name ?? undefined}>{selectedFile?.name ?? ui.upload.noFileSelected}</p>
-            {selectedFile ? (
-              <button type="button" onClick={onClearFile} aria-label={ui.upload.clearFile} className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-                <X className="h-3.5 w-3.5" />
+          {selectedFile ? (
+            <div className="inline-flex h-6 max-w-full min-w-0 items-center gap-1 rounded-full border bg-muted/40 py-0.5 pl-2.5 pr-0.5 text-xs text-muted-foreground">
+              <span className="min-w-0 flex-1 truncate leading-none" title={selectedFile.name}>{selectedFile.name}</span>
+              <button type="button" onClick={onClearFile} aria-label={ui.upload.clearFile} className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-muted-foreground/80 transition-colors hover:bg-background/80 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1">
+                <X className="h-2.5 w-2.5" />
               </button>
-            ) : null}
-          </div>
+            </div>
+          ) : (
+            <p className="min-h-4 min-w-0 truncate text-xs text-muted-foreground">{ui.upload.noFileSelected}</p>
+          )}
           <p className="min-h-4 text-xs text-muted-foreground">{ui.upload.supported}</p>
         </div>
-        <div className="min-w-0 space-y-1.5">
-          <Label htmlFor="import-header-row">{ui.upload.headerRow}</Label>
-          <div className="flex min-h-10 items-center">
-            <Input id="import-header-row" type="number" min={1} value={headerRow} onChange={(event) => onHeaderRowChange(Math.max(1, Number(event.target.value) || 1))} />
+        <div className="grid max-w-full min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-[140px_180px_minmax(180px,1fr)_minmax(180px,220px)] xl:items-start">
+          <div className="min-w-0 space-y-1.5">
+            <Label htmlFor="import-header-row">{ui.upload.headerRow}</Label>
+            <div className="flex min-h-10 min-w-0 items-center">
+              <Input id="import-header-row" type="number" min={1} value={headerRow} onChange={(event) => onHeaderRowChange(Math.max(1, Number(event.target.value) || 1))} />
+            </div>
           </div>
-          <p className="min-h-4 text-xs text-muted-foreground">&nbsp;</p>
-        </div>
-        <div className="min-w-0 space-y-1.5">
-          <Label htmlFor="import-parse-all-sheets">{ui.upload.parseAllSheets}</Label>
-          <div className="flex min-h-10 items-center gap-2 rounded-md border px-3">
-            <Switch id="import-parse-all-sheets" checked={parseAllSheets} onCheckedChange={onParseAllSheetsChange} />
-            <span className="text-xs text-muted-foreground">{parseAllSheets ? ui.upload.parseAllSheetsOn : ui.upload.parseAllSheetsOff}</span>
+          <div className="min-w-0 space-y-1.5">
+            <Label htmlFor="import-parse-all-sheets">{ui.upload.parseAllSheets}</Label>
+            <div className="flex min-h-10 min-w-0 items-center gap-2 rounded-md border px-3">
+              <Switch id="import-parse-all-sheets" checked={parseAllSheets} onCheckedChange={onParseAllSheetsChange} />
+              <span className="text-xs text-muted-foreground">{parseAllSheets ? ui.upload.parseAllSheetsOn : ui.upload.parseAllSheetsOff}</span>
+            </div>
           </div>
-          <p className="min-h-4 text-xs text-muted-foreground">&nbsp;</p>
-        </div>
-        <div className="min-w-0 space-y-1.5">
-          <Label>{ui.upload.sourceType}</Label>
-          <div className="flex min-h-10 items-center">
-            <Select value={sourceType} onValueChange={(value) => onSourceTypeChange(value as ImportSourceType)}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {SOURCE_TYPE_OPTIONS.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>{lang === "uk" ? option.labelUk : option.labelEn}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="min-w-0 space-y-1.5">
+            <Label>{ui.upload.sourceType}</Label>
+            <div className="flex min-h-10 min-w-0 items-center">
+              <Select value={sourceType} onValueChange={(value) => onSourceTypeChange(value as ImportSourceType)}>
+                <SelectTrigger className="min-w-0"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SOURCE_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>{lang === "uk" ? option.labelUk : option.labelEn}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-          <p className="min-h-4 text-xs text-muted-foreground">&nbsp;</p>
-        </div>
-        <div className="min-w-0 space-y-1.5 md:col-span-2 xl:col-span-1">
-          <span className="block min-h-5 text-sm font-medium">&nbsp;</span>
-          <Button type="submit" disabled={isUploading || Boolean(uploadError && uploadError.kind !== "missing_file")} className="h-10 w-full gap-2 whitespace-nowrap">
-          <Upload className="h-4 w-4" />
-          {isUploading ? ui.upload.uploading : ui.upload.submit}
-          </Button>
-          <p className="min-h-4 text-xs text-muted-foreground">&nbsp;</p>
+          <div className="min-w-0 space-y-1.5 sm:col-span-2 xl:col-span-1 xl:self-end">
+            <Button type="submit" disabled={isUploading || Boolean(uploadError && uploadError.kind !== "missing_file")} className="h-10 w-full max-w-full gap-2 text-center leading-tight">
+              <Upload className="h-4 w-4" />
+              {isUploading ? ui.upload.uploading : ui.upload.submit}
+            </Button>
+          </div>
         </div>
       </form>
 
@@ -1269,30 +1268,26 @@ function UploadErrorMessage({ ui, error }: { ui: Copy; error: UploadErrorState }
 
 function UploadSuccess({ ui, result, onDismiss }: { ui: Copy; result: UploadResultSummary; onDismiss: () => void }) {
   return (
-    <div className="mt-3 rounded-lg border border-success/25 bg-success-soft/20 p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold text-success">{ui.upload.successTitle}</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{ui.upload.successDesc}</p>
+    <div className="mt-3 max-w-full min-w-0 rounded-lg border border-success/25 bg-success-soft/20 px-3 py-2">
+      <div className="flex max-w-full min-w-0 items-start gap-2">
+        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold leading-5 text-success">{ui.upload.successTitle}</p>
+          <p className="mt-0.5 max-w-full min-w-0 truncate text-xs text-muted-foreground" title={result.original_file_name ?? undefined}>
+            {result.original_file_name ?? "—"} · {ui.upload.datasetsCount}: {formatNullableNumber(result.datasets_count)} · {ui.upload.rowsInserted}: {formatNullableNumber(result.rows_inserted)} · {ui.upload.columnsCount}: {formatNullableNumber(result.columns_count)}
+          </p>
         </div>
-        <button type="button" onClick={onDismiss} aria-label={ui.upload.dismissSuccess} className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-success-soft hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
-          <X className="h-4 w-4" />
+        <button type="button" onClick={onDismiss} aria-label={ui.upload.dismissSuccess} className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-success-soft hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1">
+          <X className="h-3 w-3" />
         </button>
       </div>
-      <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-4">
-        <SummaryValue label={ui.upload.originalFileName} value={result.original_file_name ?? "—"} />
-        <SummaryValue label={ui.upload.datasetsCount} value={formatNullableNumber(result.datasets_count)} />
-        <SummaryValue label={ui.upload.rowsInserted} value={formatNullableNumber(result.rows_inserted)} />
-        <SummaryValue label={ui.upload.columnsCount} value={formatNullableNumber(result.columns_count)} />
-      </dl>
-      <Button asChild size="sm" className="mt-2 h-8"><Link to={ROUTES.bindings}>{ui.upload.goBindings}<ArrowUpRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
+      <div className="mt-1.5 flex max-w-full min-w-0 items-center">
+        <Button asChild size="sm" className="h-7 max-w-full px-2 text-xs"><Link to={ROUTES.bindings} className="min-w-0"><span className="min-w-0 truncate">{ui.upload.goBindings}</span><ArrowUpRight className="ml-1 h-3 w-3 shrink-0" /></Link></Button>
+      </div>
     </div>
   );
 }
 
-function SummaryValue({ label, value }: { label: string; value: string | number }) {
-  return <div><dt className="text-xs text-muted-foreground">{label}</dt><dd className="font-semibold">{value}</dd></div>;
-}
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : String(error);

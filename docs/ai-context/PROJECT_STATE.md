@@ -1,3 +1,7 @@
+## 2026-07-15 — Imports upload layout hotfix
+
+Imports upload layout hotfix: remaining horizontal overflow on `/imports` was fixed by constraining page/card/form/KPI wrappers, replacing the fixed upload grid with safer rows, compacting the selected file clear control, and making the inline success state truly compact with truncating filename text. No backend, Supabase schema, migrations, RLS, RPC definitions, Edge Function code, storage bucket, file-upload-parser contract, OAuth logic, Ads connector logic, Google Sheets connector logic, routes, production data, or uploaded files changed.
+
 ## 2026-07-15 — Imports upload final frontend polish
 
 Imports upload final frontend polish: horizontal overflow was removed from the `/imports` upload card, selected files can be cleared with an accessible app-control that resets only upload UI state, and the parser success summary is now compact and dismissible while retaining file/dataset/row/column details and the Data Bindings CTA. No backend, Supabase schema, migrations, RLS, RPC definitions, Edge Function code, storage bucket, file-upload-parser contract, OAuth logic, Ads connector logic, Google Sheets connector logic, routes, production data, or uploaded files changed.
