@@ -230,7 +230,7 @@ describe("AdsConnectors multi-account readiness UI", () => {
   it("uses non-production-safe operational readiness wording", () => {
     expect(source).toContain('operationalChecklist: "Операційна готовність"');
     expect(source).toContain('operationalChecklist: "Operational readiness"');
-    expect(source).toContain('production_ready: "Ready for operation"');
+    expect(source).toContain('production_ready: "Ready"');
     expect(source).not.toContain(
       'operationalChecklist: "Production readiness"',
     );
@@ -239,15 +239,15 @@ describe("AdsConnectors multi-account readiness UI", () => {
 
   it("has friendly readiness, binding-gap, and detail labels in Ukrainian and English", () => {
     for (const label of [
-      'partially_bound: "Частково привʼязано"',
-      'accounts_discovered_no_bindings: "Акаунти знайдені, але не привʼязані"',
-      'active_account_without_binding: "Потрібна привʼязка"',
+      'partially_bound: "Частково прив’язано"',
+      'accounts_discovered_no_bindings: "Акаунти знайдено, прив’язок немає"',
+      'active_account_without_binding: "Потрібна прив’язка"',
       'accountNameLabel: "Назва акаунта"',
       'externalAccountIdLabel: "Зовнішній ID"',
       'gapTypeLabel: "Тип проблеми"',
       'messageLabel: "Повідомлення"',
       'partially_bound: "Partially bound"',
-      'accounts_discovered_no_bindings: "Accounts found, not bound"',
+      'accounts_discovered_no_bindings: "Accounts found, no bindings"',
       'active_account_without_binding: "Needs binding"',
       'accountNameLabel: "Account name"',
       'externalAccountIdLabel: "External ID"',
@@ -262,7 +262,7 @@ describe("AdsConnectors multi-account readiness UI", () => {
 
   it("keeps binding terminology bound instead of linked", () => {
     expect(source).toContain('partially_bound: "Partially bound"');
-    expect(source).toContain('partially_bound: "Частково привʼязано"');
+    expect(source).toContain('partially_bound: "Частково прив’язано"');
     expect(source).toContain('needsBinding: "Needs binding"');
     expect(source).not.toContain("Partially linked");
     expect(source).not.toContain("partially linked");

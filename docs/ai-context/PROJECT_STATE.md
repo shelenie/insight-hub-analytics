@@ -1,4 +1,9 @@
 
+## 2026-07-15 — Final Data Bindings UX polish: source candidates and status labels
+
+Frontend-only final Data Bindings UX polish: status values are formatted for users, Data Sources empty/candidate state is clarified, and the Overview zero file/table binding copy now describes zero active visible source bindings. No backend/Supabase/migrations/RPC/RLS/Edge Functions/production data changed.
+
+
 ## 2026-07-15 — Bindings Runtime Crash and Ads Connector Copy Follow-up
 
 Frontend-only follow-up for the production UX polish: `/bindings` now imports the active/archive helper it already uses for active Funnel counts, preventing the runtime crash from the missing `filterByOperationalStatus` symbol. Ads Connectors unbound account cards now show the unbound-account helper only once while preserving account status fields and unbound-account visibility. Added a focused production UX regression test for the Bindings helper import and unbound card copy. No Supabase queries, backend, migrations, RPCs, RLS, Edge Functions, OAuth, sync logic, routes, archive/restore behavior, or production data changed.

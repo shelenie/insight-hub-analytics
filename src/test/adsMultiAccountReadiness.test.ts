@@ -132,3 +132,14 @@ describe("ads multi-account readiness diagnostics", () => {
     expect(edgeFunctionSource).toContain("answer: aiResult.answer");
   });
 });
+
+
+describe("Ads Connectors frontend status labels", () => {
+  it("does not expose raw needs binding status in Ukrainian cards", () => {
+    const source = readFileSync("src/pages/AdsConnectors.tsx", "utf8");
+
+    expect(source).toContain('"needs binding": "Потрібна прив’язка"');
+    expect(source).toContain('needs_binding: "Потрібна прив’язка"');
+    expect(source).not.toContain('"needs binding": "needs binding"');
+  });
+});
