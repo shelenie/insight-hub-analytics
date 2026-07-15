@@ -784,7 +784,7 @@ export const translations = {
   bindingsAdAccountsTitle: { uk: "Рекламні акаунти", en: "Ad accounts" },
   bindingsAdAccountsDescription: { uk: "Керуйте привʼязкою рекламних акаунтів до клієнтів, проєктів і воронок. ID передаються автоматично.", en: "Manage ad account bindings to clients, projects, and funnels. IDs are passed automatically." },
   bindingsProjectBindingsTitle: { uk: "Привʼязки до проєктів", en: "Project bindings" },
-  bindingsProjectBindingsDescription: { uk: "Це зведений перегляд активних зв’язків між джерелами, рекламними акаунтами та структурою Client → Project → Funnel. Це зведений перегляд наявних звʼязків без редагування.", en: "All sources already connected to clients, projects, and funnels. This is a consolidated read-only view of existing bindings. This is a consolidated view of active links between sources, ad accounts, and the Client → Project → Funnel structure." },
+  bindingsProjectBindingsDescription: { uk: "Це зведений перегляд активних звʼязків між джерелами, рекламними акаунтами та структурою Клієнт → Проєкт → Воронка.", en: "This is a consolidated view of active links between sources, ad accounts, and the Client → Project → Funnel structure." },
   bindingsProjectBindingsEmpty: { uk: "Звʼязків із проєктами поки немає.", en: "No project bindings yet." },
   bindingsMappingReviewTitle: { uk: "Мапінг на перевірку", en: "Mapping review" },
   bindingsMappingReviewDescription: { uk: "Тут зʼявлятимуться джерела, які система не змогла впевнено привʼязати автоматично.", en: "Sources that the system could not confidently bind automatically will appear here." },

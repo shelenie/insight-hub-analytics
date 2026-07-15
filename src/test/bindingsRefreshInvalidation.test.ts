@@ -112,10 +112,10 @@ describe("Bindings page ad account behavior", () => {
       'bindingsProjectBindingsTitle: { uk: "Привʼязки до проєктів", en: "Project bindings" }',
     );
     expect(translationsSource).toContain(
-      "Це зведений перегляд наявних звʼязків без редагування.",
+      "Це зведений перегляд активних звʼязків між джерелами, рекламними акаунтами та структурою Клієнт → Проєкт → Воронка.",
     );
     expect(translationsSource).toContain(
-      "All sources already connected to clients, projects, and funnels. This is a consolidated read-only view of existing bindings.",
+      "This is a consolidated view of active links between sources, ad accounts, and the Client → Project → Funnel structure.",
     );
     expect(translationsSource).toContain(
       'bindingsMappingReviewTitle: { uk: "Мапінг на перевірку", en: "Mapping review" }',

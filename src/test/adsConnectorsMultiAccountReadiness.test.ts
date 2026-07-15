@@ -112,10 +112,10 @@ describe("AdsConnectors multi-account readiness UI", () => {
     expect(source).toContain('needsBinding: "Needs binding"');
     expect(source).toContain("unboundRealAccountHelper:");
     expect(source).toContain(
-      "Акаунт існує на рекламній платформі, але ще не привʼязаний до клієнта, проєкту або воронки.",
+      "Акаунт знайдений в Ads конекторах, але ще не прив’язаний до клієнта, проєкту або воронки. Відсутність spend/campaign даних ще не означає, що акаунт фейковий.",
     );
     expect(source).toContain(
-      "This account exists on the ad platform but is not bound to a client, project, or funnel yet.",
+      "This account was found in Ads Connectors but is not bound to a client, project, or funnel yet. Missing spend/campaign data does not mean the account is fake.",
     );
     expect(source).toContain("isRealPlatformAccountBound(row)");
   });
