@@ -124,20 +124,29 @@ describe("Imports production upload entry point", () => {
     expect(importsPage).toContain('noFileSelected: "No file selected"');
     expect(importsPage).toContain('className="sr-only"');
     expect(importsPage).toContain('{ui.upload.chooseFile}');
-    expect(importsPage).toContain('{selectedFile?.name ?? ui.upload.noFileSelected}');
+    expect(importsPage).toContain('{ui.upload.noFileSelected}');
   });
 
 
   it("keeps the upload form responsive without a fixed overflow-prone desktop grid", () => {
-    const formStart = importsPage.indexOf('<form className="grid min-w-0 gap-3');
+    const formStart = importsPage.indexOf('<form className="flex max-w-full min-w-0 flex-col gap-3"');
     const form = importsPage.slice(formStart, importsPage.indexOf('</form>', formStart));
 
-    expect(form).toContain('grid min-w-0 gap-3 md:grid-cols-2');
-    expect(form).toContain('xl:grid-cols-[minmax(0,1fr)_140px_180px_minmax(180px,220px)_minmax(150px,auto)]');
-    expect(form).toContain('min-w-0 space-y-1.5');
-    expect(form).toContain('min-w-0 flex-1 truncate');
-    expect(form).toContain('className="h-10 w-full gap-2 whitespace-nowrap"');
+    expect(form).toContain('flex max-w-full min-w-0 flex-col gap-3');
+    expect(form).toContain('grid max-w-full min-w-0 gap-3 sm:grid-cols-2');
+    expect(form).toContain('xl:grid-cols-[140px_180px_minmax(180px,1fr)_minmax(180px,220px)]');
+    expect(form).toContain('max-w-full min-w-0 space-y-1.5');
+    expect(form).toContain('className="h-10 w-full max-w-full gap-2 text-center leading-tight"');
+    expect(form).not.toContain('whitespace-nowrap');
+    expect(importsPage).not.toContain('xl:grid-cols-[minmax(0,1fr)_140px_180px_minmax(180px,220px)_minmax(150px,auto)]');
+    expect(form).not.toContain('xl:grid-cols-[minmax(0,1fr)_140px_180px_minmax(180px,220px)_minmax(150px,auto)]');
     expect(form).not.toContain('lg:grid-cols-[minmax(240px,1.2fr)_140px_180px_200px_auto]');
+  });
+
+  it("adds min-width and max-width guards around imports page wrappers and KPI grids", () => {
+    expect(importsPage).toContain('className="max-w-full min-w-0 space-y-4"');
+    expect(importsPage).toContain('className="grid max-w-full min-w-0 gap-3 sm:grid-cols-2 xl:grid-cols-3"');
+    expect(importsPage).toContain('className="grid max-w-full min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(280px,320px)]"');
   });
 
   it("adds an accessible clear-file control and resets file upload UI state", () => {
@@ -145,6 +154,9 @@ describe("Imports production upload entry point", () => {
     expect(importsPage).toContain('clearFile: "Clear file"');
     expect(importsPage).toContain('const fileInputRef = useRef<HTMLInputElement | null>(null)');
     expect(importsPage).toContain('aria-label={ui.upload.clearFile}');
+    expect(importsPage).toContain('inline-flex h-6 max-w-full min-w-0 items-center gap-1 rounded-full');
+    expect(importsPage).toContain('<span className="min-w-0 flex-1 truncate leading-none" title={selectedFile.name}>{selectedFile.name}</span>');
+    expect(importsPage).toContain('inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full');
 
     const clearStart = importsPage.indexOf('const handleClearFile = () => {');
     const clearHandler = importsPage.slice(clearStart, importsPage.indexOf('};', clearStart) + 2);
@@ -159,8 +171,10 @@ describe("Imports production upload entry point", () => {
     expect(importsPage).toContain('dismissSuccess: "Dismiss"');
     expect(importsPage).toContain('function UploadSuccess({ ui, result, onDismiss }');
     expect(importsPage).toContain('aria-label={ui.upload.dismissSuccess}');
-    expect(importsPage).toContain('className="mt-2 grid gap-2 text-sm sm:grid-cols-4"');
-    expect(importsPage).toContain('className="mt-2 h-8"');
+    expect(importsPage).toContain('className="mt-3 max-w-full min-w-0 rounded-lg');
+    expect(importsPage).toContain('className="mt-0.5 max-w-full min-w-0 truncate text-xs text-muted-foreground"');
+    expect(importsPage).toContain('className="h-7 max-w-full px-2 text-xs"');
+    expect(importsPage).toContain('inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full');
 
     const dismissStart = importsPage.indexOf('const handleDismissUploadSuccess = () => {');
     const dismissHandler = importsPage.slice(dismissStart, importsPage.indexOf('};', dismissStart) + 2);

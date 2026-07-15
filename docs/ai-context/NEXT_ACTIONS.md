@@ -1,3 +1,7 @@
+## 2026-07-15 — Imports upload layout hotfix review
+
+Review the frontend-only Imports upload layout hotfix on `/imports`: confirm the page has no horizontal scrollbar at normal desktop widths, selected filename chips truncate safely with a compact clear control, the success confirmation remains compact/dismissible, and Data Bindings still contains uploaded data. No backend/Supabase/migrations/RLS/RPC/Edge Function/storage/production data changes were made.
+
 - Verify in production that `/imports` no longer introduces horizontal page scroll at normal desktop widths, selected file names truncate safely with the clear-file control, and the compact success summary can be dismissed without deleting uploaded data.
 ## 2026-07-15 — Imports upload frontend hotfix follow-up
 
