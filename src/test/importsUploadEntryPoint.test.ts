@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { normalizeUploadResult } from "@/imports/normalizeUploadResult";
 import {
   buildImportStoragePath,
   FILE_IMPORTS_BUCKET,
@@ -51,6 +52,79 @@ describe("Imports production upload entry point", () => {
   it("builds stable workspace storage paths", () => {
     const path = buildImportStoragePath("Client Report July 2026.xlsx", new Date("2026-07-15T12:00:00.000Z"));
     expect(path).toBe(`workspace_${WORKSPACE_ID}/uploads/2026-07-15T12-00-00-000Z-Client-Report-July-2026.xlsx`);
+  });
+
+
+  it("normalizes snake_case and camelCase parser responses", () => {
+    expect(normalizeUploadResult({
+      original_file_name: "analytics_hub_test_leads_upload.csv",
+      datasets_count: 1,
+      rows_inserted: "6",
+      columns_count: 10,
+    }, "fallback.csv")).toEqual({
+      original_file_name: "analytics_hub_test_leads_upload.csv",
+      datasets_count: 1,
+      rows_inserted: 6,
+      columns_count: 10,
+    });
+
+    expect(normalizeUploadResult({
+      original_file_name: "",
+      datasetsCount: "1",
+      rowsInserted: 6,
+      columnsCount: "10",
+    }, "fallback.csv")).toEqual({
+      original_file_name: "fallback.csv",
+      datasets_count: 1,
+      rows_inserted: 6,
+      columns_count: 10,
+    });
+  });
+
+  it("keeps upload loading state inside try/finally after parser success or unexpected frontend errors", () => {
+    const uploadStart = importsPage.indexOf("setIsUploading(true)");
+    const uploadEnd = importsPage.indexOf("const actions = buildActions", uploadStart);
+    const uploadFlow = importsPage.slice(uploadStart, uploadEnd);
+
+    expect(uploadFlow).toContain("try {");
+    expect(uploadFlow).toContain("setUploadResult(normalizeUploadResult(parser.data, selectedFile.name))");
+    expect(uploadFlow).toContain("} catch (error) {");
+    expect(uploadFlow).toContain("setUploadError({ kind: uploadStage, technicalDetails: getErrorMessage(error) })");
+    expect(uploadFlow).toContain("} finally {");
+    expect(uploadFlow).toContain("setIsUploading(false)");
+  });
+
+  it("localizes Ukrainian source labels while keeping switch On/Off labels", () => {
+    const sourceOptionsStart = importsPage.indexOf("const SOURCE_TYPE_OPTIONS");
+    const sourceOptions = importsPage.slice(
+      sourceOptionsStart,
+      importsPage.indexOf("];", sourceOptionsStart) + 2,
+    );
+    expect(sourceOptions).toContain('labelUk: "Авто / невідомо"');
+    expect(sourceOptions).toContain('labelUk: "Трафік"');
+    expect(sourceOptions).toContain('labelUk: "Реєстрації"');
+    expect(sourceOptions).toContain('labelUk: "Заявки / ліди"');
+    expect(sourceOptions).toContain('labelUk: "Бронювання"');
+    expect(sourceOptions).toContain('labelUk: "Анкети"');
+    expect(sourceOptions).toContain('labelUk: "Продажі"');
+    expect(sourceOptions).toContain('labelUk: "Глядачі"');
+    for (const rawLabel of ["Auto / Unknown", "Traffic", "Registrations", "Applications / Leads", "Bookings", "Questionnaires", "Sales", "Viewers"]) {
+      expect(sourceOptions).not.toContain(`labelUk: "${rawLabel}"`);
+    }
+
+    const ukUploadCopy = importsPage.slice(importsPage.indexOf('upload: { title: "Завантажити файл"'), importsPage.indexOf("uploadErrors:", importsPage.indexOf('upload: { title: "Завантажити файл"')));
+    expect(ukUploadCopy).toContain('parseAllSheetsOn: "On"');
+    expect(ukUploadCopy).toContain('parseAllSheetsOff: "Off"');
+  });
+
+  it("uses custom app file picker copy instead of native browser labels", () => {
+    expect(importsPage).toContain('chooseFile: "Обрати файл"');
+    expect(importsPage).toContain('noFileSelected: "Файл ще не обрано"');
+    expect(importsPage).toContain('chooseFile: "Choose file"');
+    expect(importsPage).toContain('noFileSelected: "No file selected"');
+    expect(importsPage).toContain('className="sr-only"');
+    expect(importsPage).toContain('{ui.upload.chooseFile}');
+    expect(importsPage).toContain('{selectedFile?.name ?? ui.upload.noFileSelected}');
   });
 
   it("uses Supabase Storage bucket and file-upload-parser payload contract", () => {
