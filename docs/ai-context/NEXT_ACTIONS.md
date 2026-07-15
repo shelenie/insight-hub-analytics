@@ -1,3 +1,8 @@
+
+## 2026-07-15 — Production UX polish for Onboarding, Bindings, and Ads Connectors
+
+Frontend-only production UX polish for the connected setup flow: Onboarding → Зв’язки даних → Ads конектори. Sidebar Admin order now places Ads конектори directly after Зв’язки даних; Onboarding, Bindings, and Ads Connectors copy/empty states/overview guidance were tightened for operational readiness. No backend/Supabase/migrations/RPC/RLS/Edge Functions/production data changed.
+
 ## Next Action — 2026-07-14 Bindings Compact Geometry Manual QA
 
 After this frontend-only fix reaches a previewable environment, manually verify `/bindings` that the Source table fits the 990px compact geometry with a visibly narrower `Джерело` column, the Ad Account table fits the 1030px compact geometry with a visibly narrower `Акаунт` column, middle columns are no longer squeezed by oversized first columns, no page-level horizontal scrollbar appears at normal desktop widths, and Rebind/Archive/Restore buttons remain fully visible inside the right Action column. No Supabase migration, RPC, Edge Function, production data, permission, filter, toast, archive/restore, data-query, or CI action is required.

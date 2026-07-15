@@ -1,4 +1,9 @@
 
+## 2026-07-15 — Production UX polish for Onboarding, Bindings, and Ads Connectors
+
+Frontend-only production UX polish for the connected setup flow: Onboarding → Зв’язки даних → Ads конектори. Sidebar Admin order now places Ads конектори directly after Зв’язки даних; Onboarding, Bindings, and Ads Connectors copy/empty states/overview guidance were tightened for operational readiness. No backend/Supabase/migrations/RPC/RLS/Edge Functions/production data changed.
+
+
 ## Review Follow-up — 2026-07-15 Onboarding Active Descendant Counts
 
 Review feedback for PR #256 was addressed locally. Onboarding descendant count maps now use explicit active-only Project/Funnel datasets and active-only hierarchy fallback rows, so default active Clients and Projects views do not count archived or inactive child records. This follow-up remains frontend-only and does not change Supabase schema, migrations, RPCs, RLS, Edge Functions, archive/delete logic, production data, CI configuration, Ads connector logic, or Bindings table geometry.
