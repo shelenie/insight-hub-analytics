@@ -187,9 +187,9 @@ describe("Imports production upload entry point", () => {
     expect(importsPage).toContain("{ui.upload.noFileSelected}");
   });
 
-  it("uses a compact wrapping upload form without the old fixed desktop grid", () => {
+  it("uses aligned label/control/helper rows without the old overflow-prone desktop grid", () => {
     const formStart = importsPage.indexOf(
-      '<form\n        className="flex max-w-full min-w-0 flex-wrap items-end gap-3"',
+      '<form\n        className="grid max-w-full min-w-0 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,300px)_140px_180px_minmax(180px,220px)_minmax(150px,220px)] lg:items-start"',
     );
     const form = importsPage.slice(
       formStart,
@@ -197,16 +197,16 @@ describe("Imports production upload entry point", () => {
     );
 
     expect(formStart).toBeGreaterThanOrEqual(0);
-    expect(form).toContain("flex max-w-full min-w-0 flex-wrap items-end gap-3");
-    expect(form).toContain("min-w-0 max-w-[360px] flex-[1_1_260px]");
-    expect(form).toContain("w-[140px] min-w-0");
-    expect(form).toContain("w-[180px] min-w-0");
-    expect(form).toContain("min-w-[200px] flex-[1_1_220px]");
-    expect(form).toContain("max-w-full flex-[0_1_260px]");
+    expect(form).toContain("grid max-w-full min-w-0 gap-x-3 gap-y-2");
+    expect(form).toContain("lg:items-start");
+    expect(form).toContain("grid-rows-[1rem_2.5rem_auto]");
+    expect(form).toContain("flex min-h-10 min-w-0 items-center");
+    expect(form).toContain('aria-hidden="true"');
     expect(form).toContain(
       'className="h-10 w-full max-w-full gap-2 text-center leading-tight"',
     );
     expect(form).toContain("truncate");
+    expect(form).not.toContain("items-end");
     expect(form).not.toContain("whitespace-nowrap");
     expect(form).not.toContain("grid max-w-full min-w-0 gap-3 sm:grid-cols-2");
     expect(importsPage).not.toContain(
@@ -272,8 +272,10 @@ describe("Imports production upload entry point", () => {
       'className="mt-0.5 max-w-full min-w-0 truncate text-xs text-muted-foreground"',
     );
     expect(importsPage).toContain(
-      'className="flex max-w-full shrink-0 items-center gap-1 self-start sm:ml-auto"',
+      'className="flex max-w-full shrink-0 items-center gap-1 self-start sm:ml-auto sm:justify-end"',
     );
+    expect(importsPage).toContain('className="min-w-0 flex-1"');
+    expect(importsPage).toContain('className="flex min-w-0 items-start gap-2"');
     expect(importsPage).toContain('className="h-7 max-w-full px-2 text-xs"');
     expect(importsPage).toContain(
       "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
