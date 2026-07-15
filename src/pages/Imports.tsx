@@ -1322,10 +1322,10 @@ function UploadCard({
       contentClassName="max-w-full min-w-0"
     >
       <form
-        className="grid max-w-full min-w-0 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,300px)_140px_180px_minmax(180px,220px)_minmax(150px,220px)] lg:items-start"
+        className="flex max-w-full min-w-0 flex-wrap gap-x-3 gap-y-2"
         onSubmit={onSubmit}
       >
-        <div className="grid min-w-0 max-w-full grid-rows-[1rem_2.5rem_auto] gap-y-1.5">
+        <div className="grid min-w-0 max-w-[300px] flex-[1_1_240px] grid-rows-[1rem_2.5rem_auto] gap-y-1.5">
           <Label htmlFor="import-file-upload" className="truncate">
             {ui.upload.file}
           </Label>
@@ -1371,7 +1371,7 @@ function UploadCard({
             {ui.upload.supported}
           </p>
         </div>
-        <div className="grid min-w-0 grid-rows-[1rem_2.5rem_auto] gap-y-1.5">
+        <div className="grid min-w-0 flex-[0_0_140px] grid-rows-[1rem_2.5rem_auto] gap-y-1.5">
           <Label htmlFor="import-header-row" className="truncate">
             {ui.upload.headerRow}
           </Label>
@@ -1387,7 +1387,7 @@ function UploadCard({
             />
           </div>
         </div>
-        <div className="grid min-w-0 grid-rows-[1rem_2.5rem_auto] gap-y-1.5">
+        <div className="grid min-w-0 flex-[0_0_180px] grid-rows-[1rem_2.5rem_auto] gap-y-1.5">
           <Label htmlFor="import-parse-all-sheets" className="truncate">
             {ui.upload.parseAllSheets}
           </Label>
@@ -1404,7 +1404,7 @@ function UploadCard({
             </span>
           </div>
         </div>
-        <div className="grid min-w-0 grid-rows-[1rem_2.5rem_auto] gap-y-1.5">
+        <div className="grid min-w-0 max-w-[240px] flex-[1_1_200px] grid-rows-[1rem_2.5rem_auto] gap-y-1.5">
           <Label className="truncate">{ui.upload.sourceType}</Label>
           <div className="flex min-h-10 min-w-0 items-center">
             <Select
@@ -1426,7 +1426,7 @@ function UploadCard({
             </Select>
           </div>
         </div>
-        <div className="grid min-w-0 max-w-full grid-rows-[1rem_2.5rem_auto] gap-y-1.5">
+        <div className="grid min-w-[180px] max-w-[220px] flex-[0_1_220px] grid-rows-[1rem_2.5rem_auto] gap-y-1.5">
           <span
             className="min-h-4 text-xs font-medium leading-none opacity-0"
             aria-hidden="true"
@@ -1524,9 +1524,16 @@ function UploadSuccess({
             {formatNullableNumber(result.columns_count)}
           </p>
         </div>
-        <div className="flex max-w-full shrink-0 items-center gap-1 self-start sm:ml-auto sm:justify-end">
-          <Button asChild size="sm" className="h-7 max-w-full px-2 text-xs">
-            <Link to={ROUTES.bindings} className="min-w-0">
+        <div className="flex max-w-full min-w-0 flex-wrap items-center gap-1 self-start sm:ml-auto sm:justify-end">
+          <Button
+            asChild
+            size="sm"
+            className="h-7 max-w-full min-w-0 px-2 text-xs"
+          >
+            <Link
+              to={ROUTES.bindings}
+              className="flex min-w-0 max-w-full items-center"
+            >
               <span className="min-w-0 truncate">{ui.upload.goBindings}</span>
               <ArrowUpRight className="ml-1 h-3 w-3 shrink-0" />
             </Link>

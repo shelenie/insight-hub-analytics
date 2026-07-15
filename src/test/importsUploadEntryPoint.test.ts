@@ -15,6 +15,7 @@ const dashboardLayout = readFileSync(
   "utf8",
 );
 const importsPage = readFileSync("src/pages/Imports.tsx", "utf8");
+const globalCss = readFileSync("src/index.css", "utf8");
 
 describe("Imports production upload entry point", () => {
   it("moves Imports to Admin navigation after Data Bindings and before Ads Connectors", () => {
@@ -187,9 +188,41 @@ describe("Imports production upload entry point", () => {
     expect(importsPage).toContain("{ui.upload.noFileSelected}");
   });
 
+  it("protects DashboardLayout wrappers from page-level horizontal overflow without global body hiding", () => {
+    expect(dashboardLayout).toContain(
+      '<SidebarProvider className="max-w-full overflow-x-clip">',
+    );
+    expect(dashboardLayout).toContain(
+      'className="flex min-h-screen w-full max-w-full overflow-x-clip bg-background bg-hero"',
+    );
+    expect(dashboardLayout).toContain(
+      'className="flex min-h-screen min-w-0 max-w-full flex-1 flex-col overflow-x-clip"',
+    );
+    expect(dashboardLayout).toContain(
+      'className="sticky top-0 z-30 flex h-12 max-w-full items-center gap-2 overflow-x-clip',
+    );
+    expect(dashboardLayout).toContain(
+      'className="max-w-full min-w-0 overflow-x-clip border-b',
+    );
+    expect(dashboardLayout).toContain(
+      '"flex-1 max-w-full min-w-0 overflow-x-hidden p-4 lg:p-6 animate-fade-in"',
+    );
+
+    const bodyBlock = globalCss.slice(
+      globalCss.indexOf("  body {"),
+      globalCss.indexOf("  html {"),
+    );
+    const htmlBlock = globalCss.slice(
+      globalCss.indexOf("  html {"),
+      globalCss.indexOf("}", globalCss.indexOf("  html {")) + 1,
+    );
+    expect(bodyBlock).not.toContain("overflow-x");
+    expect(htmlBlock).not.toContain("overflow-x");
+  });
+
   it("uses aligned label/control/helper rows without the old overflow-prone desktop grid", () => {
     const formStart = importsPage.indexOf(
-      '<form\n        className="grid max-w-full min-w-0 gap-x-3 gap-y-2 lg:grid-cols-[minmax(0,300px)_140px_180px_minmax(180px,220px)_minmax(150px,220px)] lg:items-start"',
+      'className="flex max-w-full min-w-0 flex-wrap gap-x-3 gap-y-2"',
     );
     const form = importsPage.slice(
       formStart,
@@ -197,8 +230,12 @@ describe("Imports production upload entry point", () => {
     );
 
     expect(formStart).toBeGreaterThanOrEqual(0);
-    expect(form).toContain("grid max-w-full min-w-0 gap-x-3 gap-y-2");
-    expect(form).toContain("lg:items-start");
+    expect(form).toContain("flex max-w-full min-w-0 flex-wrap gap-x-3 gap-y-2");
+    expect(form).toContain("max-w-[300px] flex-[1_1_240px]");
+    expect(form).toContain("flex-[0_0_140px]");
+    expect(form).toContain("flex-[0_0_180px]");
+    expect(form).toContain("max-w-[240px] flex-[1_1_200px]");
+    expect(form).toContain("min-w-[180px] max-w-[220px] flex-[0_1_220px]");
     expect(form).toContain("grid-rows-[1rem_2.5rem_auto]");
     expect(form).toContain("flex min-h-10 min-w-0 items-center");
     expect(form).toContain('aria-hidden="true"');
@@ -210,11 +247,13 @@ describe("Imports production upload entry point", () => {
     expect(form).not.toContain("whitespace-nowrap");
     expect(form).not.toContain("grid max-w-full min-w-0 gap-3 sm:grid-cols-2");
     expect(importsPage).not.toContain(
+      "lg:grid-cols-[minmax(0,300px)_140px_180px_minmax(180px,220px)_minmax(150px,220px)]",
+    );
+    expect(importsPage).not.toContain(
       "xl:grid-cols-[minmax(0,1fr)_140px_180px_minmax(180px,220px)_minmax(150px,auto)]",
     );
-    expect(form).not.toContain(
-      "xl:grid-cols-[minmax(0,1fr)_140px_180px_minmax(180px,220px)_minmax(150px,auto)]",
-    );
+    expect(form).not.toContain("lg:grid-cols-[");
+    expect(form).not.toContain("xl:grid-cols-[");
     expect(form).not.toContain(
       "lg:grid-cols-[minmax(240px,1.2fr)_140px_180px_200px_auto]",
     );
@@ -272,11 +311,16 @@ describe("Imports production upload entry point", () => {
       'className="mt-0.5 max-w-full min-w-0 truncate text-xs text-muted-foreground"',
     );
     expect(importsPage).toContain(
-      'className="flex max-w-full shrink-0 items-center gap-1 self-start sm:ml-auto sm:justify-end"',
+      'className="flex max-w-full min-w-0 flex-wrap items-center gap-1 self-start sm:ml-auto sm:justify-end"',
     );
     expect(importsPage).toContain('className="min-w-0 flex-1"');
     expect(importsPage).toContain('className="flex min-w-0 items-start gap-2"');
-    expect(importsPage).toContain('className="h-7 max-w-full px-2 text-xs"');
+    expect(importsPage).toContain(
+      'className="h-7 max-w-full min-w-0 px-2 text-xs"',
+    );
+    expect(importsPage).toContain(
+      'className="flex min-w-0 max-w-full items-center"',
+    );
     expect(importsPage).toContain(
       "inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full",
     );
