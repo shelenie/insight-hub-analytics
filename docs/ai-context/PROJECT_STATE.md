@@ -1,4 +1,9 @@
 
+## 2026-07-15 — Production-clean source candidate labels in Data Bindings
+
+Frontend-only production-clean source candidate labels for Data Bindings → Data Sources: technical/dev source names are no longer shown as primary UI labels, Google Sheet template/tab candidates use admin-friendly labels, and the obvious test upload candidate is hidden from production-facing source candidates. Source IDs/candidate values and backend data remain unchanged. No Supabase schema, migrations, RPCs, RLS, Edge Functions, OAuth/sync logic, routes, archive/restore behavior, binding contracts, or production data changed.
+
+
 ## 2026-07-15 — Final Data Bindings UX polish: source candidates and status labels
 
 Frontend-only final Data Bindings UX polish: status values are formatted for users, Data Sources empty/candidate state is clarified, and the Overview zero file/table binding copy now describes zero active visible source bindings. No backend/Supabase/migrations/RPC/RLS/Edge Functions/production data changed.

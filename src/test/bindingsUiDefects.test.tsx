@@ -12,6 +12,8 @@ import {
   RestoreBindingDialog,
   SourceBindingsBusinessTable,
   SourceBindingsEmptyState,
+  buildSourceFormOptions,
+  formatSourceCandidateLabel,
   formatBindingSourceName,
 } from "@/pages/Bindings";
 import { workspaceRoleQueryKey } from "@/hooks/useWorkspaceRole";
@@ -139,18 +141,80 @@ describe("Bindings confirmed UI defects", () => {
       />,
     );
 
-    expect(screen.getByText("Поки немає активних прив’язок джерел. Доступні джерела можна прив’язати до клієнта, проєкту або воронки.")).toBeTruthy();
-    expect(screen.getByText("Доступні джерела для прив’язки")).toBeTruthy();
-    expect(screen.getByText("Ці джерела вже знайдені системою, але ще не прив’язані до клієнта, проєкту або воронки.")).toBeTruthy();
+    expect(screen.getByText("Поки немає активних прив’язок джерел. Нижче показані джерела, які вже знайдені системою. Їх можна прив’язати до клієнта, проєкту або воронки.")).toBeTruthy();
+    expect(screen.getByText("Джерела, доступні для прив’язки")).toBeTruthy();
+    expect(screen.getByText("Їх можна прив’язати до клієнта, проєкту або воронки.")).toBeTruthy();
     expect(screen.getByText("Revenue Sheet · Leads")).toBeTruthy();
-    expect(screen.getByText("Можна вибрати для прив’язки")).toBeTruthy();
+    expect(screen.getByText("Можна прив’язати")).toBeTruthy();
   });
+
+  it("uses production-clean source candidate labels while preserving candidate values", () => {
+    const sourceData = {
+      candidates: [
+        {
+          id: "sheet-source-id",
+          sourceType: "google_sheet_source" as const,
+          label: formatSourceCandidateLabel({
+            sourceType: "google_sheet_source",
+            name: "insight_hub_dev_google_sheet_template",
+          }),
+          description: "Google Sheet",
+        },
+        {
+          id: "sheet-tab-id",
+          sourceType: "google_sheet_tab" as const,
+          label: formatSourceCandidateLabel({
+            sourceType: "google_sheet_tab",
+            name: "Трафік - БД",
+            parentName: "insight_hub_dev_google_sheet_template",
+          }),
+          description: "Google Sheet tab · ad_traffic_raw",
+        },
+      ],
+    };
+
+    const options = buildSourceFormOptions(undefined, sourceData, {}, (key) => translations[key].uk, "uk");
+
+    expect(options.sources).toEqual([
+      { value: "sheet-source-id", label: "Google Sheet — шаблон даних", description: "Google Sheet" },
+      { value: "sheet-tab-id", label: "Трафік - БД", description: "Google Sheet tab · ad_traffic_raw" },
+    ]);
+    expect(options.sources.map((option) => option.value)).toEqual(["sheet-source-id", "sheet-tab-id"]);
+  });
+
+  it("renders production source candidate cards without raw dev/test primary labels", () => {
+    renderWithI18n(
+      <SourceBindingsEmptyState
+        candidates={[
+          { value: "sheet-source-id", label: "Google Sheet — шаблон даних", description: "Google Sheet" },
+          { value: "sheet-tab-id", label: "Трафік - БД", description: "Google Sheet tab · ad_traffic_raw" },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText("Google Sheet — шаблон даних")).toBeTruthy();
+    expect(screen.getByText("Трафік - БД")).toBeTruthy();
+    expect(screen.queryByText("insight_hub_dev_google_sheet_template")).toBeNull();
+    expect(screen.queryByText("test_upload_parser_small.csv · CSV")).toBeNull();
+  });
+
+  it("keeps the conservative frontend test-upload source candidate filter", () => {
+    const source = readFileSync("src/pages/Bindings.tsx", "utf8");
+
+    expect(source).toContain("isInternalTestSourceCandidate(row)");
+    expect(source).toContain('"test_upload_parser_small.csv"');
+    expect(source).toContain('"test_upload_"');
+    expect(source).toContain('"backend_test"');
+    expect(source).toContain('"mock"');
+    expect(source).toContain('"demo"');
+  });
+
 
   it("shows the no-candidates source empty state when no candidates are available", () => {
     renderWithI18n(<SourceBindingsEmptyState candidates={[]} />);
 
     expect(screen.getByText("Поки немає підключених файлів або таблиць. Спочатку додайте або синхронізуйте джерело даних.")).toBeTruthy();
-    expect(screen.queryByText("Доступні джерела для прив’язки")).toBeNull();
+    expect(screen.queryByText("Джерела, доступні для прив’язки")).toBeNull();
   });
 
   it("keeps the /bindings filterByOperationalStatus import intact", () => {
