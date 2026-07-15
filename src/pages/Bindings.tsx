@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronsUpDown, RefreshCw, RotateCcw } from "lucide-react";
 import { archiveBinding, manageAdAccountBinding, reactivateBinding, upsertClient, upsertFunnel, upsertProject, type PrimaryIntent } from "@/lib/dataBindingsMutations";
@@ -71,6 +71,7 @@ import {
 import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { toast } from "@/hooks/use-toast";
 import { useI18n } from "@/i18n/I18nProvider";
+import { useSearchParams } from "react-router-dom";
 import type { Lang, TranslationKey } from "@/i18n/translations";
 import {
   buildStatusMap,
@@ -156,6 +157,22 @@ type BindingsTab =
   | "project-data"
   | "mapping-review"
   | "health";
+
+
+const VALID_BINDINGS_TABS = new Set<BindingsTab>([
+  "overview",
+  "source",
+  "ad-account",
+  "project-data",
+  "mapping-review",
+  "health",
+]);
+
+function parseBindingsTab(value: string | null): BindingsTab {
+  return VALID_BINDINGS_TABS.has(value as BindingsTab)
+    ? (value as BindingsTab)
+    : "overview";
+}
 
 const FRIENDLY_COLUMN_LABELS: Record<string, string | Record<Lang, string>> = {
   ad_account_name: { uk: "Рекламний акаунт", en: "Ad account" },
@@ -268,6 +285,7 @@ export default function Bindings() {
   const { t, lang } = useI18n();
   const { session } = useAuth();
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     capabilities,
     isLoading: roleLoading,
@@ -278,7 +296,9 @@ export default function Bindings() {
   const canManageMappingReview =
     !roleLoading && capabilities.can_manage_mapping_review;
   const [message, setMessage] = useState<string>("");
-  const [activeTab, setActiveTab] = useState<BindingsTab>("overview");
+  const [activeTab, setActiveTab] = useState<BindingsTab>(() =>
+    parseBindingsTab(searchParams.get("tab")),
+  );
   const [formFeedback, setFormFeedback] = useState<
     Record<BindingType, BindingActionFeedback | null>
   >({ source: null, ad_account: null });
@@ -541,8 +561,14 @@ export default function Bindings() {
     setLastRefreshedAt(new Date());
   };
 
+  useEffect(() => {
+    setActiveTab(parseBindingsTab(searchParams.get("tab")));
+  }, [searchParams]);
+
   const handleTabChange = (value: string) => {
-    setActiveTab(value as BindingsTab);
+    const nextTab = parseBindingsTab(value);
+    setActiveTab(nextTab);
+    setSearchParams(nextTab === "overview" ? {} : { tab: nextTab });
     clearFormFeedback();
   };
 

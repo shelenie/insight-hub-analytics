@@ -1,3 +1,7 @@
+## 2026-07-15 — Imports upload layout replacement and Bindings source-tab CTA
+
+Frontend-only Imports layout fix: added app-level `html`, `body`, and `#root` horizontal overflow protection, replaced the unstable upload-form flex-wrap layout with a controlled responsive grid and fixed safe upload-button column, preserved the selected-file pill/clear behavior, centered the compact success-panel action area, and changed the success CTA to open Data Bindings on `?tab=source`. Data Bindings now supports validated `tab` query params for existing tabs and falls back to Overview for invalid values. No backend, Supabase schema, migrations, RLS, RPC definitions, Edge Function code, storage bucket, file-upload-parser contract, upload parser payload, OAuth logic, Ads connector logic, Google Sheets connector logic, binding contracts, production data, uploaded files, or upload/parser behavior changed.
+
 - Verify in production that the DashboardLayout wrapper protection plus wrapping Imports upload form remove page-level horizontal scroll at normal desktop widths without changing sidebar behavior, upload behavior, or backend contracts.
 - Verify in production that `/imports` keeps the final aligned upload form, has no horizontal page scrollbar at normal desktop widths, preserves the selected file chip/clear action, and aligns the compact success summary with the right-side Data Bindings CTA and dismiss action. No backend/Supabase/migrations/RLS/RPC/Edge Function/storage/production data changes were made.
 ## 2026-07-15 — Imports upload layout hotfix review
