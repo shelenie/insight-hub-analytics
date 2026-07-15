@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, RefObject, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle,
@@ -7,6 +7,7 @@ import {
   CheckCircle2,
   Database,
   RefreshCw,
+  X,
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
@@ -184,7 +185,7 @@ const copy = {
     actions: "Дії",
     open: "Відкрити",
     intro: "Тут завантажуються файли від клієнтів і контролюється якість імпортів. Рекламні дані підтягуються через Ads конектори, а CSV/XLS/XLSX файли завантажуються напряму в систему.",
-    upload: { title: "Завантажити файл", desc: "Завантажте CSV, XLS або XLSX файл від клієнта. Файл буде збережено в системі, розпарсено і додано як джерело для подальшої прив’язки.", file: "Файл", headerRow: "Рядок заголовків", parseAllSheets: "Парсити всі аркуші", sourceType: "Тип джерела", submit: "Завантажити / розпарсити", uploading: "Завантаження…", supported: "CSV, TSV, TXT, XLS або XLSX до 15 MB", successTitle: "Файл оброблено.", successDesc: "Джерело додано в систему. Тепер його можна прив’язати до клієнта, проєкту або воронки у “Зв’язках даних”.", goBindings: "Перейти до зв’язків даних", originalFileName: "Файл", datasetsCount: "Джерела", rowsInserted: "Рядки", columnsCount: "Колонки", chooseFile: "Обрати файл", noFileSelected: "Файл ще не обрано", parseAllSheetsOn: "On", parseAllSheetsOff: "Off" },
+    upload: { title: "Завантажити файл", desc: "Завантажте CSV, XLS або XLSX файл від клієнта. Файл буде збережено в системі, розпарсено і додано як джерело для подальшої прив’язки.", file: "Файл", headerRow: "Рядок заголовків", parseAllSheets: "Парсити всі аркуші", sourceType: "Тип джерела", submit: "Завантажити / розпарсити", uploading: "Завантаження…", supported: "CSV, TSV, TXT, XLS або XLSX до 15 MB", successTitle: "Файл оброблено.", successDesc: "Джерело додано в систему. Тепер його можна прив’язати до клієнта, проєкту або воронки у “Зв’язках даних”.", goBindings: "Перейти до зв’язків даних", originalFileName: "Файл", datasetsCount: "Джерела", rowsInserted: "Рядки", columnsCount: "Колонки", chooseFile: "Обрати файл", noFileSelected: "Файл ще не обрано", parseAllSheetsOn: "On", parseAllSheetsOff: "Off", clearFile: "Очистити файл", dismissSuccess: "Закрити" },
     uploadErrors: { unsupported: "Цей тип файлу не підтримується. Завантажте CSV, TSV, TXT, XLS або XLSX.", tooLarge: "Файл завеликий. Максимальний розмір — 15 MB.", storage: "Не вдалося завантажити файл у сховище. Спробуйте ще раз або перевірте доступ.", parser: "Файл завантажено, але не вдалося його обробити. Перевірте структуру файлу або помилки імпорту нижче.", missingFile: "Оберіть файл для завантаження.", details: "Технічні деталі" },
     review: "Перевірити",
     kpis: {
@@ -301,7 +302,7 @@ const copy = {
     actions: "Actions",
     open: "Open",
     intro: "Upload client-provided files here and monitor import quality. Ad data comes from Ads Connectors, while CSV/XLS/XLSX files are uploaded directly into the system.",
-    upload: { title: "Upload file", desc: "Upload a CSV, XLS, or XLSX file from a client. The file will be stored in the system, parsed, and added as a source that can be bound later.", file: "File", headerRow: "Header row number", parseAllSheets: "Parse all sheets", sourceType: "Source type", submit: "Upload / Parse", uploading: "Uploading…", supported: "CSV, TSV, TXT, XLS, or XLSX up to 15 MB", successTitle: "File processed.", successDesc: "The source was added to the system. You can now bind it to a client, project, or funnel in Data Bindings.", goBindings: "Go to Data Bindings", originalFileName: "File", datasetsCount: "Datasets", rowsInserted: "Rows", columnsCount: "Columns", chooseFile: "Choose file", noFileSelected: "No file selected", parseAllSheetsOn: "On", parseAllSheetsOff: "Off" },
+    upload: { title: "Upload file", desc: "Upload a CSV, XLS, or XLSX file from a client. The file will be stored in the system, parsed, and added as a source that can be bound later.", file: "File", headerRow: "Header row number", parseAllSheets: "Parse all sheets", sourceType: "Source type", submit: "Upload / Parse", uploading: "Uploading…", supported: "CSV, TSV, TXT, XLS, or XLSX up to 15 MB", successTitle: "File processed.", successDesc: "The source was added to the system. You can now bind it to a client, project, or funnel in Data Bindings.", goBindings: "Go to Data Bindings", originalFileName: "File", datasetsCount: "Datasets", rowsInserted: "Rows", columnsCount: "Columns", chooseFile: "Choose file", noFileSelected: "No file selected", parseAllSheetsOn: "On", parseAllSheetsOff: "Off", clearFile: "Clear file", dismissSuccess: "Dismiss" },
     uploadErrors: { unsupported: "This file type is not supported. Upload CSV, TSV, TXT, XLS, or XLSX.", tooLarge: "The file is too large. Maximum size is 15 MB.", storage: "Could not upload the file to storage. Try again or check access.", parser: "The file was uploaded, but it could not be processed. Check the file structure or import errors below.", missingFile: "Choose a file to upload.", details: "Technical details" },
     review: "Review",
     kpis: {
@@ -409,6 +410,7 @@ export default function Imports() {
   const { session } = useAuth();
   const ui = copy[lang];
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [headerRow, setHeaderRow] = useState(1);
   const [parseAllSheets, setParseAllSheets] = useState(true);
   const [sourceType, setSourceType] = useState<ImportSourceType>("manual_file_upload");
@@ -525,6 +527,19 @@ export default function Imports() {
       : "healthy";
 
 
+  const handleClearFile = () => {
+    setSelectedFile(null);
+    setUploadError(null);
+    setUploadResult(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDismissUploadSuccess = () => {
+    setUploadResult(null);
+  };
+
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const nextFile = event.target.files?.[0] ?? null;
     setSelectedFile(nextFile);
@@ -628,7 +643,10 @@ export default function Imports() {
             isUploading={isUploading}
             uploadError={uploadError}
             uploadResult={uploadResult}
+            fileInputRef={fileInputRef}
             onFileChange={handleFileChange}
+            onClearFile={handleClearFile}
+            onDismissSuccess={handleDismissUploadSuccess}
             onHeaderRowChange={setHeaderRow}
             onParseAllSheetsChange={setParseAllSheets}
             onSourceTypeChange={setSourceType}
@@ -1142,7 +1160,10 @@ function UploadCard({
   isUploading,
   uploadError,
   uploadResult,
+  fileInputRef,
   onFileChange,
+  onClearFile,
+  onDismissSuccess,
   onHeaderRowChange,
   onParseAllSheetsChange,
   onSourceTypeChange,
@@ -1157,7 +1178,10 @@ function UploadCard({
   isUploading: boolean;
   uploadError: UploadErrorState | null;
   uploadResult: UploadResultSummary | null;
+  fileInputRef: RefObject<HTMLInputElement>;
   onFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onClearFile: () => void;
+  onDismissSuccess: () => void;
   onHeaderRowChange: (value: number) => void;
   onParseAllSheetsChange: (value: boolean) => void;
   onSourceTypeChange: (value: ImportSourceType) => void;
@@ -1165,26 +1189,33 @@ function UploadCard({
 }) {
   return (
     <SectionCard title={ui.upload.title} description={ui.upload.desc}>
-      <form className="grid gap-3 lg:grid-cols-[minmax(240px,1.2fr)_140px_180px_200px_auto] lg:items-start" onSubmit={onSubmit}>
-        <div className="space-y-1.5">
+      <form className="grid min-w-0 gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_140px_180px_minmax(180px,220px)_minmax(150px,auto)] xl:items-start" onSubmit={onSubmit}>
+        <div className="min-w-0 space-y-1.5 md:col-span-2 xl:col-span-1">
           <Label htmlFor="import-file-upload">{ui.upload.file}</Label>
           <div className="flex min-h-10 items-center">
-            <Input id="import-file-upload" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" onChange={onFileChange} className="sr-only" />
+            <Input ref={fileInputRef} id="import-file-upload" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" onChange={onFileChange} className="sr-only" />
             <Label htmlFor="import-file-upload" className="inline-flex h-10 cursor-pointer items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               {ui.upload.chooseFile}
             </Label>
           </div>
-          <p className="min-h-4 truncate text-xs text-muted-foreground" title={selectedFile?.name ?? undefined}>{selectedFile?.name ?? ui.upload.noFileSelected}</p>
+          <div className="flex min-h-4 min-w-0 items-center gap-1 text-xs text-muted-foreground">
+            <p className="min-w-0 flex-1 truncate" title={selectedFile?.name ?? undefined}>{selectedFile?.name ?? ui.upload.noFileSelected}</p>
+            {selectedFile ? (
+              <button type="button" onClick={onClearFile} aria-label={ui.upload.clearFile} className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            ) : null}
+          </div>
           <p className="min-h-4 text-xs text-muted-foreground">{ui.upload.supported}</p>
         </div>
-        <div className="space-y-1.5">
+        <div className="min-w-0 space-y-1.5">
           <Label htmlFor="import-header-row">{ui.upload.headerRow}</Label>
           <div className="flex min-h-10 items-center">
             <Input id="import-header-row" type="number" min={1} value={headerRow} onChange={(event) => onHeaderRowChange(Math.max(1, Number(event.target.value) || 1))} />
           </div>
           <p className="min-h-4 text-xs text-muted-foreground">&nbsp;</p>
         </div>
-        <div className="space-y-1.5">
+        <div className="min-w-0 space-y-1.5">
           <Label htmlFor="import-parse-all-sheets">{ui.upload.parseAllSheets}</Label>
           <div className="flex min-h-10 items-center gap-2 rounded-md border px-3">
             <Switch id="import-parse-all-sheets" checked={parseAllSheets} onCheckedChange={onParseAllSheetsChange} />
@@ -1192,7 +1223,7 @@ function UploadCard({
           </div>
           <p className="min-h-4 text-xs text-muted-foreground">&nbsp;</p>
         </div>
-        <div className="space-y-1.5">
+        <div className="min-w-0 space-y-1.5">
           <Label>{ui.upload.sourceType}</Label>
           <div className="flex min-h-10 items-center">
             <Select value={sourceType} onValueChange={(value) => onSourceTypeChange(value as ImportSourceType)}>
@@ -1206,9 +1237,9 @@ function UploadCard({
           </div>
           <p className="min-h-4 text-xs text-muted-foreground">&nbsp;</p>
         </div>
-        <div className="space-y-1.5">
+        <div className="min-w-0 space-y-1.5 md:col-span-2 xl:col-span-1">
           <span className="block min-h-5 text-sm font-medium">&nbsp;</span>
-          <Button type="submit" disabled={isUploading || Boolean(uploadError && uploadError.kind !== "missing_file")} className="h-10 gap-2">
+          <Button type="submit" disabled={isUploading || Boolean(uploadError && uploadError.kind !== "missing_file")} className="h-10 w-full gap-2 whitespace-nowrap">
           <Upload className="h-4 w-4" />
           {isUploading ? ui.upload.uploading : ui.upload.submit}
           </Button>
@@ -1217,7 +1248,7 @@ function UploadCard({
       </form>
 
       {uploadError ? <UploadErrorMessage ui={ui} error={uploadError} /> : null}
-      {uploadResult ? <UploadSuccess ui={ui} result={uploadResult} /> : null}
+      {uploadResult ? <UploadSuccess ui={ui} result={uploadResult} onDismiss={onDismissSuccess} /> : null}
     </SectionCard>
   );
 }
@@ -1236,18 +1267,25 @@ function UploadErrorMessage({ ui, error }: { ui: Copy; error: UploadErrorState }
   );
 }
 
-function UploadSuccess({ ui, result }: { ui: Copy; result: UploadResultSummary }) {
+function UploadSuccess({ ui, result, onDismiss }: { ui: Copy; result: UploadResultSummary; onDismiss: () => void }) {
   return (
     <div className="mt-3 rounded-lg border border-success/25 bg-success-soft/20 p-3">
-      <p className="text-sm font-semibold text-success">{ui.upload.successTitle}</p>
-      <p className="mt-1 text-sm text-muted-foreground">{ui.upload.successDesc}</p>
-      <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-4">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-success">{ui.upload.successTitle}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{ui.upload.successDesc}</p>
+        </div>
+        <button type="button" onClick={onDismiss} aria-label={ui.upload.dismissSuccess} className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-success-soft hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-4">
         <SummaryValue label={ui.upload.originalFileName} value={result.original_file_name ?? "—"} />
         <SummaryValue label={ui.upload.datasetsCount} value={formatNullableNumber(result.datasets_count)} />
         <SummaryValue label={ui.upload.rowsInserted} value={formatNullableNumber(result.rows_inserted)} />
         <SummaryValue label={ui.upload.columnsCount} value={formatNullableNumber(result.columns_count)} />
       </dl>
-      <Button asChild size="sm" className="mt-3"><Link to={ROUTES.bindings}>{ui.upload.goBindings}<ArrowUpRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
+      <Button asChild size="sm" className="mt-2 h-8"><Link to={ROUTES.bindings}>{ui.upload.goBindings}<ArrowUpRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
     </div>
   );
 }

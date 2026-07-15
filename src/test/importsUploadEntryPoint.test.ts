@@ -127,6 +127,48 @@ describe("Imports production upload entry point", () => {
     expect(importsPage).toContain('{selectedFile?.name ?? ui.upload.noFileSelected}');
   });
 
+
+  it("keeps the upload form responsive without a fixed overflow-prone desktop grid", () => {
+    const formStart = importsPage.indexOf('<form className="grid min-w-0 gap-3');
+    const form = importsPage.slice(formStart, importsPage.indexOf('</form>', formStart));
+
+    expect(form).toContain('grid min-w-0 gap-3 md:grid-cols-2');
+    expect(form).toContain('xl:grid-cols-[minmax(0,1fr)_140px_180px_minmax(180px,220px)_minmax(150px,auto)]');
+    expect(form).toContain('min-w-0 space-y-1.5');
+    expect(form).toContain('min-w-0 flex-1 truncate');
+    expect(form).toContain('className="h-10 w-full gap-2 whitespace-nowrap"');
+    expect(form).not.toContain('lg:grid-cols-[minmax(240px,1.2fr)_140px_180px_200px_auto]');
+  });
+
+  it("adds an accessible clear-file control and resets file upload UI state", () => {
+    expect(importsPage).toContain('clearFile: "Очистити файл"');
+    expect(importsPage).toContain('clearFile: "Clear file"');
+    expect(importsPage).toContain('const fileInputRef = useRef<HTMLInputElement | null>(null)');
+    expect(importsPage).toContain('aria-label={ui.upload.clearFile}');
+
+    const clearStart = importsPage.indexOf('const handleClearFile = () => {');
+    const clearHandler = importsPage.slice(clearStart, importsPage.indexOf('};', clearStart) + 2);
+    expect(clearHandler).toContain('setSelectedFile(null)');
+    expect(clearHandler).toContain('setUploadError(null)');
+    expect(clearHandler).toContain('setUploadResult(null)');
+    expect(clearHandler).toContain('fileInputRef.current.value = ""');
+  });
+
+  it("keeps success feedback compact and dismissible without clearing the selected file", () => {
+    expect(importsPage).toContain('dismissSuccess: "Закрити"');
+    expect(importsPage).toContain('dismissSuccess: "Dismiss"');
+    expect(importsPage).toContain('function UploadSuccess({ ui, result, onDismiss }');
+    expect(importsPage).toContain('aria-label={ui.upload.dismissSuccess}');
+    expect(importsPage).toContain('className="mt-2 grid gap-2 text-sm sm:grid-cols-4"');
+    expect(importsPage).toContain('className="mt-2 h-8"');
+
+    const dismissStart = importsPage.indexOf('const handleDismissUploadSuccess = () => {');
+    const dismissHandler = importsPage.slice(dismissStart, importsPage.indexOf('};', dismissStart) + 2);
+    expect(dismissHandler).toContain('setUploadResult(null)');
+    expect(dismissHandler).not.toContain('setSelectedFile');
+    expect(dismissHandler).not.toContain('fileInputRef.current.value');
+  });
+
   it("uses Supabase Storage bucket and file-upload-parser payload contract", () => {
     expect(FILE_IMPORTS_BUCKET).toBe("file-imports");
     expect(FILE_UPLOAD_PARSER_FUNCTION).toBe("file-upload-parser");

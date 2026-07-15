@@ -1,3 +1,7 @@
+## 2026-07-15 — Imports upload final frontend polish
+
+Imports upload final frontend polish: horizontal overflow was removed from the `/imports` upload card, selected files can be cleared with an accessible app-control that resets only upload UI state, and the parser success summary is now compact and dismissible while retaining file/dataset/row/column details and the Data Bindings CTA. No backend, Supabase schema, migrations, RLS, RPC definitions, Edge Function code, storage bucket, file-upload-parser contract, OAuth logic, Ads connector logic, Google Sheets connector logic, routes, production data, or uploaded files changed.
+
 ## 2026-07-15 — Imports upload frontend hotfix
 
 Imports upload frontend hotfix: upload card controls are aligned, source type labels and file-picker copy are localized, a custom app-style file picker replaces the visible native browser file input, and upload success handling now uses safe parser-response normalization plus try/catch/finally so the submit button does not remain loading after a successful parser response or unexpected frontend exception. No backend, Supabase schema, migrations, RLS, RPC definitions, Edge Function code, OAuth logic, Ads connector logic, Google Sheets connector logic, routes, production data, or uploaded files changed.
