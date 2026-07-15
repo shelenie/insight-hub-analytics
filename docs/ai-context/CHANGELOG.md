@@ -1,4 +1,9 @@
 
+## Review Follow-up — 2026-07-15 Onboarding Active Descendant Counts
+
+Review feedback for PR #256 was addressed locally. Onboarding descendant count maps now use explicit active-only Project/Funnel datasets and active-only hierarchy fallback rows, so default active Clients and Projects views do not count archived or inactive child records. This follow-up remains frontend-only and does not change Supabase schema, migrations, RPCs, RLS, Edge Functions, archive/delete logic, production data, CI configuration, Ads connector logic, or Bindings table geometry.
+
+
 ## Local Frontend Fix — 2026-07-15 Active/Archived Workspace View Filtering
 
 A frontend-only fix is prepared locally to stop archived operational records from leaking into default active workspace views. `/onboarding` now defaults Clients, Projects, Funnels, and Structure to active-only views with Active / Archived / All filters, active-view empty-state guidance, and active-descendant counts that exclude archived/inactive children. `/bindings` now filters Project bindings by binding status plus already-loaded Client/Project/Funnel statuses, defaults the Project bindings tab to active-only, exposes Active / Archived / All filters, and uses the same active-only Project binding set for the Overview “Контекст проєктів” count. No Supabase schema, migrations, RPCs, RLS, Edge Functions, archive/delete logic, production data, CI configuration, or Ads connector logic was changed.

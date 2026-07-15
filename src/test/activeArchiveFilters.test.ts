@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildStatusMap, filterByOperationalStatus, filterProjectBindings } from "@/lib/activeArchiveFilters";
+import { buildStatusMap, countActiveChildrenByParent, filterByOperationalStatus, filterProjectBindings } from "@/lib/activeArchiveFilters";
 
 describe("active/archive frontend filters", () => {
   const rows = [
@@ -29,6 +29,26 @@ describe("active/archive frontend filters", () => {
     { id: "archived-project", binding_status: "active", client_id: "c1", project_id: "p2", funnel_id: "f1" },
     { id: "archived-funnel", binding_status: "active", client_id: "c1", project_id: "p1", funnel_id: "f2" },
   ];
+
+  it("active client descendant count excludes archived and inactive projects", () => {
+    const counts = countActiveChildrenByParent([
+      { client_id: "c1", project_id: "p1", status: "active" },
+      { client_id: "c1", project_id: "p2", status: "archived" },
+      { client_id: "c1", project_id: "p3", status: "inactive" },
+    ], "client_id", "project_id");
+
+    expect(counts.get("c1")).toBe(1);
+  });
+
+  it("active project descendant count excludes archived and inactive funnels", () => {
+    const counts = countActiveChildrenByParent([
+      { project_id: "p1", funnel_id: "f1", status: "active" },
+      { project_id: "p1", funnel_id: "f2", status: "archived" },
+      { project_id: "p1", funnel_id: "f3", status: "inactive" },
+    ], "project_id", "funnel_id");
+
+    expect(counts.get("p1")).toBe(1);
+  });
 
   it("Bindings project bindings default hides archived binding_status and archived hierarchy rows", () => {
     expect(filterProjectBindings(bindings, "active", maps).map((row) => row.id)).toEqual(["active"]);

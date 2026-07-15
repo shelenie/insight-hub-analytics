@@ -52,3 +52,17 @@ export function filterProjectBindings<T extends FilterRow>(rows: T[], filter: St
   if (filter === "archived") return rows.filter((row) => isArchivedProjectBinding(row, maps));
   return rows.filter((row) => isActiveProjectBinding(row, maps));
 }
+
+
+export function countActiveChildrenByParent<T extends FilterRow>(rows: T[], parentKey: string, childKey: string) {
+  const counts = new Map<string, Set<string>>();
+  for (const row of rows) {
+    if (!isExactlyActiveStatus(row.status)) continue;
+    const parentId = asFilterText(row[parentKey]);
+    const childId = asFilterText(row[childKey]);
+    if (!parentId || !childId) continue;
+    if (!counts.has(parentId)) counts.set(parentId, new Set());
+    counts.get(parentId)?.add(childId);
+  }
+  return new Map(Array.from(counts.entries()).map(([parentId, childIds]) => [parentId, childIds.size]));
+}

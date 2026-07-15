@@ -242,6 +242,7 @@ export default function Onboarding() {
 
   const hierarchyRows = useMemo(() => filterRows(onboardingQuery.data?.hierarchy ?? []), [onboardingQuery.data?.hierarchy]);
   const visibleHierarchyRows = useMemo(() => filterHierarchyRows(hierarchyRows, structureStatusFilter), [hierarchyRows, structureStatusFilter]);
+  const activeHierarchyRows = useMemo(() => filterHierarchyRows(hierarchyRows, "active"), [hierarchyRows]);
   const visibleClients = useMemo(() => filterByOperationalStatus(clients, clientStatusFilter), [clientStatusFilter, clients]);
   const visibleProjects = useMemo(() => filterByOperationalStatus(projects, projectStatusFilter), [projectStatusFilter, projects]);
   const visibleFunnels = useMemo(() => filterByOperationalStatus(funnels, funnelStatusFilter), [funnelStatusFilter, funnels]);
@@ -266,9 +267,11 @@ export default function Onboarding() {
 
   const unnamedHierarchySummary = useMemo(() => buildUnnamedHierarchySummary(visibleHierarchyRows, t), [visibleHierarchyRows, t]);
 
-  const projectCountByClient = useMemo(() => buildProjectCountByClient(projects, hierarchyRows), [hierarchyRows, projects]);
+  const activeProjectsForCounts = useMemo(() => filterByOperationalStatus(projects, "active"), [projects]);
+  const activeFunnelsForCounts = useMemo(() => filterByOperationalStatus(funnels, "active"), [funnels]);
+  const projectCountByClient = useMemo(() => buildProjectCountByClient(activeProjectsForCounts, activeHierarchyRows), [activeHierarchyRows, activeProjectsForCounts]);
 
-  const funnelCountByProject = useMemo(() => buildFunnelCountByProject(funnels, hierarchyRows), [funnels, hierarchyRows]);
+  const funnelCountByProject = useMemo(() => buildFunnelCountByProject(activeFunnelsForCounts, activeHierarchyRows), [activeFunnelsForCounts, activeHierarchyRows]);
 
   const healthDiagnostics = useMemo(() => buildHealthDiagnostics(healthRows, clients, projects, funnels, unnamedHierarchySummary, t), [clients, funnels, healthRows, projects, unnamedHierarchySummary, t]);
   const healthCards = useMemo(() => buildHealthCards(healthRows, clients, projects, funnels, healthDiagnostics.hasWarnings, t), [clients, funnels, healthDiagnostics.hasWarnings, healthRows, projects, t]);
