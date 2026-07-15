@@ -1,4 +1,11 @@
 
+## 2026-07-15 — Imports upload entry point follow-up
+
+- Verify in production that admins can upload CSV/TSV/TXT/XLS/XLSX files from `/imports` to Supabase Storage bucket `file-imports` and that the existing `file-upload-parser` Edge Function creates file asset/raw dataset records.
+- Verify successful uploaded datasets appear as source candidates in `/bindings` and are bound there to Client → Project → Funnel.
+- No Supabase schema, migrations, RLS, RPC definitions, Edge Function code, OAuth logic, Ads connector logic, Google Sheets connector logic, routes, or production data were changed by this frontend/docs update.
+
+
 ## 2026-07-15 — Production-clean source candidate labels in Data Bindings
 
 Frontend-only production-clean source candidate labels for Data Bindings → Data Sources: technical/dev source names are no longer shown as primary UI labels, Google Sheet template/tab candidates use admin-friendly labels, and the obvious test upload candidate is hidden from production-facing source candidates. Source IDs/candidate values and backend data remain unchanged. No Supabase schema, migrations, RPCs, RLS, Edge Functions, OAuth/sync logic, routes, archive/restore behavior, binding contracts, or production data changed.

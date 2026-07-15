@@ -1,8 +1,9 @@
-import { useMemo } from "react";
+import { ChangeEvent, FormEvent, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle,
   ArrowUpRight,
+  Upload,
   CheckCircle2,
   Database,
   RefreshCw,
@@ -12,6 +13,10 @@ import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { StatusBadge } from "@/components/dashboard/StatusBadge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -25,8 +30,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/auth/AuthProvider";
 import { fmtNum } from "@/lib/format";
 import { cn } from "@/lib/utils";
+import {
+  buildImportStoragePath,
+  FILE_IMPORTS_BUCKET,
+  FILE_UPLOAD_PARSER_FUNCTION,
+  type ImportSourceType,
+  validateImportFile,
+  WORKSPACE_ID,
+} from "@/imports/upload";
 
-const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 const ROUTES = {
   bindings: "/bindings",
   alerts: "/alerts",
@@ -136,6 +148,29 @@ type NormalizedAlert = {
   isOpen: boolean | null;
 };
 
+
+type UploadResultSummary = {
+  original_file_name: string | null;
+  datasets_count: number | null;
+  rows_inserted: number | null;
+  columns_count: number | null;
+};
+
+type UploadErrorKind = "unsupported" | "too_large" | "storage" | "parser" | "missing_file";
+
+type UploadErrorState = { kind: UploadErrorKind; technicalDetails?: string };
+
+const SOURCE_TYPE_OPTIONS: { value: ImportSourceType; labelUk: string; labelEn: string }[] = [
+  { value: "manual_file_upload", labelUk: "Auto / Unknown", labelEn: "Auto / Unknown" },
+  { value: "traffic", labelUk: "Traffic", labelEn: "Traffic" },
+  { value: "registrations", labelUk: "Registrations", labelEn: "Registrations" },
+  { value: "applications", labelUk: "Applications / Leads", labelEn: "Applications / Leads" },
+  { value: "bookings", labelUk: "Bookings", labelEn: "Bookings" },
+  { value: "questionnaires", labelUk: "Questionnaires", labelEn: "Questionnaires" },
+  { value: "sales", labelUk: "Sales", labelEn: "Sales" },
+  { value: "viewers", labelUk: "Viewers", labelEn: "Viewers" },
+];
+
 type Copy = typeof copy.uk;
 
 const copy = {
@@ -154,6 +189,9 @@ const copy = {
     status: "Статус",
     actions: "Дії",
     open: "Відкрити",
+    intro: "Тут завантажуються файли від клієнтів і контролюється якість імпортів. Рекламні дані підтягуються через Ads конектори, а CSV/XLS/XLSX файли завантажуються напряму в систему.",
+    upload: { title: "Завантажити файл", desc: "Завантажте CSV, XLS або XLSX файл від клієнта. Файл буде збережено в системі, розпарсено і додано як джерело для подальшої прив’язки.", file: "Файл", headerRow: "Рядок заголовків", parseAllSheets: "Парсити всі аркуші", sourceType: "Тип джерела", submit: "Завантажити / розпарсити", uploading: "Завантаження…", supported: "CSV, TSV, TXT, XLS або XLSX до 15 MB", successTitle: "Файл оброблено.", successDesc: "Джерело додано в систему. Тепер його можна прив’язати до клієнта, проєкту або воронки у “Зв’язках даних”.", goBindings: "Перейти до зв’язків даних", originalFileName: "Файл", datasetsCount: "Джерела", rowsInserted: "Рядки", columnsCount: "Колонки" },
+    uploadErrors: { unsupported: "Цей тип файлу не підтримується. Завантажте CSV, TSV, TXT, XLS або XLSX.", tooLarge: "Файл завеликий. Максимальний розмір — 15 MB.", storage: "Не вдалося завантажити файл у сховище. Спробуйте ще раз або перевірте доступ.", parser: "Файл завантажено, але не вдалося його обробити. Перевірте структуру файлу або помилки імпорту нижче.", missingFile: "Оберіть файл для завантаження.", details: "Технічні деталі" },
     review: "Перевірити",
     kpis: {
       health: "Стан даних",
@@ -268,6 +306,9 @@ const copy = {
     status: "Status",
     actions: "Actions",
     open: "Open",
+    intro: "Upload client-provided files here and monitor import quality. Ad data comes from Ads Connectors, while CSV/XLS/XLSX files are uploaded directly into the system.",
+    upload: { title: "Upload file", desc: "Upload a CSV, XLS, or XLSX file from a client. The file will be stored in the system, parsed, and added as a source that can be bound later.", file: "File", headerRow: "Header row number", parseAllSheets: "Parse all sheets", sourceType: "Source type", submit: "Upload / Parse", uploading: "Uploading…", supported: "CSV, TSV, TXT, XLS, or XLSX up to 15 MB", successTitle: "File processed.", successDesc: "The source was added to the system. You can now bind it to a client, project, or funnel in Data Bindings.", goBindings: "Go to Data Bindings", originalFileName: "File", datasetsCount: "Datasets", rowsInserted: "Rows", columnsCount: "Columns" },
+    uploadErrors: { unsupported: "This file type is not supported. Upload CSV, TSV, TXT, XLS, or XLSX.", tooLarge: "The file is too large. Maximum size is 15 MB.", storage: "Could not upload the file to storage. Try again or check access.", parser: "The file was uploaded, but it could not be processed. Check the file structure or import errors below.", missingFile: "Choose a file to upload.", details: "Technical details" },
     review: "Review",
     kpis: {
       health: "Data health",
@@ -373,6 +414,13 @@ export default function Imports() {
   const { t, lang } = useI18n();
   const { session } = useAuth();
   const ui = copy[lang];
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [headerRow, setHeaderRow] = useState(1);
+  const [parseAllSheets, setParseAllSheets] = useState(true);
+  const [sourceType, setSourceType] = useState<ImportSourceType>("manual_file_upload");
+  const [uploadError, setUploadError] = useState<UploadErrorState | null>(null);
+  const [uploadResult, setUploadResult] = useState<UploadResultSummary | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const query = useQuery<ImportsData>({
     queryKey: ["imports-page-operational", WORKSPACE_ID],
@@ -482,6 +530,72 @@ export default function Imports() {
       ? "review"
       : "healthy";
 
+
+  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextFile = event.target.files?.[0] ?? null;
+    setSelectedFile(nextFile);
+    setUploadResult(null);
+    if (!nextFile) {
+      setUploadError(null);
+      return;
+    }
+    const validationError = validateImportFile(nextFile);
+    setUploadError(validationError ? { kind: validationError } : null);
+  };
+
+  const handleUpload = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setUploadResult(null);
+    if (!selectedFile) {
+      setUploadError({ kind: "missing_file" });
+      return;
+    }
+    const validationError = validateImportFile(selectedFile);
+    if (validationError) {
+      setUploadError({ kind: validationError });
+      return;
+    }
+
+    setIsUploading(true);
+    setUploadError(null);
+    const storagePath = buildImportStoragePath(selectedFile.name);
+    const storageUpload = await supabase.storage.from(FILE_IMPORTS_BUCKET).upload(storagePath, selectedFile, {
+      contentType: selectedFile.type || undefined,
+      upsert: false,
+    });
+
+    if (storageUpload.error) {
+      setUploadError({ kind: "storage", technicalDetails: storageUpload.error.message });
+      setIsUploading(false);
+      return;
+    }
+
+    const parser = await supabase.functions.invoke(FILE_UPLOAD_PARSER_FUNCTION, {
+      body: {
+        workspace_id: WORKSPACE_ID,
+        storage_bucket: FILE_IMPORTS_BUCKET,
+        storage_path: storagePath,
+        original_file_name: selectedFile.name,
+        mime_type: selectedFile.type || null,
+        source_type: sourceType,
+        header_row: headerRow,
+        parse_all_sheets: parseAllSheets,
+        clear_previous: true,
+        metadata: { source: "imports_page_upload" },
+      },
+    });
+
+    if (parser.error) {
+      setUploadError({ kind: "parser", technicalDetails: parser.error.message });
+      setIsUploading(false);
+      return;
+    }
+
+    setUploadResult(normalizeUploadResult(parser.data, selectedFile.name));
+    setIsUploading(false);
+    void query.refetch();
+  };
+
   const actions = buildActions({
     ui,
     failedImports,
@@ -497,6 +611,29 @@ export default function Imports() {
         {signedOut ? <Message>{ui.signIn}</Message> : null}
         {!signedOut && isInitialLoading ? (
           <Message>{ui.loading}</Message>
+        ) : null}
+
+        {!signedOut ? (
+          <IntroBlock text={ui.intro} />
+        ) : null}
+
+        {!signedOut ? (
+          <UploadCard
+            ui={ui}
+            lang={lang}
+            headerRow={headerRow}
+            parseAllSheets={parseAllSheets}
+            sourceType={sourceType}
+            selectedFile={selectedFile}
+            isUploading={isUploading}
+            uploadError={uploadError}
+            uploadResult={uploadResult}
+            onFileChange={handleFileChange}
+            onHeaderRowChange={setHeaderRow}
+            onParseAllSheetsChange={setParseAllSheets}
+            onSourceTypeChange={setSourceType}
+            onSubmit={handleUpload}
+          />
         ) : null}
 
         {!signedOut && !isInitialLoading ? (
@@ -982,6 +1119,134 @@ export default function Imports() {
       </div>
     </DashboardLayout>
   );
+}
+
+function IntroBlock({ text }: { text: string }) {
+  return (
+    <div className="rounded-xl border bg-card p-4 shadow-card-sm">
+      <div className="flex gap-3">
+        <Database className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+        <p className="text-sm leading-6 text-muted-foreground">{text}</p>
+      </div>
+    </div>
+  );
+}
+
+function UploadCard({
+  ui,
+  lang,
+  headerRow,
+  parseAllSheets,
+  sourceType,
+  selectedFile,
+  isUploading,
+  uploadError,
+  uploadResult,
+  onFileChange,
+  onHeaderRowChange,
+  onParseAllSheetsChange,
+  onSourceTypeChange,
+  onSubmit,
+}: {
+  ui: Copy;
+  lang: "uk" | "en";
+  headerRow: number;
+  parseAllSheets: boolean;
+  sourceType: ImportSourceType;
+  selectedFile: File | null;
+  isUploading: boolean;
+  uploadError: UploadErrorState | null;
+  uploadResult: UploadResultSummary | null;
+  onFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  onHeaderRowChange: (value: number) => void;
+  onParseAllSheetsChange: (value: boolean) => void;
+  onSourceTypeChange: (value: ImportSourceType) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <SectionCard title={ui.upload.title} description={ui.upload.desc}>
+      <form className="grid gap-3 lg:grid-cols-[minmax(220px,1fr)_140px_170px_190px_auto] lg:items-end" onSubmit={onSubmit}>
+        <div className="space-y-1.5">
+          <Label htmlFor="import-file-upload">{ui.upload.file}</Label>
+          <Input id="import-file-upload" type="file" accept=".csv,.tsv,.txt,.xlsx,.xls" onChange={onFileChange} />
+          <p className="text-xs text-muted-foreground">{selectedFile?.name ?? ui.upload.supported}</p>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="import-header-row">{ui.upload.headerRow}</Label>
+          <Input id="import-header-row" type="number" min={1} value={headerRow} onChange={(event) => onHeaderRowChange(Math.max(1, Number(event.target.value) || 1))} />
+        </div>
+        <div className="space-y-2 rounded-md border px-3 py-2.5">
+          <Label htmlFor="import-parse-all-sheets" className="text-xs">{ui.upload.parseAllSheets}</Label>
+          <div className="flex items-center gap-2">
+            <Switch id="import-parse-all-sheets" checked={parseAllSheets} onCheckedChange={onParseAllSheetsChange} />
+            <span className="text-xs text-muted-foreground">{parseAllSheets ? "On" : "Off"}</span>
+          </div>
+        </div>
+        <div className="space-y-1.5">
+          <Label>{ui.upload.sourceType}</Label>
+          <Select value={sourceType} onValueChange={(value) => onSourceTypeChange(value as ImportSourceType)}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {SOURCE_TYPE_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>{lang === "uk" ? option.labelUk : option.labelEn}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <Button type="submit" disabled={isUploading || Boolean(uploadError && uploadError.kind !== "missing_file")} className="gap-2">
+          <Upload className="h-4 w-4" />
+          {isUploading ? ui.upload.uploading : ui.upload.submit}
+        </Button>
+      </form>
+
+      {uploadError ? <UploadErrorMessage ui={ui} error={uploadError} /> : null}
+      {uploadResult ? <UploadSuccess ui={ui} result={uploadResult} /> : null}
+    </SectionCard>
+  );
+}
+
+function UploadErrorMessage({ ui, error }: { ui: Copy; error: UploadErrorState }) {
+  const text = error.kind === "unsupported" ? ui.uploadErrors.unsupported
+    : error.kind === "too_large" ? ui.uploadErrors.tooLarge
+      : error.kind === "storage" ? ui.uploadErrors.storage
+        : error.kind === "parser" ? ui.uploadErrors.parser
+          : ui.uploadErrors.missingFile;
+  return (
+    <div className="mt-3 rounded-lg border border-destructive/25 bg-destructive-soft/20 p-3 text-sm text-destructive">
+      <p className="font-medium">{text}</p>
+      {error.technicalDetails ? <details className="mt-2 text-xs"><summary className="cursor-pointer">{ui.uploadErrors.details}</summary><pre className="mt-2 whitespace-pre-wrap">{error.technicalDetails}</pre></details> : null}
+    </div>
+  );
+}
+
+function UploadSuccess({ ui, result }: { ui: Copy; result: UploadResultSummary }) {
+  return (
+    <div className="mt-3 rounded-lg border border-success/25 bg-success-soft/20 p-3">
+      <p className="text-sm font-semibold text-success">{ui.upload.successTitle}</p>
+      <p className="mt-1 text-sm text-muted-foreground">{ui.upload.successDesc}</p>
+      <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-4">
+        <SummaryValue label={ui.upload.originalFileName} value={result.original_file_name ?? "—"} />
+        <SummaryValue label={ui.upload.datasetsCount} value={formatNullableNumber(result.datasets_count)} />
+        <SummaryValue label={ui.upload.rowsInserted} value={formatNullableNumber(result.rows_inserted)} />
+        <SummaryValue label={ui.upload.columnsCount} value={formatNullableNumber(result.columns_count)} />
+      </dl>
+      <Button asChild size="sm" className="mt-3"><Link to={ROUTES.bindings}>{ui.upload.goBindings}<ArrowUpRight className="ml-1 h-3.5 w-3.5" /></Link></Button>
+    </div>
+  );
+}
+
+function SummaryValue({ label, value }: { label: string; value: string | number }) {
+  return <div><dt className="text-xs text-muted-foreground">{label}</dt><dd className="font-semibold">{value}</dd></div>;
+}
+
+function normalizeUploadResult(data: unknown, fallbackName: string): UploadResultSummary {
+  const object = isRecord(data) ? data : {};
+  return {
+    original_file_name: readString(object, "original_file_name") ?? fallbackName,
+    datasets_count: readNumber(object, "datasets_count") ?? readNumber(object, "datasetsCount"),
+    rows_inserted: readNumber(object, "rows_inserted") ?? readNumber(object, "rowsInserted"),
+    columns_count: readNumber(object, "columns_count") ?? readNumber(object, "columnsCount"),
+  };
 }
 
 async function readImportsDashboard(): Promise<ImportsData> {
