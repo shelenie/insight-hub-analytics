@@ -72,6 +72,7 @@ import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { toast } from "@/hooks/use-toast";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { Lang, TranslationKey } from "@/i18n/translations";
+import { buildStatusMap, filterProjectBindings, type StatusFilter } from "@/lib/activeArchiveFilters";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 
@@ -141,7 +142,7 @@ type BindingActionTechnicalDetails = {
   binding_id?: string;
   result?: unknown;
 };
-type BindingStatusFilter = "active" | "archived" | "all";
+type BindingStatusFilter = StatusFilter;
 type AdAccountBindingStatusFilter = BindingStatusFilter;
 type BindingsTab =
   | "overview"
@@ -285,6 +286,7 @@ export default function Bindings() {
   const [adFormError, setAdFormError] = useState("");
   const [adAccountStatusFilter, setAdAccountStatusFilter] =
     useState<AdAccountBindingStatusFilter>("active");
+  const [projectBindingStatusFilter, setProjectBindingStatusFilter] = useState<BindingStatusFilter>("active");
   const [hierarchyDialog, setHierarchyDialog] = useState<{ type: "client" | "project" | "funnel"; target: "ad" | "source" } | null>(null);
   const [hierarchyName, setHierarchyName] = useState("");
   const [hierarchyError, setHierarchyError] = useState("");
@@ -594,9 +596,18 @@ export default function Bindings() {
       matchesBindingStatusFilter(row, adAccountStatusFilter),
     );
   }, [adAccountStatusFilter, query.data?.adAccountBindings]);
+  const projectBindingStatusMaps = useMemo(() => ({
+    clients: buildStatusMap(query.data?.clients ?? [], ["client_id", "id"]),
+    projects: buildStatusMap(query.data?.projects ?? [], ["project_id", "id"]),
+    funnels: buildStatusMap(query.data?.funnels ?? [], ["funnel_id", "id"]),
+  }), [query.data?.clients, query.data?.funnels, query.data?.projects]);
+  const activeProjectDataBindings = useMemo(
+    () => filterProjectBindings(filterRows(query.data?.projectDataBindings ?? []), "active", projectBindingStatusMaps),
+    [projectBindingStatusMaps, query.data?.projectDataBindings],
+  );
   const filteredProjectDataBindings = useMemo(
-    () => filterRows(query.data?.projectDataBindings ?? []),
-    [query.data?.projectDataBindings],
+    () => filterProjectBindings(filterRows(query.data?.projectDataBindings ?? []), projectBindingStatusFilter, projectBindingStatusMaps),
+    [projectBindingStatusFilter, projectBindingStatusMaps, query.data?.projectDataBindings],
   );
   const adBindingOptions = useMemo(
     () => buildAdAccountBindingOptions(query.data),
@@ -618,7 +629,7 @@ export default function Bindings() {
   const visibleBindingCounts = {
     sourceBindings: filteredSourceBindings.length,
     adAccountBindings: filteredAdAccountBindings.length,
-    projectDataBindings: filteredProjectDataBindings.length,
+    projectDataBindings: activeProjectDataBindings.length,
     mappingReviewQueue: filteredMappingReviewQueue.length,
   };
   const overviewCards = [
@@ -1270,6 +1281,7 @@ export default function Bindings() {
                 title={t("bindingsProjectBindingsTitle")}
                 description={t("bindingsProjectBindingsDescription")}
               >
+                <StatusFilterControl value={projectBindingStatusFilter} onChange={setProjectBindingStatusFilter} t={t} />
                 <KnownColumnsTable
                   rows={filteredProjectDataBindings}
                   columns={[
@@ -1285,7 +1297,7 @@ export default function Bindings() {
                     "health_status",
                     "binding_status",
                   ]}
-                  emptyText={t("bindingsProjectBindingsEmpty")}
+                  emptyText={projectBindingStatusFilter === "active" ? t("bindingsActiveRecordsEmpty") : t("bindingsProjectBindingsEmpty")}
                 />
               </SectionCard>
             </TabsContent>
@@ -2902,6 +2914,10 @@ function GenericDataTable({
   );
 }
 
+
+function StatusFilterControl({ value, onChange, t }: { value: BindingStatusFilter; onChange: (value: BindingStatusFilter) => void; t: (key: TranslationKey) => string }) {
+  return <div className="mb-3 flex flex-wrap items-center gap-2 text-sm"><span className="text-muted-foreground">{t("bindingsStatusLabel")}</span><Select value={value} onValueChange={(next) => onChange(next as BindingStatusFilter)}><SelectTrigger className="h-9 w-[160px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">{t("bindingsStatusActive")}</SelectItem><SelectItem value="archived">{t("bindingsStatusArchived")}</SelectItem><SelectItem value="all">{t("bindingsStatusAll")}</SelectItem></SelectContent></Select></div>;
+}
 function KpiGrid({
   cards,
 }: {
