@@ -1,3 +1,5 @@
+- Verify in production that the DashboardLayout wrapper protection plus wrapping Imports upload form remove page-level horizontal scroll at normal desktop widths without changing sidebar behavior, upload behavior, or backend contracts.
+- Verify in production that `/imports` keeps the final aligned upload form, has no horizontal page scrollbar at normal desktop widths, preserves the selected file chip/clear action, and aligns the compact success summary with the right-side Data Bindings CTA and dismiss action. No backend/Supabase/migrations/RLS/RPC/Edge Function/storage/production data changes were made.
 ## 2026-07-15 — Imports upload layout hotfix review
 - Verify in production that `/imports` keeps the compact wrapping upload layout without horizontal page scroll, clears the selected file after a successful parser response while preserving the success summary, and shows the Data Bindings CTA on the right side of the success panel.
 

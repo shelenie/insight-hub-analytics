@@ -1,3 +1,11 @@
+## 2026-07-15 — Imports overflow follow-up for layout wrappers
+
+Imports overflow follow-up: DashboardLayout now adds local max-width/min-width and overflow clipping protection on the sidebar provider, dashboard shell, content column, header, page header, and main content wrappers; the Imports upload form keeps aligned internal label/control/helper rows but now uses a wrapping flex layout instead of the fixed five-column desktop grid. The compact success summary keeps truncation and a safely wrapping right-side CTA/dismiss area. No backend, Supabase schema, migrations, RLS, RPC definitions, Edge Function code, storage bucket, file-upload-parser contract, upload parser payload, OAuth logic, Ads connector logic, Google Sheets connector logic, binding contracts, routes, production data, uploaded files, or Google Drive uploads changed.
+
+## 2026-07-15 — Imports upload final alignment and overflow fix
+
+Imports upload final alignment fix: upload form controls now share aligned label/control/helper rows, the remaining `/imports` horizontal page overflow cause was addressed with local max-width/min-width/truncation constraints, and the success summary text plus Data Bindings CTA/dismiss action align cleanly inside the compact success panel. The selected file chip with accessible clear action is preserved. No backend, Supabase schema, migrations, RLS, RPC definitions, Edge Function code, storage bucket, file-upload-parser contract, upload parser payload, OAuth logic, Ads connector logic, Google Sheets connector logic, binding contracts, routes, production data, uploaded files, or Google Drive uploads changed.
+
 ## 2026-07-15 — Imports upload deployed layout regression fix
 
 Imports upload deployed layout regression fix: compact upload form restored with a safe wrapping layout and constrained controls, selected files now clear automatically after successful parser upload while the success summary remains visible, and the success CTA moved to the right-side action area. No backend, Supabase schema, migrations, RLS, RPC definitions, Edge Function code, storage bucket, file-upload-parser contract, upload parser payload, OAuth logic, Ads connector logic, Google Sheets connector logic, binding contracts, routes, production data, uploaded files, or Google Drive uploads changed.

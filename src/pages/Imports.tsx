@@ -1315,13 +1315,20 @@ function UploadCard({
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
-    <SectionCard title={ui.upload.title} description={ui.upload.desc}>
+    <SectionCard
+      title={ui.upload.title}
+      description={ui.upload.desc}
+      className="max-w-full min-w-0 overflow-hidden"
+      contentClassName="max-w-full min-w-0"
+    >
       <form
-        className="flex max-w-full min-w-0 flex-wrap items-end gap-3"
+        className="flex max-w-full min-w-0 flex-wrap gap-x-3 gap-y-2"
         onSubmit={onSubmit}
       >
-        <div className="min-w-0 max-w-[360px] flex-[1_1_260px] space-y-1.5">
-          <Label htmlFor="import-file-upload">{ui.upload.file}</Label>
+        <div className="grid min-w-0 max-w-[300px] flex-[1_1_240px] grid-rows-[1rem_2.5rem_auto] gap-y-1.5">
+          <Label htmlFor="import-file-upload" className="truncate">
+            {ui.upload.file}
+          </Label>
           <div className="flex min-h-10 min-w-0 items-center">
             <Input
               ref={fileInputRef}
@@ -1360,12 +1367,14 @@ function UploadCard({
               {ui.upload.noFileSelected}
             </p>
           )}
-          <p className="min-h-4 text-xs text-muted-foreground">
+          <p className="min-h-4 min-w-0 truncate text-xs text-muted-foreground">
             {ui.upload.supported}
           </p>
         </div>
-        <div className="w-[140px] min-w-0 space-y-1.5">
-          <Label htmlFor="import-header-row">{ui.upload.headerRow}</Label>
+        <div className="grid min-w-0 flex-[0_0_140px] grid-rows-[1rem_2.5rem_auto] gap-y-1.5">
+          <Label htmlFor="import-header-row" className="truncate">
+            {ui.upload.headerRow}
+          </Label>
           <div className="flex min-h-10 min-w-0 items-center">
             <Input
               id="import-header-row"
@@ -1378,8 +1387,8 @@ function UploadCard({
             />
           </div>
         </div>
-        <div className="w-[180px] min-w-0 space-y-1.5">
-          <Label htmlFor="import-parse-all-sheets">
+        <div className="grid min-w-0 flex-[0_0_180px] grid-rows-[1rem_2.5rem_auto] gap-y-1.5">
+          <Label htmlFor="import-parse-all-sheets" className="truncate">
             {ui.upload.parseAllSheets}
           </Label>
           <div className="flex min-h-10 min-w-0 items-center gap-2 rounded-md border px-3">
@@ -1395,8 +1404,8 @@ function UploadCard({
             </span>
           </div>
         </div>
-        <div className="min-w-[200px] flex-[1_1_220px] space-y-1.5">
-          <Label>{ui.upload.sourceType}</Label>
+        <div className="grid min-w-0 max-w-[240px] flex-[1_1_200px] grid-rows-[1rem_2.5rem_auto] gap-y-1.5">
+          <Label className="truncate">{ui.upload.sourceType}</Label>
           <div className="flex min-h-10 min-w-0 items-center">
             <Select
               value={sourceType}
@@ -1417,7 +1426,13 @@ function UploadCard({
             </Select>
           </div>
         </div>
-        <div className="max-w-full flex-[0_1_260px] space-y-1.5">
+        <div className="grid min-w-[180px] max-w-[220px] flex-[0_1_220px] grid-rows-[1rem_2.5rem_auto] gap-y-1.5">
+          <span
+            className="min-h-4 text-xs font-medium leading-none opacity-0"
+            aria-hidden="true"
+          >
+            {ui.upload.submit}
+          </span>
           <Button
             type="submit"
             disabled={
@@ -1490,28 +1505,35 @@ function UploadSuccess({
   return (
     <div className="mt-3 max-w-full min-w-0 rounded-lg border border-success/25 bg-success-soft/20 px-3 py-2">
       <div className="flex max-w-full min-w-0 flex-col gap-2 sm:flex-row sm:items-start">
-        <div className="flex min-w-0 flex-1 items-start gap-2">
-          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold leading-5 text-success">
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-start gap-2">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+            <p className="min-w-0 text-sm font-semibold leading-5 text-success">
               {ui.upload.successTitle}
             </p>
-            <p
-              className="mt-0.5 max-w-full min-w-0 truncate text-xs text-muted-foreground"
-              title={result.original_file_name ?? undefined}
-            >
-              {result.original_file_name ?? "—"} · {ui.upload.datasetsCount}:{" "}
-              {formatNullableNumber(result.datasets_count)} ·{" "}
-              {ui.upload.rowsInserted}:{" "}
-              {formatNullableNumber(result.rows_inserted)} ·{" "}
-              {ui.upload.columnsCount}:{" "}
-              {formatNullableNumber(result.columns_count)}
-            </p>
           </div>
+          <p
+            className="mt-0.5 max-w-full min-w-0 truncate text-xs text-muted-foreground"
+            title={result.original_file_name ?? undefined}
+          >
+            {result.original_file_name ?? "—"} · {ui.upload.datasetsCount}:{" "}
+            {formatNullableNumber(result.datasets_count)} ·{" "}
+            {ui.upload.rowsInserted}:{" "}
+            {formatNullableNumber(result.rows_inserted)} ·{" "}
+            {ui.upload.columnsCount}:{" "}
+            {formatNullableNumber(result.columns_count)}
+          </p>
         </div>
-        <div className="flex max-w-full shrink-0 items-center gap-1 self-start sm:ml-auto">
-          <Button asChild size="sm" className="h-7 max-w-full px-2 text-xs">
-            <Link to={ROUTES.bindings} className="min-w-0">
+        <div className="flex max-w-full min-w-0 flex-wrap items-center gap-1 self-start sm:ml-auto sm:justify-end">
+          <Button
+            asChild
+            size="sm"
+            className="h-7 max-w-full min-w-0 px-2 text-xs"
+          >
+            <Link
+              to={ROUTES.bindings}
+              className="flex min-w-0 max-w-full items-center"
+            >
               <span className="min-w-0 truncate">{ui.upload.goBindings}</span>
               <ArrowUpRight className="ml-1 h-3 w-3 shrink-0" />
             </Link>

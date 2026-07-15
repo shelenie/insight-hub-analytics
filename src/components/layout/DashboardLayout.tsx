@@ -16,32 +16,91 @@ interface DashboardLayoutProps {
   subtitle?: string;
   actions?: ReactNode;
   /** Optional last-sync metadata shown as a freshness pill in the page header */
-  sync?: { source?: string; lastSync: string; status?: "fresh" | "stale" | "failed" };
+  sync?: {
+    source?: string;
+    lastSync: string;
+    status?: "fresh" | "stale" | "failed";
+  };
   children: ReactNode;
   contentClassName?: string;
 }
 
-export function DashboardLayout({ title, subtitle, actions, sync, children, contentClassName }: DashboardLayoutProps) {
+export function DashboardLayout({
+  title,
+  subtitle,
+  actions,
+  sync,
+  children,
+  contentClassName,
+}: DashboardLayoutProps) {
   const { t, lang } = useI18n();
   const navigate = useNavigate();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [isApplePlatform, setIsApplePlatform] = useState(false);
   const [searchValue, setSearchValue] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const shortcutLabel = useMemo(() => (isApplePlatform ? "⌘K" : "Ctrl K"), [isApplePlatform]);
+  const shortcutLabel = useMemo(
+    () => (isApplePlatform ? "⌘K" : "Ctrl K"),
+    [isApplePlatform],
+  );
 
   const searchableRoutes = useMemo(
     () => [
-      { labelUk: "Огляд", labelEn: "Overview", path: "/", aliases: ["робочий простір", "workspace"] },
-      { labelUk: "Конверсії", labelEn: "Conversions", path: "/conversions", aliases: [] },
-      { labelUk: "Кампанії", labelEn: "Campaigns", path: "/campaigns", aliases: [] },
+      {
+        labelUk: "Огляд",
+        labelEn: "Overview",
+        path: "/",
+        aliases: ["робочий простір", "workspace"],
+      },
+      {
+        labelUk: "Конверсії",
+        labelEn: "Conversions",
+        path: "/conversions",
+        aliases: [],
+      },
+      {
+        labelUk: "Кампанії",
+        labelEn: "Campaigns",
+        path: "/campaigns",
+        aliases: [],
+      },
       { labelUk: "Продажі", labelEn: "Sales", path: "/sales", aliases: [] },
-      { labelUk: "Онбординг", labelEn: "Onboarding", path: "/onboarding", aliases: [] },
-      { labelUk: "Звʼязки даних", labelEn: "Data bindings", path: "/bindings", aliases: ["bindings"] },
-      { labelUk: "Імпорти", labelEn: "Imports", path: "/imports", aliases: ["якість даних", "data quality"] },
-      { labelUk: "Ads конектори", labelEn: "Ads connectors", path: "/ads-connectors", aliases: [] },
-      { labelUk: "Telegram", labelEn: "Alerts", path: "/alerts", aliases: ["сповіщення", "notifications"] },
-      { labelUk: "AI-асистент", labelEn: "AI assistant", path: "/assistant", aliases: [] },
+      {
+        labelUk: "Онбординг",
+        labelEn: "Onboarding",
+        path: "/onboarding",
+        aliases: [],
+      },
+      {
+        labelUk: "Звʼязки даних",
+        labelEn: "Data bindings",
+        path: "/bindings",
+        aliases: ["bindings"],
+      },
+      {
+        labelUk: "Імпорти",
+        labelEn: "Imports",
+        path: "/imports",
+        aliases: ["якість даних", "data quality"],
+      },
+      {
+        labelUk: "Ads конектори",
+        labelEn: "Ads connectors",
+        path: "/ads-connectors",
+        aliases: [],
+      },
+      {
+        labelUk: "Telegram",
+        labelEn: "Alerts",
+        path: "/alerts",
+        aliases: ["сповіщення", "notifications"],
+      },
+      {
+        labelUk: "AI-асистент",
+        labelEn: "AI assistant",
+        path: "/assistant",
+        aliases: [],
+      },
     ],
     [],
   );
@@ -50,7 +109,14 @@ export function DashboardLayout({ title, subtitle, actions, sync, children, cont
   const matchedRoutes = useMemo(() => {
     if (!normalizedQuery) return [];
     return searchableRoutes.filter((route) => {
-      const haystack = [route.labelUk, route.labelEn, route.path, ...route.aliases].join(" ").toLowerCase();
+      const haystack = [
+        route.labelUk,
+        route.labelEn,
+        route.path,
+        ...route.aliases,
+      ]
+        .join(" ")
+        .toLowerCase();
       return haystack.includes(normalizedQuery);
     });
   }, [normalizedQuery, searchableRoutes]);
@@ -64,7 +130,9 @@ export function DashboardLayout({ title, subtitle, actions, sync, children, cont
   useEffect(() => {
     const platform = navigator.platform ?? "";
     const userAgent = navigator.userAgent ?? "";
-    const isApple = /Mac|iPhone|iPad|iPod/i.test(platform) || /Mac|iPhone|iPad|iPod/i.test(userAgent);
+    const isApple =
+      /Mac|iPhone|iPad|iPod/i.test(platform) ||
+      /Mac|iPhone|iPad|iPod/i.test(userAgent);
     setIsApplePlatform(isApple);
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -80,26 +148,32 @@ export function DashboardLayout({ title, subtitle, actions, sync, children, cont
   }, [searchValue]);
 
   return (
-    <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background bg-hero">
+    <SidebarProvider className="max-w-full overflow-x-clip">
+      <div className="flex min-h-screen w-full max-w-full overflow-x-clip bg-background bg-hero">
         <AppSidebar />
-        <div className="flex min-h-screen flex-1 min-w-0 flex-col">
+        <div className="flex min-h-screen min-w-0 max-w-full flex-1 flex-col overflow-x-clip">
           {/* Top bar — unified premium control strip */}
-          <header className="sticky top-0 z-30 flex h-12 items-center gap-2 border-b border-border/60 glass px-3 lg:px-4">
+          <header className="sticky top-0 z-30 flex h-12 max-w-full items-center gap-2 overflow-x-clip border-b border-border/60 glass px-3 lg:px-4">
             <SidebarTrigger className="h-8 w-8 shrink-0 hover:bg-muted/60" />
             <div className="mx-1 hidden h-5 w-px bg-border/70 md:block" />
 
             {/* Context group: workspace › page */}
             <div className="hidden min-w-0 items-center gap-1.5 text-[12.5px] md:flex">
-              <Link to="/" aria-label={t("goToOverview")} className="text-muted-foreground/80 transition-colors hover:text-foreground/80">
+              <Link
+                to="/"
+                aria-label={t("goToOverview")}
+                className="text-muted-foreground/80 transition-colors hover:text-foreground/80"
+              >
                 {t("workspace")}
               </Link>
               <ChevronRight className="h-3 w-3 text-muted-foreground/50" />
-              <span className="truncate font-medium tracking-tight text-foreground/90">{title}</span>
+              <span className="truncate font-medium tracking-tight text-foreground/90">
+                {title}
+              </span>
             </div>
 
             {/* Right side: search + utilities + actions */}
-            <div className="ml-auto flex items-center gap-1.5">
+            <div className="ml-auto flex min-w-0 items-center gap-1.5">
               <div className="relative hidden lg:block">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground/70" />
                 <Input
@@ -109,7 +183,9 @@ export function DashboardLayout({ title, subtitle, actions, sync, children, cont
                     setSearchValue(e.target.value);
                     setShowSearchResults(Boolean(e.target.value.trim()));
                   }}
-                  onFocus={() => setShowSearchResults(Boolean(searchValue.trim()))}
+                  onFocus={() =>
+                    setShowSearchResults(Boolean(searchValue.trim()))
+                  }
                   onBlur={() => {
                     setTimeout(() => setShowSearchResults(false), 120);
                   }}
@@ -145,14 +221,20 @@ export function DashboardLayout({ title, subtitle, actions, sync, children, cont
                               onMouseDown={(e) => e.preventDefault()}
                               onClick={() => navigateToResult(route.path)}
                             >
-                              <span>{lang === "en" ? route.labelEn : route.labelUk}</span>
-                              <span className="text-muted-foreground">{route.path}</span>
+                              <span>
+                                {lang === "en" ? route.labelEn : route.labelUk}
+                              </span>
+                              <span className="text-muted-foreground">
+                                {route.path}
+                              </span>
                             </button>
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <div className="px-3 py-2 text-xs text-muted-foreground">{t("topSearchNoResults")}</div>
+                      <div className="px-3 py-2 text-xs text-muted-foreground">
+                        {t("topSearchNoResults")}
+                      </div>
                     )}
                   </div>
                 )}
@@ -164,7 +246,12 @@ export function DashboardLayout({ title, subtitle, actions, sync, children, cont
               <div className="flex items-center gap-0.5 rounded-md border border-border/60 bg-card/40 p-0.5">
                 <LangSwitcher />
                 <ThemeSwitcher />
-                <Button asChild variant="ghost" size="icon" className="h-7 w-7 rounded-md text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:ring-1 focus-visible:ring-primary/40">
+                <Button
+                  asChild
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 rounded-md text-muted-foreground hover:bg-muted/60 hover:text-foreground focus-visible:ring-1 focus-visible:ring-primary/40"
+                >
                   <Link to="/alerts" aria-label="Перейти до сповіщень">
                     <Bell className="h-3.5 w-3.5" />
                   </Link>
@@ -177,8 +264,8 @@ export function DashboardLayout({ title, subtitle, actions, sync, children, cont
           </header>
 
           {/* Page header — title + sync pill + actions */}
-          <div className="border-b border-border/60 bg-card-elevated/40 backdrop-blur-sm">
-            <div className="flex flex-col gap-3 px-4 py-4 lg:flex-row lg:items-end lg:justify-between lg:px-6 lg:py-5">
+          <div className="max-w-full min-w-0 overflow-x-clip border-b border-border/60 bg-card-elevated/40 backdrop-blur-sm">
+            <div className="flex max-w-full min-w-0 flex-col gap-3 px-4 py-4 lg:flex-row lg:items-end lg:justify-between lg:px-6 lg:py-5">
               <div className="min-w-0">
                 <div className="flex items-center gap-2.5">
                   <h1 className="text-[22px] font-semibold leading-none tracking-[-0.02em] lg:text-[28px]">
@@ -187,38 +274,59 @@ export function DashboardLayout({ title, subtitle, actions, sync, children, cont
                   {sync && <SyncPill sync={sync} />}
                 </div>
                 {subtitle && (
-                  <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">{subtitle}</p>
+                  <p className="mt-2 text-[13px] leading-relaxed text-muted-foreground">
+                    {subtitle}
+                  </p>
                 )}
               </div>
               {actions && (
-                <div className="flex flex-wrap items-center gap-2 lg:shrink-0">{actions}</div>
+                <div className="flex flex-wrap items-center gap-2 lg:shrink-0">
+                  {actions}
+                </div>
               )}
             </div>
           </div>
 
           {/* Content */}
-          <main className={cn("flex-1 overflow-x-hidden p-4 lg:p-6 animate-fade-in", contentClassName)}>{children}</main>
+          <main
+            className={cn(
+              "flex-1 max-w-full min-w-0 overflow-x-hidden p-4 lg:p-6 animate-fade-in",
+              contentClassName,
+            )}
+          >
+            {children}
+          </main>
         </div>
       </div>
     </SidebarProvider>
   );
 }
 
-function SyncPill({ sync }: { sync: { source?: string; lastSync: string; status?: "fresh" | "stale" | "failed" } }) {
+function SyncPill({
+  sync,
+}: {
+  sync: {
+    source?: string;
+    lastSync: string;
+    status?: "fresh" | "stale" | "failed";
+  };
+}) {
   const { t, lang } = useI18n();
   const status = sync.status ?? "fresh";
   const dot =
     status === "fresh"
       ? "bg-success shadow-[0_0_0_3px_hsl(var(--success)/0.18)]"
       : status === "stale"
-      ? "bg-warning shadow-[0_0_0_3px_hsl(var(--warning)/0.18)]"
-      : "bg-destructive shadow-[0_0_0_3px_hsl(var(--destructive)/0.18)]";
+        ? "bg-warning shadow-[0_0_0_3px_hsl(var(--warning)/0.18)]"
+        : "bg-destructive shadow-[0_0_0_3px_hsl(var(--destructive)/0.18)]";
   return (
     <div className="hidden items-center gap-2 rounded-full border border-border/70 bg-card/70 px-2.5 py-1 text-[11px] text-muted-foreground md:inline-flex">
       <span className={"inline-flex h-1.5 w-1.5 rounded-full " + dot} />
       <Activity className="h-3 w-3 text-muted-foreground/70" />
       <span className="text-muted-foreground/90">{t("lastSync")}</span>
-      <span className="font-medium text-foreground/85 num">{sync.lastSync}</span>
+      <span className="font-medium text-foreground/85 num">
+        {sync.lastSync}
+      </span>
       {sync.source && (
         <>
           <span className="text-muted-foreground/40">·</span>
