@@ -1814,7 +1814,7 @@ function AdAccountCard({ row, ui, compact = false, timestampDisplayMode, timezon
       </div>
 
       <div className={cn("mt-auto", compact ? "pt-3" : "pt-4")}>
-        {testOrArchived ? <OperationalNotice tone="warning">{accountNote}</OperationalNotice> : <p className="text-xs text-muted-foreground">{accountNote}</p>}
+        {testOrArchived ? <OperationalNotice tone="warning">{accountNote}</OperationalNotice> : unboundRealAccount ? null : <p className="text-xs text-muted-foreground">{accountNote}</p>}
       </div>
     </article>
   );

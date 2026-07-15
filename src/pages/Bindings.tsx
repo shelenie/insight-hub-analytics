@@ -72,7 +72,12 @@ import { useWorkspaceRole } from "@/hooks/useWorkspaceRole";
 import { toast } from "@/hooks/use-toast";
 import { useI18n } from "@/i18n/I18nProvider";
 import type { Lang, TranslationKey } from "@/i18n/translations";
-import { buildStatusMap, filterProjectBindings, type StatusFilter } from "@/lib/activeArchiveFilters";
+import {
+  buildStatusMap,
+  filterByOperationalStatus,
+  filterProjectBindings,
+  type StatusFilter,
+} from "@/lib/activeArchiveFilters";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
 

@@ -1,4 +1,9 @@
 
+## Next Action — 2026-07-15 Bindings Crash Fix Production Smoke Test
+
+After merge/deploy, smoke-test `/bindings` in production to confirm the page opens without the global ErrorBoundary and verify Ads Connectors unbound account cards still show the account identity/status fields plus one concise unbound-account helper. No Supabase migration, RPC, RLS, Edge Function, OAuth, sync, archive/restore, or production data action is required for this frontend-only fix.
+
+
 ## 2026-07-15 — Production UX polish for Onboarding, Bindings, and Ads Connectors
 
 Frontend-only production UX polish for the connected setup flow: Onboarding → Зв’язки даних → Ads конектори. Sidebar Admin order now places Ads конектори directly after Зв’язки даних; Onboarding, Bindings, and Ads Connectors copy/empty states/overview guidance were tightened for operational readiness. No backend/Supabase/migrations/RPC/RLS/Edge Functions/production data changed.
