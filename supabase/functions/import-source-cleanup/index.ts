@@ -94,6 +94,7 @@ async function deleteByColumn(
 
 async function deleteRawExternalRows(
   client: any,
+  workspaceId: string,
   datasetId: string | null,
   fileAssetId: string | null,
 ) {
@@ -103,24 +104,28 @@ async function deleteRawExternalRows(
       "raw_external_rows",
       "raw_external_dataset_id",
       datasetId,
+      { workspace_id: workspaceId },
     )) +
     (await deleteByColumn(
       client,
       "raw_external_rows",
       "dataset_id",
       datasetId,
+      { workspace_id: workspaceId },
     )) +
     (await deleteByColumn(
       client,
       "raw_external_rows",
       "file_asset_id",
       fileAssetId,
+      { workspace_id: workspaceId },
     ))
   );
 }
 
 async function deleteSourceEntityBindings(
   client: any,
+  workspaceId: string,
   datasetId: string | null,
 ) {
   return deleteByColumn(
@@ -129,6 +134,7 @@ async function deleteSourceEntityBindings(
     "source_id",
     datasetId,
     {
+      workspace_id: workspaceId,
       source_table: "raw_external_datasets",
     },
   );
@@ -136,6 +142,7 @@ async function deleteSourceEntityBindings(
 
 async function deleteImportRejectedRows(
   client: any,
+  workspaceId: string,
   fileAssetId: string | null,
   datasetId: string | null,
   importRunId: string | null,
@@ -146,18 +153,21 @@ async function deleteImportRejectedRows(
       "import_rejected_rows",
       "file_asset_id",
       fileAssetId,
+      { workspace_id: workspaceId },
     )) +
     (await deleteByColumn(
       client,
       "import_rejected_rows",
       "source_id",
       datasetId,
+      { workspace_id: workspaceId },
     )) +
     (await deleteByColumn(
       client,
       "import_rejected_rows",
       "import_run_id",
       importRunId,
+      { workspace_id: workspaceId },
     ))
   );
 }
@@ -170,7 +180,9 @@ async function deleteImportRunRows(
   sourceNames: string[],
 ) {
   if (importRunId)
-    return deleteByColumn(client, table, "import_run_id", importRunId);
+    return deleteByColumn(client, table, "import_run_id", importRunId, {
+      workspace_id: workspaceId,
+    });
 
   let deleted = 0;
   for (const sourceName of sourceNames.filter(Boolean)) {
@@ -514,9 +526,11 @@ Deno.serve(async (req) => {
       "dataset_field_mappings",
       "dataset_id",
       resolvedDatasetId,
+      { workspace_id: workspaceId },
     );
     deleted_counts.import_rejected_rows = await deleteImportRejectedRows(
       supabaseAdmin,
+      workspaceId,
       resolvedFileAssetId,
       resolvedDatasetId,
       resolvedImportRunId,
@@ -530,11 +544,13 @@ Deno.serve(async (req) => {
     );
     deleted_counts.raw_external_rows = await deleteRawExternalRows(
       supabaseAdmin,
+      workspaceId,
       resolvedDatasetId,
       resolvedFileAssetId,
     );
     deleted_counts.source_entity_bindings = await deleteSourceEntityBindings(
       supabaseAdmin,
+      workspaceId,
       resolvedDatasetId,
     );
     deleted_counts.raw_external_datasets = await deleteByColumn(
@@ -542,12 +558,14 @@ Deno.serve(async (req) => {
       "raw_external_datasets",
       "id",
       resolvedDatasetId,
+      { workspace_id: workspaceId },
     );
     deleted_counts.file_assets = await deleteByColumn(
       supabaseAdmin,
       "file_assets",
       "id",
       resolvedFileAssetId,
+      { workspace_id: workspaceId },
     );
     await audit(
       supabaseAdmin,

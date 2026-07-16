@@ -67,6 +67,7 @@ describe("import source management", () => {
     expect(source).toContain("Missing bearer token");
     expect(source).toContain("Cleanup requires confirm: true");
     expect(source).toContain("Cleanup requires superadmin role");
+    expect(source).toContain('if (mode === "cleanup" && role !== "superadmin")');
     expect(source).toContain("Only file/import uploaded sources");
     expect(source).toContain("File import source was not found in this workspace");
     expect(source).toMatch(/storage\s*\.from\(storageBucket\)\s*\.remove\(\[storagePath\]\)/);
@@ -85,7 +86,7 @@ describe("import source management", () => {
     expect(source).toMatch(/deleteByColumn\(\s*client,\s*"import_rejected_rows",\s*"file_asset_id",\s*fileAssetId/s);
     expect(source).toMatch(/deleteByColumn\(\s*client,\s*"import_rejected_rows",\s*"source_id",\s*datasetId/s);
     expect(source).toMatch(/deleteByColumn\(\s*client,\s*"import_rejected_rows",\s*"import_run_id",\s*importRunId/s);
-    expect(source).toMatch(/deleteByColumn\(client, table, "import_run_id", importRunId\)/);
+    expect(source).toMatch(/deleteByColumn\(client, table, "import_run_id", importRunId, \{/);
     expect(source).toMatch(/deleteByColumn\(client, table, "source_name", sourceName, \{/);
 
     const mappingReviewCleanup = functionBody(source, "deleteImportRunRows");
@@ -95,6 +96,22 @@ describe("import source management", () => {
     expect(mappingReviewCleanup).not.toContain('"raw_external_dataset_id"');
     expect(datasetMappingsCleanup).not.toContain('"raw_external_dataset_id"');
     expect(stagingCleanupCall).not.toContain('"raw_external_dataset_id"');
+  });
+
+
+  it("scopes destructive cleanup deletes by workspace_id", () => {
+    const source = edgeSource();
+
+    expect(functionBody(source, "deleteRawExternalRows")).toMatch(/workspace_id:\s*workspaceId/g);
+    expect(functionBody(source, "deleteSourceEntityBindings")).toContain("workspace_id: workspaceId");
+    expect(functionBody(source, "deleteImportRejectedRows")).toMatch(/workspace_id:\s*workspaceId/g);
+    expect(functionBody(source, "deleteImportRunRows")).toMatch(/workspace_id:\s*workspaceId/g);
+
+    const cleanupBlock = source.slice(source.indexOf("const deleted_counts"), source.indexOf("file_import_source_cleaned"));
+    for (const table of ["dataset_field_mappings", "raw_external_datasets", "file_assets"]) {
+      const tableCall = cleanupBlock.slice(cleanupBlock.indexOf(`"${table}"`) - 80, cleanupBlock.indexOf(`"${table}"`) + 220);
+      expect(tableCall).toContain("workspace_id: workspaceId");
+    }
   });
 
   it("resolves import_run_id before deleting staging/review rows", () => {
@@ -140,6 +157,9 @@ describe("import source management", () => {
 
     expect(migration).toContain("import-source-cleanup");
     expect(migration).toContain("required_min_role = ''admin''");
+    expect(migration).toContain("required_permission = ''can_manage_imports''");
+    expect(migration).not.toContain("required_permission = null");
+    expect(migration).not.toContain("insert_values := insert_values || 'null'");
     expect(migration).toContain("is_dangerous = true");
     expect(migration).toContain("requires_audit_log = true");
     expect(migration).toContain("status = ''active''");

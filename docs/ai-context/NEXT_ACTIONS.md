@@ -1,3 +1,9 @@
+## 2026-07-16 — PR #269 final access and cleanup verification
+
+- After applying `20260716_register_import_source_cleanup_edge_function.sql`, verify `check_edge_function_access`/`check_edge_function_access_by_email` allows admins with `can_manage_imports` to archive/restore through `import-source-cleanup`.
+- Verify destructive cleanup still returns forbidden for admin and succeeds only for superadmin with explicit confirmation.
+- Verify cleanup audit metadata and deleted counts remain workspace-scoped and do not affect imports from another workspace.
+
 ## 2026-07-16 — PR #269 import cleanup deployment verification
 
 - Apply the `20260716_register_import_source_cleanup_edge_function.sql` migration before deploying `import-source-cleanup`, then verify the registry resolves admin access for archive/restore and still leaves cleanup superadmin-only in the function.

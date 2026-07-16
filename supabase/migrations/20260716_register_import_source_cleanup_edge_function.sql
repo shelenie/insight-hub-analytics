@@ -60,9 +60,9 @@ begin
   end if;
 
   if exists (select 1 from information_schema.columns where table_schema = registry_schema and table_name = registry_name and column_name = 'required_permission') then
-    set_clauses := set_clauses || 'required_permission = null';
+    set_clauses := set_clauses || 'required_permission = ''can_manage_imports''';
     insert_columns := insert_columns || 'required_permission';
-    insert_values := insert_values || 'null';
+    insert_values := insert_values || quote_literal('can_manage_imports');
   end if;
 
   if exists (select 1 from information_schema.columns where table_schema = registry_schema and table_name = registry_name and column_name = 'status') then
