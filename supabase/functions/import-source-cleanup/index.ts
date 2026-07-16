@@ -58,18 +58,198 @@ async function audit(
   });
   if (error) console.error("Audit log write failed", error);
 }
-async function countDelete(
+function isMissingColumnError(error: any) {
+  const message = String(error?.message ?? error ?? "").toLowerCase();
+  return (
+    error?.code === "42703" ||
+    (message.includes("column") && message.includes("does not exist")) ||
+    (message.includes("could not find") && message.includes("column"))
+  );
+}
+
+async function deleteByColumn(
   client: any,
   table: string,
   column: string,
-  value: string,
+  value: string | null,
+  extra?: Record<string, string>,
 ) {
-  const { count, error } = await client
-    .from(table)
-    .delete({ count: "exact" })
-    .eq(column, value);
-  if (error) throw new Error(`${table}: ${error.message}`);
+  if (!value) return 0;
+  let query = client.from(table).delete({ count: "exact" }).eq(column, value);
+  for (const [extraColumn, extraValue] of Object.entries(extra ?? {})) {
+    query = query.eq(extraColumn, extraValue);
+  }
+  const { count, error } = await query;
+  if (error) {
+    if (isMissingColumnError(error)) {
+      console.warn(
+        `[${FUNCTION_NAME}] skipped ${table}.${column}: ${error.message}`,
+      );
+      return 0;
+    }
+    throw new Error(`${table}.${column}: ${error.message}`);
+  }
   return count ?? 0;
+}
+
+async function deleteRawExternalRows(
+  client: any,
+  datasetId: string | null,
+  fileAssetId: string | null,
+) {
+  return (
+    (await deleteByColumn(
+      client,
+      "raw_external_rows",
+      "raw_external_dataset_id",
+      datasetId,
+    )) +
+    (await deleteByColumn(
+      client,
+      "raw_external_rows",
+      "dataset_id",
+      datasetId,
+    )) +
+    (await deleteByColumn(
+      client,
+      "raw_external_rows",
+      "file_asset_id",
+      fileAssetId,
+    ))
+  );
+}
+
+async function deleteSourceEntityBindings(
+  client: any,
+  datasetId: string | null,
+) {
+  return deleteByColumn(
+    client,
+    "source_entity_bindings",
+    "source_id",
+    datasetId,
+    {
+      source_table: "raw_external_datasets",
+    },
+  );
+}
+
+async function deleteImportRejectedRows(
+  client: any,
+  fileAssetId: string | null,
+  datasetId: string | null,
+  importRunId: string | null,
+) {
+  return (
+    (await deleteByColumn(
+      client,
+      "import_rejected_rows",
+      "file_asset_id",
+      fileAssetId,
+    )) +
+    (await deleteByColumn(
+      client,
+      "import_rejected_rows",
+      "source_id",
+      datasetId,
+    )) +
+    (await deleteByColumn(
+      client,
+      "import_rejected_rows",
+      "import_run_id",
+      importRunId,
+    ))
+  );
+}
+
+async function deleteImportRunRows(
+  client: any,
+  table: "import_staging_rows" | "mapping_review_queue",
+  workspaceId: string,
+  importRunId: string | null,
+  sourceNames: string[],
+) {
+  if (importRunId)
+    return deleteByColumn(client, table, "import_run_id", importRunId);
+
+  let deleted = 0;
+  for (const sourceName of sourceNames.filter(Boolean)) {
+    deleted += await deleteByColumn(client, table, "source_name", sourceName, {
+      workspace_id: workspaceId,
+    });
+  }
+  return deleted;
+}
+
+async function findImportRunId(
+  client: any,
+  fileAsset: Row | null,
+  dataset: Row | null,
+  fileAssetId: string | null,
+  datasetId: string | null,
+) {
+  const direct = fileAsset?.import_run_id ?? dataset?.import_run_id ?? null;
+  if (direct) return String(direct);
+
+  const lookups = [
+    {
+      table: "import_rejected_rows",
+      column: "file_asset_id",
+      value: fileAssetId,
+    },
+    { table: "import_rejected_rows", column: "source_id", value: datasetId },
+    {
+      table: "import_staging_rows",
+      column: "file_asset_id",
+      value: fileAssetId,
+    },
+    { table: "raw_external_rows", column: "file_asset_id", value: fileAssetId },
+    {
+      table: "raw_external_rows",
+      column: "raw_external_dataset_id",
+      value: datasetId,
+    },
+    { table: "raw_external_rows", column: "dataset_id", value: datasetId },
+  ];
+
+  for (const lookup of lookups) {
+    if (!lookup.value) continue;
+    const { data, error } = await client
+      .from(lookup.table)
+      .select("import_run_id")
+      .eq(lookup.column, lookup.value)
+      .not("import_run_id", "is", null)
+      .limit(1)
+      .maybeSingle();
+    if (error) {
+      if (isMissingColumnError(error)) continue;
+      throw new Error(`${lookup.table}.${lookup.column}: ${error.message}`);
+    }
+    if (data?.import_run_id) return String(data.import_run_id);
+  }
+
+  return null;
+}
+
+function buildSourceNameFallbacks(fileAsset: Row | null, dataset: Row | null) {
+  const original = fileAsset?.original_file_name ?? null;
+  const datasetName = dataset?.dataset_name ?? null;
+  const sheetName = dataset?.sheet_name ?? null;
+  return Array.from(
+    new Set(
+      [
+        datasetName,
+        original,
+        datasetName && sheetName
+          ? `file_upload:${datasetName}:${sheetName}`
+          : null,
+        original && sheetName ? `file_upload:${original}:${sheetName}` : null,
+      ].filter(
+        (value): value is string =>
+          typeof value === "string" && value.trim().length > 0,
+      ),
+    ),
+  );
 }
 function isFileImportSource(fileAsset: Row | null, dataset: Row | null) {
   const sourceText = [
@@ -217,6 +397,14 @@ Deno.serve(async (req) => {
     const resolvedFileAssetId =
       fileAsset?.id ?? dataset?.file_asset_id ?? fileAssetId;
     const resolvedDatasetId = dataset?.id ?? datasetId;
+    const resolvedImportRunId = await findImportRunId(
+      supabaseAdmin,
+      fileAsset,
+      dataset,
+      resolvedFileAssetId,
+      resolvedDatasetId,
+    );
+    const sourceNameFallbacks = buildSourceNameFallbacks(fileAsset, dataset);
     const storageBucket = fileAsset?.storage_bucket ?? FILE_IMPORTS_BUCKET;
     const storagePath = fileAsset?.storage_path ?? fileAsset?.path ?? null;
     const metadata = {
@@ -227,6 +415,8 @@ Deno.serve(async (req) => {
         fileAsset?.original_file_name ?? dataset?.dataset_name ?? null,
       storage_bucket: storageBucket,
       storage_path: storagePath,
+      import_run_id: resolvedImportRunId,
+      source_name_fallbacks: sourceNameFallbacks,
       mode,
       reason,
       ui_source: body.ui_source ?? "bindings_source_management",
@@ -312,38 +502,53 @@ Deno.serve(async (req) => {
     }
 
     const deleted_counts: Row = {};
-    if (resolvedDatasetId) {
-      for (const table of [
-        "mapping_review_queue",
-        "dataset_field_mappings",
-        "import_rejected_rows",
-        "import_staging_rows",
-        "raw_external_rows",
-        "source_entity_bindings",
-      ]) {
-        deleted_counts[table] = await countDelete(
-          supabaseAdmin,
-          table,
-          table === "source_entity_bindings"
-            ? "source_id"
-            : "raw_external_dataset_id",
-          resolvedDatasetId,
-        );
-      }
-      deleted_counts.raw_external_datasets = await countDelete(
-        supabaseAdmin,
-        "raw_external_datasets",
-        "id",
-        resolvedDatasetId,
-      );
-    }
-    if (resolvedFileAssetId)
-      deleted_counts.file_assets = await countDelete(
-        supabaseAdmin,
-        "file_assets",
-        "id",
-        resolvedFileAssetId,
-      );
+    deleted_counts.mapping_review_queue = await deleteImportRunRows(
+      supabaseAdmin,
+      "mapping_review_queue",
+      workspaceId,
+      resolvedImportRunId,
+      sourceNameFallbacks,
+    );
+    deleted_counts.dataset_field_mappings = await deleteByColumn(
+      supabaseAdmin,
+      "dataset_field_mappings",
+      "dataset_id",
+      resolvedDatasetId,
+    );
+    deleted_counts.import_rejected_rows = await deleteImportRejectedRows(
+      supabaseAdmin,
+      resolvedFileAssetId,
+      resolvedDatasetId,
+      resolvedImportRunId,
+    );
+    deleted_counts.import_staging_rows = await deleteImportRunRows(
+      supabaseAdmin,
+      "import_staging_rows",
+      workspaceId,
+      resolvedImportRunId,
+      sourceNameFallbacks,
+    );
+    deleted_counts.raw_external_rows = await deleteRawExternalRows(
+      supabaseAdmin,
+      resolvedDatasetId,
+      resolvedFileAssetId,
+    );
+    deleted_counts.source_entity_bindings = await deleteSourceEntityBindings(
+      supabaseAdmin,
+      resolvedDatasetId,
+    );
+    deleted_counts.raw_external_datasets = await deleteByColumn(
+      supabaseAdmin,
+      "raw_external_datasets",
+      "id",
+      resolvedDatasetId,
+    );
+    deleted_counts.file_assets = await deleteByColumn(
+      supabaseAdmin,
+      "file_assets",
+      "id",
+      resolvedFileAssetId,
+    );
     await audit(
       supabaseAdmin,
       workspaceId,

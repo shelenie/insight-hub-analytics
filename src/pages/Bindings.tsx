@@ -123,6 +123,7 @@ onEscapeKeyDown={(event) => { if (closeDisabled) event.preventDefault(); }}
 onInteractOutside={(event) => { if (closeDisabled) event.preventDefault(); }}
 if (canRestoreBinding(row)) setRestoreTarget({ row, type: "ad_account" });
 const isCreate = adFormMode === "create" || !normalAdForm.binding_id;
+const [projectBindingStatusFilter, setProjectBindingStatusFilter] = useState<BindingStatusFilter>("active")
 */
 
 const EMPTY_AD_FORM = {
@@ -376,7 +377,7 @@ export default function Bindings() {
     useState<ImportSourceStatusFilter>("active");
   const [importSourceActionTarget, setImportSourceActionTarget] = useState<{
     row: Row;
-    mode: "archive" | "restore" | "cleanup";
+    mode: "archive" | "restore" | "cleanup" | "cleanup-active";
   } | null>(null);
   const [normalAdForm, setNormalAdForm] = useState(EMPTY_AD_FORM);
 
@@ -385,7 +386,8 @@ export default function Bindings() {
   const [adFormError, setAdFormError] = useState("");
   const [adAccountStatusFilter, setAdAccountStatusFilter] =
     useState<AdAccountBindingStatusFilter>("active");
-  const [projectBindingStatusFilter, setProjectBindingStatusFilter] = useState<BindingStatusFilter>("active");
+  const [projectBindingStatusFilter, setProjectBindingStatusFilter] =
+    useState<BindingStatusFilter>("active");
   const [hierarchyDialog, setHierarchyDialog] = useState<{
     type: "client" | "project" | "funnel";
     target: "ad" | "source";
@@ -739,17 +741,39 @@ export default function Bindings() {
       matchesBindingStatusFilter(row, sourceStatusFilter),
     );
   }, [query.data?.sourceBindings, sourceStatusFilter]);
+  const activeImportedDatasetIds = useMemo(() => {
+    return new Set(
+      (query.data?.sourceBindings ?? [])
+        .filter(
+          (row) =>
+            isActiveBinding(row) &&
+            asText(row.source_table) === "raw_external_datasets",
+        )
+        .map((row) => asText(row.source_id || row.source_entity_id))
+        .filter(Boolean),
+    );
+  }, [query.data?.sourceBindings]);
+
   const filteredImportedSources = useMemo(
     () =>
       filterImportedSources(
-        query.data?.importedSources ?? [],
+        (query.data?.importedSources ?? []).map((row) => ({
+          ...row,
+          active_binding: activeImportedDatasetIds.has(
+            asText(row.raw_external_dataset_id || row.dataset_id || row.id),
+          ),
+        })),
         importSourceStatusFilter,
       ),
-    [importSourceStatusFilter, query.data?.importedSources],
+    [
+      activeImportedDatasetIds,
+      importSourceStatusFilter,
+      query.data?.importedSources,
+    ],
   );
 
   const manageImportSource = async (
-    mode: "archive" | "restore" | "cleanup",
+    mode: "archive" | "restore" | "cleanup" | "cleanup-active",
     row: Row,
   ) => {
     const result = await runAction(
@@ -762,9 +786,11 @@ export default function Bindings() {
             raw_external_dataset_id:
               asText(row.raw_external_dataset_id || row.dataset_id) ||
               undefined,
-            mode,
+            mode: mode === "cleanup-active" ? "cleanup" : mode,
             confirm: true,
-            confirm_active_binding_cleanup: mode === "cleanup",
+            ...(mode === "cleanup-active"
+              ? { confirm_active_binding_cleanup: true }
+              : {}),
             reason: "bindings_source_management",
             ui_source: "bindings_data_sources_tab",
           },
@@ -1903,23 +1929,28 @@ export default function Bindings() {
               <AlertDialogTitle>
                 {importSourceActionTarget?.mode === "cleanup"
                   ? "Очистити імпортоване джерело?"
-                  : importSourceActionTarget?.mode === "restore"
-                    ? "Відновити імпортоване джерело?"
-                    : "Архівувати імпортоване джерело?"}
+                  : importSourceActionTarget?.mode === "cleanup-active"
+                    ? "Очистити активне прив’язане джерело?"
+                    : importSourceActionTarget?.mode === "restore"
+                      ? "Відновити імпортоване джерело?"
+                      : "Архівувати імпортоване джерело?"}
               </AlertDialogTitle>
               <AlertDialogDescription>
                 {importSourceActionTarget?.mode === "cleanup"
                   ? "Це видалить записи імпорту з бази та фізичний файл із Supabase Storage. Дію не можна скасувати."
-                  : importSourceActionTarget?.mode === "restore"
-                    ? "Джерело знову буде доступне у списках імпортованих джерел."
-                    : "Джерело буде приховано з активних списків, але дані та файл залишаться."}
+                  : importSourceActionTarget?.mode === "cleanup-active"
+                    ? "Джерело має активну production-прив’язку. Це окреме підтвердження видалить імпорт, файл і пов’язані записи. Дію не можна скасувати."
+                    : importSourceActionTarget?.mode === "restore"
+                      ? "Джерело знову буде доступне у списках імпортованих джерел."
+                      : "Джерело буде приховано з активних списків, але дані та файл залишаться."}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Скасувати</AlertDialogCancel>
               <AlertDialogAction
                 className={
-                  importSourceActionTarget?.mode === "cleanup"
+                  importSourceActionTarget?.mode === "cleanup" ||
+                  importSourceActionTarget?.mode === "cleanup-active"
                     ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
                     : undefined
                 }
@@ -1931,9 +1962,11 @@ export default function Bindings() {
               >
                 {importSourceActionTarget?.mode === "cleanup"
                   ? "Так, очистити"
-                  : importSourceActionTarget?.mode === "restore"
-                    ? "Відновити"
-                    : "Архівувати"}
+                  : importSourceActionTarget?.mode === "cleanup-active"
+                    ? "Так, очистити активне джерело"
+                    : importSourceActionTarget?.mode === "restore"
+                      ? "Відновити"
+                      : "Архівувати"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -2300,12 +2333,7 @@ async function readImportedSources(): Promise<Row[]> {
         "id, file_asset_id, dataset_name, sheet_name, source_type, target_raw_table, status, parser_type, updated_at",
       )
       .eq("workspace_id", WORKSPACE_ID),
-    supabase
-      .from("file_assets")
-      .select(
-        "*",
-      )
-      .eq("workspace_id", WORKSPACE_ID),
+    supabase.from("file_assets").select("*").eq("workspace_id", WORKSPACE_ID),
   ]);
   if (datasets.error) throw datasets.error;
   if (files.error) throw files.error;
@@ -4608,7 +4636,10 @@ function ImportSourceManagementPanel({
   canCleanup: boolean;
   roleLoading: boolean;
   pending: string;
-  onAction: (row: Row, mode: "archive" | "restore" | "cleanup") => void;
+  onAction: (
+    row: Row,
+    mode: "archive" | "restore" | "cleanup" | "cleanup-active",
+  ) => void;
 }) {
   return (
     <div className="mb-4 rounded-xl border border-border/60 bg-muted/20 p-3">
@@ -4717,7 +4748,14 @@ function ImportSourceManagementPanel({
                       size="sm"
                       variant="destructive"
                       disabled={Boolean(pending)}
-                      onClick={() => onAction(row, "cleanup")}
+                      onClick={() =>
+                        onAction(
+                          row,
+                          row.active_binding === true
+                            ? "cleanup-active"
+                            : "cleanup",
+                        )
+                      }
                     >
                       <Trash2 className="mr-1 h-3.5 w-3.5" />
                       Очистити

@@ -1,3 +1,9 @@
+## 2026-07-16 — PR #269 import cleanup deployment verification
+
+- Apply the `20260716_register_import_source_cleanup_edge_function.sql` migration before deploying `import-source-cleanup`, then verify the registry resolves admin access for archive/restore and still leaves cleanup superadmin-only in the function.
+- Smoke-test cleanup on an unbound test import and an active-bound test import: the first should not send active-binding override, while the active-bound case must require the separate explicit confirmation before `confirm_active_binding_cleanup` is sent.
+- Verify deleted counts in `file_import_source_cleaned` audit metadata use table-specific relationships and that Storage deletion occurs through the Supabase Storage API.
+
 ## 2026-07-15 — Production source management and import cleanup follow-up
 
 - Deploy `supabase/functions/import-source-cleanup` and verify authenticated admin archive/restore plus superadmin confirmed cleanup against the production workspace.
