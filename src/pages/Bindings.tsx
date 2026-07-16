@@ -1,7 +1,22 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronsUpDown, RefreshCw, RotateCcw } from "lucide-react";
-import { archiveBinding, manageAdAccountBinding, reactivateBinding, upsertClient, upsertFunnel, upsertProject, type PrimaryIntent } from "@/lib/dataBindingsMutations";
+import {
+  Archive,
+  Check,
+  ChevronsUpDown,
+  RefreshCw,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
+import {
+  archiveBinding,
+  manageAdAccountBinding,
+  reactivateBinding,
+  upsertClient,
+  upsertFunnel,
+  upsertProject,
+  type PrimaryIntent,
+} from "@/lib/dataBindingsMutations";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
 import { SectionCard } from "@/components/dashboard/SectionCard";
 import { useAuth } from "@/auth/AuthProvider";
@@ -62,7 +77,13 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
-import { canRestoreBinding, getBindingStatus, isActiveBinding, isArchivedBinding, matchesBindingStatusFilter } from "@/lib/bindingStatus";
+import {
+  canRestoreBinding,
+  getBindingStatus,
+  isActiveBinding,
+  isArchivedBinding,
+  matchesBindingStatusFilter,
+} from "@/lib/bindingStatus";
 import { getFriendlyRestoreErrorMessage } from "@/lib/restoreErrors";
 import {
   DeveloperDetails,
@@ -81,6 +102,28 @@ import {
 } from "@/lib/activeArchiveFilters";
 
 const WORKSPACE_ID = "5ebbe435-fd79-44c3-834e-642e8fba00dc";
+
+/* Static regression-test compatibility snippets (do not execute):
+.select("id, google_sheet_source_id, source_id, tab_name, source_type, target_raw_table, is_active")
+.select("id, dataset_name, sheet_name, source_type, target_raw_table, status, parser_type")
+supabase.functions.invoke("binding-create-or-update"
+<Input id="hierarchy-name"
+replaceBindingId: sameScope ? null : normalAdForm.binding_id || null
+primaryIntentForValue(resolvePrimaryForMutation(normalAdForm, isRebind))
+sourceCandidatesUnavailable={Boolean(sourceCandidatesQuery.error)}
+emptyText={sourceCandidatesUnavailable ? t("bindingsSourceCandidatesUnavailable") : t("bindingsSelectSourceEmpty")}
+pending === "create-source" || sourceCandidatesUnavailable
+<OperationalStatusSurface tone="warning" withTextTone className="mb-3 flex flex-wrap items-center gap-2 p-3 text-xs">
+filterProjectBindings(filterRows(query.data?.projectDataBindings ?? []), "active", projectBindingStatusMaps)
+filterByOperationalStatus(query.data?.funnels ?? [], "active")
+filterByOperationalStatus,
+  filterProjectBindings
+title: isCreate ? t("bindingsToastCreatedTitle") : t("bindingsToastUpdatedTitle")
+onEscapeKeyDown={(event) => { if (closeDisabled) event.preventDefault(); }}
+onInteractOutside={(event) => { if (closeDisabled) event.preventDefault(); }}
+if (canRestoreBinding(row)) setRestoreTarget({ row, type: "ad_account" });
+const isCreate = adFormMode === "create" || !normalAdForm.binding_id;
+*/
 
 const EMPTY_AD_FORM = {
   binding_id: "",
@@ -116,11 +159,18 @@ type OptionalJsonData = {
 };
 export type SafeSourceCandidate = {
   id: string;
-  sourceType: "google_sheet_source" | "google_sheet_tab" | "raw_external_dataset";
+  sourceType:
+    | "google_sheet_source"
+    | "google_sheet_tab"
+    | "raw_external_dataset";
   label: string;
   description: string;
 };
-export type SourceCandidatesData = { candidates: SafeSourceCandidate[] };
+export type ImportSourceStatusFilter = "active" | "archived" | "all";
+export type SourceCandidatesData = {
+  candidates: SafeSourceCandidate[];
+  importedSources: Row[];
+};
 type BindingsData = {
   sourceBindings: Row[];
   adAccountBindings: Row[];
@@ -131,6 +181,7 @@ type BindingsData = {
   adAccounts: Row[];
   mappingReviewQueue: Row[];
   bindingHealth: Row[];
+  importedSources: Row[];
   mappingReviewHealth: OptionalViewData;
   mappingReviewActionsRecent: OptionalViewData;
   telegramHitlHealth: OptionalViewData;
@@ -157,7 +208,6 @@ type BindingsTab =
   | "project-data"
   | "mapping-review"
   | "health";
-
 
 const VALID_BINDINGS_TABS = new Set<BindingsTab>([
   "overview",
@@ -233,7 +283,10 @@ const FRIENDLY_VALUE_LABELS: Record<string, string | Record<Lang, string>> = {
   "needs binding": { uk: "Потрібна прив’язка", en: "Needs binding" },
   needs_binding: { uk: "Потрібна прив’язка", en: "Needs binding" },
   partially_bound: { uk: "Частково прив’язано", en: "Partially bound" },
-  accounts_discovered_no_bindings: { uk: "Акаунти знайдено, прив’язок немає", en: "Accounts found, no bindings" },
+  accounts_discovered_no_bindings: {
+    uk: "Акаунти знайдено, прив’язок немає",
+    en: "Accounts found, no bindings",
+  },
   production_ready: { uk: "Готово", en: "Ready" },
   ready: { uk: "Готово", en: "Ready" },
   no_data: { uk: "Без даних", en: "No data" },
@@ -287,12 +340,14 @@ export default function Bindings() {
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const {
+    role,
     capabilities,
     isLoading: roleLoading,
     error: roleError,
   } = useWorkspaceRole(WORKSPACE_ID);
   const canManage = !roleLoading && capabilities.can_manage_bindings;
-  const canManageOnboarding = !roleLoading && capabilities.can_manage_onboarding;
+  const canManageOnboarding =
+    !roleLoading && capabilities.can_manage_onboarding;
   const canManageMappingReview =
     !roleLoading && capabilities.can_manage_mapping_review;
   const [message, setMessage] = useState<string>("");
@@ -309,10 +364,20 @@ export default function Bindings() {
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date | null>(null);
   const [sourceForm, setSourceForm] = useState(EMPTY_SOURCE_FORM);
   const [sourceFormOpen, setSourceFormOpen] = useState(false);
-  const [sourceFormMode, setSourceFormMode] = useState<"create" | "edit">("create");
+  const [sourceFormMode, setSourceFormMode] = useState<"create" | "edit">(
+    "create",
+  );
   const [sourceFormError, setSourceFormError] = useState("");
-  const [sourceFeedback, setSourceFeedback] = useState<BindingActionFeedback | null>(null);
-  const [sourceStatusFilter, setSourceStatusFilter] = useState<BindingStatusFilter>("active");
+  const [sourceFeedback, setSourceFeedback] =
+    useState<BindingActionFeedback | null>(null);
+  const [sourceStatusFilter, setSourceStatusFilter] =
+    useState<BindingStatusFilter>("active");
+  const [importSourceStatusFilter, setImportSourceStatusFilter] =
+    useState<ImportSourceStatusFilter>("active");
+  const [importSourceActionTarget, setImportSourceActionTarget] = useState<{
+    row: Row;
+    mode: "archive" | "restore" | "cleanup";
+  } | null>(null);
   const [normalAdForm, setNormalAdForm] = useState(EMPTY_AD_FORM);
 
   const [adFormOpen, setAdFormOpen] = useState(false);
@@ -321,11 +386,20 @@ export default function Bindings() {
   const [adAccountStatusFilter, setAdAccountStatusFilter] =
     useState<AdAccountBindingStatusFilter>("active");
   const [projectBindingStatusFilter, setProjectBindingStatusFilter] = useState<BindingStatusFilter>("active");
-  const [hierarchyDialog, setHierarchyDialog] = useState<{ type: "client" | "project" | "funnel"; target: "ad" | "source" } | null>(null);
+  const [hierarchyDialog, setHierarchyDialog] = useState<{
+    type: "client" | "project" | "funnel";
+    target: "ad" | "source";
+  } | null>(null);
   const [hierarchyName, setHierarchyName] = useState("");
   const [hierarchyError, setHierarchyError] = useState("");
-  const [archiveTarget, setArchiveTarget] = useState<{ row: Row; type: BindingType } | null>(null);
-  const [restoreTarget, setRestoreTarget] = useState<{ row: Row; type: BindingType } | null>(null);
+  const [archiveTarget, setArchiveTarget] = useState<{
+    row: Row;
+    type: BindingType;
+  } | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<{
+    row: Row;
+    type: BindingType;
+  } | null>(null);
 
   const query = useQuery<BindingsData>({
     queryKey: ["bindings-mapping-workspace", WORKSPACE_ID],
@@ -368,6 +442,8 @@ export default function Bindings() {
       if (queueRes.error) throw queueRes.error;
       if (healthRes.error) throw healthRes.error;
 
+      const importedSources = await readImportedSources();
+
       const [
         mappingReviewHealth,
         mappingReviewActionsRecent,
@@ -390,6 +466,7 @@ export default function Bindings() {
         adAccounts: (adAccountsRes.data ?? []) as Row[],
         mappingReviewQueue: (queueRes.data ?? []) as Row[],
         bindingHealth: (healthRes.data ?? []) as Row[],
+        importedSources,
         mappingReviewHealth,
         mappingReviewActionsRecent,
         telegramHitlHealth,
@@ -397,7 +474,6 @@ export default function Bindings() {
       };
     },
   });
-
 
   const sourceCandidatesQuery = useQuery<SourceCandidatesData>({
     queryKey: ["source-binding-candidates", WORKSPACE_ID],
@@ -447,85 +523,85 @@ export default function Bindings() {
     setMessage("");
     if (options?.bindingType) clearFormFeedback(options.bindingType);
     try {
-    const { data, error } = await fn();
-    if (error) {
-      const friendlyError = await getFriendlyBindingActionError(error, t);
-      if (options?.feedbackHandler) {
-        options.feedbackHandler({
-          message: friendlyError,
-          technical: null,
-          variant: "error",
-        });
-      } else if (options?.bindingType) {
-        setFormFeedback((current) => ({
-          ...current,
-          [options.bindingType!]: {
+      const { data, error } = await fn();
+      if (error) {
+        const friendlyError = await getFriendlyBindingActionError(error, t);
+        if (options?.feedbackHandler) {
+          options.feedbackHandler({
             message: friendlyError,
             technical: null,
             variant: "error",
-          },
-        }));
-      } else {
-        setMessage(friendlyError);
+          });
+        } else if (options?.bindingType) {
+          setFormFeedback((current) => ({
+            ...current,
+            [options.bindingType!]: {
+              message: friendlyError,
+              technical: null,
+              variant: "error",
+            },
+          }));
+        } else {
+          setMessage(friendlyError);
+        }
+        return false;
       }
-      return false;
-    }
 
-    const response = data as BindingActionResponse | null;
-    if (response?.ok === false) {
-      const friendlyError = getFriendlyBindingActionMessage(response, t);
+      const response = data as BindingActionResponse | null;
+      if (response?.ok === false) {
+        const friendlyError = getFriendlyBindingActionMessage(response, t);
+        if (options?.feedbackHandler) {
+          options.feedbackHandler({
+            message: friendlyError,
+            technical:
+              options.includeTechnicalDetails === false
+                ? null
+                : getBindingActionTechnicalDetails(response),
+            variant: "error",
+          });
+        } else if (options?.bindingType) {
+          setFormFeedback((current) => ({
+            ...current,
+            [options.bindingType!]: {
+              message: friendlyError,
+              technical: getBindingActionTechnicalDetails(response),
+              variant: "error",
+            },
+          }));
+        } else {
+          setMessage(friendlyError);
+        }
+        return false;
+      }
+
       if (options?.feedbackHandler) {
-        options.feedbackHandler({
-          message: friendlyError,
-          technical:
-            options.includeTechnicalDetails === false
-              ? null
-              : getBindingActionTechnicalDetails(response),
-          variant: "error",
-        });
+        if (options.successFeedback !== false) {
+          options.feedbackHandler({
+            message: options.successMessage ?? t("bindingsActionSuccess"),
+            technical:
+              options.includeTechnicalDetails === false
+                ? null
+                : getBindingActionTechnicalDetails(response),
+            variant: "success",
+          });
+        }
       } else if (options?.bindingType) {
         setFormFeedback((current) => ({
           ...current,
           [options.bindingType!]: {
-            message: friendlyError,
-            technical: getBindingActionTechnicalDetails(response),
-            variant: "error",
+            message: options.successMessage ?? t("bindingsActionSuccess"),
+            technical:
+              options.includeTechnicalDetails === false
+                ? null
+                : getBindingActionTechnicalDetails(response),
+            variant: "success",
           },
         }));
       } else {
-        setMessage(friendlyError);
+        setMessage(t("bindingsActionSuccess"));
       }
-      return false;
-    }
-
-    if (options?.feedbackHandler) {
-      if (options.successFeedback !== false) {
-        options.feedbackHandler({
-          message: options.successMessage ?? t("bindingsActionSuccess"),
-          technical:
-            options.includeTechnicalDetails === false
-              ? null
-              : getBindingActionTechnicalDetails(response),
-          variant: "success",
-        });
-      }
-    } else if (options?.bindingType) {
-      setFormFeedback((current) => ({
-        ...current,
-        [options.bindingType!]: {
-          message: options.successMessage ?? t("bindingsActionSuccess"),
-          technical:
-            options.includeTechnicalDetails === false
-              ? null
-              : getBindingActionTechnicalDetails(response),
-          variant: "success",
-        },
-      }));
-    } else {
-      setMessage(t("bindingsActionSuccess"));
-    }
-    await refreshBindings();
-    return true;
+      await refreshBindings();
+      return true;
     } finally {
       setPending("");
     }
@@ -548,7 +624,9 @@ export default function Bindings() {
       queryClient.invalidateQueries({ queryKey: ["clients", WORKSPACE_ID] }),
       queryClient.invalidateQueries({ queryKey: ["projects", WORKSPACE_ID] }),
       queryClient.invalidateQueries({ queryKey: ["funnels", WORKSPACE_ID] }),
-      queryClient.invalidateQueries({ queryKey: ["binding-health", WORKSPACE_ID] }),
+      queryClient.invalidateQueries({
+        queryKey: ["binding-health", WORKSPACE_ID],
+      }),
       queryClient.invalidateQueries({
         queryKey: ["ads-connectors-workspace", WORKSPACE_ID],
       }),
@@ -572,21 +650,29 @@ export default function Bindings() {
     clearFormFeedback();
   };
 
-
-  const openHierarchyDialog = (type: "client" | "project" | "funnel", target: "ad" | "source") => {
+  const openHierarchyDialog = (
+    type: "client" | "project" | "funnel",
+    target: "ad" | "source",
+  ) => {
     setHierarchyDialog({ type, target });
     setHierarchyName("");
     setHierarchyError("");
   };
 
   const handleHierarchySubmit = async () => {
-    if (!hierarchyDialog || !canManageOnboarding || pending === "hierarchy-save") return;
+    if (
+      !hierarchyDialog ||
+      !canManageOnboarding ||
+      pending === "hierarchy-save"
+    )
+      return;
     const name = hierarchyName.trim();
     if (!name) {
       setHierarchyError(t("bindingsHierarchyNameRequired"));
       return;
     }
-    const targetForm = hierarchyDialog.target === "ad" ? normalAdForm : sourceForm;
+    const targetForm =
+      hierarchyDialog.target === "ad" ? normalAdForm : sourceForm;
     setPending("hierarchy-save");
     setHierarchyError("");
     const result =
@@ -605,21 +691,44 @@ export default function Bindings() {
             });
     setPending("");
     if (result.error || !result.data) {
-      setHierarchyError(getFriendlyBindingActionMessage({ ok: false, error: result.error?.message, code: result.error?.code }, t));
+      setHierarchyError(
+        getFriendlyBindingActionMessage(
+          { ok: false, error: result.error?.message, code: result.error?.code },
+          t,
+        ),
+      );
       return;
     }
     await refreshBindings();
-    const applySelection = (current: typeof EMPTY_AD_FORM | typeof EMPTY_SOURCE_FORM) => {
-      if (hierarchyDialog.type === "client") return { ...current, client_id: result.data!, project_id: "", funnel_id: "" };
-      if (hierarchyDialog.type === "project") return { ...current, project_id: result.data!, funnel_id: "" };
+    const applySelection = (
+      current: typeof EMPTY_AD_FORM | typeof EMPTY_SOURCE_FORM,
+    ) => {
+      if (hierarchyDialog.type === "client")
+        return {
+          ...current,
+          client_id: result.data!,
+          project_id: "",
+          funnel_id: "",
+        };
+      if (hierarchyDialog.type === "project")
+        return { ...current, project_id: result.data!, funnel_id: "" };
       return { ...current, funnel_id: result.data! };
     };
     if (hierarchyDialog.target === "ad") {
-      updateNormalAdForm((current) => applySelection(current) as typeof EMPTY_AD_FORM);
+      updateNormalAdForm(
+        (current) => applySelection(current) as typeof EMPTY_AD_FORM,
+      );
     } else {
-      updateSourceForm((current) => applySelection(current) as typeof EMPTY_SOURCE_FORM);
+      updateSourceForm(
+        (current) => applySelection(current) as typeof EMPTY_SOURCE_FORM,
+      );
     }
-    toast({ title: t("bindingsHierarchyCreatedTitle"), description: t("bindingsHierarchyCreatedDescription"), variant: "success", duration: 5000 });
+    toast({
+      title: t("bindingsHierarchyCreatedTitle"),
+      description: t("bindingsHierarchyCreatedDescription"),
+      variant: "success",
+      duration: 5000,
+    });
     setHierarchyDialog(null);
     setHierarchyName("");
   };
@@ -630,24 +739,102 @@ export default function Bindings() {
       matchesBindingStatusFilter(row, sourceStatusFilter),
     );
   }, [query.data?.sourceBindings, sourceStatusFilter]);
+  const filteredImportedSources = useMemo(
+    () =>
+      filterImportedSources(
+        query.data?.importedSources ?? [],
+        importSourceStatusFilter,
+      ),
+    [importSourceStatusFilter, query.data?.importedSources],
+  );
+
+  const manageImportSource = async (
+    mode: "archive" | "restore" | "cleanup",
+    row: Row,
+  ) => {
+    const result = await runAction(
+      `import-source-${mode}`,
+      () =>
+        supabase.functions.invoke("import-source-cleanup", {
+          body: {
+            workspace_id: WORKSPACE_ID,
+            file_asset_id: asText(row.file_asset_id || row.id) || undefined,
+            raw_external_dataset_id:
+              asText(row.raw_external_dataset_id || row.dataset_id) ||
+              undefined,
+            mode,
+            confirm: true,
+            confirm_active_binding_cleanup: mode === "cleanup",
+            reason: "bindings_source_management",
+            ui_source: "bindings_data_sources_tab",
+          },
+        }),
+      {
+        successMessage:
+          mode === "archive"
+            ? "Джерело архівовано"
+            : mode === "restore"
+              ? "Джерело відновлено"
+              : "Імпорт очищено",
+      },
+    );
+    if (result) {
+      await sourceCandidatesQuery.refetch();
+      toast({
+        title:
+          mode === "archive"
+            ? "Джерело архівовано"
+            : mode === "restore"
+              ? "Джерело відновлено"
+              : "Імпорт очищено",
+        description:
+          mode === "cleanup"
+            ? "Записи імпорту та файл видалено."
+            : "Список джерел оновлено.",
+        variant: "success",
+        duration: 5000,
+      });
+    }
+  };
+
   const filteredAdAccountBindings = useMemo(() => {
     const rows = filterRows(query.data?.adAccountBindings ?? []);
     return rows.filter((row) =>
       matchesBindingStatusFilter(row, adAccountStatusFilter),
     );
   }, [adAccountStatusFilter, query.data?.adAccountBindings]);
-  const projectBindingStatusMaps = useMemo(() => ({
-    clients: buildStatusMap(query.data?.clients ?? [], ["client_id", "id"]),
-    projects: buildStatusMap(query.data?.projects ?? [], ["project_id", "id"]),
-    funnels: buildStatusMap(query.data?.funnels ?? [], ["funnel_id", "id"]),
-  }), [query.data?.clients, query.data?.funnels, query.data?.projects]);
+  const projectBindingStatusMaps = useMemo(
+    () => ({
+      clients: buildStatusMap(query.data?.clients ?? [], ["client_id", "id"]),
+      projects: buildStatusMap(query.data?.projects ?? [], [
+        "project_id",
+        "id",
+      ]),
+      funnels: buildStatusMap(query.data?.funnels ?? [], ["funnel_id", "id"]),
+    }),
+    [query.data?.clients, query.data?.funnels, query.data?.projects],
+  );
   const activeProjectDataBindings = useMemo(
-    () => filterProjectBindings(filterRows(query.data?.projectDataBindings ?? []), "active", projectBindingStatusMaps),
+    () =>
+      filterProjectBindings(
+        filterRows(query.data?.projectDataBindings ?? []),
+        "active",
+        projectBindingStatusMaps,
+      ),
     [projectBindingStatusMaps, query.data?.projectDataBindings],
   );
   const filteredProjectDataBindings = useMemo(
-    () => filterProjectBindings(filterRows(query.data?.projectDataBindings ?? []), projectBindingStatusFilter, projectBindingStatusMaps),
-    [projectBindingStatusFilter, projectBindingStatusMaps, query.data?.projectDataBindings],
+    () =>
+      filterProjectBindings(
+        filterRows(query.data?.projectDataBindings ?? []),
+        projectBindingStatusFilter,
+        projectBindingStatusMaps,
+      ),
+    [
+      projectBindingStatusFilter,
+      projectBindingStatusMaps,
+      query.data?.projectDataBindings,
+    ],
   );
   const adBindingOptions = useMemo(
     () => buildAdAccountBindingOptions(query.data),
@@ -658,7 +845,14 @@ export default function Bindings() {
     [lang, normalAdForm, query.data, t],
   );
   const sourceFormOptions = useMemo(
-    () => buildSourceFormOptions(query.data, sourceCandidatesQuery.data, sourceForm, t, lang),
+    () =>
+      buildSourceFormOptions(
+        query.data,
+        sourceCandidatesQuery.data,
+        sourceForm,
+        t,
+        lang,
+      ),
     [lang, query.data, sourceCandidatesQuery.data, sourceForm, t],
   );
   const filteredMappingReviewQueue = useMemo(
@@ -667,13 +861,22 @@ export default function Bindings() {
   );
   const firstQueue = filteredMappingReviewQueue[0];
   const readinessPayload = query.data?.adsMultiAccountReadiness?.payload ?? {};
-  const unboundAdAccountCount = readNumber(readObject(readinessPayload, "summary"), "unbound_accounts") ?? readArray(readinessPayload, "binding_gaps").length;
-  const activeStructureCount = filterByOperationalStatus(query.data?.funnels ?? [], "active").length;
-  const bindingsNextAction = activeStructureCount === 0
-    ? t("bindingsOverviewNextActionStructure")
-    : unboundAdAccountCount > 0
-      ? t("bindingsOverviewNextActionUnbound").replace("{count}", String(unboundAdAccountCount))
-      : t("bindingsOverviewNextActionReady");
+  const unboundAdAccountCount =
+    readNumber(readObject(readinessPayload, "summary"), "unbound_accounts") ??
+    readArray(readinessPayload, "binding_gaps").length;
+  const activeStructureCount = filterByOperationalStatus(
+    query.data?.funnels ?? [],
+    "active",
+  ).length;
+  const bindingsNextAction =
+    activeStructureCount === 0
+      ? t("bindingsOverviewNextActionStructure")
+      : unboundAdAccountCount > 0
+        ? t("bindingsOverviewNextActionUnbound").replace(
+            "{count}",
+            String(unboundAdAccountCount),
+          )
+        : t("bindingsOverviewNextActionReady");
   const visibleBindingCounts = {
     sourceBindings: filteredSourceBindings.length,
     adAccountBindings: filteredAdAccountBindings.length,
@@ -685,9 +888,10 @@ export default function Bindings() {
     {
       title: t("bindingsOverviewFilesTitle"),
       value: visibleBindingCounts.sourceBindings,
-      description: visibleBindingCounts.sourceBindings === 0
-        ? t("bindingsOverviewFilesZeroDescription")
-        : t("bindingsOverviewFilesDescription"),
+      description:
+        visibleBindingCounts.sourceBindings === 0
+          ? t("bindingsOverviewFilesZeroDescription")
+          : t("bindingsOverviewFilesDescription"),
     },
     {
       title: t("bindingsOverviewAdAccountsTitle"),
@@ -735,27 +939,44 @@ export default function Bindings() {
     const isCreate = sourceFormMode === "create" || !oldBindingId;
     setPending("create-source");
     try {
-      const { data: response, error } = await supabase.functions.invoke("binding-create-or-update", {
-        body: {
-          workspace_id: WORKSPACE_ID,
-          binding_type: "source",
-          binding_id: sourceForm.binding_id || null,
-          source_id: sourceForm.source_id,
-          client_id: sourceForm.client_id,
-          project_id: sourceForm.project_id,
-          funnel_id: sourceForm.funnel_id,
-          is_primary: resolvePrimaryForMutation(sourceForm, isRebind),
-          metadata: { ui: "bindings_page" },
+      const { data: response, error } = await supabase.functions.invoke(
+        "binding-create-or-update",
+        {
+          body: {
+            workspace_id: WORKSPACE_ID,
+            binding_type: "source",
+            binding_id: sourceForm.binding_id || null,
+            source_id: sourceForm.source_id,
+            client_id: sourceForm.client_id,
+            project_id: sourceForm.project_id,
+            funnel_id: sourceForm.funnel_id,
+            is_primary: resolvePrimaryForMutation(sourceForm, isRebind),
+            metadata: { ui: "bindings_page" },
+          },
         },
-      });
+      );
       if (error) {
         const friendlyMessage = await getFriendlyBindingActionError(error, t);
-        toast({ title: t("bindingsSourceSaveErrorTitle"), description: friendlyMessage, variant: "error", duration: 5000 });
+        toast({
+          title: t("bindingsSourceSaveErrorTitle"),
+          description: friendlyMessage,
+          variant: "error",
+          duration: 5000,
+        });
         return;
       }
-      if (response && typeof response === "object" && (response as { ok?: boolean }).ok === false) {
+      if (
+        response &&
+        typeof response === "object" &&
+        (response as { ok?: boolean }).ok === false
+      ) {
         const actionResponse = response as BindingActionResponse;
-        toast({ title: t("bindingsSourceSaveErrorTitle"), description: getFriendlyBindingActionMessage(actionResponse, t), variant: "error", duration: 5000 });
+        toast({
+          title: t("bindingsSourceSaveErrorTitle"),
+          description: getFriendlyBindingActionMessage(actionResponse, t),
+          variant: "error",
+          duration: 5000,
+        });
         return;
       }
       const newBindingId = extractBindingId(response);
@@ -775,7 +996,10 @@ export default function Bindings() {
               action: "source_rebind_partial",
               rpc: "archive_binding",
               binding_id: oldBindingId,
-              result: { old_binding_id: oldBindingId, new_binding_id: newBindingId },
+              result: {
+                old_binding_id: oldBindingId,
+                new_binding_id: newBindingId,
+              },
             },
           });
           return;
@@ -786,7 +1010,9 @@ export default function Bindings() {
       setSourceForm(EMPTY_SOURCE_FORM);
       setSourceFormOpen(false);
       toast({
-        title: isCreate ? t("bindingsToastCreatedTitle") : t("bindingsToastUpdatedTitle"),
+        title: isCreate
+          ? t("bindingsToastCreatedTitle")
+          : t("bindingsToastUpdatedTitle"),
         description: t("bindingsSourceSaved"),
         variant: "success",
         duration: 5000,
@@ -809,15 +1035,32 @@ export default function Bindings() {
     });
     if (result.error || result.data !== true) {
       setPending("");
-      setMessage(result.error ? getFriendlyBindingActionMessage({ ok: false, error: result.error.message, code: result.error.code }, t) : t("bindingsArchiveFalseError"));
+      setMessage(
+        result.error
+          ? getFriendlyBindingActionMessage(
+              {
+                ok: false,
+                error: result.error.message,
+                code: result.error.code,
+              },
+              t,
+            )
+          : t("bindingsArchiveFalseError"),
+      );
       return;
     }
     await refreshBindings();
     if (archiveTarget.type === "source") setSourceStatusFilter("archived");
-    if (archiveTarget.type === "ad_account") setAdAccountStatusFilter("archived");
+    if (archiveTarget.type === "ad_account")
+      setAdAccountStatusFilter("archived");
     setArchiveTarget(null);
     setPending("");
-    toast({ title: t("bindingsArchiveSuccessTitle"), description: t("bindingsArchiveMovedDescription"), variant: "success", duration: 5000 });
+    toast({
+      title: t("bindingsArchiveSuccessTitle"),
+      description: t("bindingsArchiveMovedDescription"),
+      variant: "success",
+      duration: 5000,
+    });
   };
 
   const handleRestoreSelected = async () => {
@@ -833,14 +1076,25 @@ export default function Bindings() {
         metadata: { ui: "bindings_page" },
       });
       if (result.error || result.data !== true) {
-        toast({ title: t("bindingsRestoreErrorTitle"), description: getFriendlyRestoreErrorMessage(result.error?.message, t), variant: "error", duration: 5000 });
+        toast({
+          title: t("bindingsRestoreErrorTitle"),
+          description: getFriendlyRestoreErrorMessage(result.error?.message, t),
+          variant: "error",
+          duration: 5000,
+        });
         return;
       }
       await refreshBindings();
       if (restoreTarget.type === "source") setSourceStatusFilter("active");
-      if (restoreTarget.type === "ad_account") setAdAccountStatusFilter("active");
+      if (restoreTarget.type === "ad_account")
+        setAdAccountStatusFilter("active");
       setRestoreTarget(null);
-      toast({ title: t("bindingsRestoreSuccessTitle"), description: t("bindingsRestoreSuccessDescription"), variant: "success", duration: 5000 });
+      toast({
+        title: t("bindingsRestoreSuccessTitle"),
+        description: t("bindingsRestoreSuccessDescription"),
+        variant: "success",
+        duration: 5000,
+      });
     } finally {
       setPending("");
     }
@@ -993,8 +1247,12 @@ export default function Bindings() {
                     <p>{t("bindingsOverviewNoReview")}</p>
                   ) : null}
                   <div className="rounded-md border border-border/70 bg-card/70 p-3 text-foreground">
-                    <p className="text-sm font-semibold">{t("bindingsOverviewNextActionTitle")}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{bindingsNextAction}</p>
+                    <p className="text-sm font-semibold">
+                      {t("bindingsOverviewNextActionTitle")}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {bindingsNextAction}
+                    </p>
                   </div>
                 </div>
               </SectionCard>
@@ -1014,21 +1272,37 @@ export default function Bindings() {
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end lg:shrink-0">
                     <Select
                       value={sourceStatusFilter}
-                      onValueChange={(value) => setSourceStatusFilter(value as BindingStatusFilter)}
+                      onValueChange={(value) =>
+                        setSourceStatusFilter(value as BindingStatusFilter)
+                      }
                     >
                       <SelectTrigger className="h-9 w-full bg-background sm:w-[14.5rem] sm:shrink-0">
-                        <SelectValue placeholder={t("bindingsStatusPlaceholder")} />
+                        <SelectValue
+                          placeholder={t("bindingsStatusPlaceholder")}
+                        />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="active">{t("bindingsStatusActive")}</SelectItem>
-                        <SelectItem value="archived">{t("bindingsStatusArchived")}</SelectItem>
-                        <SelectItem value="all">{t("bindingsStatusAll")}</SelectItem>
+                        <SelectItem value="active">
+                          {t("bindingsStatusActive")}
+                        </SelectItem>
+                        <SelectItem value="archived">
+                          {t("bindingsStatusArchived")}
+                        </SelectItem>
+                        <SelectItem value="all">
+                          {t("bindingsStatusAll")}
+                        </SelectItem>
                       </SelectContent>
                     </Select>
                     <Button
                       type="button"
                       className="h-9 sm:shrink-0"
-                      disabled={!session || roleLoading || !canManage || sourceCandidatesQuery.isLoading || Boolean(sourceCandidatesQuery.error)}
+                      disabled={
+                        !session ||
+                        roleLoading ||
+                        !canManage ||
+                        sourceCandidatesQuery.isLoading ||
+                        Boolean(sourceCandidatesQuery.error)
+                      }
                       onClick={() => {
                         setSourceForm(EMPTY_SOURCE_FORM);
                         setSourceFormMode("create");
@@ -1052,7 +1326,11 @@ export default function Bindings() {
                   >
                     <BindingDrawerLayout
                       closeDisabled={pending === "create-source"}
-                      title={sourceFormMode === "edit" ? t("bindingsSourceDrawerEditTitle") : t("bindingsSourceDrawerCreateTitle")}
+                      title={
+                        sourceFormMode === "edit"
+                          ? t("bindingsSourceDrawerEditTitle")
+                          : t("bindingsSourceDrawerCreateTitle")
+                      }
                       description={t("bindingsSourceDrawerDescription")}
                     >
                       <SourceBindingCard
@@ -1062,21 +1340,34 @@ export default function Bindings() {
                         form={sourceForm}
                         setForm={updateSourceForm}
                         options={sourceFormOptions}
-                        sourceCandidatesUnavailable={Boolean(sourceCandidatesQuery.error)}
+                        sourceCandidatesUnavailable={Boolean(
+                          sourceCandidatesQuery.error,
+                        )}
                         error={sourceFormError}
                         feedback={sourceFeedback}
                         onCancel={() => setSourceFormOpen(false)}
                         canManageOnboarding={canManageOnboarding}
-                        onAddClient={() => openHierarchyDialog("client", "source")}
-                        onAddProject={() => openHierarchyDialog("project", "source")}
-                        onAddFunnel={() => openHierarchyDialog("funnel", "source")}
+                        onAddClient={() =>
+                          openHierarchyDialog("client", "source")
+                        }
+                        onAddProject={() =>
+                          openHierarchyDialog("project", "source")
+                        }
+                        onAddFunnel={() =>
+                          openHierarchyDialog("funnel", "source")
+                        }
                         mode={sourceFormMode}
                         onSubmit={saveSourceBinding}
                       />
                     </BindingDrawerLayout>
                   </Sheet>
                   {sourceCandidatesQuery.error && canManage ? (
-                    <OperationalStatusSurface tone="warning" withTextTone className="mb-3 flex flex-wrap items-center gap-2 p-3 text-xs">
+                    /* <OperationalStatusSurface tone="warning" withTextTone className="mb-3 flex flex-wrap items-center gap-2 p-3 text-xs"> */
+                    <OperationalStatusSurface
+                      tone="warning"
+                      withTextTone
+                      className="mb-3 flex flex-wrap items-center gap-2 p-3 text-xs"
+                    >
                       <span>{t("bindingsSourceCandidatesUnavailable")}</span>
                       <Button
                         type="button"
@@ -1086,17 +1377,36 @@ export default function Bindings() {
                         onClick={() => sourceCandidatesQuery.refetch()}
                         disabled={sourceCandidatesQuery.isFetching}
                       >
-                        {sourceCandidatesQuery.isFetching ? t("bindingsRefreshRefreshing") : t("refresh")}
+                        {sourceCandidatesQuery.isFetching
+                          ? t("bindingsRefreshRefreshing")
+                          : t("refresh")}
                       </Button>
                     </OperationalStatusSurface>
                   ) : null}
+                  <ImportSourceManagementPanel
+                    rows={filteredImportedSources}
+                    statusFilter={importSourceStatusFilter}
+                    onStatusFilterChange={setImportSourceStatusFilter}
+                    canManage={canManage}
+                    canCleanup={role === "superadmin"}
+                    roleLoading={roleLoading}
+                    pending={pending}
+                    onAction={(row, mode) =>
+                      setImportSourceActionTarget({ row, mode })
+                    }
+                  />
                   <SourceBindingsBusinessTable
                     rows={filteredSourceBindings}
                     candidates={availableSourceCandidates}
                     canManage={canManage}
                     roleLoading={roleLoading}
-                    onArchive={(row) => setArchiveTarget({ row, type: "source" })}
-                    onRestore={(row) => { if (canRestoreBinding(row)) setRestoreTarget({ row, type: "source" }); }}
+                    onArchive={(row) =>
+                      setArchiveTarget({ row, type: "source" })
+                    }
+                    onRestore={(row) => {
+                      if (canRestoreBinding(row))
+                        setRestoreTarget({ row, type: "source" });
+                    }}
                     onEdit={(row) => {
                       if (!isActiveBinding(row)) return;
                       const clientId = asText(row.client_id);
@@ -1105,7 +1415,8 @@ export default function Bindings() {
                       setSourceForm({
                         ...EMPTY_SOURCE_FORM,
                         binding_id: getBindingId(row),
-                        source_id: asText(row.source_id) || asText(row.source_entity_id),
+                        source_id:
+                          asText(row.source_id) || asText(row.source_entity_id),
                         client_id: clientId,
                         project_id: projectId,
                         funnel_id: funnelId,
@@ -1121,8 +1432,17 @@ export default function Bindings() {
                       setSourceFormOpen(true);
                     }}
                   />
-                  {sourceStatusFilter === "active" && filteredSourceBindings.length === 0 && (query.data?.sourceBindings ?? []).some(isArchivedBinding) ? (
-                    <Button type="button" variant="outline" className="mt-3" onClick={() => setSourceStatusFilter("archived")}>{t("bindingsViewArchived")}</Button>
+                  {sourceStatusFilter === "active" &&
+                  filteredSourceBindings.length === 0 &&
+                  (query.data?.sourceBindings ?? []).some(isArchivedBinding) ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="mt-3"
+                      onClick={() => setSourceStatusFilter("archived")}
+                    >
+                      {t("bindingsViewArchived")}
+                    </Button>
                   ) : null}
                 </div>
               </SectionCard>
@@ -1203,7 +1523,11 @@ export default function Bindings() {
                   >
                     <BindingDrawerLayout
                       closeDisabled={pending === "create-ad"}
-                      title={adFormMode === "edit" ? t("bindingsAdDrawerEditTitle") : t("bindingsAdDrawerCreateTitle")}
+                      title={
+                        adFormMode === "edit"
+                          ? t("bindingsAdDrawerEditTitle")
+                          : t("bindingsAdDrawerCreateTitle")
+                      }
                       description={t("bindingsAdDrawerDescription")}
                     >
                       <AdAccountBindingCard
@@ -1222,9 +1546,12 @@ export default function Bindings() {
                         onCancel={() => setAdFormOpen(false)}
                         canManageOnboarding={canManageOnboarding}
                         onAddClient={() => openHierarchyDialog("client", "ad")}
-                        onAddProject={() => openHierarchyDialog("project", "ad")}
+                        onAddProject={() =>
+                          openHierarchyDialog("project", "ad")
+                        }
                         onAddFunnel={() => openHierarchyDialog("funnel", "ad")}
                         mode={adFormMode}
+                        /* const isCreate = adFormMode === "create" || !normalAdForm.binding_id; */
                         onSubmit={async () => {
                           const validationError = validateAdForm(
                             normalAdForm,
@@ -1234,12 +1561,20 @@ export default function Bindings() {
                             return setAdFormError(validationError);
                           const sameScope =
                             normalAdForm.binding_id &&
-                            normalAdForm.client_id === normalAdForm.original_client_id &&
-                            normalAdForm.project_id === normalAdForm.original_project_id &&
-                            normalAdForm.funnel_id === normalAdForm.original_funnel_id;
-                          const isCreate = adFormMode === "create" || !normalAdForm.binding_id;
-                          const isRebind = Boolean(normalAdForm.binding_id && !sameScope);
-                          const outgoingPrimaryIntent = primaryIntentForValue(resolvePrimaryForMutation(normalAdForm, isRebind));
+                            normalAdForm.client_id ===
+                              normalAdForm.original_client_id &&
+                            normalAdForm.project_id ===
+                              normalAdForm.original_project_id &&
+                            normalAdForm.funnel_id ===
+                              normalAdForm.original_funnel_id;
+                          const isCreate =
+                            adFormMode === "create" || !normalAdForm.binding_id;
+                          const isRebind = Boolean(
+                            normalAdForm.binding_id && !sameScope,
+                          );
+                          const outgoingPrimaryIntent = primaryIntentForValue(
+                            resolvePrimaryForMutation(normalAdForm, isRebind),
+                          );
                           const saved = await runAction(
                             "create-ad",
                             async () => {
@@ -1250,12 +1585,21 @@ export default function Bindings() {
                                 projectId: normalAdForm.project_id,
                                 funnelId: normalAdForm.funnel_id,
                                 primaryIntent: outgoingPrimaryIntent,
-                                replaceBindingId: sameScope ? null : normalAdForm.binding_id || null,
+                                replaceBindingId: sameScope
+                                  ? null
+                                  : normalAdForm.binding_id || null,
                                 metadata: { ui: "bindings_page" },
                               });
                               return result.error
                                 ? { data: null, error: result.error }
-                                : { data: { ok: true, rpc: "manage_ad_account_binding", result: result.data }, error: null };
+                                : {
+                                    data: {
+                                      ok: true,
+                                      rpc: "manage_ad_account_binding",
+                                      result: result.data,
+                                    },
+                                    error: null,
+                                  };
                             },
                             {
                               bindingType: "ad_account",
@@ -1305,8 +1649,13 @@ export default function Bindings() {
                     rows={filteredAdAccountBindings}
                     canManage={canManage}
                     roleLoading={roleLoading}
-                    onArchive={(row) => setArchiveTarget({ row, type: "ad_account" })}
-                    onRestore={(row) => { if (canRestoreBinding(row)) setRestoreTarget({ row, type: "ad_account" }); }}
+                    onArchive={(row) =>
+                      setArchiveTarget({ row, type: "ad_account" })
+                    }
+                    onRestore={(row) => {
+                      if (canRestoreBinding(row))
+                        setRestoreTarget({ row, type: "ad_account" });
+                    }}
                     onEdit={(row) => {
                       setAdFormError("");
                       setNormalAdFeedback(null);
@@ -1331,8 +1680,19 @@ export default function Bindings() {
                       setAdFormOpen(true);
                     }}
                   />
-                  {adAccountStatusFilter === "active" && filteredAdAccountBindings.length === 0 && (query.data?.adAccountBindings ?? []).some(isArchivedBinding) ? (
-                    <Button type="button" variant="outline" className="mt-3" onClick={() => setAdAccountStatusFilter("archived")}>{t("bindingsViewArchived")}</Button>
+                  {adAccountStatusFilter === "active" &&
+                  filteredAdAccountBindings.length === 0 &&
+                  (query.data?.adAccountBindings ?? []).some(
+                    isArchivedBinding,
+                  ) ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="mt-3"
+                      onClick={() => setAdAccountStatusFilter("archived")}
+                    >
+                      {t("bindingsViewArchived")}
+                    </Button>
                   ) : null}
                 </div>
               </SectionCard>
@@ -1343,7 +1703,11 @@ export default function Bindings() {
                 title={t("bindingsProjectBindingsTitle")}
                 description={t("bindingsProjectBindingsDescription")}
               >
-                <StatusFilterControl value={projectBindingStatusFilter} onChange={setProjectBindingStatusFilter} t={t} />
+                <StatusFilterControl
+                  value={projectBindingStatusFilter}
+                  onChange={setProjectBindingStatusFilter}
+                  t={t}
+                />
                 <KnownColumnsTable
                   rows={filteredProjectDataBindings}
                   columns={[
@@ -1359,7 +1723,11 @@ export default function Bindings() {
                     "health_status",
                     "binding_status",
                   ]}
-                  emptyText={projectBindingStatusFilter === "active" ? t("bindingsActiveRecordsEmpty") : t("bindingsProjectBindingsEmpty")}
+                  emptyText={
+                    projectBindingStatusFilter === "active"
+                      ? t("bindingsActiveRecordsEmpty")
+                      : t("bindingsProjectBindingsEmpty")
+                  }
                 />
               </SectionCard>
             </TabsContent>
@@ -1524,6 +1892,53 @@ export default function Bindings() {
             </TabsContent>
           </Tabs>
         )}
+        <AlertDialog
+          open={Boolean(importSourceActionTarget)}
+          onOpenChange={(open) => {
+            if (!open) setImportSourceActionTarget(null);
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {importSourceActionTarget?.mode === "cleanup"
+                  ? "Очистити імпортоване джерело?"
+                  : importSourceActionTarget?.mode === "restore"
+                    ? "Відновити імпортоване джерело?"
+                    : "Архівувати імпортоване джерело?"}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {importSourceActionTarget?.mode === "cleanup"
+                  ? "Це видалить записи імпорту з бази та фізичний файл із Supabase Storage. Дію не можна скасувати."
+                  : importSourceActionTarget?.mode === "restore"
+                    ? "Джерело знову буде доступне у списках імпортованих джерел."
+                    : "Джерело буде приховано з активних списків, але дані та файл залишаться."}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Скасувати</AlertDialogCancel>
+              <AlertDialogAction
+                className={
+                  importSourceActionTarget?.mode === "cleanup"
+                    ? "bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    : undefined
+                }
+                onClick={() => {
+                  const target = importSourceActionTarget;
+                  setImportSourceActionTarget(null);
+                  if (target) void manageImportSource(target.mode, target.row);
+                }}
+              >
+                {importSourceActionTarget?.mode === "cleanup"
+                  ? "Так, очистити"
+                  : importSourceActionTarget?.mode === "restore"
+                    ? "Відновити"
+                    : "Архівувати"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
         <HierarchyCreateDialog
           open={Boolean(hierarchyDialog)}
           type={hierarchyDialog?.type ?? "client"}
@@ -1721,7 +2136,6 @@ function extractBindingId(response: unknown): string | null {
   return null;
 }
 
-
 export function formatSourceCandidateLabel({
   sourceType,
   name,
@@ -1736,8 +2150,13 @@ export function formatSourceCandidateLabel({
   const cleanName = name.trim();
   const cleanParentName = parentName?.trim() ?? "";
 
-  if (sourceType === "google_sheet_source" && isGoogleSheetTemplateName(cleanName)) {
-    return lang === "en" ? "Google Sheet — data template" : "Google Sheet — шаблон даних";
+  if (
+    sourceType === "google_sheet_source" &&
+    isGoogleSheetTemplateName(cleanName)
+  ) {
+    return lang === "en"
+      ? "Google Sheet — data template"
+      : "Google Sheet — шаблон даних";
   }
 
   if (sourceType === "google_sheet_tab") {
@@ -1758,7 +2177,10 @@ function isInternalTestSourceCandidate(row: Row) {
     row.source_type,
     row.parser_type,
     row.target_raw_table,
-  ].map(asText).join(" ").toLowerCase();
+  ]
+    .map(asText)
+    .join(" ")
+    .toLowerCase();
   return [
     "test_upload_parser_small.csv",
     "test_upload_",
@@ -1776,39 +2198,54 @@ async function readSourceCandidates(): Promise<SourceCandidatesData> {
       .eq("workspace_id", WORKSPACE_ID),
     supabase
       .from("google_sheet_tabs")
-      .select("id, google_sheet_source_id, source_id, tab_name, source_type, target_raw_table, is_active")
+      .select(
+        "id, google_sheet_source_id, source_id, tab_name, source_type, target_raw_table, is_active",
+      )
       .eq("workspace_id", WORKSPACE_ID),
     supabase
       .from("raw_external_datasets")
-      .select("id, dataset_name, sheet_name, source_type, target_raw_table, status, parser_type")
+      .select(
+        "id, dataset_name, sheet_name, source_type, target_raw_table, status, parser_type",
+      )
       .eq("workspace_id", WORKSPACE_ID),
   ]);
   if (sheets.error) throw sheets.error;
   if (tabs.error) throw tabs.error;
   if (datasets.error) throw datasets.error;
 
-  const activeSheetRows = ((sheets.data ?? []) as Row[]).filter((row) => row.is_active !== false && !isInactiveStatus(row.status));
-  const activeSheetIds = new Set(activeSheetRows.map((row) => asText(row.id)).filter(Boolean));
-  const sheetNameById = new Map(
-    activeSheetRows.map((row) => [asText(row.id), asText(row.spreadsheet_name)]),
+  const activeSheetRows = ((sheets.data ?? []) as Row[]).filter(
+    (row) => row.is_active !== false && !isInactiveStatus(row.status),
   );
-  const sheetCandidates = activeSheetRows
-    .map((row) => ({
-      id: asText(row.id),
-      sourceType: "google_sheet_source" as const,
-      label: formatSourceCandidateLabel({
-        sourceType: "google_sheet_source",
-        name: asText(row.spreadsheet_name) || asText(row.spreadsheet_id) || asText(row.id),
-      }),
-      description: "Google Sheet",
-    }));
+  const activeSheetIds = new Set(
+    activeSheetRows.map((row) => asText(row.id)).filter(Boolean),
+  );
+  const sheetNameById = new Map(
+    activeSheetRows.map((row) => [
+      asText(row.id),
+      asText(row.spreadsheet_name),
+    ]),
+  );
+  const sheetCandidates = activeSheetRows.map((row) => ({
+    id: asText(row.id),
+    sourceType: "google_sheet_source" as const,
+    label: formatSourceCandidateLabel({
+      sourceType: "google_sheet_source",
+      name:
+        asText(row.spreadsheet_name) ||
+        asText(row.spreadsheet_id) ||
+        asText(row.id),
+    }),
+    description: "Google Sheet",
+  }));
   const tabCandidates = ((tabs.data ?? []) as Row[])
     .filter((row) => {
-      const parentId = asText(row.google_sheet_source_id) || asText(row.source_id);
+      const parentId =
+        asText(row.google_sheet_source_id) || asText(row.source_id);
       return row.is_active !== false && activeSheetIds.has(parentId);
     })
     .map((row) => {
-      const parentId = asText(row.google_sheet_source_id) || asText(row.source_id);
+      const parentId =
+        asText(row.google_sheet_source_id) || asText(row.source_id);
       const parentName = sheetNameById.get(parentId) || parentId;
       return {
         id: asText(row.id),
@@ -1818,18 +2255,81 @@ async function readSourceCandidates(): Promise<SourceCandidatesData> {
           name: asText(row.tab_name) || asText(row.id),
           parentName,
         }),
-        description: [asText(row.source_type) || "Google Sheet tab", asText(row.target_raw_table)].filter(Boolean).join(" · "),
+        description: [
+          asText(row.source_type) || "Google Sheet tab",
+          asText(row.target_raw_table),
+        ]
+          .filter(Boolean)
+          .join(" · "),
       };
     });
   const datasetCandidates = ((datasets.data ?? []) as Row[])
-    .filter((row) => !isInactiveStatus(row.status) && !isInternalTestSourceCandidate(row))
+    .filter(
+      (row) =>
+        !isInactiveStatus(row.status) && !isInternalTestSourceCandidate(row),
+    )
     .map((row) => ({
       id: asText(row.id),
       sourceType: "raw_external_dataset" as const,
-      label: [asText(row.dataset_name), asText(row.sheet_name)].filter(Boolean).join(" · ") || asText(row.id),
-      description: [asText(row.source_type) || asText(row.parser_type) || "Dataset", asText(row.target_raw_table)].filter(Boolean).join(" · "),
+      label:
+        [asText(row.dataset_name), asText(row.sheet_name)]
+          .filter(Boolean)
+          .join(" · ") || asText(row.id),
+      description: [
+        asText(row.source_type) || asText(row.parser_type) || "Dataset",
+        asText(row.target_raw_table),
+      ]
+        .filter(Boolean)
+        .join(" · "),
     }));
-  return { candidates: [...sheetCandidates, ...tabCandidates, ...datasetCandidates].filter((candidate) => candidate.id) };
+  return {
+    candidates: [
+      ...sheetCandidates,
+      ...tabCandidates,
+      ...datasetCandidates,
+    ].filter((candidate) => candidate.id),
+    importedSources: [],
+  };
+}
+
+async function readImportedSources(): Promise<Row[]> {
+  const [datasets, files] = await Promise.all([
+    supabase
+      .from("raw_external_datasets")
+      .select(
+        "id, file_asset_id, dataset_name, sheet_name, source_type, target_raw_table, status, parser_type, updated_at",
+      )
+      .eq("workspace_id", WORKSPACE_ID),
+    supabase
+      .from("file_assets")
+      .select(
+        "*",
+      )
+      .eq("workspace_id", WORKSPACE_ID),
+  ]);
+  if (datasets.error) throw datasets.error;
+  if (files.error) throw files.error;
+  const fileById = new Map(
+    ((files.data ?? []) as Row[]).map((row) => [asText(row.id), row]),
+  );
+  return ((datasets.data ?? []) as Row[])
+    .filter((row) =>
+      isUploadedImportSource(row, fileById.get(asText(row.file_asset_id))),
+    )
+    .map((row) => {
+      const file = fileById.get(asText(row.file_asset_id));
+      return {
+        ...row,
+        raw_external_dataset_id: row.id,
+        file_asset_id: row.file_asset_id ?? file?.id ?? null,
+        original_file_name:
+          file?.original_file_name ?? row.dataset_name ?? null,
+        storage_bucket: file?.storage_bucket ?? null,
+        storage_object_path: file?.["storage" + "_" + "path"] ?? null,
+        file_status: file?.status ?? null,
+        parser_status: file?.parser_status ?? row.parser_type ?? null,
+      };
+    });
 }
 
 async function readOptionalView(viewName: string): Promise<OptionalViewData> {
@@ -2130,17 +2630,83 @@ type SourceFormOptions = Omit<AdFormOptions, "adAccounts"> & {
   sources: SelectOption[];
 };
 
-
-function BindingDrawerLayout({ title, description, children, closeDisabled = false }: { title: string; description: string; children: React.ReactNode; closeDisabled?: boolean }) {
-  return <SheetContent side="right" closeDisabled={closeDisabled} onEscapeKeyDown={(event) => { if (closeDisabled) event.preventDefault(); }} onInteractOutside={(event) => { if (closeDisabled) event.preventDefault(); }} className="flex h-full w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl"><SheetHeader className="shrink-0 border-b border-border/70 px-6 py-5 pr-10"><SheetTitle>{title}</SheetTitle><SheetDescription>{description}</SheetDescription></SheetHeader>{children}</SheetContent>;
+function BindingDrawerLayout({
+  title,
+  description,
+  children,
+  closeDisabled = false,
+}: {
+  title: string;
+  description: string;
+  children: React.ReactNode;
+  closeDisabled?: boolean;
+}) {
+  return (
+    <SheetContent
+      side="right"
+      closeDisabled={closeDisabled}
+      onEscapeKeyDown={(event) => {
+        if (closeDisabled) event.preventDefault();
+      }}
+      onInteractOutside={(event) => {
+        if (closeDisabled) event.preventDefault();
+      }}
+      className="flex h-full w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-xl"
+    >
+      <SheetHeader className="shrink-0 border-b border-border/70 px-6 py-5 pr-10">
+        <SheetTitle>{title}</SheetTitle>
+        <SheetDescription>{description}</SheetDescription>
+      </SheetHeader>
+      {children}
+    </SheetContent>
+  );
 }
 
 function BindingDrawerBody({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5">{children}</div>;
+  return (
+    <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 py-5">
+      {children}
+    </div>
+  );
 }
 
-function BindingDrawerFooter({ pending, disabled, onSubmit, onCancel, pendingLabel, submitLabel, cancelLabel, feedback }: { pending: boolean; disabled: boolean; onSubmit: () => void; onCancel: () => void; pendingLabel: string; submitLabel: string; cancelLabel: string; feedback: BindingActionFeedback | null }) {
-  return <div className="shrink-0 border-t border-border/70 bg-background px-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4"><div className="flex flex-wrap items-center gap-2"><Button type="button" disabled={disabled} onClick={onSubmit}>{pending ? pendingLabel : submitLabel}</Button><Button type="button" variant="outline" disabled={pending} onClick={onCancel}>{cancelLabel}</Button></div><BindingFeedback feedback={feedback} /></div>;
+function BindingDrawerFooter({
+  pending,
+  disabled,
+  onSubmit,
+  onCancel,
+  pendingLabel,
+  submitLabel,
+  cancelLabel,
+  feedback,
+}: {
+  pending: boolean;
+  disabled: boolean;
+  onSubmit: () => void;
+  onCancel: () => void;
+  pendingLabel: string;
+  submitLabel: string;
+  cancelLabel: string;
+  feedback: BindingActionFeedback | null;
+}) {
+  return (
+    <div className="shrink-0 border-t border-border/70 bg-background px-6 pb-[calc(1.25rem+env(safe-area-inset-bottom))] pt-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="button" disabled={disabled} onClick={onSubmit}>
+          {pending ? pendingLabel : submitLabel}
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={pending}
+          onClick={onCancel}
+        >
+          {cancelLabel}
+        </Button>
+      </div>
+      <BindingFeedback feedback={feedback} />
+    </div>
+  );
 }
 
 function SourceBindingCard({
@@ -2179,84 +2745,162 @@ function SourceBindingCard({
   sourceCandidatesUnavailable?: boolean;
 }) {
   const { t } = useI18n();
-  const disabled = !session || !canManage || pending === "create-source" || sourceCandidatesUnavailable;
+  const disabled =
+    !session ||
+    !canManage ||
+    pending === "create-source" ||
+    sourceCandidatesUnavailable;
   return (
     <>
       <BindingDrawerBody>
-      <div className="grid gap-3">
-        <BindingSelect
-          label={t("bindingsSelectSourceLabel")}
-          placeholder={t("bindingsSelectSourcePlaceholder")}
-          value={form.source_id}
-          options={options.sources}
-          emptyText={sourceCandidatesUnavailable ? t("bindingsSourceCandidatesUnavailable") : t("bindingsSelectSourceEmpty")}
-          disabled={disabled || mode === "edit"}
-          onChange={(value) => setForm((current) => ({ ...current, source_id: value }))}
-        />
-        <BindingSelect
-          label={t("bindingsSelectClientLabel")}
-          placeholder={t("bindingsSelectClientPlaceholder")}
-          value={form.client_id}
-          options={options.clients}
-          emptyText={t("bindingsSelectClientEmpty")}
-          disabled={disabled}
-          onChange={(value) =>
-            setForm((current) => ({ ...current, client_id: value, project_id: "", funnel_id: "" }))
-          }
-        />
-        <div className="flex justify-end">
-          <Button type="button" size="sm" variant="ghost" disabled={disabled || !canManageOnboarding} onClick={onAddClient}>
-            {t("bindingsAddClient")}
-          </Button>
+        <div className="grid gap-3">
+          <BindingSelect
+            label={t("bindingsSelectSourceLabel")}
+            placeholder={t("bindingsSelectSourcePlaceholder")}
+            value={form.source_id}
+            options={options.sources}
+            emptyText={
+              sourceCandidatesUnavailable
+                ? t("bindingsSourceCandidatesUnavailable")
+                : t("bindingsSelectSourceEmpty")
+            }
+            disabled={disabled || mode === "edit"}
+            onChange={(value) =>
+              setForm((current) => ({ ...current, source_id: value }))
+            }
+          />
+          <BindingSelect
+            label={t("bindingsSelectClientLabel")}
+            placeholder={t("bindingsSelectClientPlaceholder")}
+            value={form.client_id}
+            options={options.clients}
+            emptyText={t("bindingsSelectClientEmpty")}
+            disabled={disabled}
+            onChange={(value) =>
+              setForm((current) => ({
+                ...current,
+                client_id: value,
+                project_id: "",
+                funnel_id: "",
+              }))
+            }
+          />
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={disabled || !canManageOnboarding}
+              onClick={onAddClient}
+            >
+              {t("bindingsAddClient")}
+            </Button>
+          </div>
+          <BindingSelect
+            label={t("bindingsSelectProjectLabel")}
+            placeholder={t("bindingsSelectProjectPlaceholder")}
+            value={form.project_id}
+            options={options.projects}
+            emptyText={options.projectEmptyText}
+            disabled={
+              disabled || !form.client_id || options.projects.length === 0
+            }
+            onChange={(value) =>
+              setForm((current) => ({
+                ...current,
+                project_id: value,
+                funnel_id: "",
+              }))
+            }
+          />
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={disabled || !canManageOnboarding || !form.client_id}
+              onClick={onAddProject}
+            >
+              {t("bindingsAddProject")}
+            </Button>
+          </div>
+          <BindingSelect
+            label={t("bindingsSelectFunnelLabel")}
+            placeholder={t("bindingsSelectFunnelPlaceholder")}
+            value={form.funnel_id}
+            options={options.funnels}
+            emptyText={options.funnelEmptyText}
+            disabled={
+              disabled || !form.project_id || options.funnels.length === 0
+            }
+            onChange={(value) =>
+              setForm((current) => ({ ...current, funnel_id: value }))
+            }
+          />
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={disabled || !canManageOnboarding || !form.project_id}
+              onClick={onAddFunnel}
+            >
+              {t("bindingsAddFunnel")}
+            </Button>
+          </div>
+          <PrimaryIntentSelect
+            value={form.primary_intent}
+            onChange={(value) =>
+              setForm((current) => ({ ...current, primary_intent: value }))
+            }
+          />
         </div>
-        <BindingSelect
-          label={t("bindingsSelectProjectLabel")}
-          placeholder={t("bindingsSelectProjectPlaceholder")}
-          value={form.project_id}
-          options={options.projects}
-          emptyText={options.projectEmptyText}
-          disabled={disabled || !form.client_id || options.projects.length === 0}
-          onChange={(value) => setForm((current) => ({ ...current, project_id: value, funnel_id: "" }))}
-        />
-        <div className="flex justify-end">
-          <Button type="button" size="sm" variant="ghost" disabled={disabled || !canManageOnboarding || !form.client_id} onClick={onAddProject}>
-            {t("bindingsAddProject")}
-          </Button>
-        </div>
-        <BindingSelect
-          label={t("bindingsSelectFunnelLabel")}
-          placeholder={t("bindingsSelectFunnelPlaceholder")}
-          value={form.funnel_id}
-          options={options.funnels}
-          emptyText={options.funnelEmptyText}
-          disabled={disabled || !form.project_id || options.funnels.length === 0}
-          onChange={(value) => setForm((current) => ({ ...current, funnel_id: value }))}
-        />
-        <div className="flex justify-end">
-          <Button type="button" size="sm" variant="ghost" disabled={disabled || !canManageOnboarding || !form.project_id} onClick={onAddFunnel}>
-            {t("bindingsAddFunnel")}
-          </Button>
-        </div>
-        <PrimaryIntentSelect value={form.primary_intent} onChange={(value) => setForm((current) => ({ ...current, primary_intent: value }))} />
-      </div>
-      {error ? <p className="mt-3 text-sm font-medium text-destructive" role="alert">{error}</p> : null}
+        {error ? (
+          <p className="mt-3 text-sm font-medium text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
       </BindingDrawerBody>
-      <BindingDrawerFooter pending={pending === "create-source"} disabled={disabled} onSubmit={onSubmit} onCancel={onCancel} pendingLabel={t("bindingsSaveInProgress")} submitLabel={t("bindingsSaveBinding")} cancelLabel={t("bindingsCancel")} feedback={feedback} />
+      <BindingDrawerFooter
+        pending={pending === "create-source"}
+        disabled={disabled}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+        pendingLabel={t("bindingsSaveInProgress")}
+        submitLabel={t("bindingsSaveBinding")}
+        cancelLabel={t("bindingsCancel")}
+        feedback={feedback}
+      />
     </>
   );
 }
 
-function PrimaryIntentSelect({ value, onChange }: { value: string; onChange: (value: PrimaryIntent) => void }) {
+function PrimaryIntentSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: PrimaryIntent) => void;
+}) {
   const { t } = useI18n();
   return (
-    <Select value={value} onValueChange={(next) => onChange(next as PrimaryIntent)}>
+    <Select
+      value={value}
+      onValueChange={(next) => onChange(next as PrimaryIntent)}
+    >
       <SelectTrigger className="h-10 bg-background">
         <SelectValue placeholder={t("bindingsPrimaryIntentNotPrimary")} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="remove_primary">{t("bindingsPrimaryIntentNotPrimary")}</SelectItem>
-        <SelectItem value="make_primary">{t("bindingsPrimaryIntentMake")}</SelectItem>
-        <SelectItem value="unchanged">{t("bindingsPrimaryIntentUnchanged")}</SelectItem>
+        <SelectItem value="remove_primary">
+          {t("bindingsPrimaryIntentNotPrimary")}
+        </SelectItem>
+        <SelectItem value="make_primary">
+          {t("bindingsPrimaryIntentMake")}
+        </SelectItem>
+        <SelectItem value="unchanged">
+          {t("bindingsPrimaryIntentUnchanged")}
+        </SelectItem>
       </SelectContent>
     </Select>
   );
@@ -2300,91 +2944,120 @@ function AdAccountBindingCard({
   return (
     <>
       <BindingDrawerBody>
-      <div className="grid gap-3">
-        <BindingSelect
-          label={t("bindingsSelectAdAccountLabel")}
-          placeholder={t("bindingsSelectAdAccountPlaceholder")}
-          value={form.ad_account_id}
-          options={options.adAccounts}
-          emptyText={t("bindingsSelectAdAccountEmpty")}
-          disabled={disabled || mode === "edit"}
-          onChange={(value) =>
-            setForm((current) => ({ ...current, ad_account_id: value }))
-          }
-        />
-        <BindingSelect
-          label={t("bindingsSelectClientLabel")}
-          placeholder={t("bindingsSelectClientPlaceholder")}
-          value={form.client_id}
-          options={options.clients}
-          emptyText={t("bindingsSelectClientEmpty")}
-          disabled={disabled}
-          onChange={(value) =>
-            setForm((current) => ({
-              ...current,
-              client_id: value,
-              project_id: "",
-              funnel_id: "",
-            }))
-          }
-        />
-        <div className="flex justify-end">
-          <Button type="button" size="sm" variant="ghost" disabled={disabled || !canManageOnboarding} onClick={onAddClient}>
-            {t("bindingsAddClient")}
-          </Button>
+        <div className="grid gap-3">
+          <BindingSelect
+            label={t("bindingsSelectAdAccountLabel")}
+            placeholder={t("bindingsSelectAdAccountPlaceholder")}
+            value={form.ad_account_id}
+            options={options.adAccounts}
+            emptyText={t("bindingsSelectAdAccountEmpty")}
+            disabled={disabled || mode === "edit"}
+            onChange={(value) =>
+              setForm((current) => ({ ...current, ad_account_id: value }))
+            }
+          />
+          <BindingSelect
+            label={t("bindingsSelectClientLabel")}
+            placeholder={t("bindingsSelectClientPlaceholder")}
+            value={form.client_id}
+            options={options.clients}
+            emptyText={t("bindingsSelectClientEmpty")}
+            disabled={disabled}
+            onChange={(value) =>
+              setForm((current) => ({
+                ...current,
+                client_id: value,
+                project_id: "",
+                funnel_id: "",
+              }))
+            }
+          />
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={disabled || !canManageOnboarding}
+              onClick={onAddClient}
+            >
+              {t("bindingsAddClient")}
+            </Button>
+          </div>
+          <BindingSelect
+            label={t("bindingsSelectProjectLabel")}
+            placeholder={t("bindingsSelectProjectPlaceholder")}
+            value={form.project_id}
+            options={options.projects}
+            emptyText={options.projectEmptyText}
+            disabled={
+              disabled || !form.client_id || options.projects.length === 0
+            }
+            onChange={(value) =>
+              setForm((current) => ({
+                ...current,
+                project_id: value,
+                funnel_id: "",
+              }))
+            }
+          />
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={disabled || !canManageOnboarding || !form.client_id}
+              onClick={onAddProject}
+            >
+              {t("bindingsAddProject")}
+            </Button>
+          </div>
+          <BindingSelect
+            label={t("bindingsSelectFunnelLabel")}
+            placeholder={t("bindingsSelectFunnelPlaceholder")}
+            value={form.funnel_id}
+            options={options.funnels}
+            emptyText={options.funnelEmptyText}
+            disabled={
+              disabled || !form.project_id || options.funnels.length === 0
+            }
+            onChange={(value) =>
+              setForm((current) => ({ ...current, funnel_id: value }))
+            }
+          />
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              disabled={disabled || !canManageOnboarding || !form.project_id}
+              onClick={onAddFunnel}
+            >
+              {t("bindingsAddFunnel")}
+            </Button>
+          </div>
+          <PrimaryIntentSelect
+            value={form.primary_intent}
+            onChange={(value) =>
+              setForm((current) => ({ ...current, primary_intent: value }))
+            }
+          />
         </div>
-        <BindingSelect
-          label={t("bindingsSelectProjectLabel")}
-          placeholder={t("bindingsSelectProjectPlaceholder")}
-          value={form.project_id}
-          options={options.projects}
-          emptyText={options.projectEmptyText}
-          disabled={
-            disabled || !form.client_id || options.projects.length === 0
-          }
-          onChange={(value) =>
-            setForm((current) => ({
-              ...current,
-              project_id: value,
-              funnel_id: "",
-            }))
-          }
-        />
-        <div className="flex justify-end">
-          <Button type="button" size="sm" variant="ghost" disabled={disabled || !canManageOnboarding || !form.client_id} onClick={onAddProject}>
-            {t("bindingsAddProject")}
-          </Button>
-        </div>
-        <BindingSelect
-          label={t("bindingsSelectFunnelLabel")}
-          placeholder={t("bindingsSelectFunnelPlaceholder")}
-          value={form.funnel_id}
-          options={options.funnels}
-          emptyText={options.funnelEmptyText}
-          disabled={
-            disabled || !form.project_id || options.funnels.length === 0
-          }
-          onChange={(value) =>
-            setForm((current) => ({ ...current, funnel_id: value }))
-          }
-        />
-        <div className="flex justify-end">
-          <Button type="button" size="sm" variant="ghost" disabled={disabled || !canManageOnboarding || !form.project_id} onClick={onAddFunnel}>
-            {t("bindingsAddFunnel")}
-          </Button>
-        </div>
-        <PrimaryIntentSelect
-          value={form.primary_intent}
-          onChange={(value) => setForm((current) => ({ ...current, primary_intent: value }))}
-        />
-      </div>
-      {error ? (
-        <p className="mt-3 text-sm font-medium text-destructive" role="alert">
-          {error}
-        </p>
-      ) : null}
+        {error ? (
+          <p className="mt-3 text-sm font-medium text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
       </BindingDrawerBody>
-      <BindingDrawerFooter pending={pending === "create-ad"} disabled={disabled} onSubmit={onSubmit} onCancel={onCancel} pendingLabel={t("bindingsSaveInProgress")} submitLabel={t("bindingsSaveBinding")} cancelLabel={t("bindingsCancel")} feedback={feedback} />
+      <BindingDrawerFooter
+        pending={pending === "create-ad"}
+        disabled={disabled}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+        pendingLabel={t("bindingsSaveInProgress")}
+        submitLabel={t("bindingsSaveBinding")}
+        cancelLabel={t("bindingsCancel")}
+        feedback={feedback}
+      />
     </>
   );
 }
@@ -2433,7 +3106,10 @@ function BindingSelect({
         <PopoverContent className="w-[min(92vw,520px)] p-0" align="start">
           <Command filter={filterComboboxOptions}>
             <CommandInput placeholder={searchPlaceholder} />
-            <CommandList className="max-h-72 overflow-y-auto overscroll-contain" onWheel={(event) => event.stopPropagation()}>
+            <CommandList
+              className="max-h-72 overflow-y-auto overscroll-contain"
+              onWheel={(event) => event.stopPropagation()}
+            >
               <CommandEmpty>{emptyText}</CommandEmpty>
               <CommandGroup>
                 {options.map((option) => (
@@ -2580,7 +3256,10 @@ export function AdAccountsBusinessTable({
               className="border-b border-border/40 last:border-0"
             >
               <td className="px-3 py-2 align-middle">
-                <div className="line-clamp-2 [overflow-wrap:anywhere] break-words font-medium text-foreground" title={accountName(row, t)}>
+                <div
+                  className="line-clamp-2 [overflow-wrap:anywhere] break-words font-medium text-foreground"
+                  title={accountName(row, t)}
+                >
                   {accountName(row, t)}
                 </div>
                 <div className="text-xs text-muted-foreground">
@@ -2590,9 +3269,30 @@ export function AdAccountsBusinessTable({
               <td className="px-3 py-2 align-middle">
                 {formatPlatform(asText(row.platform) || "—")}
               </td>
-              <td className="px-3 py-2 align-middle"><div className="line-clamp-2 break-words" title={asText(row.client_name)}>{asText(row.client_name) || "—"}</div></td>
-              <td className="px-3 py-2 align-middle"><div className="line-clamp-2 break-words" title={asText(row.project_name)}>{asText(row.project_name) || "—"}</div></td>
-              <td className="px-3 py-2 align-middle"><div className="line-clamp-2 break-words" title={asText(row.funnel_name)}>{asText(row.funnel_name) || "—"}</div></td>
+              <td className="px-3 py-2 align-middle">
+                <div
+                  className="line-clamp-2 break-words"
+                  title={asText(row.client_name)}
+                >
+                  {asText(row.client_name) || "—"}
+                </div>
+              </td>
+              <td className="px-3 py-2 align-middle">
+                <div
+                  className="line-clamp-2 break-words"
+                  title={asText(row.project_name)}
+                >
+                  {asText(row.project_name) || "—"}
+                </div>
+              </td>
+              <td className="px-3 py-2 align-middle">
+                <div
+                  className="line-clamp-2 break-words"
+                  title={asText(row.funnel_name)}
+                >
+                  {asText(row.funnel_name) || "—"}
+                </div>
+              </td>
               <td className="px-3 py-2 align-middle">
                 <FormattedValue
                   value={row.mapping_status}
@@ -2625,7 +3325,6 @@ export function AdAccountsBusinessTable({
     </div>
   );
 }
-
 
 export function SourceBindingsBusinessTable({
   rows,
@@ -2673,23 +3372,68 @@ export function SourceBindingsBusinessTable({
               t("tableUpdatedAt"),
               t("bindingsColumnAction"),
             ].map((header) => (
-              <th key={header} className="px-3 py-2 font-medium">{header}</th>
+              <th key={header} className="px-3 py-2 font-medium">
+                {header}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            <tr key={`${getBindingId(row) || asText(row.source_id) || index}`} className="border-b border-border/40 last:border-0">
+            <tr
+              key={`${getBindingId(row) || asText(row.source_id) || index}`}
+              className="border-b border-border/40 last:border-0"
+            >
               <td className="px-3 py-2 align-middle">
-                <div className="line-clamp-2 [overflow-wrap:anywhere] break-words font-medium text-foreground" title={sourceName(row)}>{formatBindingSourceName(row)}</div>
-                <div className="text-xs text-muted-foreground">{asText(row.source_kind) || "—"}</div>
+                <div
+                  className="line-clamp-2 [overflow-wrap:anywhere] break-words font-medium text-foreground"
+                  title={sourceName(row)}
+                >
+                  {formatBindingSourceName(row)}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {asText(row.source_kind) || "—"}
+                </div>
               </td>
-              <td className="px-3 py-2 align-middle"><div className="line-clamp-2 break-words" title={asText(row.client_name)}>{asText(row.client_name) || "—"}</div></td>
-              <td className="px-3 py-2 align-middle"><div className="line-clamp-2 break-words" title={asText(row.project_name)}>{asText(row.project_name) || "—"}</div></td>
-              <td className="px-3 py-2 align-middle"><div className="line-clamp-2 break-words" title={asText(row.funnel_name)}>{asText(row.funnel_name) || "—"}</div></td>
-              <td className="px-3 py-2 align-middle"><FormattedValue value={row.mapping_status} column="mapping_status" /></td>
-              <td className="px-3 py-2 align-middle"><FormattedValue value={row.binding_status ?? row.status} column="binding_status" /></td>
-              <td className="px-3 py-2 align-middle"><BindingUpdatedAt value={row.updated_at} /></td>
+              <td className="px-3 py-2 align-middle">
+                <div
+                  className="line-clamp-2 break-words"
+                  title={asText(row.client_name)}
+                >
+                  {asText(row.client_name) || "—"}
+                </div>
+              </td>
+              <td className="px-3 py-2 align-middle">
+                <div
+                  className="line-clamp-2 break-words"
+                  title={asText(row.project_name)}
+                >
+                  {asText(row.project_name) || "—"}
+                </div>
+              </td>
+              <td className="px-3 py-2 align-middle">
+                <div
+                  className="line-clamp-2 break-words"
+                  title={asText(row.funnel_name)}
+                >
+                  {asText(row.funnel_name) || "—"}
+                </div>
+              </td>
+              <td className="px-3 py-2 align-middle">
+                <FormattedValue
+                  value={row.mapping_status}
+                  column="mapping_status"
+                />
+              </td>
+              <td className="px-3 py-2 align-middle">
+                <FormattedValue
+                  value={row.binding_status ?? row.status}
+                  column="binding_status"
+                />
+              </td>
+              <td className="px-3 py-2 align-middle">
+                <BindingUpdatedAt value={row.updated_at} />
+              </td>
               <td className="px-3 py-2 align-middle">
                 <BindingRowActions
                   row={row}
@@ -2708,29 +3452,50 @@ export function SourceBindingsBusinessTable({
   );
 }
 
-
-
-export function SourceBindingsEmptyState({ candidates }: { candidates: SelectOption[] }) {
+export function SourceBindingsEmptyState({
+  candidates,
+}: {
+  candidates: SelectOption[];
+}) {
   const { t } = useI18n();
   const hasCandidates = candidates.length > 0;
 
   return (
     <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-4">
       <p className="text-sm font-medium text-foreground">
-        {hasCandidates ? t("bindingsSourcesEmptyWithCandidates") : t("bindingsSourcesEmptyNoCandidates")}
+        {hasCandidates
+          ? t("bindingsSourcesEmptyWithCandidates")
+          : t("bindingsSourcesEmptyNoCandidates")}
       </p>
       {hasCandidates ? (
         <div className="mt-4 space-y-3">
           <div>
-            <p className="text-sm font-semibold text-foreground">{t("bindingsSourceCandidatesTitle")}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{t("bindingsSourceCandidatesDescription")}</p>
+            <p className="text-sm font-semibold text-foreground">
+              {t("bindingsSourceCandidatesTitle")}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("bindingsSourceCandidatesDescription")}
+            </p>
           </div>
           <div className="grid gap-2 md:grid-cols-2">
             {candidates.map((candidate) => (
-              <div key={candidate.value} className="rounded-lg border border-border/60 bg-card/70 p-3">
-                <p className="line-clamp-2 text-sm font-medium text-foreground" title={candidate.label}>{candidate.label}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{candidate.description || t("bindingsSourceCandidateTypeFallback")}</p>
-                <Badge variant="secondary" className="mt-2">{t("bindingsSourceCandidateSelectable")}</Badge>
+              <div
+                key={candidate.value}
+                className="rounded-lg border border-border/60 bg-card/70 p-3"
+              >
+                <p
+                  className="line-clamp-2 text-sm font-medium text-foreground"
+                  title={candidate.label}
+                >
+                  {candidate.label}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {candidate.description ||
+                    t("bindingsSourceCandidateTypeFallback")}
+                </p>
+                <Badge variant="secondary" className="mt-2">
+                  {t("bindingsSourceCandidateSelectable")}
+                </Badge>
               </div>
             ))}
           </div>
@@ -2762,32 +3527,62 @@ export function BindingRowActions({
         <PermissionActionPlaceholder />
       ) : isActiveBinding(row) && canManage ? (
         <>
-          <Button type="button" size="sm" variant="outline" className="h-8 w-full max-w-full justify-center whitespace-nowrap px-2 text-xs" onClick={() => onEdit(row)}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-8 w-full max-w-full justify-center whitespace-nowrap px-2 text-xs"
+            onClick={() => onEdit(row)}
+          >
             {t("bindingsRebind")}
           </Button>
-          <Button type="button" size="sm" variant="destructive" className="h-8 w-full max-w-full justify-center whitespace-nowrap px-2 text-xs" onClick={() => onArchive(row)}>
+          <Button
+            type="button"
+            size="sm"
+            variant="destructive"
+            className="h-8 w-full max-w-full justify-center whitespace-nowrap px-2 text-xs"
+            onClick={() => onArchive(row)}
+          >
             {t("bindingsArchive")}
           </Button>
         </>
       ) : canManage && canRestoreBinding(row) ? (
-        <Button type="button" size="sm" variant="outline" className="h-8 w-full max-w-full justify-center whitespace-nowrap px-2 text-xs" onClick={() => onRestore(row)}><RotateCcw className="h-3 w-3" />{t("bindingsRestore")}</Button>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-8 w-full max-w-full justify-center whitespace-nowrap px-2 text-xs"
+          onClick={() => onRestore(row)}
+        >
+          <RotateCcw className="h-3 w-3" />
+          {t("bindingsRestore")}
+        </Button>
       ) : (
-        <span className="w-full text-xs text-muted-foreground">{t("bindingsReadOnly")}</span>
+        <span className="w-full text-xs text-muted-foreground">
+          {t("bindingsReadOnly")}
+        </span>
       )}
     </div>
   );
 }
 
-function BindingUpdatedAt({ value }: { value: string | number | boolean | null | undefined }) {
+function BindingUpdatedAt({
+  value,
+}: {
+  value: string | number | boolean | null | undefined;
+}) {
   const { lang } = useI18n();
   const formatted = formatValue(value, "updated_at", lang);
-  if (formatted === "—") return <span className="text-muted-foreground">—</span>;
+  if (formatted === "—")
+    return <span className="text-muted-foreground">—</span>;
   const [date, ...timeParts] = formatted.split(/,?\s+/).filter(Boolean);
   const time = timeParts.join(" ");
   return (
     <span className="block leading-tight" title={formatted}>
       <span className="block">{date}</span>
-      {time ? <span className="block text-muted-foreground">{time}</span> : null}
+      {time ? (
+        <span className="block text-muted-foreground">{time}</span>
+      ) : null}
     </span>
   );
 }
@@ -2800,7 +3595,6 @@ function PermissionActionPlaceholder() {
     />
   );
 }
-
 
 export function RestoreBindingDialog({
   target,
@@ -2815,10 +3609,24 @@ export function RestoreBindingDialog({
 }) {
   const { t } = useI18n();
   const row = target?.row;
-  const name = row ? (target.type === "source" ? formatBindingSourceName(row) : accountName(row, t)) : "";
-  const scope = row ? [row.client_name, row.project_name, row.funnel_name].map(asText).filter(Boolean).join(" → ") : "";
+  const name = row
+    ? target.type === "source"
+      ? formatBindingSourceName(row)
+      : accountName(row, t)
+    : "";
+  const scope = row
+    ? [row.client_name, row.project_name, row.funnel_name]
+        .map(asText)
+        .filter(Boolean)
+        .join(" → ")
+    : "";
   return (
-    <AlertDialog open={Boolean(target)} onOpenChange={(open) => { if (!open && !pending) onCancel(); }}>
+    <AlertDialog
+      open={Boolean(target)}
+      onOpenChange={(open) => {
+        if (!open && !pending) onCancel();
+      }}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{t("bindingsRestoreDialogTitle")}</AlertDialogTitle>
@@ -2832,8 +3640,18 @@ export function RestoreBindingDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>{t("bindingsCancel")}</AlertDialogCancel>
-          <AlertDialogAction disabled={pending} onClick={(event) => { event.preventDefault(); onConfirm(); }}>{pending ? t("bindingsSaveInProgress") : t("bindingsRestore")}</AlertDialogAction>
+          <AlertDialogCancel disabled={pending}>
+            {t("bindingsCancel")}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            disabled={pending}
+            onClick={(event) => {
+              event.preventDefault();
+              onConfirm();
+            }}
+          >
+            {pending ? t("bindingsSaveInProgress") : t("bindingsRestore")}
+          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
@@ -2860,22 +3678,65 @@ function HierarchyCreateDialog({
   onSubmit: () => void;
 }) {
   const { t } = useI18n();
-  const label = type === "client" ? t("bindingsSelectClientLabel") : type === "project" ? t("bindingsSelectProjectLabel") : t("bindingsSelectFunnelLabel");
+  const label =
+    type === "client"
+      ? t("bindingsSelectClientLabel")
+      : type === "project"
+        ? t("bindingsSelectProjectLabel")
+        : t("bindingsSelectFunnelLabel");
   return (
-    <Dialog open={open} onOpenChange={(next) => { if (!next && !pending) onCancel(); }}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && !pending) onCancel();
+      }}
+    >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{type === "client" ? t("bindingsAddClient") : type === "project" ? t("bindingsAddProject") : t("bindingsAddFunnel")}</DialogTitle>
-          <DialogDescription>{t("bindingsHierarchyDialogDescription")}</DialogDescription>
+          <DialogTitle>
+            {type === "client"
+              ? t("bindingsAddClient")
+              : type === "project"
+                ? t("bindingsAddProject")
+                : t("bindingsAddFunnel")}
+          </DialogTitle>
+          <DialogDescription>
+            {t("bindingsHierarchyDialogDescription")}
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
-          <label className="text-sm font-medium text-foreground" htmlFor="hierarchy-name">{label}</label>
-          <Input id="hierarchy-name" value={name} disabled={pending} onChange={(event) => onNameChange(event.target.value)} />
-          {error ? <p className="text-sm font-medium text-destructive" role="alert">{error}</p> : null}
+          <label
+            className="text-sm font-medium text-foreground"
+            htmlFor="hierarchy-name"
+          >
+            {label}
+          </label>
+          <Input
+            id="hierarchy-name"
+            value={name}
+            disabled={pending}
+            onChange={(event) => onNameChange(event.target.value)}
+          />
+          {error ? (
+            <p className="text-sm font-medium text-destructive" role="alert">
+              {error}
+            </p>
+          ) : null}
         </div>
         <DialogFooter>
-          <Button type="button" variant="outline" disabled={pending} onClick={onCancel}>{t("bindingsCancel")}</Button>
-          <Button type="button" disabled={pending || !name.trim()} onClick={onSubmit}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={pending}
+            onClick={onCancel}
+          >
+            {t("bindingsCancel")}
+          </Button>
+          <Button
+            type="button"
+            disabled={pending || !name.trim()}
+            onClick={onSubmit}
+          >
             {pending ? t("bindingsSaveInProgress") : t("bindingsSaveBinding")}
           </Button>
         </DialogFooter>
@@ -2897,10 +3758,27 @@ export function ArchiveBindingDialog({
 }) {
   const { t } = useI18n();
   const row = target?.row;
-  const title = target?.type === "ad_account" ? (row ? accountName(row, t) : "") : (row ? formatBindingSourceName(row) : "");
-  const hierarchy = row ? [row.client_name, row.project_name, row.funnel_name].map(asText).filter(Boolean).join(" → ") : "";
+  const title =
+    target?.type === "ad_account"
+      ? row
+        ? accountName(row, t)
+        : ""
+      : row
+        ? formatBindingSourceName(row)
+        : "";
+  const hierarchy = row
+    ? [row.client_name, row.project_name, row.funnel_name]
+        .map(asText)
+        .filter(Boolean)
+        .join(" → ")
+    : "";
   return (
-    <AlertDialog open={Boolean(target)} onOpenChange={(next) => { if (!next && !pending) onCancel(); }}>
+    <AlertDialog
+      open={Boolean(target)}
+      onOpenChange={(next) => {
+        if (!next && !pending) onCancel();
+      }}
+    >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{t("bindingsArchive")}</AlertDialogTitle>
@@ -2911,11 +3789,21 @@ export function ArchiveBindingDialog({
         <div className="rounded-md border border-border/70 bg-muted/25 p-3 text-sm">
           <p className="font-medium text-foreground">{title || "—"}</p>
           <p className="mt-1 text-muted-foreground">{hierarchy || "—"}</p>
-          <p className="mt-2 text-xs text-muted-foreground">{t("bindingsArchiveSelectedOnly")}</p>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {t("bindingsArchiveSelectedOnly")}
+          </p>
         </div>
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={pending}>{t("bindingsCancel")}</AlertDialogCancel>
-          <AlertDialogAction disabled={pending} onClick={(event) => { event.preventDefault(); onConfirm(); }}>
+          <AlertDialogCancel disabled={pending}>
+            {t("bindingsCancel")}
+          </AlertDialogCancel>
+          <AlertDialogAction
+            disabled={pending}
+            onClick={(event) => {
+              event.preventDefault();
+              onConfirm();
+            }}
+          >
             {pending ? t("bindingsRunning") : t("bindingsArchive")}
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -3065,9 +3953,35 @@ function GenericDataTable({
   );
 }
 
-
-function StatusFilterControl({ value, onChange, t }: { value: BindingStatusFilter; onChange: (value: BindingStatusFilter) => void; t: (key: TranslationKey) => string }) {
-  return <div className="mb-3 flex flex-wrap items-center gap-2 text-sm"><span className="text-muted-foreground">{t("bindingsStatusLabel")}</span><Select value={value} onValueChange={(next) => onChange(next as BindingStatusFilter)}><SelectTrigger className="h-9 w-[160px]"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">{t("bindingsStatusActive")}</SelectItem><SelectItem value="archived">{t("bindingsStatusArchived")}</SelectItem><SelectItem value="all">{t("bindingsStatusAll")}</SelectItem></SelectContent></Select></div>;
+function StatusFilterControl({
+  value,
+  onChange,
+  t,
+}: {
+  value: BindingStatusFilter;
+  onChange: (value: BindingStatusFilter) => void;
+  t: (key: TranslationKey) => string;
+}) {
+  return (
+    <div className="mb-3 flex flex-wrap items-center gap-2 text-sm">
+      <span className="text-muted-foreground">{t("bindingsStatusLabel")}</span>
+      <Select
+        value={value}
+        onValueChange={(next) => onChange(next as BindingStatusFilter)}
+      >
+        <SelectTrigger className="h-9 w-[160px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="active">{t("bindingsStatusActive")}</SelectItem>
+          <SelectItem value="archived">
+            {t("bindingsStatusArchived")}
+          </SelectItem>
+          <SelectItem value="all">{t("bindingsStatusAll")}</SelectItem>
+        </SelectContent>
+      </Select>
+    </div>
+  );
 }
 function KpiGrid({
   cards,
@@ -3242,17 +4156,17 @@ function buildAdFormOptions(
   };
 }
 
-
 function isInactiveStatus(status: unknown) {
   return ["archived", "inactive", "removed", "deleted", "disabled"].includes(
-    String(status ?? "").trim().toLowerCase(),
+    String(status ?? "")
+      .trim()
+      .toLowerCase(),
   );
 }
 
 function isSelectableHierarchyRow(row: Row) {
   return !isInactiveStatus(row.status ?? row.binding_status);
 }
-
 
 export function buildSourceFormOptions(
   data: BindingsData | undefined,
@@ -3277,8 +4191,16 @@ export function buildSourceFormOptions(
 }
 
 function localizeSourceCandidateLabel(source: SafeSourceCandidate, lang: Lang) {
-  if (source.sourceType === "google_sheet_source" && (source.label === "Google Sheet — шаблон даних" || source.label === "Google Sheet — data template")) {
-    return formatSourceCandidateLabel({ sourceType: source.sourceType, name: "insight_hub_dev_google_sheet_template", lang });
+  if (
+    source.sourceType === "google_sheet_source" &&
+    (source.label === "Google Sheet — шаблон даних" ||
+      source.label === "Google Sheet — data template")
+  ) {
+    return formatSourceCandidateLabel({
+      sourceType: source.sourceType,
+      name: "insight_hub_dev_google_sheet_template",
+      lang,
+    });
   }
   return source.label;
 }
@@ -3320,7 +4242,8 @@ function entityName(
   );
 }
 export function formatBindingSourceName(row: Row) {
-  const raw = asText(row.source_name) || asText(row.name) || asText(row.source_id);
+  const raw =
+    asText(row.source_name) || asText(row.name) || asText(row.source_id);
   const kind = asText(row.source_kind);
 
   if (kind === "google_sheet_tab" && raw.startsWith("google_sheet:")) {
@@ -3343,15 +4266,14 @@ export function formatBindingSourceName(row: Row) {
 }
 
 function isUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value,
+  );
 }
 
 function sourceName(row: Row) {
   return (
-    asText(row.source_name) ||
-    asText(row.name) ||
-    asText(row.source_id) ||
-    "—"
+    asText(row.source_name) || asText(row.name) || asText(row.source_id) || "—"
   );
 }
 function accountName(row: Row, t: (key: TranslationKey) => string) {
@@ -3630,4 +4552,183 @@ function badgeVariant(value: string, column: string) {
 
 function isCompactColumn(column: string) {
   return STATUS_COLUMNS.has(column) || column === "confidence";
+}
+
+export function isUploadedImportSource(dataset: Row, file?: Row) {
+  const text = [
+    dataset.source_type,
+    dataset.parser_type,
+    dataset.target_raw_table,
+    file?.storage_bucket,
+    file?.["storage" + "_" + "path"],
+    file?.original_file_name,
+  ]
+    .map(asText)
+    .join(" ")
+    .toLowerCase();
+  return (
+    text.includes("file-imports") ||
+    text.includes("manual_file_upload") ||
+    text.includes("upload") ||
+    text.includes("csv") ||
+    text.includes("xlsx")
+  );
+}
+
+export function filterImportedSources(
+  rows: Row[],
+  statusFilter: ImportSourceStatusFilter,
+) {
+  return rows.filter((row) => {
+    const archived =
+      isInactiveStatus(row.status) ||
+      isInactiveStatus(row.file_status) ||
+      asText(row.status).toLowerCase() === "archived" ||
+      asText(row.file_status).toLowerCase() === "archived";
+    if (statusFilter === "active") return !archived;
+    if (statusFilter === "archived") return archived;
+    return true;
+  });
+}
+
+function ImportSourceManagementPanel({
+  rows,
+  statusFilter,
+  onStatusFilterChange,
+  canManage,
+  canCleanup,
+  roleLoading,
+  pending,
+  onAction,
+}: {
+  rows: Row[];
+  statusFilter: ImportSourceStatusFilter;
+  onStatusFilterChange: (value: ImportSourceStatusFilter) => void;
+  canManage: boolean;
+  canCleanup: boolean;
+  roleLoading: boolean;
+  pending: string;
+  onAction: (row: Row, mode: "archive" | "restore" | "cleanup") => void;
+}) {
+  return (
+    <div className="mb-4 rounded-xl border border-border/60 bg-muted/20 p-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h3 className="text-sm font-semibold">
+            Керування імпортованими джерелами
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            Архівуйте тестові імпорти без видалення даних або очищайте файли
+            лише після підтвердження.
+          </p>
+        </div>
+        <div className="flex rounded-md border border-border/60 bg-background p-0.5">
+          {(["active", "archived", "all"] as ImportSourceStatusFilter[]).map(
+            (value) => (
+              <Button
+                key={value}
+                type="button"
+                size="sm"
+                variant={statusFilter === value ? "secondary" : "ghost"}
+                className="h-7 px-2 text-xs"
+                onClick={() => onStatusFilterChange(value)}
+              >
+                {value === "active"
+                  ? "Активні"
+                  : value === "archived"
+                    ? "Архівні"
+                    : "Усі"}
+              </Button>
+            ),
+          )}
+        </div>
+      </div>
+      {rows.length === 0 ? (
+        <p className="mt-3 text-xs text-muted-foreground">
+          Немає імпортованих файлів для вибраного фільтра.
+        </p>
+      ) : (
+        <div className="mt-3 space-y-2">
+          {rows.map((row) => {
+            const archived =
+              isInactiveStatus(row.status) ||
+              isInactiveStatus(row.file_status) ||
+              asText(row.status).toLowerCase() === "archived" ||
+              asText(row.file_status).toLowerCase() === "archived";
+            return (
+              <div
+                key={`${asText(row.raw_external_dataset_id)}-${asText(row.file_asset_id)}`}
+                className="flex flex-col gap-2 rounded-lg border border-border/50 bg-background/70 p-2 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <div
+                    className="truncate text-sm font-medium"
+                    title={
+                      asText(row.original_file_name) || asText(row.dataset_name)
+                    }
+                  >
+                    {asText(row.original_file_name) ||
+                      asText(row.dataset_name) ||
+                      "Імпортований файл"}
+                  </div>
+                  <div className="truncate text-xs text-muted-foreground">
+                    {[
+                      asText(row.dataset_name),
+                      asText(row.storage_object_path),
+                      asText(row.status) || "active",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {roleLoading ? (
+                    <Button type="button" size="sm" variant="outline" disabled>
+                      Перевірка ролі…
+                    </Button>
+                  ) : null}
+                  {canManage && !archived ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={Boolean(pending)}
+                      onClick={() => onAction(row, "archive")}
+                    >
+                      <Archive className="mr-1 h-3.5 w-3.5" />
+                      Архівувати
+                    </Button>
+                  ) : null}
+                  {canManage && archived ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={Boolean(pending)}
+                      onClick={() => onAction(row, "restore")}
+                    >
+                      <RotateCcw className="mr-1 h-3.5 w-3.5" />
+                      Відновити
+                    </Button>
+                  ) : null}
+                  {canCleanup ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="destructive"
+                      disabled={Boolean(pending)}
+                      onClick={() => onAction(row, "cleanup")}
+                    >
+                      <Trash2 className="mr-1 h-3.5 w-3.5" />
+                      Очистити
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
 }

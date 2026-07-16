@@ -1,3 +1,9 @@
+## 2026-07-15 — Production source management and import cleanup follow-up
+
+- Deploy `supabase/functions/import-source-cleanup` and verify authenticated admin archive/restore plus superadmin confirmed cleanup against the production workspace.
+- Verify Storage cleanup removes physical files from Supabase Storage bucket `file-imports` through the Storage API and that cleaned imports disappear from Data Bindings while audit history remains.
+- Smoke-test `/bindings?tab=source`: active uploaded sources appear under Активні, archived uploaded sources appear under Архівні/Усі only, cleanup is not shown for Google Sheets or Ads connectors, and archive/cleanup confirmation copy is Ukrainian and explicit.
+
 ## 2026-07-15 — Imports upload layout replacement and Bindings source-tab CTA
 
 Frontend-only Imports layout fix: added app-level `html`, `body`, and `#root` horizontal overflow protection, replaced the unstable upload-form flex-wrap layout with a controlled responsive grid and fixed safe upload-button column, preserved the selected-file pill/clear behavior, centered the compact success-panel action area, and changed the success CTA to open Data Bindings on `?tab=source`. Data Bindings now supports validated `tab` query params for existing tabs and falls back to Overview for invalid values. No backend, Supabase schema, migrations, RLS, RPC definitions, Edge Function code, storage bucket, file-upload-parser contract, upload parser payload, OAuth logic, Ads connector logic, Google Sheets connector logic, binding contracts, production data, uploaded files, or upload/parser behavior changed.

@@ -28,4 +28,4 @@ Reason:
 
 During `/imports` QA, test uploads of `analytics_hub_test_leads_upload.csv` were removed from public DB tables, but the physical CSV files remained in Supabase Storage because direct SQL deletion from Storage tables is not allowed. A proper production cleanup function is needed so future test/failed imports can be cleaned completely and safely.
 
-Do not mark the file import cleanup layer complete until DB cleanup and Storage cleanup are both covered.
+Status: implementation added locally in `import-source-cleanup` plus Data Bindings source-management UI. Do not mark production-complete until the Edge Function is deployed and DB + Storage cleanup are verified against the production workspace.
