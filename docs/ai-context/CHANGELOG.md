@@ -1,3 +1,10 @@
+## 2026-07-19 — Imports / Data Bindings portfolio UI polish
+
+- Recorded that the client declined the paid project and the analytics system is now receiving limited portfolio/demo polish.
+- Made the Imports upload form responsive within its card without changing upload behavior or payloads.
+- Replaced imported-source segmented status buttons with the shared Select, hid storage paths behind technical details, improved bilingual source summaries, and aligned Archive/Restore/Cleanup actions.
+- No backend, Edge Function contract, Supabase schema, RLS, SQL policy, storage policy, route, archive, or cleanup behavior changed.
+
 ## 2026-07-16 — PR #269 registry permission and workspace-scoped cleanup follow-up
 
 Remaining PR #269 blockers were addressed locally: the `import-source-cleanup` registry migration now sets `required_permission = 'can_manage_imports'` with `required_min_role = 'admin'`, `is_dangerous = true`, `requires_audit_log = true`, and active status so the live edge-function access check can pass for admin archive/restore. Destructive cleanup remains superadmin-only in the Edge Function. Cleanup deletes now pass `workspace_id` scope for all import cleanup target tables that should be workspace-scoped while preserving the table-specific delete keys and import-run/source-name fallback behavior. Focused tests now assert the registry permission, absence of null permission, workspace-scoped cleanup helpers, superadmin-only cleanup, and admin-access registry configuration.

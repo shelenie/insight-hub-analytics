@@ -1,3 +1,9 @@
+## 2026-07-19 — Portfolio/demo maintenance
+
+- Treat the system as a portfolio/demo asset after the client declined the paid project; keep future work narrow and polish-focused.
+- Manually review `/imports` at approximately 1280px with the sidebar open and `/bindings?tab=source` in Ukrainian and English after deployment.
+- No backend, Supabase, RLS, upload-contract, archive, or cleanup follow-up is required for this frontend-only polish.
+
 ## 2026-07-16 — PR #269 final access and cleanup verification
 
 - After applying `20260716_register_import_source_cleanup_edge_function.sql`, verify `check_edge_function_access`/`check_edge_function_access_by_email` allows admins with `can_manage_imports` to archive/restore through `import-source-cleanup`.

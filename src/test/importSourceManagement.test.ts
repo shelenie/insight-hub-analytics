@@ -46,9 +46,11 @@ describe("import source management", () => {
     const source = fs.readFileSync(bindingsPath, "utf8");
 
     expect(source).toContain("!isInactiveStatus(row.status) && !isInternalTestSourceCandidate(row)");
-    expect(source).toContain("Активні");
-    expect(source).toContain("Архівні");
-    expect(source).toContain("Це видалить записи імпорту з бази та фізичний файл із Supabase Storage. Дію не можна скасувати.");
+    expect(source).toContain('<SelectItem value="active">');
+    expect(source).toContain('<SelectItem value="archived">');
+    expect(source).toContain("bindingsImportSourceCleanupConfirmDescription");
+    expect(source).toContain("bindingsImportSourceTechnicalDetails");
+    expect(source).not.toContain("asText(row.storage_object_path),");
     expect(source).toContain("sourceType: \"google_sheet_source\"");
   });
 
