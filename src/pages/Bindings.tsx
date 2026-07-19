@@ -4693,14 +4693,23 @@ function ImportSourceManagementPanel({
               ? fileName.split(".").pop()?.toUpperCase()
               : "";
             const sourceType = asText(row.source_type);
+            const normalizedSourceType = sourceType.toLowerCase();
             const sourceTypeLabel =
               sourceType === "manual_file_upload"
                 ? lang === "uk"
                   ? "Файл"
                   : "File"
-                : sourceType
+                : normalizedSourceType === "applications"
+                  ? t("bindingsImportSourceApplications")
+                  : sourceType
                   ? friendlyLabel(sourceType, lang)
                   : "";
+            const parserStatus =
+              asText(row.parser_status) || asText(row.status) || "active";
+            const parserStatusLabel =
+              parserStatus.toLowerCase() === "parsed"
+                ? t("bindingsImportSourceParsed")
+                : formatStatus(parserStatus, lang);
             return (
               <div
                 key={`${asText(row.raw_external_dataset_id)}-${asText(row.file_asset_id)}`}
@@ -4717,12 +4726,7 @@ function ImportSourceManagementPanel({
                     {[
                       extension,
                       sourceTypeLabel,
-                      formatStatus(
-                        asText(row.parser_status) ||
-                          asText(row.status) ||
-                          "active",
-                        lang,
-                      ),
+                      parserStatusLabel,
                     ]
                       .filter(Boolean)
                       .join(" · ")}

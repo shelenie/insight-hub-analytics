@@ -1322,7 +1322,7 @@ function UploadCard({
       contentClassName="max-w-full min-w-0"
     >
       <form
-        className="grid w-full min-w-0 grid-cols-1 gap-x-3 gap-y-2 md:grid-cols-2 lg:grid-cols-3 lg:items-start"
+        className="grid w-full min-w-0 grid-cols-1 justify-start gap-x-3 gap-y-2 md:grid-cols-2 lg:grid-cols-[minmax(0,220px)_minmax(0,160px)_minmax(0,190px)] lg:items-start xl:grid-cols-[minmax(0,220px)_minmax(0,160px)_minmax(0,190px)_minmax(0,240px)_minmax(220px,250px)]"
         onSubmit={onSubmit}
       >
         <div className="grid min-w-0 max-w-full grid-rows-[1rem_2.5rem_auto_auto] gap-y-1.5">
@@ -1426,7 +1426,7 @@ function UploadCard({
             </Select>
           </div>
         </div>
-        <div className="grid min-w-0 max-w-full grid-rows-[1rem_2.5rem_auto] gap-y-1.5 md:col-span-2 md:justify-self-end md:w-full lg:col-span-1 lg:w-full">
+        <div className="grid w-full min-w-0 max-w-[250px] grid-rows-[1rem_2.5rem_auto] gap-y-1.5 md:justify-self-end lg:justify-self-start">
           <span
             className="min-h-4 text-xs font-medium leading-none opacity-0"
             aria-hidden="true"

@@ -836,6 +836,8 @@ export const translations = {
   bindingsImportSourceManagementDescription: { uk: "Архівуйте тестові імпорти без видалення даних або очищайте файли лише після підтвердження.", en: "Archive test imports without deleting data, or clean up files only after confirmation." },
   bindingsImportSourceEmpty: { uk: "Немає імпортованих файлів для вибраного фільтра.", en: "No imported files match the selected filter." },
   bindingsImportSourceFallbackName: { uk: "Імпортований файл", en: "Imported file" },
+  bindingsImportSourceApplications: { uk: "Заявки / ліди", en: "Applications / Leads" },
+  bindingsImportSourceParsed: { uk: "Успішно", en: "Parsed" },
   bindingsImportSourceTechnicalDetails: { uk: "Технічні деталі", en: "Technical details" },
   bindingsImportSourceCheckingRole: { uk: "Перевірка ролі…", en: "Checking role…" },
   bindingsImportSourceArchive: { uk: "Архівувати", en: "Archive" },

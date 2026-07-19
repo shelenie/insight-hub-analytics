@@ -1,3 +1,7 @@
+## 2026-07-19 — Imports upload regression and imported-source labels follow-up
+
+The PR #270 frontend polish now uses a compact, capped responsive grid for the Imports upload form: five aligned controls at laptop/desktop widths, clean wrapping below that breakpoint, and a submit width capped at 250px. Data Bindings now presents the imported-source values `applications` and `parsed` as bilingual human-facing labels while retaining its status Select, collapsed storage path, and aligned management actions. Upload, parser, archive, cleanup, route, and backend contracts are unchanged.
+
 ## 2026-07-19 — Imports and Data Bindings UI polish
 
 Imports and Data Bindings received frontend-only responsive and presentation polish. The upload form now fits laptop content widths, imported-source status uses a Select, source rows prioritize human-friendly file metadata, technical storage paths are collapsed, actions align consistently, and the panel is bilingual. No backend logic, route, upload payload, Edge Function contract, Supabase schema, RLS, SQL, or storage policy changed.

@@ -1,6 +1,7 @@
 ## 2026-07-19 — Imports / Data Bindings UI verification
 
-- Manually review `/imports` at approximately 1280px with the sidebar open and `/bindings?tab=source` in Ukrainian and English after deployment.
+- Manually review `/imports` at approximately 1280px with the sidebar open: confirm all five controls share a compact row, the submit button is fully visible, and the page has no horizontal scroll.
+- Verify `/bindings?tab=source` renders `applications` / `parsed` as `Заявки / ліди` / `Успішно` in Ukrainian and `Applications / Leads` / `Parsed` in English, with the storage path still collapsed.
 - No backend, Supabase, RLS, upload-contract, archive, or cleanup follow-up is required for this frontend-only polish.
 
 ## 2026-07-16 — PR #269 final access and cleanup verification
