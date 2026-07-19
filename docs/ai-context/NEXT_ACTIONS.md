@@ -1,6 +1,5 @@
-## 2026-07-19 — Portfolio/demo maintenance
+## 2026-07-19 — Imports / Data Bindings UI verification
 
-- Treat the system as a portfolio/demo asset after the client declined the paid project; keep future work narrow and polish-focused.
 - Manually review `/imports` at approximately 1280px with the sidebar open and `/bindings?tab=source` in Ukrainian and English after deployment.
 - No backend, Supabase, RLS, upload-contract, archive, or cleanup follow-up is required for this frontend-only polish.
 

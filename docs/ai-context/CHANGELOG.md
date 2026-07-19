@@ -1,8 +1,8 @@
-## 2026-07-19 — Imports / Data Bindings portfolio UI polish
+## 2026-07-19 — Imports / Data Bindings UI polish
 
-- Recorded that the client declined the paid project and the analytics system is now receiving limited portfolio/demo polish.
-- Made the Imports upload form responsive within its card without changing upload behavior or payloads.
-- Replaced imported-source segmented status buttons with the shared Select, hid storage paths behind technical details, improved bilingual source summaries, and aligned Archive/Restore/Cleanup actions.
+- Imports and Data Bindings received frontend-only responsive and presentation polish.
+- The upload form now fits laptop content widths without changing upload behavior or payloads.
+- Imported-source status uses the shared Select, source rows prioritize human-friendly file metadata, technical storage paths are collapsed, and Archive/Restore/Cleanup actions align consistently.
 - No backend, Edge Function contract, Supabase schema, RLS, SQL policy, storage policy, route, archive, or cleanup behavior changed.
 
 ## 2026-07-16 — PR #269 registry permission and workspace-scoped cleanup follow-up
