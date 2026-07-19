@@ -1,3 +1,10 @@
+## 2026-07-19 — Imports / Data Bindings UI polish
+
+- Imports and Data Bindings received frontend-only responsive and presentation polish.
+- The upload form now fits laptop content widths without changing upload behavior or payloads.
+- Imported-source status uses the shared Select, source rows prioritize human-friendly file metadata, technical storage paths are collapsed, and Archive/Restore/Cleanup actions align consistently.
+- No backend, Edge Function contract, Supabase schema, RLS, SQL policy, storage policy, route, archive, or cleanup behavior changed.
+
 ## 2026-07-16 — PR #269 registry permission and workspace-scoped cleanup follow-up
 
 Remaining PR #269 blockers were addressed locally: the `import-source-cleanup` registry migration now sets `required_permission = 'can_manage_imports'` with `required_min_role = 'admin'`, `is_dangerous = true`, `requires_audit_log = true`, and active status so the live edge-function access check can pass for admin archive/restore. Destructive cleanup remains superadmin-only in the Edge Function. Cleanup deletes now pass `workspace_id` scope for all import cleanup target tables that should be workspace-scoped while preserving the table-specific delete keys and import-run/source-name fallback behavior. Focused tests now assert the registry permission, absence of null permission, workspace-scoped cleanup helpers, superadmin-only cleanup, and admin-access registry configuration.

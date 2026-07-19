@@ -274,6 +274,7 @@ const FRIENDLY_COLUMN_LABELS: Record<string, string | Record<Lang, string>> = {
 
 const FRIENDLY_VALUE_LABELS: Record<string, string | Record<Lang, string>> = {
   active: { uk: "Активний", en: "Active" },
+  success: { uk: "Успішно", en: "Success" },
   archived: { uk: "Архівний", en: "Archived" },
   paused: { uk: "Призупинений", en: "Paused" },
   ad_account: { uk: "Рекламний акаунт", en: "Ad account" },
@@ -798,10 +799,10 @@ export default function Bindings() {
       {
         successMessage:
           mode === "archive"
-            ? "Джерело архівовано"
+            ? t("bindingsImportSourceArchivedTitle")
             : mode === "restore"
-              ? "Джерело відновлено"
-              : "Імпорт очищено",
+              ? t("bindingsImportSourceRestoredTitle")
+              : t("bindingsImportSourceCleanedTitle"),
       },
     );
     if (result) {
@@ -809,14 +810,14 @@ export default function Bindings() {
       toast({
         title:
           mode === "archive"
-            ? "Джерело архівовано"
+            ? t("bindingsImportSourceArchivedTitle")
             : mode === "restore"
-              ? "Джерело відновлено"
-              : "Імпорт очищено",
+              ? t("bindingsImportSourceRestoredTitle")
+              : t("bindingsImportSourceCleanedTitle"),
         description:
           mode === "cleanup"
-            ? "Записи імпорту та файл видалено."
-            : "Список джерел оновлено.",
+            ? t("bindingsImportSourceCleanedDescription")
+            : t("bindingsImportSourceUpdatedDescription"),
         variant: "success",
         duration: 5000,
       });
@@ -1928,25 +1929,25 @@ export default function Bindings() {
             <AlertDialogHeader>
               <AlertDialogTitle>
                 {importSourceActionTarget?.mode === "cleanup"
-                  ? "Очистити імпортоване джерело?"
+                  ? t("bindingsImportSourceCleanupConfirmTitle")
                   : importSourceActionTarget?.mode === "cleanup-active"
-                    ? "Очистити активне прив’язане джерело?"
+                    ? t("bindingsImportSourceActiveCleanupConfirmTitle")
                     : importSourceActionTarget?.mode === "restore"
-                      ? "Відновити імпортоване джерело?"
-                      : "Архівувати імпортоване джерело?"}
+                      ? t("bindingsImportSourceRestoreConfirmTitle")
+                      : t("bindingsImportSourceArchiveConfirmTitle")}
               </AlertDialogTitle>
               <AlertDialogDescription>
                 {importSourceActionTarget?.mode === "cleanup"
-                  ? "Це видалить записи імпорту з бази та фізичний файл із Supabase Storage. Дію не можна скасувати."
+                  ? t("bindingsImportSourceCleanupConfirmDescription")
                   : importSourceActionTarget?.mode === "cleanup-active"
-                    ? "Джерело має активну production-прив’язку. Це окреме підтвердження видалить імпорт, файл і пов’язані записи. Дію не можна скасувати."
+                    ? t("bindingsImportSourceActiveCleanupConfirmDescription")
                     : importSourceActionTarget?.mode === "restore"
-                      ? "Джерело знову буде доступне у списках імпортованих джерел."
-                      : "Джерело буде приховано з активних списків, але дані та файл залишаться."}
+                      ? t("bindingsImportSourceRestoreConfirmDescription")
+                      : t("bindingsImportSourceArchiveConfirmDescription")}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Скасувати</AlertDialogCancel>
+              <AlertDialogCancel>{t("bindingsCancel")}</AlertDialogCancel>
               <AlertDialogAction
                 className={
                   importSourceActionTarget?.mode === "cleanup" ||
@@ -1961,12 +1962,12 @@ export default function Bindings() {
                 }}
               >
                 {importSourceActionTarget?.mode === "cleanup"
-                  ? "Так, очистити"
+                  ? t("bindingsImportSourceConfirmCleanup")
                   : importSourceActionTarget?.mode === "cleanup-active"
-                    ? "Так, очистити активне джерело"
+                    ? t("bindingsImportSourceConfirmActiveCleanup")
                     : importSourceActionTarget?.mode === "restore"
-                      ? "Відновити"
-                      : "Архівувати"}
+                      ? t("bindingsImportSourceRestore")
+                      : t("bindingsImportSourceArchive")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -4641,42 +4642,40 @@ function ImportSourceManagementPanel({
     mode: "archive" | "restore" | "cleanup" | "cleanup-active",
   ) => void;
 }) {
+  const { t, lang } = useI18n();
   return (
     <div className="mb-4 rounded-xl border border-border/60 bg-muted/20 p-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h3 className="text-sm font-semibold">
-            Керування імпортованими джерелами
+            {t("bindingsImportSourceManagementTitle")}
           </h3>
           <p className="text-xs text-muted-foreground">
-            Архівуйте тестові імпорти без видалення даних або очищайте файли
-            лише після підтвердження.
+            {t("bindingsImportSourceManagementDescription")}
           </p>
         </div>
-        <div className="flex rounded-md border border-border/60 bg-background p-0.5">
-          {(["active", "archived", "all"] as ImportSourceStatusFilter[]).map(
-            (value) => (
-              <Button
-                key={value}
-                type="button"
-                size="sm"
-                variant={statusFilter === value ? "secondary" : "ghost"}
-                className="h-7 px-2 text-xs"
-                onClick={() => onStatusFilterChange(value)}
-              >
-                {value === "active"
-                  ? "Активні"
-                  : value === "archived"
-                    ? "Архівні"
-                    : "Усі"}
-              </Button>
-            ),
-          )}
-        </div>
+        <Select
+          value={statusFilter}
+          onValueChange={(value) =>
+            onStatusFilterChange(value as ImportSourceStatusFilter)
+          }
+        >
+          <SelectTrigger
+            className="w-full sm:w-[180px]"
+            aria-label={t("bindingsStatusPlaceholder")}
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">{t("bindingsStatusActive")}</SelectItem>
+            <SelectItem value="archived">{t("bindingsStatusArchived")}</SelectItem>
+            <SelectItem value="all">{t("bindingsStatusAll")}</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
       {rows.length === 0 ? (
         <p className="mt-3 text-xs text-muted-foreground">
-          Немає імпортованих файлів для вибраного фільтра.
+          {t("bindingsImportSourceEmpty")}
         </p>
       ) : (
         <div className="mt-3 space-y-2">
@@ -4686,36 +4685,63 @@ function ImportSourceManagementPanel({
               isInactiveStatus(row.file_status) ||
               asText(row.status).toLowerCase() === "archived" ||
               asText(row.file_status).toLowerCase() === "archived";
+            const fileName =
+              asText(row.original_file_name) ||
+              asText(row.dataset_name) ||
+              t("bindingsImportSourceFallbackName");
+            const extension = fileName.includes(".")
+              ? fileName.split(".").pop()?.toUpperCase()
+              : "";
+            const sourceType = asText(row.source_type);
+            const sourceTypeLabel =
+              sourceType === "manual_file_upload"
+                ? lang === "uk"
+                  ? "Файл"
+                  : "File"
+                : sourceType
+                  ? friendlyLabel(sourceType, lang)
+                  : "";
             return (
               <div
                 key={`${asText(row.raw_external_dataset_id)}-${asText(row.file_asset_id)}`}
-                className="flex flex-col gap-2 rounded-lg border border-border/50 bg-background/70 p-2 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-3 rounded-lg border border-border/50 bg-background/70 p-3 md:flex-row md:items-center md:justify-between"
               >
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div
                     className="truncate text-sm font-medium"
-                    title={
-                      asText(row.original_file_name) || asText(row.dataset_name)
-                    }
+                    title={fileName}
                   >
-                    {asText(row.original_file_name) ||
-                      asText(row.dataset_name) ||
-                      "Імпортований файл"}
+                    {fileName}
                   </div>
                   <div className="truncate text-xs text-muted-foreground">
                     {[
-                      asText(row.dataset_name),
-                      asText(row.storage_object_path),
-                      asText(row.status) || "active",
+                      extension,
+                      sourceTypeLabel,
+                      formatStatus(
+                        asText(row.parser_status) ||
+                          asText(row.status) ||
+                          "active",
+                        lang,
+                      ),
                     ]
                       .filter(Boolean)
                       .join(" · ")}
                   </div>
+                  {asText(row.storage_object_path) ? (
+                    <details className="mt-1 text-xs text-muted-foreground">
+                      <summary className="cursor-pointer">
+                        {t("bindingsImportSourceTechnicalDetails")}
+                      </summary>
+                      <p className="mt-1 break-all font-mono text-[11px]">
+                        {asText(row.storage_object_path)}
+                      </p>
+                    </details>
+                  ) : null}
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="grid w-full shrink-0 grid-cols-1 gap-2 sm:grid-cols-2 md:flex md:w-auto md:items-center md:justify-end">
                   {roleLoading ? (
                     <Button type="button" size="sm" variant="outline" disabled>
-                      Перевірка ролі…
+                      {t("bindingsImportSourceCheckingRole")}
                     </Button>
                   ) : null}
                   {canManage && !archived ? (
@@ -4723,11 +4749,12 @@ function ImportSourceManagementPanel({
                       type="button"
                       size="sm"
                       variant="outline"
+                      className="h-9 w-full min-w-[8rem]"
                       disabled={Boolean(pending)}
                       onClick={() => onAction(row, "archive")}
                     >
                       <Archive className="mr-1 h-3.5 w-3.5" />
-                      Архівувати
+                      {t("bindingsImportSourceArchive")}
                     </Button>
                   ) : null}
                   {canManage && archived ? (
@@ -4735,11 +4762,12 @@ function ImportSourceManagementPanel({
                       type="button"
                       size="sm"
                       variant="outline"
+                      className="h-9 w-full min-w-[8rem]"
                       disabled={Boolean(pending)}
                       onClick={() => onAction(row, "restore")}
                     >
                       <RotateCcw className="mr-1 h-3.5 w-3.5" />
-                      Відновити
+                      {t("bindingsImportSourceRestore")}
                     </Button>
                   ) : null}
                   {canCleanup ? (
@@ -4747,6 +4775,7 @@ function ImportSourceManagementPanel({
                       type="button"
                       size="sm"
                       variant="destructive"
+                      className="h-9 w-full min-w-[8rem]"
                       disabled={Boolean(pending)}
                       onClick={() =>
                         onAction(
@@ -4758,7 +4787,7 @@ function ImportSourceManagementPanel({
                       }
                     >
                       <Trash2 className="mr-1 h-3.5 w-3.5" />
-                      Очистити
+                      {t("bindingsImportSourceCleanup")}
                     </Button>
                   ) : null}
                 </div>

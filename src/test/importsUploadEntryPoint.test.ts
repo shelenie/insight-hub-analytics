@@ -219,7 +219,7 @@ describe("Imports production upload entry point", () => {
 
   it("uses a controlled responsive upload grid instead of flex-wrap", () => {
     const formStart = importsPage.indexOf(
-      'className="grid w-fit max-w-full min-w-0 grid-cols-1 gap-x-3 gap-y-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[230px_150px_180px_230px_270px] xl:items-start"',
+      'className="grid w-full min-w-0 grid-cols-1 gap-x-3 gap-y-2 md:grid-cols-2 lg:grid-cols-3 lg:items-start"',
     );
     const form = importsPage.slice(
       formStart,
@@ -227,11 +227,15 @@ describe("Imports production upload entry point", () => {
     );
 
     expect(formStart).toBeGreaterThanOrEqual(0);
-    expect(form).toContain("xl:grid-cols-[230px_150px_180px_230px_270px]");
-    expect(form).toContain("w-fit");
+    expect(form).toContain("grid-cols-1");
+    expect(form).toContain("md:grid-cols-2");
+    expect(form).toContain("lg:grid-cols-3");
+    expect(form).toContain("w-full");
+    expect(form).not.toContain("w-fit");
     expect(form).not.toContain("minmax(220px,1fr)");
     expect(form).toContain("grid-rows-[1rem_2.5rem_auto_auto]");
-    expect(form).toContain("xl:w-[270px]");
+    expect(form).toContain("md:col-span-2");
+    expect(form).not.toContain("xl:grid-cols-[230px_150px_180px_230px_270px]");
     expect(form).toContain('aria-hidden="true"');
     expect(form).toContain(
       'className="h-10 w-full max-w-full gap-2 text-center leading-tight"',
