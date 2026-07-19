@@ -1,3 +1,10 @@
+## 2026-07-19 — Imports upload regression and imported-source labels follow-up
+
+- Replaced the stretching three-column Imports upload form with left-aligned, capped responsive grid columns that keep five controls compact at laptop/desktop widths and wrap predictably on narrower screens.
+- Capped the submit control at 250px so it remains visible without stretching across the card.
+- Localized imported-source `applications` and `parsed` values in Ukrainian and English while retaining PR #270's status filter, technical-details collapse, and aligned actions.
+- No backend logic, Edge Function contract, upload payload, parser behavior, route, archive/cleanup behavior, Supabase schema, or RLS changed.
+
 ## 2026-07-19 — Imports / Data Bindings UI polish
 
 - Imports and Data Bindings received frontend-only responsive and presentation polish.

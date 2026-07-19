@@ -50,6 +50,8 @@ describe("import source management", () => {
     expect(source).toContain('<SelectItem value="archived">');
     expect(source).toContain("bindingsImportSourceCleanupConfirmDescription");
     expect(source).toContain("bindingsImportSourceTechnicalDetails");
+    expect(source).toContain("bindingsImportSourceApplications");
+    expect(source).toContain("bindingsImportSourceParsed");
     expect(source).not.toContain("asText(row.storage_object_path),");
     expect(source).toContain("sourceType: \"google_sheet_source\"");
   });
