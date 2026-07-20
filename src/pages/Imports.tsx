@@ -227,7 +227,7 @@ const copy = {
       sourceType: "Тип джерела",
       submit: "Завантажити / розпарсити",
       uploading: "Завантаження…",
-      supported: "CSV, TSV, TXT, XLS або XLSX до 15 MB",
+      supported: "CSV, TSV, TXT, XLS/XLSX до 15 MB",
       successTitle: "Файл оброблено.",
       successDesc:
         "Джерело додано в систему. Тепер його можна прив’язати до клієнта, проєкту або воронки у “Зв’язках даних”.",
@@ -380,7 +380,7 @@ const copy = {
       sourceType: "Source type",
       submit: "Upload / Parse",
       uploading: "Uploading…",
-      supported: "CSV, TSV, TXT, XLS, or XLSX up to 15 MB",
+      supported: "CSV, TSV, TXT, XLS/XLSX up to 15 MB",
       successTitle: "File processed.",
       successDesc:
         "The source was added to the system. You can now bind it to a client, project, or funnel in Data Bindings.",
@@ -1367,7 +1367,7 @@ function UploadCard({
               {ui.upload.noFileSelected}
             </p>
           )}
-          <p className="min-h-4 min-w-0 truncate text-xs text-muted-foreground">
+          <p className="min-h-4 min-w-0 text-xs leading-4 text-muted-foreground">
             {ui.upload.supported}
           </p>
         </div>

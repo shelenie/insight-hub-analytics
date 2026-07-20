@@ -1239,3 +1239,10 @@ Safety / scope:
 - old chat memory may conflict with repo facts
 - RLS/security could be weakened if changes are rushed
 - users/access may be implemented incorrectly without USER_MANAGEMENT.md
+## 2026-07-19 — Imported-source action feedback/refresh fix
+
+- Added visible success and error feedback for imported-source archive, restore, and cleanup actions.
+- Added collapsed technical details for action failures when the Edge Function provides them.
+- Updated imported-source UI state after successful actions and refreshed both workspace imported-source data and source candidates.
+- Shortened the bilingual Imports supported-file helper and allowed it to wrap without widening the upload form.
+- Kept active-binding confirmation, role enforcement, Edge Function contract, destructive rules, parser/upload behavior, schema, and RLS unchanged.

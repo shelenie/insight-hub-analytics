@@ -873,3 +873,6 @@ At the start of a new session:
 A local Supabase migration was added for the first safe backend/RLS patch. It adds active/inactive/removed membership lifecycle status, backfills existing memberships as active, hardens role/access helper functions to require active membership, updates direct `workspace_members` RLS policies to use the hardened helper, hardens known permission/member views when present, and adds trigger protection for the last active `superadmin`.
 
 Deferred items remain: invitations, user-management RPCs, first-superadmin bootstrap, user-management audit events, and remote deployment verification.
+## 2026-07-19 — Imported-source action feedback and Imports helper copy
+
+Data Bindings imported-source archive, restore, and cleanup actions now surface success/error feedback, retain collapsed technical error details, update imported-source rows locally after success, and refresh both the workspace data and source candidates. The compact Imports upload helper now uses shorter bilingual XLS/XLSX copy and can wrap instead of clipping. Backend contracts, access rules, cleanup protections, schema, RLS, parser payload, upload behavior, and routes are unchanged.

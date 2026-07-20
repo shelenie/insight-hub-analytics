@@ -65,6 +65,20 @@ describe("import source management", () => {
     expect(source).not.toContain('confirm_active_binding_cleanup: mode === "cleanup"');
   });
 
+  it("shows cleanup feedback and refreshes both imported sources and candidates", () => {
+    const source = fs.readFileSync(bindingsPath, "utf8");
+
+    expect(source).toContain("feedbackHandler: setImportSourceFeedback");
+    expect(source).toContain(
+      'errorToastTitle: t("bindingsImportSourceActionErrorTitle")',
+    );
+    expect(source).toContain("<BindingFeedback feedback={feedback} />");
+    expect(source).toContain("sourceCandidatesQuery.refetch()");
+    expect(source).toContain('["bindings-mapping-workspace", WORKSPACE_ID]');
+    expect(source).toContain("current.importedSources.filter(");
+    expect(source).toContain('mode === "archive" ? "archived" : "active"');
+  });
+
   it("protects cleanup in the edge function and uses Storage API, not storage.objects SQL", () => {
     const source = edgeSource();
 
