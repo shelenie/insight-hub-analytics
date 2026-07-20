@@ -195,6 +195,8 @@ type BindingActionFeedback = {
   variant: "success" | "warning" | "error";
 };
 type BindingActionTechnicalDetails = {
+  error?: string;
+  code?: string;
   rpc?: string;
   action?: string;
   binding_id?: string;
@@ -372,6 +374,8 @@ export default function Bindings() {
   const [sourceFormError, setSourceFormError] = useState("");
   const [sourceFeedback, setSourceFeedback] =
     useState<BindingActionFeedback | null>(null);
+  const [importSourceFeedback, setImportSourceFeedback] =
+    useState<BindingActionFeedback | null>(null);
   const [sourceStatusFilter, setSourceStatusFilter] =
     useState<BindingStatusFilter>("active");
   const [importSourceStatusFilter, setImportSourceStatusFilter] =
@@ -520,6 +524,7 @@ export default function Bindings() {
       includeTechnicalDetails?: boolean;
       feedbackHandler?: (feedback: BindingActionFeedback) => void;
       successFeedback?: boolean;
+      errorToastTitle?: string;
     },
   ) => {
     setPending(key);
@@ -528,11 +533,24 @@ export default function Bindings() {
     try {
       const { data, error } = await fn();
       if (error) {
-        const friendlyError = await getFriendlyBindingActionError(error, t);
+        const payload = await readFunctionErrorPayload(error);
+        const friendlyError = getFriendlyBindingActionMessage(
+          {
+            ok: false,
+            error: payload?.error ?? error.message,
+            code: payload?.code,
+          },
+          t,
+        );
+        const technical = payload
+          ? getBindingActionTechnicalDetails(payload)
+          : error.message
+            ? { result: error.message }
+            : null;
         if (options?.feedbackHandler) {
           options.feedbackHandler({
             message: friendlyError,
-            technical: null,
+            technical,
             variant: "error",
           });
         } else if (options?.bindingType) {
@@ -546,6 +564,14 @@ export default function Bindings() {
           }));
         } else {
           setMessage(friendlyError);
+        }
+        if (options?.errorToastTitle) {
+          toast({
+            title: options.errorToastTitle,
+            description: friendlyError,
+            variant: "error",
+            duration: 7000,
+          });
         }
         return false;
       }
@@ -573,6 +599,14 @@ export default function Bindings() {
           }));
         } else {
           setMessage(friendlyError);
+        }
+        if (options?.errorToastTitle) {
+          toast({
+            title: options.errorToastTitle,
+            description: friendlyError,
+            variant: "error",
+            duration: 7000,
+          });
         }
         return false;
       }
@@ -605,6 +639,23 @@ export default function Bindings() {
       }
       await refreshBindings();
       return true;
+    } catch (error) {
+      const message = t("bindingsActionFailed");
+      const technical = {
+        result: error instanceof Error ? error.message : String(error),
+      };
+      options?.feedbackHandler?.({ message, technical, variant: "error" });
+      if (options?.errorToastTitle) {
+        toast({
+          title: options.errorToastTitle,
+          description: message,
+          variant: "error",
+          duration: 7000,
+        });
+      } else {
+        setMessage(message);
+      }
+      return false;
     } finally {
       setPending("");
     }
@@ -777,6 +828,7 @@ export default function Bindings() {
     mode: "archive" | "restore" | "cleanup" | "cleanup-active",
     row: Row,
   ) => {
+    setImportSourceFeedback(null);
     const result = await runAction(
       `import-source-${mode}`,
       () =>
@@ -797,6 +849,8 @@ export default function Bindings() {
           },
         }),
       {
+        feedbackHandler: setImportSourceFeedback,
+        errorToastTitle: t("bindingsImportSourceActionErrorTitle"),
         successMessage:
           mode === "archive"
             ? t("bindingsImportSourceArchivedTitle")
@@ -806,7 +860,51 @@ export default function Bindings() {
       },
     );
     if (result) {
-      await sourceCandidatesQuery.refetch();
+      const matchesTarget = (candidate: Row) => {
+        const fileAssetId = asText(row.file_asset_id || row.id);
+        const datasetId = asText(
+          row.raw_external_dataset_id || row.dataset_id,
+        );
+        return (
+          (fileAssetId &&
+            asText(candidate.file_asset_id || candidate.id) === fileAssetId) ||
+          (datasetId &&
+            asText(
+              candidate.raw_external_dataset_id || candidate.dataset_id,
+            ) === datasetId)
+        );
+      };
+      queryClient.setQueryData<BindingsData>(
+        ["bindings-mapping-workspace", WORKSPACE_ID],
+        (current) =>
+          current
+            ? {
+                ...current,
+                importedSources:
+                  mode === "cleanup" || mode === "cleanup-active"
+                    ? current.importedSources.filter(
+                        (candidate) => !matchesTarget(candidate),
+                      )
+                    : current.importedSources.map((candidate) =>
+                        matchesTarget(candidate)
+                          ? {
+                              ...candidate,
+                              status:
+                                mode === "archive" ? "archived" : "active",
+                              file_status:
+                                mode === "archive" ? "archived" : "active",
+                            }
+                          : candidate,
+                      ),
+              }
+            : current,
+      );
+      await Promise.all([
+        sourceCandidatesQuery.refetch(),
+        queryClient.invalidateQueries({
+          queryKey: ["bindings-mapping-workspace", WORKSPACE_ID],
+        }),
+      ]);
       toast({
         title:
           mode === "archive"
@@ -1412,6 +1510,7 @@ export default function Bindings() {
                   ) : null}
                   <ImportSourceManagementPanel
                     rows={filteredImportedSources}
+                    feedback={importSourceFeedback}
                     statusFilter={importSourceStatusFilter}
                     onStatusFilterChange={setImportSourceStatusFilter}
                     canManage={canManage}
@@ -2122,6 +2221,8 @@ function getBindingActionTechnicalDetails(
       : null) ??
     resultString;
   if (
+    !response.error &&
+    !response.code &&
     !response.rpc &&
     !response.action &&
     !bindingId &&
@@ -2129,6 +2230,8 @@ function getBindingActionTechnicalDetails(
   )
     return null;
   return {
+    error: response.error,
+    code: response.code,
     rpc: response.rpc,
     action: response.action,
     binding_id: bindingId ?? undefined,
@@ -4622,6 +4725,7 @@ export function filterImportedSources(
 
 function ImportSourceManagementPanel({
   rows,
+  feedback,
   statusFilter,
   onStatusFilterChange,
   canManage,
@@ -4631,6 +4735,7 @@ function ImportSourceManagementPanel({
   onAction,
 }: {
   rows: Row[];
+  feedback: BindingActionFeedback | null;
   statusFilter: ImportSourceStatusFilter;
   onStatusFilterChange: (value: ImportSourceStatusFilter) => void;
   canManage: boolean;
@@ -4673,6 +4778,7 @@ function ImportSourceManagementPanel({
           </SelectContent>
         </Select>
       </div>
+      <BindingFeedback feedback={feedback} />
       {rows.length === 0 ? (
         <p className="mt-3 text-xs text-muted-foreground">
           {t("bindingsImportSourceEmpty")}

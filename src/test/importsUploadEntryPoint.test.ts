@@ -178,6 +178,18 @@ describe("Imports production upload entry point", () => {
     expect(importsPage).toContain('parseAllSheetsOff: "Off"');
   });
 
+  it("keeps the compact supported-file helper readable", () => {
+    expect(importsPage).toContain(
+      'supported: "CSV, TSV, TXT, XLS/XLSX до 15 MB"',
+    );
+    expect(importsPage).toContain(
+      'supported: "CSV, TSV, TXT, XLS/XLSX up to 15 MB"',
+    );
+    expect(importsPage).not.toContain(
+      'min-w-0 truncate text-xs text-muted-foreground">\n            {ui.upload.supported}',
+    );
+  });
+
   it("uses custom app file picker copy instead of native browser labels", () => {
     expect(importsPage).toContain('chooseFile: "Обрати файл"');
     expect(importsPage).toContain('noFileSelected: "Файл ще не обрано"');

@@ -846,6 +846,7 @@ export const translations = {
   bindingsImportSourceArchivedTitle: { uk: "Джерело архівовано", en: "Source archived" },
   bindingsImportSourceRestoredTitle: { uk: "Джерело відновлено", en: "Source restored" },
   bindingsImportSourceCleanedTitle: { uk: "Імпорт очищено", en: "Import cleaned up" },
+  bindingsImportSourceActionErrorTitle: { uk: "Не вдалося оновити джерело", en: "Could not update source" },
   bindingsImportSourceCleanedDescription: { uk: "Записи імпорту та файл видалено.", en: "The import records and file were deleted." },
   bindingsImportSourceUpdatedDescription: { uk: "Список джерел оновлено.", en: "The source list was updated." },
   bindingsImportSourceCleanupConfirmTitle: { uk: "Очистити імпортоване джерело?", en: "Clean up imported source?" },
